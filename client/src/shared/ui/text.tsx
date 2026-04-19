@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from "react";
-import { cn } from "@/shared/lib/cn";
+import { cn } from "@/shared/lib";
 
 export type TextProps = HTMLAttributes<HTMLParagraphElement> & {
   as?: "p" | "span";

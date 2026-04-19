@@ -1,9 +1,5 @@
-import { HomeIntro } from "@/widgets/home-intro";
+import { HomePage } from "@/views/home";
 
-export default function Home() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-16">
-      <HomeIntro />
-    </div>
-  );
+export default function Page() {
+  return <HomePage />;
 }
