@@ -5,8 +5,8 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { notFound } from "next/navigation";
 import { AppProviders } from "@/app/providers";
 import "@/app/styles/globals.css";
-import type { AppLocale } from "@/i18n/routing";
-import { routing } from "@/i18n/routing";
+import type { AppLocale } from "@/app/i18n/routing";
+import { routing } from "@/app/i18n/routing";
 
 const manrope = Manrope({
   variable: "--font-manrope",

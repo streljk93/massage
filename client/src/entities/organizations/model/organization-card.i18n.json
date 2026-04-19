@@ -2,17 +2,20 @@
   "messages": {
     "en": {
       "slots": {
-        "today": "today"
+        "today": "today",
+        "tomorrow": "tomorrow"
       }
     },
     "vi": {
       "slots": {
-        "today": "hôm nay"
+        "today": "hôm nay",
+        "tomorrow": "ngày mai"
       }
     },
     "ru": {
       "slots": {
-        "today": "сегодня"
+        "today": "сегодня",
+        "tomorrow": "завтра"
       }
     }
   }

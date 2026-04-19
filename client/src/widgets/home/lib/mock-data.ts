@@ -20,6 +20,12 @@ export const currentBooking = {
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop",
 };
 
+/** Сырые группы для карточек: ключ дня переводится на экране через `slots.*`. */
+export type SlotGroupSeed = {
+  dayKey: "today" | "tomorrow";
+  times: string[];
+};
+
 export const topSalons = [
   {
     id: "s1",
@@ -28,7 +34,10 @@ export const topSalons = [
     rating: 4.5,
     metaLine: "~ 1km from you | 123 Nguyen Trai str.",
     servicesLine: "Foots, hands, back, neck…",
-    slotLabels: ["today", "09:00", "10:00", "11:30"],
+    slotGroups: [
+      { dayKey: "today" as const, times: ["09:00", "10:00", "11:30"] },
+      { dayKey: "tomorrow" as const, times: ["09:00", "12:00", "15:00"] },
+    ] satisfies SlotGroupSeed[],
   },
   {
     id: "s2",
@@ -37,7 +46,10 @@ export const topSalons = [
     rating: 4.8,
     metaLine: "~ 2km from you | Tran Hung Dao",
     servicesLine: "Aroma, hot stone, foot…",
-    slotLabels: ["today", "10:00", "12:00"],
+    slotGroups: [
+      { dayKey: "today" as const, times: ["10:00", "12:00"] },
+      { dayKey: "tomorrow" as const, times: ["08:30", "14:00"] },
+    ] satisfies SlotGroupSeed[],
   },
 ];
 
@@ -49,7 +61,10 @@ export const topSpecialists = [
     rating: 4.5,
     metaLine: "~ 1km from you | 123 Nguyen Trai str.",
     servicesLine: "Foots, hands, back, neck…",
-    slotLabels: ["today", "09:00", "10:00"],
+    slotGroups: [
+      { dayKey: "today" as const, times: ["09:00", "10:00"] },
+      { dayKey: "tomorrow" as const, times: ["11:00", "16:00"] },
+    ] satisfies SlotGroupSeed[],
   },
   {
     id: "p2",
@@ -58,7 +73,10 @@ export const topSpecialists = [
     rating: 4.9,
     metaLine: "~ 3km from you | Duong Dong",
     servicesLine: "Thai, Swedish, reflexology…",
-    slotLabels: ["today", "11:00", "15:00"],
+    slotGroups: [
+      { dayKey: "today" as const, times: ["11:00", "15:00"] },
+      { dayKey: "tomorrow" as const, times: ["09:30", "13:00", "17:00"] },
+    ] satisfies SlotGroupSeed[],
   },
 ];
 

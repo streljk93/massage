@@ -8,7 +8,13 @@ import { SpecialistCard } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
-import { homeUser, topSalons, topSpecialists } from "@/widgets/home/lib/mock-data";
+import type { AvailabilitySlotGroup } from "@/shared/ui";
+import {
+  homeUser,
+  topSalons,
+  topSpecialists,
+  type SlotGroupSeed,
+} from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
 
 type SearchTab = "organizations" | "specialists";
@@ -17,6 +23,17 @@ const tabs: { id: SearchTab; labelKey: "tabSalons" | "tabSpecialists" }[] = [
   { id: "organizations", labelKey: "tabSalons" },
   { id: "specialists", labelKey: "tabSpecialists" },
 ];
+
+function slotGroupsFromSeed(
+  groups: SlotGroupSeed[],
+  t: (key: string) => string,
+): AvailabilitySlotGroup[] {
+  return groups.map((g) => ({
+    dayLabel:
+      g.dayKey === "today" ? t("today") : t("tomorrow"),
+    times: g.times,
+  }));
+}
 
 function matchesListQuery(
   q: string,
@@ -136,9 +153,7 @@ export function SearchPage() {
                   key={s.id}
                   {...s}
                   imageAlt={s.name}
-                  slotLabels={s.slotLabels.map((l) =>
-                    l.toLowerCase() === "today" ? tSlots("today") : l,
-                  )}
+                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
                 />
               ))
             : filteredSpecialists.map((s) => (
@@ -146,9 +161,7 @@ export function SearchPage() {
                   key={s.id}
                   {...s}
                   imageAlt={s.name}
-                  slotLabels={s.slotLabels.map((l) =>
-                    l.toLowerCase() === "today" ? tSlots("today") : l,
-                  )}
+                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
                 />
               ))}
         </div>

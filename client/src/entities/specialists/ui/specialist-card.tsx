@@ -5,7 +5,10 @@ import {
   EntityCardImage,
 } from "@/shared/ui/card";
 import { Rating } from "@/shared/ui/rating";
-import { Tag } from "@/shared/ui/tag";
+import {
+  AvailabilitySlotStrip,
+  type AvailabilitySlotGroup,
+} from "@/shared/ui";
 import { cn } from "@/shared/lib";
 
 export type SpecialistCardProps = {
@@ -15,7 +18,9 @@ export type SpecialistCardProps = {
   rating: number;
   metaLine: string;
   servicesLine: string;
-  slotLabels: string[];
+  slotGroups: AvailabilitySlotGroup[];
+  onSelectSlotTime?: (payload: { dayLabel: string; time: string }) => void;
+  onOpenCalendar?: () => void;
   className?: string;
 };
 
@@ -26,7 +31,9 @@ export function SpecialistCard({
   rating,
   metaLine,
   servicesLine,
-  slotLabels,
+  slotGroups,
+  onSelectSlotTime,
+  onOpenCalendar,
   className,
 }: SpecialistCardProps) {
   return (
@@ -47,17 +54,11 @@ export function SpecialistCard({
         <p className="line-clamp-2 text-xs text-muted-foreground">
           {servicesLine}
         </p>
-        <div className="mt-1 flex flex-wrap gap-1.5">
-          {slotLabels.map((label) => (
-            <Tag
-              key={label}
-              variant={label.toLowerCase() === "today" ? "default" : "slot"}
-              className="text-[0.65rem] capitalize"
-            >
-              {label}
-            </Tag>
-          ))}
-        </div>
+        <AvailabilitySlotStrip
+          groups={slotGroups}
+          onSelectTime={onSelectSlotTime}
+          onOpenCalendar={onOpenCalendar}
+        />
       </EntityCardContent>
     </EntityCard>
   );

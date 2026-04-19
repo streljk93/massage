@@ -8,9 +8,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/shared/ui/shadcn/popover";
-import { usePathname, useRouter } from "@/i18n/navigation";
-import type { AppLocale } from "@/i18n/routing";
-import { routing } from "@/i18n/routing";
+import { usePathname, useRouter } from "@/app/i18n/navigation";
+import type { AppLocale } from "@/app/i18n/routing";
+import { routing } from "@/app/i18n/routing";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
 

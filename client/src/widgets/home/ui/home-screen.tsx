@@ -4,7 +4,8 @@ import { CategoryCard } from "@/entities/services";
 import { BookingCard } from "@/entities/booking";
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/app/i18n/navigation";
+import type { AvailabilitySlotGroup } from "@/shared/ui";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Slider } from "@/shared/ui/slider";
@@ -17,6 +18,7 @@ import {
   promoSlides,
   topSalons,
   topSpecialists,
+  type SlotGroupSeed,
 } from "../lib/mock-data";
 
 function PromoSlide({
@@ -53,8 +55,15 @@ function PromoSlide({
   );
 }
 
-function translateSlotLabel(label: string, t: (key: string) => string) {
-  return label.toLowerCase() === "today" ? t("slots.today") : label;
+function slotGroupsFromSeed(
+  groups: SlotGroupSeed[],
+  t: (key: string) => string,
+): AvailabilitySlotGroup[] {
+  return groups.map((g) => ({
+    dayLabel:
+      g.dayKey === "today" ? t("slots.today") : t("slots.tomorrow"),
+    times: g.times,
+  }));
 }
 
 export async function HomeScreen() {
@@ -146,7 +155,7 @@ export async function HomeScreen() {
                 key={s.id}
                 {...s}
                 imageAlt={s.name}
-                slotLabels={s.slotLabels.map((l) => translateSlotLabel(l, t))}
+                slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
               />
             ))}
           </div>
@@ -172,7 +181,7 @@ export async function HomeScreen() {
                 key={s.id}
                 {...s}
                 imageAlt={s.name}
-                slotLabels={s.slotLabels.map((l) => translateSlotLabel(l, t))}
+                slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
               />
             ))}
           </div>

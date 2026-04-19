@@ -1,0 +1,25 @@
+{
+  "messages": {
+    "en": {
+      "availabilitySlots": {
+        "regionAria": "Available times",
+        "calendarAria": "Open calendar",
+        "calendarLabel": "Dates"
+      }
+    },
+    "vi": {
+      "availabilitySlots": {
+        "regionAria": "Giờ còn trống",
+        "calendarAria": "Mở lịch",
+        "calendarLabel": "Ngày"
+      }
+    },
+    "ru": {
+      "availabilitySlots": {
+        "regionAria": "Доступное время",
+        "calendarAria": "Открыть календарь",
+        "calendarLabel": "Даты"
+      }
+    }
+  }
+}

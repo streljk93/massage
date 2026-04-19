@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { CalendarDays, Home, Search, UserRound } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { Link } from "@/app/i18n/navigation";
 import { cn, motion } from "@/shared/lib";
 
 const items = [
