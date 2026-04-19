@@ -35,7 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${manrope.variable} ${openSans.variable} h-full antialiased`}
+      className={`${manrope.variable} ${openSans.variable} h-full font-sans antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AppProviders>{children}</AppProviders>

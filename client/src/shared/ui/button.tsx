@@ -1,27 +1,43 @@
-import type { ButtonHTMLAttributes } from "react";
+import type { ComponentProps } from "react";
+import { Button as ShadcnButton } from "@/components/ui/button";
 import { cn } from "@/shared/lib";
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+export type ButtonTone = "light" | "muted";
+
+export type ButtonProps = Omit<
+  ComponentProps<typeof ShadcnButton>,
+  "variant"
+> & {
   variant?: "primary" | "secondary" | "ghost";
+  /**
+   * Для `variant="secondary"`: `light` — `surface-light` (как поиск, по умолчанию для таких кнопок),
+   * `muted` — нейтральная. Без `tone` — стандартные цвета shadcn `secondary` (бренд и т.д.).
+   */
+  tone?: ButtonTone;
 };
+
+const variantMap = {
+  primary: "default",
+  secondary: "secondary",
+  ghost: "ghost",
+} as const;
 
 export function Button({
   className,
   variant = "primary",
-  type = "button",
+  tone,
   ...props
 }: ButtonProps) {
   return (
-    <button
-      type={type}
+    <ShadcnButton
+      variant={variantMap[variant]}
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
-        variant === "primary" &&
-          "bg-surface-primary text-action-on-primary hover:opacity-90",
         variant === "secondary" &&
-          "border border-border bg-surface-secondary text-action-on-secondary hover:opacity-90",
-        variant === "ghost" &&
-          "text-text-primary hover:bg-surface-muted",
+          tone === "light" &&
+          "border-0 bg-surface-light hover:bg-surface-muted",
+        variant === "secondary" &&
+          tone === "muted" &&
+          "border-0 bg-muted hover:bg-muted/80",
         className,
       )}
       {...props}
