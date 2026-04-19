@@ -16,8 +16,8 @@ export function Text({
     <Component
       className={cn(
         "text-base leading-relaxed",
-        tone === "muted" && "text-[var(--ds-muted-fg)]",
-        tone === "default" && "text-[var(--ds-fg)]",
+        tone === "muted" && "text-[var(--ds-text-muted)]",
+        tone === "default" && "text-[var(--ds-text-primary)]",
         className,
       )}
       {...props}

@@ -1,42 +1,85 @@
+@import "./design-tokens.css";
 @import "tailwindcss";
-
-:root {
-  --background: #fafafa;
-  --foreground: #0a0a0a;
-  --ds-surface: #ffffff;
-  --ds-fg: #0a0a0a;
-  --ds-muted-fg: #525252;
-  --ds-muted: #f5f5f5;
-  --ds-border: #e5e5e5;
-  --ds-primary: #171717;
-  --ds-primary-fg: #fafafa;
-  --ds-ring: #171717;
-}
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface-primary: var(--ds-surface-primary);
+  --color-surface-secondary: var(--ds-surface-secondary);
+  --color-surface-light: var(--ds-surface-light);
+  --color-surface-background: var(--ds-surface-background);
+  --color-surface-muted: var(--ds-surface-muted);
+  --color-text-primary: var(--ds-text-primary);
+  --color-text-muted: var(--ds-text-muted);
+  --color-border: var(--ds-border);
+  --color-action-on-primary: var(--ds-action-on-primary);
+  --color-action-on-secondary: var(--ds-action-on-secondary);
+  --color-ring: var(--ds-ring);
+  --font-sans: var(--font-open-sans);
+  --font-heading: var(--font-manrope);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --ds-surface: #171717;
-    --ds-fg: #fafafa;
-    --ds-muted-fg: #a3a3a3;
-    --ds-muted: #262626;
-    --ds-border: #404040;
-    --ds-primary: #fafafa;
-    --ds-primary-fg: #171717;
-    --ds-ring: #fafafa;
+@layer base {
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--ds-font-body);
+    font-size: var(--ds-type-body-size);
+    line-height: var(--ds-type-body-leading);
+    font-weight: var(--ds-type-body-weight);
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--ds-font-heading);
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--ds-type-h1-size);
+    line-height: var(--ds-type-h1-leading);
+    font-weight: var(--ds-type-h1-weight);
+    letter-spacing: var(--ds-type-h1-tracking);
+  }
+
+  h2 {
+    font-size: var(--ds-type-h2-size);
+    line-height: var(--ds-type-h2-leading);
+    font-weight: var(--ds-type-h2-weight);
+    letter-spacing: var(--ds-type-h2-tracking);
+  }
+
+  h3 {
+    font-size: var(--ds-type-h3-size);
+    line-height: var(--ds-type-h3-leading);
+    font-weight: var(--ds-type-h3-weight);
+    letter-spacing: var(--ds-type-h3-tracking);
+  }
+
+  h4 {
+    font-size: var(--ds-type-h4-size);
+    line-height: var(--ds-type-h4-leading);
+    font-weight: var(--ds-type-h4-weight);
+    letter-spacing: var(--ds-type-h4-tracking);
+  }
+
+  h5 {
+    font-size: var(--ds-type-h5-size);
+    line-height: var(--ds-type-h5-leading);
+    font-weight: var(--ds-type-h5-weight);
+    letter-spacing: var(--ds-type-h5-tracking);
+  }
+
+  h6 {
+    font-size: var(--ds-type-h6-size);
+    line-height: var(--ds-type-h6-leading);
+    font-weight: var(--ds-type-h6-weight);
+    letter-spacing: var(--ds-type-h6-tracking);
+  }
 }

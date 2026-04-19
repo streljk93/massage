@@ -1,0 +1,131 @@
+/**
+ * Дизайн-токены: surface, текст, типографика.
+ * Лежат в слое App рядом с globals.css — точка входа глобальных стилей.
+ * Тема: data-theme="light" | "dark" на <html>
+ *
+ * Семейства: --font-manrope и --font-open-sans выставляет next/font на <html>.
+ */
+
+/* Шкала заголовков и body — не зависит от светлой/тёмной темы */
+:root {
+  --ds-font-heading: var(--font-manrope);
+  --ds-font-body: var(--font-open-sans);
+
+  --ds-type-h1-size: 2.25rem;
+  --ds-type-h1-leading: 2.5rem;
+  --ds-type-h1-weight: 700;
+  --ds-type-h1-tracking: -0.02em;
+
+  --ds-type-h2-size: 1.875rem;
+  --ds-type-h2-leading: 2.25rem;
+  --ds-type-h2-weight: 700;
+  --ds-type-h2-tracking: -0.018em;
+
+  --ds-type-h3-size: 1.5rem;
+  --ds-type-h3-leading: 2rem;
+  --ds-type-h3-weight: 600;
+  --ds-type-h3-tracking: -0.015em;
+
+  --ds-type-h4-size: 1.25rem;
+  --ds-type-h4-leading: 1.75rem;
+  --ds-type-h4-weight: 600;
+  --ds-type-h4-tracking: -0.01em;
+
+  --ds-type-h5-size: 1.125rem;
+  --ds-type-h5-leading: 1.5rem;
+  --ds-type-h5-weight: 600;
+  --ds-type-h5-tracking: -0.005em;
+
+  --ds-type-h6-size: 1rem;
+  --ds-type-h6-leading: 1.5rem;
+  --ds-type-h6-weight: 600;
+  --ds-type-h6-tracking: 0;
+
+  --ds-type-body-size: 1rem;
+  --ds-type-body-leading: 1.625rem;
+  --ds-type-body-weight: 400;
+}
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surface (макет из бренда) */
+  --ds-surface-primary: #379f94;
+  --ds-surface-secondary: #e8c895;
+  --ds-surface-light: #ffffff;
+  --ds-surface-background: #ede9e2;
+
+  /* Производные */
+  --ds-surface-muted: #e0dcd4;
+  --ds-border: #d8d4cc;
+  --ds-text-primary: #1a1917;
+  --ds-text-muted: #5c5852;
+  --ds-action-on-primary: #ffffff;
+  --ds-action-on-secondary: #1a1917;
+  --ds-ring: #379f94;
+
+  /* Совместимость с существующими именами */
+  --background: var(--ds-surface-background);
+  --foreground: var(--ds-text-primary);
+  --ds-surface: var(--ds-surface-light);
+  --ds-fg: var(--ds-text-primary);
+  --ds-muted-fg: var(--ds-text-muted);
+  --ds-muted: var(--ds-surface-muted);
+  --ds-primary: var(--ds-surface-primary);
+  --ds-primary-fg: var(--ds-action-on-primary);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ds-surface-primary: #4db0a6;
+  --ds-surface-secondary: #c9a86e;
+  --ds-surface-light: #2f2e2b;
+  --ds-surface-background: #1c1b19;
+
+  --ds-surface-muted: #3a3834;
+  --ds-border: rgba(255, 255, 255, 0.12);
+  --ds-text-primary: #f5f2eb;
+  --ds-text-muted: #9c9890;
+  --ds-action-on-primary: #0f0e0d;
+  --ds-action-on-secondary: #1c1b19;
+  --ds-ring: #6bc4b8;
+
+  --background: var(--ds-surface-background);
+  --foreground: var(--ds-text-primary);
+  --ds-surface: var(--ds-surface-light);
+  --ds-fg: var(--ds-text-primary);
+  --ds-muted-fg: var(--ds-text-muted);
+  --ds-muted: var(--ds-surface-muted);
+  --ds-primary: var(--ds-surface-primary);
+  --ds-primary-fg: var(--ds-action-on-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ds-surface-primary: #4db0a6;
+    --ds-surface-secondary: #c9a86e;
+    --ds-surface-light: #2f2e2b;
+    --ds-surface-background: #1c1b19;
+
+    --ds-surface-muted: #3a3834;
+    --ds-border: rgba(255, 255, 255, 0.12);
+    --ds-text-primary: #f5f2eb;
+    --ds-text-muted: #9c9890;
+    --ds-action-on-primary: #0f0e0d;
+    --ds-action-on-secondary: #1c1b19;
+    --ds-ring: #6bc4b8;
+
+    --background: var(--ds-surface-background);
+    --foreground: var(--ds-text-primary);
+    --ds-surface: var(--ds-surface-light);
+    --ds-fg: var(--ds-text-primary);
+    --ds-muted-fg: var(--ds-text-muted);
+    --ds-muted: var(--ds-surface-muted);
+    --ds-primary: var(--ds-surface-primary);
+    --ds-primary-fg: var(--ds-action-on-primary);
+  }
+}
