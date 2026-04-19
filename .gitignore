@@ -1,0 +1,13 @@
+# Jest (back: coverageDirectory = ../coverage)
+/coverage
+
+# OS / IDE (personal settings; keep shared config via repo if needed)
+.DS_Store
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

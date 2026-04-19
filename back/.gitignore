@@ -1,0 +1,16 @@
+node_modules
+
+# compiled output
+/dist
+
+# Keep environment variables out of version control
+.env
+.env.local
+.env.*.local
+
+# OS / logs
+.DS_Store
+*.log
+
+# Jest (if coverageDirectory is ever set inside back/)
+/coverage
