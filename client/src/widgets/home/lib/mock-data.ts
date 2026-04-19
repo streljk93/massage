@@ -1,30 +1,20 @@
-import type { SpecialistSearchOption } from "@/entities/specialists";
-
 export const homeUser = {
   firstName: "Evgenii",
   locationLabel: "Phu Quoc",
   avatarSrc: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop",
 };
 
-export const specialistSearchOptions: SpecialistSearchOption[] = [
-  { id: "1", label: "Nguyễn Ngọc", subtitle: "Foot massage · 1 km" },
-  { id: "2", label: "Lan Anh", subtitle: "Thai massage · 2 km" },
-  { id: "3", label: "Minh Tuấn", subtitle: "Sports massage · 3 km" },
-  { id: "4", label: "Thu Hà", subtitle: "Neck & back · 0.5 km" },
-];
-
 export const categories = [
-  { id: "neck", label: "Neck", emoji: "🧘" },
-  { id: "body", label: "Body", emoji: "✋" },
-  { id: "foot", label: "Foot", emoji: "🦶" },
-  { id: "spa", label: "Spa", emoji: "💆" },
-  { id: "combo", label: "Combo", emoji: "⭐" },
+  { id: "neck", labelKey: "categories.neck" as const, emoji: "🧘" },
+  { id: "body", labelKey: "categories.body" as const, emoji: "✋" },
+  { id: "foot", labelKey: "categories.foot" as const, emoji: "🦶" },
+  { id: "spa", labelKey: "categories.spa" as const, emoji: "💆" },
+  { id: "combo", labelKey: "categories.combo" as const, emoji: "⭐" },
 ];
 
 export const currentBooking = {
   specialistName: "Nha Trang",
   serviceLine: "Massage foot 500 000 VND",
-  dateLabel: "Today",
   timeRange: "14:00 – 15:30",
   avatarSrc:
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop",
@@ -75,17 +65,17 @@ export const topSpecialists = [
 export const promoSlides = [
   {
     id: "promo-1",
-    title: "Discount 25%",
-    subtitle: "For new clients",
-    cta: "Registration",
+    titleKey: "promo.promo1.title" as const,
+    subtitleKey: "promo.promo1.subtitle" as const,
+    ctaKey: "promo.promo1.cta" as const,
     imageSrc:
       "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=400&h=300&fit=crop",
   },
   {
     id: "promo-2",
-    title: "Free hot stone",
-    subtitle: "Book this week",
-    cta: "Book now",
+    titleKey: "promo.promo2.title" as const,
+    subtitleKey: "promo.promo2.subtitle" as const,
+    ctaKey: "promo.promo2.cta" as const,
     imageSrc:
       "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop",
   },

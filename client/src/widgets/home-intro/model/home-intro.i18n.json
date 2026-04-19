@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "homeIntro": {
+        "book": "Book",
+        "forSalons": "For salons"
+      }
+    },
+    "vi": {
+      "homeIntro": {
+        "book": "Đặt lịch",
+        "forSalons": "Dành cho salon"
+      }
+    },
+    "ru": {
+      "homeIntro": {
+        "book": "Записаться",
+        "forSalons": "Для салонов"
+      }
+    }
+  }
+}

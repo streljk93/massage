@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "locale": {
+        "switchAria": "Choose language",
+        "name": {
+          "en": "English",
+          "vi": "Tiếng Việt",
+          "ru": "Русский"
+        }
+      }
+    },
+    "vi": {
+      "locale": {
+        "switchAria": "Chọn ngôn ngữ",
+        "name": {
+          "en": "English",
+          "vi": "Tiếng Việt",
+          "ru": "Русский"
+        }
+      }
+    },
+    "ru": {
+      "locale": {
+        "switchAria": "Выбор языка",
+        "name": {
+          "en": "English",
+          "vi": "Tiếng Việt",
+          "ru": "Русский"
+        }
+      }
+    }
+  }
+}

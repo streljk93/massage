@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
-import { Button as ShadcnButton } from "@/components/ui/button";
-import { cn } from "@/shared/lib";
+import { cn } from "../lib";
+import { Button as ShadcnButton } from "./shadcn/button";
 
 export type ButtonTone = "light" | "muted";
 

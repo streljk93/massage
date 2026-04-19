@@ -1,0 +1,31 @@
+{
+  "messages": {
+    "en": {
+      "nav": {
+        "mainLabel": "Main navigation",
+        "home": "Home",
+        "search": "Search",
+        "bookings": "Bookings",
+        "profile": "Profile"
+      }
+    },
+    "vi": {
+      "nav": {
+        "mainLabel": "Điều hướng chính",
+        "home": "Trang chủ",
+        "search": "Tìm kiếm",
+        "bookings": "Lịch hẹn",
+        "profile": "Hồ sơ"
+      }
+    },
+    "ru": {
+      "nav": {
+        "mainLabel": "Основная навигация",
+        "home": "Главная",
+        "search": "Поиск",
+        "bookings": "Записи",
+        "profile": "Профиль"
+      }
+    }
+  }
+}

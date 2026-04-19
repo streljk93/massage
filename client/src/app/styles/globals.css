@@ -77,16 +77,20 @@
   transition-timing-function: var(--motion-ease-out);
 }
 
-/** Лёгкое «нажатие» (кнопки, плитки) */
+/**
+ * Нажатие: заметное «вдавливание» (scale + сдвиг вниз).
+ * Предпочитаем transform — дёшево по GPU и одинаково на всех кнопках.
+ */
 @utility motion-press {
   &:active:not(:disabled):not([aria-disabled="true"]) {
-    transform: scale(0.983);
+    transform: scale(0.96) translateY(1.5px);
   }
 }
 
+/** Крупные зоны (карточки-ссылки, нижняя навигация) */
 @utility motion-press-strong {
   &:active:not(:disabled):not([aria-disabled="true"]) {
-    transform: scale(0.967);
+    transform: scale(0.94) translateY(2px);
   }
 }
 

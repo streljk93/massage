@@ -19,9 +19,3 @@ export {
   type EntityCardImageProps,
   type EntityCardContentProps,
 } from "./card";
-export {
-  Search,
-  type SearchProps,
-  type SearchOption,
-  type SearchVariant,
-} from "./search";

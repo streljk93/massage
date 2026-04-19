@@ -1,0 +1,76 @@
+{
+  "messages": {
+    "en": {
+      "home": {
+        "welcome": "Welcome, {name}",
+        "searchPlaceholder": "Search salons and specialists",
+        "searchAriaLabel": "Search salons and specialists",
+        "categoriesHeading": "Massage categories",
+        "yourBooking": "Your booking",
+        "topSalons": "Top salons",
+        "topSpecialists": "Top specialists",
+        "seeAll": "See all"
+      },
+      "promo": {
+        "promo1": {
+          "title": "Discount 25%",
+          "subtitle": "For new clients",
+          "cta": "Sign up"
+        },
+        "promo2": {
+          "title": "Free hot stone",
+          "subtitle": "Book this week",
+          "cta": "Book now"
+        }
+      }
+    },
+    "vi": {
+      "home": {
+        "welcome": "Xin chào, {name}",
+        "searchPlaceholder": "Tìm salon và chuyên viên",
+        "searchAriaLabel": "Tìm salon và chuyên viên",
+        "categoriesHeading": "Danh mục massage",
+        "yourBooking": "Lịch hẹn của bạn",
+        "topSalons": "Salon nổi bật",
+        "topSpecialists": "Chuyên viên nổi bật",
+        "seeAll": "Xem tất cả"
+      },
+      "promo": {
+        "promo1": {
+          "title": "Giảm 25%",
+          "subtitle": "Cho khách hàng mới",
+          "cta": "Đăng ký"
+        },
+        "promo2": {
+          "title": "Đá nóng miễn phí",
+          "subtitle": "Đặt trong tuần này",
+          "cta": "Đặt ngay"
+        }
+      }
+    },
+    "ru": {
+      "home": {
+        "welcome": "Добро пожаловать, {name}",
+        "searchPlaceholder": "Поиск салонов и специалистов",
+        "searchAriaLabel": "Поиск салонов и специалистов",
+        "categoriesHeading": "Категории массажа",
+        "yourBooking": "Ваша запись",
+        "topSalons": "Топ салонов",
+        "topSpecialists": "Топ специалистов",
+        "seeAll": "Смотреть все"
+      },
+      "promo": {
+        "promo1": {
+          "title": "Скидка 25%",
+          "subtitle": "Новым клиентам",
+          "cta": "Регистрация"
+        },
+        "promo2": {
+          "title": "Горячий камень в подарок",
+          "subtitle": "Запишитесь на этой неделе",
+          "cta": "Записаться"
+        }
+      }
+    }
+  }
+}

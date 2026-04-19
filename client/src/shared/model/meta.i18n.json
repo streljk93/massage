@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "meta": {
+        "siteName": "Services",
+        "siteDescription": "Online booking for massage therapists, salons and specialists in one app."
+      }
+    },
+    "vi": {
+      "meta": {
+        "siteName": "Services",
+        "siteDescription": "Đặt lịch trực tuyến với chuyên viên massage, salon và chuyên gia trong một ứng dụng."
+      }
+    },
+    "ru": {
+      "meta": {
+        "siteName": "Services",
+        "siteDescription": "Онлайн-запись к мастерам массажа, салоны и специалисты в одном сервисе."
+      }
+    }
+  }
+}

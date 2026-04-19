@@ -1,0 +1,49 @@
+{
+  "messages": {
+    "en": {
+      "search": {
+        "title": "Search",
+        "tabSalons": "Salons",
+        "tabSpecialists": "Specialists",
+        "tablistAria": "Result type",
+        "placeholderSalon": "Search salon…",
+        "placeholderSpecialist": "Search specialist…",
+        "ariaSalon": "Search salon",
+        "ariaSpecialist": "Search specialist",
+        "filtersAria": "Filters",
+        "mapAria": "Map",
+        "seeAll": "See all"
+      }
+    },
+    "vi": {
+      "search": {
+        "title": "Tìm kiếm",
+        "tabSalons": "Salon",
+        "tabSpecialists": "Chuyên viên",
+        "tablistAria": "Loại kết quả",
+        "placeholderSalon": "Tìm salon…",
+        "placeholderSpecialist": "Tìm chuyên viên…",
+        "ariaSalon": "Tìm salon",
+        "ariaSpecialist": "Tìm chuyên viên",
+        "filtersAria": "Bộ lọc",
+        "mapAria": "Bản đồ",
+        "seeAll": "Xem tất cả"
+      }
+    },
+    "ru": {
+      "search": {
+        "title": "Поиск",
+        "tabSalons": "Салоны",
+        "tabSpecialists": "Специалисты",
+        "tablistAria": "Тип результатов",
+        "placeholderSalon": "Поиск салона…",
+        "placeholderSpecialist": "Поиск специалиста…",
+        "ariaSalon": "Поиск салона",
+        "ariaSpecialist": "Поиск специалиста",
+        "filtersAria": "Фильтры",
+        "mapAria": "Карта",
+        "seeAll": "Смотреть все"
+      }
+    }
+  }
+}

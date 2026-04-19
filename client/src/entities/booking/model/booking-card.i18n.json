@@ -1,0 +1,19 @@
+{
+  "messages": {
+    "en": {
+      "booking": {
+        "today": "Today"
+      }
+    },
+    "vi": {
+      "booking": {
+        "today": "Hôm nay"
+      }
+    },
+    "ru": {
+      "booking": {
+        "today": "Сегодня"
+      }
+    }
+  }
+}

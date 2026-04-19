@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
-import { cn } from "@/shared/lib";
+import { cn } from "../lib";
 
 const tagVariants = cva(
   "inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap",

@@ -13,6 +13,8 @@ export const motion = {
   pressStrong: "motion-press-strong",
   /** interactive + press — типичная кнопка */
   interactivePress: "motion-interactive motion-press",
+  /** Крупные цели (табы, нижняя навигация): заметнее нажатие */
+  interactivePressStrong: "motion-interactive motion-press-strong",
   /** Только opacity */
   fade: "motion-fade",
 } as const;

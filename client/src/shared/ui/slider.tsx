@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { cn, motion } from "@/shared/lib";
+import { cn, motion } from "../lib";
 
 export type SliderSlide = {
   id: string;
@@ -53,12 +53,15 @@ export function Slider({ slides, className, showDots = true }: SliderProps) {
       <div
         ref={scrollerRef}
         className={cn(
-          "flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1",
+          "flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto pb-1",
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
       >
         {slides.map((slide) => (
-          <div key={slide.id} className="min-w-full shrink-0 snap-start">
+          <div
+            key={slide.id}
+            className="flex min-h-0 min-w-full shrink-0 snap-start flex-col"
+          >
             {slide.content}
           </div>
         ))}

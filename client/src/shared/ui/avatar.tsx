@@ -4,8 +4,7 @@ import {
   Avatar as ShadcnAvatar,
   AvatarFallback as ShadcnAvatarFallback,
   AvatarImage as ShadcnAvatarImage,
-} from "@/components/ui/avatar";
-import { cn } from "@/shared/lib";
+} from "./shadcn/avatar";
 
 export const Avatar = ShadcnAvatar;
 export const AvatarImage = ShadcnAvatarImage;
