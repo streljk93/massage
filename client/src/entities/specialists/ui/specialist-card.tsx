@@ -1,6 +1,7 @@
 "use client";
 
 import { UserRound } from "lucide-react";
+import { Link } from "@/app/i18n/navigation";
 import {
   EntityCard,
   EntityCardContent,
@@ -11,7 +12,7 @@ import {
   AvailabilitySlotStrip,
   type AvailabilitySlotGroup,
 } from "@/shared/ui";
-import { cn } from "@/shared/lib";
+import { cn, motion } from "@/shared/lib";
 
 export type SpecialistCardProps = {
   name: string;
@@ -21,10 +22,41 @@ export type SpecialistCardProps = {
   metaLine: string;
   servicesLine: string;
   slotGroups: AvailabilitySlotGroup[];
+  /** Ссылка в профиль: один hit-layer на карточку + анимация нажатия на всё, кроме полосы времён. */
+  profileHref?: string;
   onSelectSlotTime?: (payload: { dayLabel: string; time: string }) => void;
   onOpenCalendar?: () => void;
   className?: string;
 };
+
+function CardTextBlock({
+  name,
+  metaLine,
+  servicesLine,
+  rating,
+}: Pick<
+  SpecialistCardProps,
+  "name" | "metaLine" | "servicesLine" | "rating"
+>) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <Rating value={rating} />
+        <UserRound
+          className="size-4 shrink-0 text-muted-foreground"
+          aria-hidden
+        />
+      </div>
+      <h3 className="font-heading text-base font-semibold tracking-tight text-foreground">
+        {name}
+      </h3>
+      <p className="line-clamp-2 text-xs text-muted-foreground">{metaLine}</p>
+      <p className="line-clamp-2 text-xs text-muted-foreground">
+        {servicesLine}
+      </p>
+    </>
+  );
+}
 
 export function SpecialistCard({
   name,
@@ -34,40 +66,67 @@ export function SpecialistCard({
   metaLine,
   servicesLine,
   slotGroups,
+  profileHref,
   onSelectSlotTime,
   onOpenCalendar,
   className,
 }: SpecialistCardProps) {
+  const textBlock = (
+    <CardTextBlock
+      name={name}
+      metaLine={metaLine}
+      servicesLine={servicesLine}
+      rating={rating}
+    />
+  );
+
+  const strip = (
+    <AvailabilitySlotStrip
+      groups={slotGroups}
+      onSelectTime={onSelectSlotTime}
+      onOpenCalendar={onOpenCalendar}
+    />
+  );
+
+  if (!profileHref) {
+    return (
+      <EntityCard className={cn("items-start", className)}>
+        <EntityCardImage src={imageSrc} alt={imageAlt} />
+        <EntityCardContent>
+          {textBlock}
+          {strip}
+        </EntityCardContent>
+      </EntityCard>
+    );
+  }
+
   return (
-    <EntityCard className={cn("items-start", className)}>
-      <EntityCardImage src={imageSrc} alt={imageAlt} />
-      <EntityCardContent>
-        <div className="flex items-start justify-between gap-2">
-          <Rating value={rating} />
-          <UserRound
-            className="size-4 shrink-0 text-muted-foreground"
-            aria-hidden
-          />
+    <div className="relative min-w-0 w-full">
+      <Link
+        href={profileHref}
+        className={cn(
+          "peer absolute inset-0 z-[1] rounded-2xl bg-transparent outline-none",
+          "touch-manipulation",
+          "focus-visible:z-[5] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        )}
+        aria-label={name}
+      />
+      {/* Анимация на всём «теле» карточки (фон, скругление, padding): peer — прямой sibling перед article */}
+      <article
+        className={cn(
+          motion.interactiveSlow,
+          "relative z-[2] flex min-w-0 gap-3 overflow-visible rounded-2xl bg-card p-3 items-start",
+          "origin-center pointer-events-none",
+          "peer-active:scale-[0.97] peer-active:translate-y-px",
+          className,
+        )}
+      >
+        <EntityCardImage src={imageSrc} alt={imageAlt} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          {textBlock}
+          <div className="pointer-events-auto relative z-[3]">{strip}</div>
         </div>
-        <h3 className="font-heading text-base font-semibold tracking-tight text-foreground">
-          {name}
-        </h3>
-        <p className="line-clamp-2 text-xs text-muted-foreground">{metaLine}</p>
-        <p className="line-clamp-2 text-xs text-muted-foreground">
-          {servicesLine}
-        </p>
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <AvailabilitySlotStrip
-            groups={slotGroups}
-            onSelectTime={onSelectSlotTime}
-            onOpenCalendar={onOpenCalendar}
-          />
-        </div>
-      </EntityCardContent>
-    </EntityCard>
+      </article>
+    </div>
   );
 }

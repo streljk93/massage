@@ -68,7 +68,7 @@ export function SearchPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface-background">
-      <main className="mx-auto w-full max-w-lg flex-1 space-y-4 px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         <HomeScreenHeader
           locationLabel={homeUser.locationLabel}
           title={tSearch("title")}
@@ -153,7 +153,7 @@ export function SearchPage() {
           </Button>
         </div>
 
-        <div className="space-y-3" role="tabpanel">
+        <div className="space-y-2.5" role="tabpanel">
           {tab === "organizations"
             ? filteredSalons.map((s) => (
                 <OrganizationCard
@@ -164,28 +164,13 @@ export function SearchPage() {
                 />
               ))
             : filteredSpecialists.map((s) => (
-                <div
+                <SpecialistCard
                   key={s.id}
-                  role="link"
-                  tabIndex={0}
-                  className={cn(
-                    motion.interactivePressStrong,
-                    "block cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  )}
-                  onClick={() => router.push(`/specialists/${s.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`/specialists/${s.id}`);
-                    }
-                  }}
-                >
-                  <SpecialistCard
-                    {...s}
-                    imageAlt={s.name}
-                    slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
-                  />
-                </div>
+                  {...s}
+                  imageAlt={s.name}
+                  profileHref={`/specialists/${s.id}`}
+                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
+                />
               ))}
         </div>
 

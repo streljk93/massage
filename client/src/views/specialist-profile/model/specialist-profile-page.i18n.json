@@ -13,6 +13,10 @@
           "clientsLabel": "Clients",
           "reviewsLabel": "Reviews"
         },
+        "mapTitle": "Location on map",
+        "mapUserLocationAria": "Your current location",
+        "mapWhereAmI": "Where am I",
+        "mapInteractionGateHint": "Tap the map to zoom and pan.",
         "selectDate": "Select date",
         "selectSlot": "Select slot",
         "selectService": "Select service",
@@ -46,6 +50,10 @@
           "clientsLabel": "Khách hàng",
           "reviewsLabel": "Đánh giá"
         },
+        "mapTitle": "Vị trí trên bản đồ",
+        "mapUserLocationAria": "Vị trí hiện tại của bạn",
+        "mapWhereAmI": "Tôi ở đâu",
+        "mapInteractionGateHint": "Chạm bản đồ để thu phóng và kéo.",
         "selectDate": "Chọn ngày",
         "selectSlot": "Chọn giờ",
         "selectService": "Chọn dịch vụ",
@@ -79,6 +87,10 @@
           "clientsLabel": "Клиенты",
           "reviewsLabel": "Отзывы"
         },
+        "mapTitle": "Расположение на карте",
+        "mapUserLocationAria": "Ваше текущее местоположение",
+        "mapWhereAmI": "Где я",
+        "mapInteractionGateHint": "Нажмите на карту, чтобы масштабировать и двигать её.",
         "selectDate": "Выберите дату",
         "selectSlot": "Выберите время",
         "selectService": "Выберите услугу",

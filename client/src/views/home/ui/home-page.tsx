@@ -78,7 +78,7 @@ export async function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
       <div className="flex min-h-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-6 px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+        <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           <HomeScreenHeader
             locationLabel={homeUser.locationLabel}
             title={t("home.welcome", { name: homeUser.firstName })}
@@ -88,6 +88,7 @@ export async function HomePage() {
           />
 
           <Slider
+            showDots={false}
             slides={promoSlides.map((p) => ({
               id: p.id,
               content: (
@@ -99,7 +100,6 @@ export async function HomePage() {
                 />
               ),
             }))}
-            dotsAriaLabel={t("home.promoSliderDotsAria")}
           />
 
           <Link
@@ -142,7 +142,7 @@ export async function HomePage() {
             </div>
           </section>
 
-          <section className="space-y-3" aria-labelledby="booking-heading">
+          <section className="space-y-2.5" aria-labelledby="booking-heading">
             <h2
               id="booking-heading"
               className="font-heading text-lg font-semibold tracking-tight"
@@ -162,14 +162,14 @@ export async function HomePage() {
             />
           </section>
 
-          <section className="space-y-3" aria-labelledby="salons-heading">
+          <section className="space-y-2.5" aria-labelledby="salons-heading">
             <h2
               id="salons-heading"
               className="font-heading text-lg font-semibold tracking-tight"
             >
               {t("home.topSalons")}
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {topSalons.map((s) => (
                 <OrganizationCard
                   key={s.id}
@@ -188,19 +188,20 @@ export async function HomePage() {
             </Button>
           </section>
 
-          <section className="space-y-3" aria-labelledby="specialists-heading">
+          <section className="space-y-2.5" aria-labelledby="specialists-heading">
             <h2
               id="specialists-heading"
               className="font-heading text-lg font-semibold tracking-tight"
             >
               {t("home.topSpecialists")}
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {topSpecialists.map((s) => (
                 <SpecialistCard
                   key={s.id}
                   {...s}
                   imageAlt={s.name}
+                  profileHref={`/specialists/${s.id}`}
                   slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
                 />
               ))}

@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import {
   CircleMarker,
   MapContainer,
@@ -8,9 +16,11 @@ import {
   TileLayer,
   Tooltip,
   useMap,
+  useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { cn } from "@/shared/lib";
 
 export type SearchMapMarkerItem = {
   id: string;
@@ -33,9 +43,18 @@ type SearchResultsLeafletMapProps = {
    * Передаёт функцию `flyTo` по готовности карты (`next/dynamic` не пробрасывает ref).
    */
   onMapFlyReady?: (flyTo: (p: [number, number]) => void) => void;
+  /**
+   * Режим фокуса: при `true` карта интерактивна только пока в фокусе; без фокуса страница
+   * прокручивается поверх карты. Прокрутка над картой без фокуса кратко показывает
+   * `interactionGateHint`. Клик по карте — фокус и подсветка; клик снаружи или Escape — снятие фокуса.
+   */
+  interactionGate?: boolean;
+  interactionGateHint?: string;
 };
 
 const PHU_QUOC_CENTER: [number, number] = [10.223, 103.968];
+
+const SCROLL_HINT_AUTO_HIDE_MS = 2000;
 
 function escapeAttr(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -110,7 +129,7 @@ function MapViewSync({
 
     const item = items[safeIndex];
     map.flyTo([item.lat, item.lng], 15, { duration: 0.45 });
-  }, [items, itemsKey, map, safeIndex, selectedIndex]);
+  }, [items, itemsKey, map, safeIndex, selectedIndex, userPositionRef]);
 
   return null;
 }
@@ -151,6 +170,73 @@ function MapRegisterFlyTo({
   return null;
 }
 
+/** Убирает блок атрибуции Leaflet/OSM (флаг, ссылка «Leaflet») — тайлы могут снова добавить контрол при layeradd. */
+function MapStripLeafletBranding() {
+  const map = useMap();
+  useEffect(() => {
+    const strip = () => {
+      const root = map.getContainer();
+      root
+        .querySelectorAll(".leaflet-control-attribution")
+        .forEach((n) => n.remove());
+      root
+        .querySelectorAll(".leaflet-attribution-flag")
+        .forEach((n) => n.remove());
+      const ac = map.attributionControl;
+      if (ac) {
+        try {
+          map.removeControl(ac);
+        } catch {
+          /* уже снят */
+        }
+      }
+    };
+    strip();
+    map.on("layeradd", strip);
+    return () => {
+      map.off("layeradd", strip);
+    };
+  }, [map]);
+  return null;
+}
+
+/** Синхронизирует опции карты при смене «замка» (react-leaflet не всегда обновляет их с пропсов). */
+function MapInteractionLockSync({ interactive }: { interactive: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    if (interactive) {
+      map.dragging.enable();
+      map.scrollWheelZoom.enable();
+      map.doubleClickZoom.enable();
+      map.touchZoom.enable();
+    } else {
+      map.dragging.disable();
+      map.scrollWheelZoom.disable();
+      map.doubleClickZoom.disable();
+      map.touchZoom.disable();
+    }
+  }, [map, interactive]);
+  return null;
+}
+
+/** Клик по «пустому» тайлу карты переводит карту в фокус (если режим включён). */
+function MapFocusOnBackgroundClick({
+  enabled,
+  onFocus,
+}: {
+  enabled: boolean;
+  onFocus: () => void;
+}) {
+  useMapEvents({
+    click: () => {
+      if (enabled) {
+        onFocus();
+      }
+    },
+  });
+  return null;
+}
+
 export function SearchResultsLeafletMap({
   items,
   selectedIndex,
@@ -158,23 +244,148 @@ export function SearchResultsLeafletMap({
   userLocationAriaLabel,
   userPosition,
   onMapFlyReady,
+  interactionGate = false,
+  interactionGateHint,
 }: SearchResultsLeafletMapProps) {
+  /** В режиме `interactionGate` стартуем без фокуса — страница скроллится; иначе сразу «в фокусе». */
+  const [mapFocused, setMapFocused] = useState(!interactionGate);
+  /** Прокрутка над картой без фокуса — кратко показываем подсказку (не перехватывает указатель). */
+  const [scrollHintVisible, setScrollHintVisible] = useState(false);
+
+  const mapInteractive = !interactionGate || mapFocused;
+
   const safeIndex = Math.min(items.length - 1, Math.max(0, selectedIndex));
   const userPositionRef = useRef<[number, number] | null>(null);
-  userPositionRef.current = userPosition;
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const mapFocusedRef = useRef(mapFocused);
+  const scrollHintVisibleRef = useRef(scrollHintVisible);
+
+  useLayoutEffect(() => {
+    userPositionRef.current = userPosition;
+  }, [userPosition]);
+
+  useLayoutEffect(() => {
+    mapFocusedRef.current = mapFocused;
+    scrollHintVisibleRef.current = scrollHintVisible;
+  });
+
+  const focusMap = useCallback(() => {
+    setMapFocused(true);
+  }, []);
+
+  /** Клик / pointerdown вне карты — снять фокус. */
+  useEffect(() => {
+    if (!interactionGate || !mapFocused) {
+      return;
+    }
+    const onPointerDownCapture = (e: PointerEvent) => {
+      const el = wrapRef.current;
+      if (!el?.contains(e.target as Node)) {
+        setMapFocused(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDownCapture, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDownCapture, true);
+    };
+  }, [interactionGate, mapFocused]);
+
+  /** Escape — снять фокус. */
+  useEffect(() => {
+    if (!interactionGate || !mapFocused) {
+      return;
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMapFocused(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [interactionGate, mapFocused]);
+
+  /** Прокрутка колесом над картой без фокуса — показать подсказку. */
+  useEffect(() => {
+    if (!interactionGate) {
+      return;
+    }
+    const root = wrapRef.current;
+    if (!root) {
+      return;
+    }
+    const onWheel = () => {
+      if (mapFocusedRef.current || scrollHintVisibleRef.current) {
+        return;
+      }
+      scrollHintVisibleRef.current = true;
+      setScrollHintVisible(true);
+    };
+    root.addEventListener("wheel", onWheel, { passive: true });
+    return () => {
+      root.removeEventListener("wheel", onWheel);
+    };
+  }, [interactionGate]);
+
+  useEffect(() => {
+    if (!scrollHintVisible) {
+      return;
+    }
+    const id = window.setTimeout(() => {
+      scrollHintVisibleRef.current = false;
+      setScrollHintVisible(false);
+    }, SCROLL_HINT_AUTO_HIDE_MS);
+    return () => {
+      window.clearTimeout(id);
+    };
+  }, [scrollHintVisible]);
+
+  const mapFocusOutline = Boolean(interactionGate && mapFocused);
+  /** В фокусе жесты должны обрабатывать Leaflet, а не прокручивать страницу. */
+  const mapGesturesIsolatePage =
+    Boolean(interactionGate && mapFocused);
 
   return (
-    <MapContainer
-      center={PHU_QUOC_CENTER}
-      zoom={13}
-      zoomControl={false}
-      className="size-full min-h-[280px] z-0 [&_.leaflet-control-attribution]:text-[10px]"
-      scrollWheelZoom
+    <div
+      ref={wrapRef}
+      className={cn(
+        "relative size-full min-h-[280px] rounded-2xl [&_.leaflet-bottom.leaflet-right]:!hidden [&_.leaflet-control-attribution]:!hidden [&_img.leaflet-attribution-flag]:!hidden",
+        mapGesturesIsolatePage && "touch-none overscroll-contain",
+      )}
+      onTouchMove={() => {
+        if (!interactionGate || mapFocusedRef.current) {
+          return;
+        }
+        if (scrollHintVisibleRef.current) {
+          return;
+        }
+        scrollHintVisibleRef.current = true;
+        setScrollHintVisible(true);
+      }}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-      />
+      <MapContainer
+        center={PHU_QUOC_CENTER}
+        zoom={13}
+        zoomControl={false}
+        attributionControl={false}
+        className={cn(
+          "size-full min-h-[280px] z-0",
+          mapGesturesIsolatePage && "touch-none overscroll-contain",
+        )}
+        dragging={mapInteractive}
+        scrollWheelZoom={mapInteractive}
+        doubleClickZoom={mapInteractive}
+        touchZoom={mapInteractive}
+        boxZoom={mapInteractive}
+      >
+        <MapInteractionLockSync interactive={mapInteractive} />
+        <MapFocusOnBackgroundClick
+          enabled={Boolean(interactionGate && !mapFocused)}
+          onFocus={focusMap}
+        />
+        <MapStripLeafletBranding />
+        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
       <MapEmptyAndUserSync
         itemsLength={items.length}
         userPosition={userPosition}
@@ -214,11 +425,33 @@ export function SearchResultsLeafletMap({
           )}
           eventHandlers={{
             click: () => {
+              if (interactionGate && !mapFocused) {
+                setMapFocused(true);
+              }
               onMarkerSelect(index);
             },
           }}
         />
       ))}
-    </MapContainer>
+      </MapContainer>
+      {mapFocusOutline ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-[1000] rounded-2xl border-2 border-secondary"
+        />
+      ) : null}
+      {interactionGate && !mapFocused && scrollHintVisible ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-[2000] flex flex-col items-center justify-center bg-background/45 px-4 text-center text-sm leading-snug text-foreground shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)] backdrop-blur-[2px]"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="max-w-[min(100%,18rem)] text-pretty">
+            {interactionGateHint ??
+              "Tap the map to zoom and pan."}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Open_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -24,6 +24,15 @@ const openSans = Open_Sans({
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
+};
+
+/** Без pinch-zoom страницы; ориентация дополнительно задаётся в `manifest.ts` и `PortraitOrientationLock`. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export function generateStaticParams() {

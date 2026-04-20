@@ -7,7 +7,8 @@ export function EntityCard({ className, ...props }: EntityCardProps) {
   return (
     <article
       className={cn(
-        "flex gap-3 overflow-hidden rounded-2xl bg-card p-3",
+        /* overflow-visible: на iOS вложенный горизонтальный скролл (слоты) ломается при overflow-hidden у предка */
+        "flex min-w-0 gap-3 overflow-visible rounded-2xl bg-card p-3",
         className,
       )}
       {...props}

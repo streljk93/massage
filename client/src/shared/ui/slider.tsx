@@ -110,7 +110,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
       <div
         ref={scrollerRef}
         className={cn(
-          "flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto pb-1",
+          "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]",
           "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
       >
@@ -128,7 +128,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
       </div>
       {showDots && slides.length > 1 ? (
         <div
-          className="mt-2 flex justify-center gap-1.5"
+          className="mt-1 flex justify-center gap-1"
           role="tablist"
           aria-label={dotsAriaLabel}
         >
@@ -140,7 +140,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
               aria-selected={i === active}
               className={cn(
                 motion.interactive,
-                "size-2 rounded-full",
+                "h-1.5 w-1.5 shrink-0 rounded-full",
                 i === active ? "bg-foreground" : "bg-muted-foreground/30",
               )}
               onClick={() => scrollToIndex(i)}

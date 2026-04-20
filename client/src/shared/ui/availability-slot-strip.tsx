@@ -33,7 +33,8 @@ export function AvailabilitySlotStrip({
       role="group"
       aria-label={t("regionAria")}
       className={cn(
-        "-mx-0.5 mt-1 flex gap-1.5 overflow-x-auto px-0.5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "-mx-0.5 mt-1 flex min-w-0 w-full max-w-full touch-pan-x gap-1.5 overflow-x-auto overscroll-x-contain px-0.5 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "transform-gpu [-webkit-overflow-scrolling:touch]",
         className,
       )}
     >
@@ -42,7 +43,7 @@ export function AvailabilitySlotStrip({
           <Tag
             variant="default"
             bordered
-            className="shrink-0 text-[0.65rem] capitalize"
+            className="shrink-0 touch-pan-x text-[0.65rem] capitalize"
             aria-hidden
           >
             {group.dayLabel}
@@ -54,7 +55,7 @@ export function AvailabilitySlotStrip({
               className={cn(
                 tagVariants({ variant: "slot" }),
                 motion.interactivePressStrong,
-                "shrink-0 cursor-pointer text-[0.65rem]",
+                "shrink-0 cursor-pointer touch-pan-x text-[0.65rem]",
               )}
               onClick={() => onSelectTime?.({ dayLabel: group.dayLabel, time })}
               aria-label={`${time}, ${group.dayLabel}`}
@@ -69,7 +70,7 @@ export function AvailabilitySlotStrip({
         className={cn(
           tagVariants({ variant: "default", bordered: true }),
           motion.interactivePressStrong,
-          "shrink-0 cursor-pointer gap-1.5 text-[0.65rem] font-medium leading-none text-foreground",
+          "shrink-0 cursor-pointer touch-pan-x gap-1.5 text-[0.65rem] font-medium leading-none text-foreground",
           "hover:bg-muted/35 active:bg-muted/50",
         )}
         aria-label={t("calendarAria")}

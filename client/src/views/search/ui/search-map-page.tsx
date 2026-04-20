@@ -118,7 +118,7 @@ function SearchMapInteractiveLayer({
 
       {/* Табы и закрытие — те же размеры табов, что на /search */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-1 pt-4 pl-3 pr-2"
+        className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-1 pt-3 pl-3 pr-2"
       >
         <div className="pointer-events-auto flex min-w-0 flex-1 items-center justify-center px-1">
           <div
@@ -164,7 +164,7 @@ function SearchMapInteractiveLayer({
       </div>
 
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-40 mx-auto max-w-lg px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
-        <div className="pointer-events-auto mb-2 flex justify-end">
+        <div className="pointer-events-auto mb-1.5 flex justify-end">
           <button
             type="button"
             className={cn(

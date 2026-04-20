@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { PortraitOrientationLock } from "./portrait-orientation-lock";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -21,6 +22,9 @@ export function AppProviders({ children }: AppProvidersProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <PortraitOrientationLock />
+      {children}
+    </QueryClientProvider>
   );
 }

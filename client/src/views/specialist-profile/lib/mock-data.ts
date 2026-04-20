@@ -19,6 +19,9 @@ export type SpecialistProfileData = {
   imageSrc: string;
   imageAlt: string;
   rating: number;
+  /** Точка на карте (остров Phú Quốc, демо). */
+  lat: number;
+  lng: number;
   specialtiesLine: string;
   experienceYears: number;
   clientsLabel: string;
@@ -32,7 +35,7 @@ const extraById: Record<
   string,
   Omit<
     SpecialistProfileData,
-    "id" | "name" | "imageSrc" | "imageAlt" | "rating"
+    "id" | "name" | "imageSrc" | "imageAlt" | "rating" | "lat" | "lng"
   >
 > = {
   p1: {
@@ -117,5 +120,7 @@ export function getSpecialistProfile(
     imageAlt: base.name,
     rating: base.rating,
     ...extra,
+    lat: base.lat,
+    lng: base.lng,
   };
 }
