@@ -1,0 +1,52 @@
+{
+  "messages": {
+    "en": {
+      "authRegister": {
+        "title": "Registration",
+        "namePlaceholder": "Name",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Password",
+        "submit": "Registration",
+        "loginCta": "Login",
+        "socialAria": "Social sign-up",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Instagram sign-in coming soon",
+        "errorGeneric": "Something went wrong. Try again."
+      }
+    },
+    "vi": {
+      "authRegister": {
+        "title": "Đăng ký",
+        "namePlaceholder": "Tên",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Mật khẩu",
+        "submit": "Đăng ký",
+        "loginCta": "Đăng nhập",
+        "socialAria": "Đăng ký qua mạng xã hội",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Đăng nhập Instagram sắp có",
+        "errorGeneric": "Đã xảy ra lỗi. Thử lại."
+      }
+    },
+    "ru": {
+      "authRegister": {
+        "title": "Регистрация",
+        "namePlaceholder": "Имя",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Пароль",
+        "submit": "Регистрация",
+        "loginCta": "Вход",
+        "socialAria": "Регистрация через соцсети",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Вход через Instagram скоро",
+        "errorGeneric": "Что-то пошло не так. Попробуйте снова."
+      }
+    }
+  }
+}

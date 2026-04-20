@@ -1,6 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SessionProvider } from "next-auth/react";
 import { useState, type ReactNode } from "react";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
 
@@ -22,9 +23,11 @@ export function AppProviders({ children }: AppProvidersProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <PortraitOrientationLock />
-      {children}
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <PortraitOrientationLock />
+        {children}
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

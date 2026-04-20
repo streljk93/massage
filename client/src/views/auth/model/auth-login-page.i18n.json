@@ -1,0 +1,55 @@
+{
+  "messages": {
+    "en": {
+      "authLogin": {
+        "title": "Login",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Password",
+        "forgotPassword": "Forgot password",
+        "submit": "Login",
+        "registrationCta": "Registration",
+        "socialAria": "Social login",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Instagram sign-in coming soon",
+        "errorCredentials": "Check your email and password.",
+        "errorGeneric": "Something went wrong. Try again."
+      }
+    },
+    "vi": {
+      "authLogin": {
+        "title": "Đăng nhập",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Mật khẩu",
+        "forgotPassword": "Quên mật khẩu",
+        "submit": "Đăng nhập",
+        "registrationCta": "Đăng ký",
+        "socialAria": "Đăng nhập mạng xã hội",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Đăng nhập Instagram sắp có",
+        "errorCredentials": "Kiểm tra email và mật khẩu.",
+        "errorGeneric": "Đã xảy ra lỗi. Thử lại."
+      }
+    },
+    "ru": {
+      "authLogin": {
+        "title": "Вход",
+        "emailPlaceholder": "Email",
+        "passwordPlaceholder": "Пароль",
+        "forgotPassword": "Забыли пароль",
+        "submit": "Войти",
+        "registrationCta": "Регистрация",
+        "socialAria": "Вход через соцсети",
+        "oauthGoogle": "Google",
+        "oauthFacebook": "Facebook",
+        "oauthInstagram": "Instagram",
+        "oauthInstagramSoon": "Вход через Instagram скоро",
+        "errorCredentials": "Проверьте email и пароль.",
+        "errorGeneric": "Что-то пошло не так. Попробуйте снова."
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "services-app",
+  "private": true,
+  "scripts": {
+    "auth:secret": "node scripts/generate-auth-secret.mjs",
+    "auth:secret:write": "node scripts/generate-auth-secret.mjs --write-client",
+    "clean": "node scripts/clean.mjs",
+    "clean:all": "node scripts/clean.mjs --all",
+    "preflight:client": "node scripts/preflight-client.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "build:client:fast": "node scripts/build-client.mjs --skip-preflight",
+    "build:back": "node scripts/build-back.mjs",
+    "build:all": "node scripts/build-all.mjs",
+    "build:all:fast": "node scripts/build-all.mjs --skip-preflight"
+  }
+}
