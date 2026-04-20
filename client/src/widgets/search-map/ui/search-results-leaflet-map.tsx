@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -18,6 +25,14 @@ type SearchResultsLeafletMapProps = {
   items: SearchMapMarkerItem[];
   selectedIndex: number;
   onMarkerSelect: (index: number) => void;
+  /** Подпись для маркера «моё местоположение» (a11y) */
+  userLocationAriaLabel?: string;
+  /** Координаты пользователя с родителя (геолокация поднимается на страницу — см. кнопку «ко мне»). */
+  userPosition: [number, number] | null;
+  /**
+   * Передаёт функцию `flyTo` по готовности карты (`next/dynamic` не пробрасывает ref).
+   */
+  onMapFlyReady?: (flyTo: (p: [number, number]) => void) => void;
 };
 
 const PHU_QUOC_CENTER: [number, number] = [10.223, 103.968];
@@ -62,9 +77,11 @@ function createPinIcon(
 function MapViewSync({
   items,
   selectedIndex,
+  userPositionRef,
 }: {
   items: SearchMapMarkerItem[];
   selectedIndex: number;
+  userPositionRef: MutableRefObject<[number, number] | null>;
 }) {
   const map = useMap();
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
@@ -73,8 +90,6 @@ function MapViewSync({
 
   useEffect(() => {
     if (items.length === 0) {
-      map.setView(PHU_QUOC_CENTER, 13);
-      prevItemsKey.current = itemsKey;
       return;
     }
 
@@ -85,6 +100,10 @@ function MapViewSync({
       const bounds = L.latLngBounds(
         items.map((i) => [i.lat, i.lng] as [number, number]),
       );
+      const u = userPositionRef.current;
+      if (u) {
+        bounds.extend(u);
+      }
       map.fitBounds(bounds, { padding: [56, 56], maxZoom: 15 });
       return;
     }
@@ -96,12 +115,53 @@ function MapViewSync({
   return null;
 }
 
+function MapEmptyAndUserSync({
+  itemsLength,
+  userPosition,
+}: {
+  itemsLength: number;
+  userPosition: [number, number] | null;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (itemsLength !== 0) return;
+    if (userPosition) {
+      map.setView(userPosition, 14);
+    } else {
+      map.setView(PHU_QUOC_CENTER, 13);
+    }
+  }, [itemsLength, userPosition, map]);
+
+  return null;
+}
+
+function MapRegisterFlyTo({
+  onMapFlyReady,
+}: {
+  onMapFlyReady?: (flyTo: (p: [number, number]) => void) => void;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!onMapFlyReady) return;
+    onMapFlyReady((p) => {
+      map.flyTo(p, 15, { duration: 0.45 });
+    });
+  }, [map, onMapFlyReady]);
+  return null;
+}
+
 export function SearchResultsLeafletMap({
   items,
   selectedIndex,
   onMarkerSelect,
+  userLocationAriaLabel,
+  userPosition,
+  onMapFlyReady,
 }: SearchResultsLeafletMapProps) {
   const safeIndex = Math.min(items.length - 1, Math.max(0, selectedIndex));
+  const userPositionRef = useRef<[number, number] | null>(null);
+  userPositionRef.current = userPosition;
 
   return (
     <MapContainer
@@ -115,7 +175,34 @@ export function SearchResultsLeafletMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
       />
-      <MapViewSync items={items} selectedIndex={selectedIndex} />
+      <MapEmptyAndUserSync
+        itemsLength={items.length}
+        userPosition={userPosition}
+      />
+      <MapViewSync
+        items={items}
+        selectedIndex={selectedIndex}
+        userPositionRef={userPositionRef}
+      />
+      <MapRegisterFlyTo onMapFlyReady={onMapFlyReady} />
+      {userPosition ? (
+        <CircleMarker
+          center={userPosition}
+          radius={11}
+          pathOptions={{
+            color: "#ffffff",
+            fillColor: "#2563eb",
+            fillOpacity: 1,
+            weight: 3,
+          }}
+        >
+          {userLocationAriaLabel ? (
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+              {userLocationAriaLabel}
+            </Tooltip>
+          ) : null}
+        </CircleMarker>
+      ) : null}
       {items.map((item, index) => (
         <Marker
           key={item.id}

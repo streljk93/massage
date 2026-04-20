@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { X } from "lucide-react";
+import { LocateFixed, X } from "lucide-react";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import {
   Slider,
@@ -12,7 +12,10 @@ import {
   type SliderSlide,
 } from "@/shared/ui/slider";
 import { HomeBottomNav } from "@/widgets/home";
-import { SearchMapResultCard } from "@/widgets/search-map/ui/search-map-result-card";
+import {
+  SearchMapResultCard,
+  useUserGeolocation,
+} from "@/widgets/search-map";
 import { topSalons, topSpecialists } from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
 import {
@@ -50,6 +53,15 @@ function SearchMapInteractiveLayer({
   const list = tab === "organizations" ? topSalons : topSpecialists;
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const sliderRef = useRef<SliderHandle>(null);
+  const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
+  const { userPosition, requestFromUserGesture } = useUserGeolocation();
+
+  const onMapFlyReady = useCallback(
+    (flyTo: (p: [number, number]) => void) => {
+      mapFlyToRef.current = flyTo;
+    },
+    [],
+  );
 
   const mapItems = useMemo(
     () =>
@@ -92,18 +104,21 @@ function SearchMapInteractiveLayer({
   );
 
   return (
-    <div className="relative min-h-0 w-full flex-1">
-      <div className="absolute inset-0 z-0 [&_.leaflet-control-container]:z-[410]">
+    <div className="relative h-full min-h-0 w-full flex-1 overflow-hidden">
+      <div className="absolute inset-0 z-0 [&_.leaflet-control-container]:z-[25]">
         <SearchResultsLeafletMap
+          userPosition={userPosition}
+          onMapFlyReady={onMapFlyReady}
           items={mapItems}
           selectedIndex={activeCardIndex}
           onMarkerSelect={onMarkerSelect}
+          userLocationAriaLabel={tMap("userLocationAria")}
         />
       </div>
 
       {/* Табы и закрытие — те же размеры табов, что на /search */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-[420] flex items-center gap-1 pt-4 pl-3 pr-2"
+        className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-1 pt-4 pl-3 pr-2"
       >
         <div className="pointer-events-auto flex min-w-0 flex-1 items-center justify-center px-1">
           <div
@@ -148,7 +163,28 @@ function SearchMapInteractiveLayer({
         </Link>
       </div>
 
-      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-[420] mx-auto max-w-lg px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))]">
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-40 mx-auto max-w-lg px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+        <div className="pointer-events-auto mb-2 flex justify-end">
+          <button
+            type="button"
+            className={cn(
+              motion.interactivePressStrong,
+              "inline-flex max-w-[min(100%,18rem)] items-center justify-center gap-2 rounded-full bg-card px-3 py-2.5 text-sm font-medium text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
+            )}
+            onClick={() => {
+              const fly = mapFlyToRef.current;
+              if (userPosition && fly) {
+                fly(userPosition);
+              }
+              requestFromUserGesture((p) => {
+                mapFlyToRef.current?.(p);
+              });
+            }}
+          >
+            <LocateFixed className="size-5 shrink-0" aria-hidden />
+            <span>{tMap("locateMeLabel")}</span>
+          </button>
+        </div>
         <div className="pointer-events-auto">
           <Slider
             ref={sliderRef}
@@ -179,8 +215,8 @@ export function SearchMapPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      <div className="flex min-h-0 flex-1 flex-col">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-surface-background">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SearchMapInteractiveLayer
           key={tab}
           tab={tab}

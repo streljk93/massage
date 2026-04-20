@@ -3,19 +3,25 @@
     "en": {
       "searchMap": {
         "closeAria": "Close map and return to search",
-        "sliderDotsAria": "Results on map"
+        "sliderDotsAria": "Results on map",
+        "userLocationAria": "Your current location",
+        "locateMeLabel": "Where am I"
       }
     },
     "vi": {
       "searchMap": {
         "closeAria": "Đóng bản đồ và quay lại tìm kiếm",
-        "sliderDotsAria": "Kết quả trên bản đồ"
+        "sliderDotsAria": "Kết quả trên bản đồ",
+        "userLocationAria": "Vị trí hiện tại của bạn",
+        "locateMeLabel": "Tôi ở đâu"
       }
     },
     "ru": {
       "searchMap": {
         "closeAria": "Закрыть карту и вернуться к поиску",
-        "sliderDotsAria": "Результаты на карте"
+        "sliderDotsAria": "Результаты на карте",
+        "userLocationAria": "Ваше текущее местоположение",
+        "locateMeLabel": "Где я"
       }
     }
   }

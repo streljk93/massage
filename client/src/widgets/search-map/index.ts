@@ -1,7 +1,5 @@
-export {
-  SearchResultsLeafletMap,
-  type SearchMapMarkerItem,
-} from "./ui/search-results-leaflet-map";
+/** Leaflet-карта: только динамический импорт из `./ui/search-results-leaflet-map` (не тянуть в SSR). */
+export { useUserGeolocation } from "./lib/use-user-geolocation";
 export {
   SearchMapResultCard,
   type SearchMapResultCardProps,

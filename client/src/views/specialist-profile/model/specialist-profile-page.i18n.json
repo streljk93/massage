@@ -1,0 +1,103 @@
+{
+  "messages": {
+    "en": {
+      "specialistProfile": {
+        "backAria": "Back",
+        "details": "Details",
+        "callAria": "Call",
+        "messageAria": "Message",
+        "favoriteAria": "Add to favorites",
+        "stats": {
+          "experienceValue": "{years} Years",
+          "experienceLabel": "Experience",
+          "clientsLabel": "Clients",
+          "reviewsLabel": "Reviews"
+        },
+        "selectDate": "Select date",
+        "selectSlot": "Select slot",
+        "selectService": "Select service",
+        "weekdays": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        },
+        "durationMin": "{n} min",
+        "services": {
+          "footMassage": "Foot massage",
+          "relaxMassage": "Relax massage"
+        },
+        "booking": "Booking"
+      }
+    },
+    "vi": {
+      "specialistProfile": {
+        "backAria": "Quay lại",
+        "details": "Chi tiết",
+        "callAria": "Gọi điện",
+        "messageAria": "Nhắn tin",
+        "favoriteAria": "Thêm vào yêu thích",
+        "stats": {
+          "experienceValue": "{years} năm",
+          "experienceLabel": "Kinh nghiệm",
+          "clientsLabel": "Khách hàng",
+          "reviewsLabel": "Đánh giá"
+        },
+        "selectDate": "Chọn ngày",
+        "selectSlot": "Chọn giờ",
+        "selectService": "Chọn dịch vụ",
+        "weekdays": {
+          "sun": "CN",
+          "mon": "T2",
+          "tue": "T3",
+          "wed": "T4",
+          "thu": "T5",
+          "fri": "T6",
+          "sat": "T7"
+        },
+        "durationMin": "{n} phút",
+        "services": {
+          "footMassage": "Massage chân",
+          "relaxMassage": "Massage thư giãn"
+        },
+        "booking": "Đặt lịch"
+      }
+    },
+    "ru": {
+      "specialistProfile": {
+        "backAria": "Назад",
+        "details": "Подробнее",
+        "callAria": "Позвонить",
+        "messageAria": "Написать",
+        "favoriteAria": "В избранное",
+        "stats": {
+          "experienceValue": "{years} лет",
+          "experienceLabel": "Опыт",
+          "clientsLabel": "Клиенты",
+          "reviewsLabel": "Отзывы"
+        },
+        "selectDate": "Выберите дату",
+        "selectSlot": "Выберите время",
+        "selectService": "Выберите услугу",
+        "weekdays": {
+          "sun": "Вс",
+          "mon": "Пн",
+          "tue": "Вт",
+          "wed": "Ср",
+          "thu": "Чт",
+          "fri": "Пт",
+          "sat": "Сб"
+        },
+        "durationMin": "{n} мин",
+        "services": {
+          "footMassage": "Массаж стоп",
+          "relaxMassage": "Расслабляющий массаж"
+        },
+        "booking": "Записаться"
+      }
+    }
+  }
+}

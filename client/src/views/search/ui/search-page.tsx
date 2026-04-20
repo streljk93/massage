@@ -164,12 +164,28 @@ export function SearchPage() {
                 />
               ))
             : filteredSpecialists.map((s) => (
-                <SpecialistCard
+                <div
                   key={s.id}
-                  {...s}
-                  imageAlt={s.name}
-                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
-                />
+                  role="link"
+                  tabIndex={0}
+                  className={cn(
+                    motion.interactivePressStrong,
+                    "block cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  onClick={() => router.push(`/specialists/${s.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/specialists/${s.id}`);
+                    }
+                  }}
+                >
+                  <SpecialistCard
+                    {...s}
+                    imageAlt={s.name}
+                    slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
+                  />
+                </div>
               ))}
         </div>
 

@@ -1,3 +1,5 @@
+"use client";
+
 import { UserRound } from "lucide-react";
 import {
   EntityCard,
@@ -54,11 +56,17 @@ export function SpecialistCard({
         <p className="line-clamp-2 text-xs text-muted-foreground">
           {servicesLine}
         </p>
-        <AvailabilitySlotStrip
-          groups={slotGroups}
-          onSelectTime={onSelectSlotTime}
-          onOpenCalendar={onOpenCalendar}
-        />
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
+        >
+          <AvailabilitySlotStrip
+            groups={slotGroups}
+            onSelectTime={onSelectSlotTime}
+            onOpenCalendar={onOpenCalendar}
+          />
+        </div>
       </EntityCardContent>
     </EntityCard>
   );
