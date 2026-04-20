@@ -2,17 +2,23 @@
   "messages": {
     "en": {
       "booking": {
-        "today": "Today"
+        "today": "Today",
+        "serviceLine": "{service} — {price}",
+        "demoFootMassage": "Foot massage"
       }
     },
     "vi": {
       "booking": {
-        "today": "Hôm nay"
+        "today": "Hôm nay",
+        "serviceLine": "{service} — {price}",
+        "demoFootMassage": "Massage chân"
       }
     },
     "ru": {
       "booking": {
-        "today": "Сегодня"
+        "today": "Сегодня",
+        "serviceLine": "{service} — {price}",
+        "demoFootMassage": "Массаж стоп"
       }
     }
   }

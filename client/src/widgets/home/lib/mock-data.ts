@@ -14,7 +14,12 @@ export const categories = [
 
 export const currentBooking = {
   specialistName: "Nha Trang",
-  serviceLine: "Massage foot 500 000 VND",
+  /** Демо: с API придут `nameKey` / готовая строка + числовые поля для Intl. */
+  service: {
+    nameKey: "booking.demoFootMassage" as const,
+    amount: 500_000,
+    currency: "VND" as const,
+  },
   timeRange: "14:00 – 15:30",
   avatarSrc:
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop",

@@ -4,7 +4,7 @@ import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
-import { homeScreenI18n } from "@/views/home";
+import { homePageI18n } from "@/views/home";
 import { searchPageI18n } from "@/views/search";
 import {
   homeBottomNavI18n,
@@ -20,7 +20,7 @@ const bundles: ColocatedI18nBundle[] = [
   availabilitySlotStripI18n,
   homeBottomNavI18n,
   homeScreenHeaderI18n,
-  homeScreenI18n,
+  homePageI18n,
   categoryCardI18n,
   bookingCardI18n,
   searchPageI18n,
