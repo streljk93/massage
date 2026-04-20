@@ -13,7 +13,9 @@
         "oauthFacebook": "Facebook",
         "oauthInstagram": "Instagram",
         "oauthInstagramSoon": "Instagram sign-in coming soon",
-        "errorGeneric": "Something went wrong. Try again."
+        "errorGeneric": "Something went wrong. Try again.",
+        "errorEmailTaken": "This email is already registered.",
+        "errorBackendNotConfigured": "Registration service is unavailable. Set AUTH_BACKEND_URL for the app."
       }
     },
     "vi": {
@@ -29,7 +31,9 @@
         "oauthFacebook": "Facebook",
         "oauthInstagram": "Instagram",
         "oauthInstagramSoon": "Đăng nhập Instagram sắp có",
-        "errorGeneric": "Đã xảy ra lỗi. Thử lại."
+        "errorGeneric": "Đã xảy ra lỗi. Thử lại.",
+        "errorEmailTaken": "Email này đã được đăng ký.",
+        "errorBackendNotConfigured": "Dịch vụ đăng ký không khả dụng. Hãy cấu hình AUTH_BACKEND_URL."
       }
     },
     "ru": {
@@ -45,7 +49,9 @@
         "oauthFacebook": "Facebook",
         "oauthInstagram": "Instagram",
         "oauthInstagramSoon": "Вход через Instagram скоро",
-        "errorGeneric": "Что-то пошло не так. Попробуйте снова."
+        "errorGeneric": "Что-то пошло не так. Попробуйте снова.",
+        "errorEmailTaken": "Этот email уже зарегистрирован.",
+        "errorBackendNotConfigured": "Регистрация недоступна. Задайте AUTH_BACKEND_URL для приложения."
       }
     }
   }

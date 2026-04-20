@@ -1,5 +1,23 @@
-# Локальный и CI-подобный запуск стека для автодеплоя.
-# Бэк: http://localhost:3001  Фронт: http://localhost:3000  Postgres: localhost:5432
+# Полный стек: Postgres + Nest (back) + Next.js (client).
+#
+# Первый раз с нуля (зависимости, секреты, Docker, OpenAPI-типы):
+#   npm run init
+#
+# Запуск из корня репозитория:
+#   npm run docker:env         — создать/обновить .env с JWT_SECRET + AUTH_SECRET для compose
+#   npm run docker:bootstrap   — docker:env + поднять стек
+#   docker compose up --build -d
+#   npm run docker:up          — поднять стек (если .env уже есть)
+#
+# Данные PostgreSQL лежат в именованном volume `postgres_data` (см. внизу файла).
+#   • `docker compose down` — останавливает контейнеры, **данные БД сохраняются**.
+#   • `docker compose down -v` — удаляет volumes и **обнуляет БД** (осторожно).
+#   • Редеплой образов: `docker compose up --build -d` — снова поднимается с тем же volume.
+#
+# Только база (для локальной разработки без сервисов из compose):
+#   docker compose up postgres -d
+
+name: services-app
 
 services:
   postgres:
@@ -12,6 +30,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      # Персистентное хранилище: переживает `docker compose down` и пересборки образов
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d services"]
@@ -30,8 +49,10 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/services?schema=public
       PORT: "3001"
       NODE_ENV: production
-      # с браузера на хосте фронт открывается как localhost:3000
+      # С браузера фронт — http://localhost:3000
       CLIENT_ORIGIN: http://localhost:3000
+      # В production JWT_SECRET обязателен; для локального compose — дефолт (смените в деплое)
+      JWT_SECRET: ${JWT_SECRET:-local-docker-jwt-secret-replace-in-real-deploy}
     depends_on:
       postgres:
         condition: service_healthy
@@ -47,8 +68,13 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      # Сервер Next (proxy /api/auth/register, Auth.js authorize) ходит в back по имени сервиса
+      AUTH_BACKEND_URL: http://back:3001
+      AUTH_URL: http://localhost:3000
+      AUTH_SECRET: ${AUTH_SECRET:-local-docker-authsecret-replace-in-real-deploy}
     depends_on:
       - back
 
 volumes:
   postgres_data:
+    name: services-app_postgres_data

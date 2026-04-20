@@ -10,3 +10,16 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+/// Учётная запись пользователя приложения (клиент маркетплейса). Пароль только для email-входа; OAuth — отдельная связка позже.
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  /// Отображаемое имя (профиль).
+  name         String
+  /// Argon2/bcrypt-хэш; null если пользователь только через OAuth (будущее).
+  passwordHash String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+}

@@ -13,12 +13,13 @@ describe('Health (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.setGlobalPrefix('v1');
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it('/v1/health (GET)', () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get('/v1/health')
       .expect(200)
       .expect({ status: 'ok', service: 'back' });
   });

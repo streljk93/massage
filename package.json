@@ -2,6 +2,7 @@
   "name": "services-app",
   "private": true,
   "scripts": {
+    "init": "node scripts/init-project.mjs",
     "auth:secret": "node scripts/generate-auth-secret.mjs",
     "auth:secret:write": "node scripts/generate-auth-secret.mjs --write-client",
     "clean": "node scripts/clean.mjs",
@@ -11,6 +12,16 @@
     "build:client:fast": "node scripts/build-client.mjs --skip-preflight",
     "build:back": "node scripts/build-back.mjs",
     "build:all": "node scripts/build-all.mjs",
-    "build:all:fast": "node scripts/build-all.mjs --skip-preflight"
+    "build:all:fast": "node scripts/build-all.mjs --skip-preflight",
+    "openapi:export": "node scripts/openapi.mjs export",
+    "openapi:types": "node scripts/openapi.mjs types",
+    "openapi:sync": "node scripts/openapi.mjs sync",
+    "docker:env": "node scripts/generate-docker-env.mjs",
+    "docker:env:force": "node scripts/generate-docker-env.mjs --force",
+    "docker:bootstrap": "node scripts/generate-docker-env.mjs && docker compose up --build -d",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:psql": "docker compose exec postgres psql -U postgres -d services"
   }
 }

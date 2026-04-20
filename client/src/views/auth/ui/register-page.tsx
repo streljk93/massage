@@ -23,7 +23,9 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<false | "generic" | "taken" | "config">(
+    false,
+  );
   const [pending, setPending] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -31,14 +33,36 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
     setError(false);
     setPending(true);
     try {
+      const reg = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          name: name.trim(),
+        }),
+      });
+
+      if (reg.status === 503) {
+        setError("config");
+        return;
+      }
+      if (reg.status === 409) {
+        setError("taken");
+        return;
+      }
+      if (!reg.ok) {
+        setError("generic");
+        return;
+      }
+
       const res = await signIn("credentials", {
         email,
         password,
-        name,
         redirect: false,
       });
       if (res?.error) {
-        setError(true);
+        setError("generic");
         return;
       }
       if (res?.ok) {
@@ -46,7 +70,7 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
         router.refresh();
       }
     } catch {
-      setError(true);
+      setError("generic");
     } finally {
       setPending(false);
     }
@@ -90,12 +114,22 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={8}
             className={authFieldClass}
           />
-          {error ? (
+          {error === "generic" ? (
             <p className="text-center text-sm text-destructive" role="alert">
               {t("errorGeneric")}
+            </p>
+          ) : null}
+          {error === "taken" ? (
+            <p className="text-center text-sm text-destructive" role="alert">
+              {t("errorEmailTaken")}
+            </p>
+          ) : null}
+          {error === "config" ? (
+            <p className="text-center text-sm text-destructive" role="alert">
+              {t("errorBackendNotConfigured")}
             </p>
           ) : null}
           <Button
