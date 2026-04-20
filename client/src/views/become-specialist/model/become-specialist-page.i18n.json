@@ -3,25 +3,316 @@
     "en": {
       "becomeSpecialist": {
         "title": "Become a specialist",
-        "intro": "Offer your services and accept bookings on the platform. Email us to get access and onboarding.",
-        "ctaEmail": "Email us",
-        "backAria": "Back to home"
+        "backAria": "Back to home",
+        "emailSubject": "Specialist registration — Services",
+        "badge": "Now onboarding in Vietnam",
+        "heroTitle": "Turn your skills into a fuller calendar",
+        "heroLead": "List your services where locals already look for trusted beauty and wellness. We focus on Vietnam-first discovery, clear scheduling, and straightforward payouts.",
+        "heroMainAlt": "Beauty professional with a client in a bright salon",
+        "heroTopAlt": "Manicure tools and hands in a nail studio",
+        "heroBottomAlt": "Calm spa treatment room",
+        "heroAdv1Title": "Local demand",
+        "heroAdv1Body": "Appear in search when people look for services near them.",
+        "heroAdv2Title": "Less chat chaos",
+        "heroAdv2Body": "Requests, confirmations, and changes stay in one thread—not scattered across apps.",
+        "heroAdv3Title": "Help getting started",
+        "heroAdv3Body": "We help you publish your profile and tune offerings for your city.",
+        "heroCta": "Register",
+        "heroCtaHint": "When you sign up, you can add your city, specialty, and language preferences.",
+        "sliderHeading": "Professionals already on the app",
+        "sliderSub": "Examples of specialists who receive bookings through our platform.",
+        "sliderCardTag": "App bookings",
+        "sliderAria": "Specialist profiles carousel",
+        "slotsToday": "Today",
+        "slotsTomorrow": "Tomorrow",
+        "exploreAll": "Browse services",
+        "partners": {
+          "sp1": {
+            "name": "Lan Anh",
+            "meta": "District 1 · Ho Chi Minh City",
+            "services": "Gel nails, pedicure, nail art",
+            "imageAlt": "Portrait of nail specialist Lan Anh"
+          },
+          "sp2": {
+            "name": "Minh Tuấn",
+            "meta": "Thảo Điền · Ho Chi Minh City",
+            "services": "Thai massage, deep tissue, sports recovery",
+            "imageAlt": "Portrait of massage therapist Minh Tuấn"
+          },
+          "sp3": {
+            "name": "Hải Long",
+            "meta": "An Thới · Phú Quốc",
+            "services": "Foot reflexology, cupping, relaxation packages",
+            "imageAlt": "Portrait of wellness specialist Hải Long"
+          },
+          "sp4": {
+            "name": "Thảo My",
+            "meta": "Cửa Dương · Phú Quốc",
+            "services": "Aromatherapy, hot stone, neck and shoulders",
+            "imageAlt": "Portrait of spa specialist Thảo My"
+          },
+          "sp5": {
+            "name": "Quỳnh Anh",
+            "meta": "Dinh Cậu · Phú Quốc",
+            "services": "Facial massage, gentle lymphatic work",
+            "imageAlt": "Portrait of facial specialist Quỳnh Anh"
+          }
+        },
+        "salonsHeading": "Partner salons",
+        "salonsSub": "Studios that have completed onboarding and accept online booking.",
+        "salonsRowLabel": "Salon",
+        "salons": {
+          "sl1": {
+            "name": "Ngọc Sen Studio",
+            "city": "Phú Quốc · Dương Đông",
+            "imageAlt": "Interior of Ngọc Sen nail and foot care studio"
+          },
+          "sl2": {
+            "name": "Sen Spa House",
+            "city": "Phú Quốc · Trần Hưng Đạo",
+            "imageAlt": "Sen Spa reception and lounge"
+          },
+          "sl3": {
+            "name": "Saigon Glow Collective",
+            "city": "Ho Chi Minh City · District 3",
+            "imageAlt": "Saigon Glow hair and makeup studio"
+          },
+          "sl4": {
+            "name": "District 1 Barber Lab",
+            "city": "Ho Chi Minh City · Bến Thành",
+            "imageAlt": "District 1 Barber Lab interior"
+          }
+        },
+        "wygHeading": "What you get when you join",
+        "wyg_analytics_title": "Simple analytics",
+        "wyg_analytics_body": "See popular services, busy hours, and returning clients—so you can plan shifts and offers.",
+        "wyg_booking_title": "Online booking",
+        "wyg_booking_body": "Clients choose a slot, get reminders, and reschedule without long text threads.",
+        "wyg_visibility_title": "Your listing on the marketplace",
+        "wyg_visibility_body": "Photos, menus, and clear pricing help new clients understand what you offer.",
+        "wyg_trust_title": "Reviews and trust",
+        "wyg_trust_body": "Ratings and completed visits help first-time bookers feel confident.",
+        "bannerTitle": "Start your registration",
+        "bannerBody": "We onboard salons and independent professionals in small groups so support stays hands-on. Create an account to begin—we’ll guide you through the next steps.",
+        "bannerCta": "Register",
+        "bannerImageAlt": "Warm wellness scene at sunrise",
+        "footerHeading": "Contact",
+        "footerEmailLabel": "Email",
+        "footerHoursLabel": "Response hours",
+        "footerHours": "Monday–Saturday, 9:00–18:00 ICT.",
+        "footerNoteLabel": "Other channels",
+        "footerNote": "Zalo and a phone line will be added before public launch—for now, email is the fastest way to reach us.",
+        "contactAria": "Contact details"
       }
     },
     "vi": {
       "becomeSpecialist": {
         "title": "Trở thành chuyên viên",
-        "intro": "Cung cấp dịch vụ và nhận lịch hẹn trên nền tảng. Gửi email để được cấp quyền và hướng dẫn.",
-        "ctaEmail": "Gửi email",
-        "backAria": "Về trang chủ"
+        "backAria": "Về trang chủ",
+        "emailSubject": "Đăng ký chuyên viên — Services",
+        "badge": "Đang mở đăng ký tại Việt Nam",
+        "heroTitle": "Biến tay nghề thành lịch đặt đều đặn hơn",
+        "heroLead": "Đăng dịch vụ nơi khách hàng đang tìm làm đẹp và chăm sóc đáng tin. Ưu tiên khám phá tại Việt Nam, lịch rõ ràng và thanh toán minh bạch.",
+        "heroMainAlt": "Chuyên viên đang phục vụ khách trong salon sáng",
+        "heroTopAlt": "Dụng cụ và đôi tay trong tiệm nail",
+        "heroBottomAlt": "Phòng trị liệu spa yên tĩnh",
+        "heroAdv1Title": "Nhu cầu tại chỗ",
+        "heroAdv1Body": "Hiển thị khi khách tìm dịch vụ gần họ.",
+        "heroAdv2Title": "Đỡ rối chat",
+        "heroAdv2Body": "Yêu cầu, xác nhận và đổi lịch gom một luồng, không rải nhiều app.",
+        "heroAdv3Title": "Hỗ trợ lúc mới vào",
+        "heroAdv3Body": "Chúng tôi giúp bạn lên hồ sơ và tinh chỉnh dịch vụ theo thành phố.",
+        "heroCta": "Đăng ký",
+        "heroCtaHint": "Khi đăng ký, bạn có thể điền thành phố, chuyên môn và ngôn ngữ ưu tiên.",
+        "sliderHeading": "Chuyên viên đã có trên app",
+        "sliderSub": "Một số hồ sơ đang nhận lịch qua nền tảng.",
+        "sliderCardTag": "Đặt qua app",
+        "sliderAria": "Danh sách ngang hồ sơ chuyên viên",
+        "slotsToday": "Hôm nay",
+        "slotsTomorrow": "Ngày mai",
+        "exploreAll": "Xem dịch vụ",
+        "partners": {
+          "sp1": {
+            "name": "Lan Anh",
+            "meta": "Quận 1 · TP. Hồ Chí Minh",
+            "services": "Gel, chăm sóc chân, vẽ nail",
+            "imageAlt": "Chân dung chuyên viên nail Lan Anh"
+          },
+          "sp2": {
+            "name": "Minh Tuấn",
+            "meta": "Thảo Điền · TP. Hồ Chí Minh",
+            "services": "Massage Thái, cơ sâu, phục hồi thể thao",
+            "imageAlt": "Chân dung chuyên viên massage Minh Tuấn"
+          },
+          "sp3": {
+            "name": "Hải Long",
+            "meta": "An Thới · Phú Quốc",
+            "services": "Bấm huyệt chân, giác hơi, gói thư giãn",
+            "imageAlt": "Chân dung chuyên viên Hải Long"
+          },
+          "sp4": {
+            "name": "Thảo My",
+            "meta": "Cửa Dương · Phú Quốc",
+            "services": "Tinh dầu, đá nóng, cổ và vai gáy",
+            "imageAlt": "Chân dung chuyên viên spa Thảo My"
+          },
+          "sp5": {
+            "name": "Quỳnh Anh",
+            "meta": "Dinh Cậu · Phú Quốc",
+            "services": "Massage mặt, lymph nhẹ",
+            "imageAlt": "Chân dung chuyên viên Quỳnh Anh"
+          }
+        },
+        "salonsHeading": "Salon đối tác",
+        "salonsSub": "Tiệm đã hoàn tất đăng ký và nhận lịch online.",
+        "salonsRowLabel": "Salon",
+        "salons": {
+          "sl1": {
+            "name": "Ngọc Sen Studio",
+            "city": "Phú Quốc · Dương Đông",
+            "imageAlt": "Không gian Ngọc Sen nail và chăm sóc chân"
+          },
+          "sl2": {
+            "name": "Sen Spa House",
+            "city": "Phú Quốc · Trần Hưng Đạo",
+            "imageAlt": "Khu lễ tân Sen Spa"
+          },
+          "sl3": {
+            "name": "Saigon Glow Collective",
+            "city": "TP. HCM · Quận 3",
+            "imageAlt": "Không gian Saigon Glow hair và makeup"
+          },
+          "sl4": {
+            "name": "District 1 Barber Lab",
+            "city": "TP. HCM · Bến Thành",
+            "imageAlt": "Nội thất District 1 Barber Lab"
+          }
+        },
+        "wygHeading": "Bạn nhận gì khi tham gia",
+        "wyg_analytics_title": "Báo cáo gọn",
+        "wyg_analytics_body": "Biết dịch vụ nào chạy, giờ cao điểm và khách quay lại để sắp ca và khuyến mãi.",
+        "wyg_booking_title": "Đặt lịch online",
+        "wyg_booking_body": "Khách chọn giờ, nhận nhắc lịch và đổi lịch bớt nhắn tin dài.",
+        "wyg_visibility_title": "Hồ sơ trên sàn",
+        "wyg_visibility_body": "Ảnh, menu và giá rõ giúp khách mới hiểu bạn nhanh.",
+        "wyg_trust_title": "Đánh giá và uy tín",
+        "wyg_trust_body": "Sao và lượt hoàn thành giúp khách mới yên tâm hơn.",
+        "bannerTitle": "Bắt đầu đăng ký",
+        "bannerBody": "Chúng tôi onboard salon và chuyên viên theo nhóm nhỏ để hỗ trợ sát tay. Tạo tài khoản để bắt đầu — chúng tôi hướng dẫn các bước tiếp theo.",
+        "bannerCta": "Đăng ký",
+        "bannerImageAlt": "Không gian wellness ấm áp lúc bình minh",
+        "footerHeading": "Liên hệ",
+        "footerEmailLabel": "Email",
+        "footerHoursLabel": "Giờ phản hồi",
+        "footerHours": "Thứ Hai–Thứ Bảy, 9:00–18:00 (ICT).",
+        "footerNoteLabel": "Kênh khác",
+        "footerNote": "Zalo và hotline sẽ bổ sung trước khi mở rộng công khai — hiện tại email là nhanh nhất.",
+        "contactAria": "Thông tin liên hệ"
       }
     },
     "ru": {
       "becomeSpecialist": {
         "title": "Стать специалистом",
-        "intro": "Размещайте услуги и принимайте записи на платформе. Напишите нам, чтобы получить доступ и подключение.",
-        "ctaEmail": "Написать на почту",
-        "backAria": "Назад на главную"
+        "backAria": "Назад на главную",
+        "emailSubject": "Регистрация специалиста — Services",
+        "badge": "Идёт набор во Вьетнаме",
+        "heroTitle": "Превратите навыки в стабильный поток записей",
+        "heroLead": "Размещайте услуги там, где люди ищут проверенный beauty и wellness. Упор на Вьетнам, понятное расписание и прозрачные выплаты.",
+        "heroMainAlt": "Мастер работает с клиентом в светлом салоне",
+        "heroTopAlt": "Руки и инструменты в nail-студии",
+        "heroBottomAlt": "Спокойный кабинет для spa-процедур",
+        "heroAdv1Title": "Спрос рядом с клиентом",
+        "heroAdv1Body": "Появляетесь в поиске, когда ищут услуги неподалёку.",
+        "heroAdv2Title": "Меньше хаоса в чатах",
+        "heroAdv2Body": "Заявки, подтверждения и переносы — в одном месте, без россыпи мессенджеров.",
+        "heroAdv3Title": "Помощь на старте",
+        "heroAdv3Body": "Поможем оформить профиль и настроить услуги под ваш город.",
+        "heroCta": "Зарегистрироваться",
+        "heroCtaHint": "При регистрации можно указать город, специализацию и удобный язык общения.",
+        "sliderHeading": "Специалисты в приложении",
+        "sliderSub": "Примеры профилей, которые получают записи через платформу.",
+        "sliderCardTag": "Запись через приложение",
+        "sliderAria": "Карусель профилей специалистов",
+        "slotsToday": "Сегодня",
+        "slotsTomorrow": "Завтра",
+        "exploreAll": "Смотреть услуги",
+        "partners": {
+          "sp1": {
+            "name": "Lan Anh",
+            "meta": "Район 1 · Хошимин",
+            "services": "Гель-лак, педикюр, nail-art",
+            "imageAlt": "Портрет мастера маникюра Lan Anh"
+          },
+          "sp2": {
+            "name": "Minh Tuấn",
+            "meta": "Thảo Điền · Хошимин",
+            "services": "Тайский массаж, глубокие ткани, спортивное восстановление",
+            "imageAlt": "Портрет массажиста Minh Tuấn"
+          },
+          "sp3": {
+            "name": "Hải Long",
+            "meta": "An Thới · Фукуок",
+            "services": "Рефлексология стоп, банки, relax-комбо",
+            "imageAlt": "Портрет мастера Hải Long"
+          },
+          "sp4": {
+            "name": "Thảo My",
+            "meta": "Cửa Dương · Фукуок",
+            "services": "Аромамассаж, горячие камни, шея и плечи",
+            "imageAlt": "Портрет спа-специалиста Thảo My"
+          },
+          "sp5": {
+            "name": "Quỳnh Anh",
+            "meta": "Dinh Cậu · Фукуок",
+            "services": "Массаж лица, мягкий лимфодренаж",
+            "imageAlt": "Портрет специалиста Quỳnh Anh"
+          }
+        },
+        "salonsHeading": "Салоны-партнёры",
+        "salonsSub": "Студии, прошедшие подключение и принимающие онлайн-запись.",
+        "salonsRowLabel": "Салон",
+        "salons": {
+          "sl1": {
+            "name": "Ngọc Sen Studio",
+            "city": "Фукуок · Дуонг-Донг",
+            "imageAlt": "Интерьер студии Ngọc Sen"
+          },
+          "sl2": {
+            "name": "Sen Spa House",
+            "city": "Фукуок · Tran Hung Dao",
+            "imageAlt": "Зона приёма Sen Spa"
+          },
+          "sl3": {
+            "name": "Saigon Glow Collective",
+            "city": "Хошимин · 3-й район",
+            "imageAlt": "Зал Saigon Glow"
+          },
+          "sl4": {
+            "name": "District 1 Barber Lab",
+            "city": "Хошимин · Бентхань",
+            "imageAlt": "Интерьер District 1 Barber Lab"
+          }
+        },
+        "wygHeading": "Что вы получите после подключения",
+        "wyg_analytics_title": "Простая аналитика",
+        "wyg_analytics_body": "Какие услуги заходят, пиковые часы и возвращаемость — чтобы планировать смены и акции.",
+        "wyg_booking_title": "Онлайн-запись",
+        "wyg_booking_body": "Клиент выбирает слот, получает напоминания и переносит без длинной переписки.",
+        "wyg_visibility_title": "Карточка на маркетплейсе",
+        "wyg_visibility_body": "Фото, меню услуг и понятные цены — новым гостям проще разобраться.",
+        "wyg_trust_title": "Отзывы и доверие",
+        "wyg_trust_body": "Рейтинг и завершённые визиты повышают доверие к первой записи.",
+        "bannerTitle": "Начните с регистрации",
+        "bannerBody": "Подключаем салоны и частных мастеров небольшими группами, чтобы сопровождение оставалось живым. Создайте аккаунт — проведём по следующим шагам.",
+        "bannerCta": "Зарегистрироваться",
+        "bannerImageAlt": "Тёплая сцена wellness на рассвете",
+        "footerHeading": "Контакты",
+        "footerEmailLabel": "Почта",
+        "footerHoursLabel": "Время ответа",
+        "footerHours": "Понедельник–суббота, 9:00–18:00 по ICT.",
+        "footerNoteLabel": "Другие каналы",
+        "footerNote": "Zalo и телефон появятся здесь перед публичным запуском — сейчас быстрее всего написать на почту.",
+        "contactAria": "Контактные данные"
       }
     }
   }

@@ -27,6 +27,8 @@ export type HomeScreenHeaderProps = {
    * `section` — заголовок раздела (поиск, записи, профиль): всегда `title`.
    */
   titleVariant?: "greeting" | "section";
+  /** Если `false`, блок с `<h1>` не рендерится (заголовок страницы ниже в контенте). */
+  showHeadline?: boolean;
   avatarAlt: string;
   avatarFallback: string;
   className?: string;
@@ -35,6 +37,7 @@ export type HomeScreenHeaderProps = {
 export function HomeScreenHeader({
   title,
   titleVariant = "section",
+  showHeadline = true,
   avatarAlt,
   avatarFallback,
   className,
@@ -80,7 +83,9 @@ export function HomeScreenHeader({
     <header
       className={cn("flex items-start justify-between gap-3", className)}
     >
-      <div className="min-w-0 flex-1 space-y-1">
+      <div
+        className={cn("min-w-0 flex-1", showHeadline && "space-y-1")}
+      >
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
           <LocaleSwitcher className="shrink-0" />
           <span
@@ -103,9 +108,11 @@ export function HomeScreenHeader({
             {tHeader("becomeSpecialistLink")}
           </Link>
         </div>
-        <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-          {headline}
-        </h1>
+        {showHeadline ? (
+          <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            {headline}
+          </h1>
+        ) : null}
       </div>
       <Link
         href={profileHref}

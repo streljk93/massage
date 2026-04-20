@@ -27,6 +27,17 @@ export type SliderProps = {
   className?: string;
   /** Дополнительные классы для каждого слайда (по умолчанию на всю ширину скролла). */
   slideClassName?: string;
+  /**
+   * Ширина слайда (Tailwind). По умолчанию `min-w-full` — одна карточка на экран.
+   * Для одинаковой ширины всех карточек задавайте **`w-*`** (а не только `min-w-*`), иначе flex может
+   * растянуть слайды по-разному. Пример «peek» + две колонки:
+   * `min-w-0 w-[82%] sm:w-[calc((100%-0.75rem)/2)]` при `trackGapClassName="gap-3"` и `trackGapPx={12}`.
+   */
+  slideMinWidthClassName?: string;
+  /** Класс `gap` между слайдами на треке. Должен соответствовать `trackGapPx`. По умолчанию `gap-3`. */
+  trackGapClassName?: string;
+  /** Расстояние между слайдами в px (для расчёта активной точки). По умолчанию 12 = `gap-3`. */
+  trackGapPx?: number;
   showDots?: boolean;
   /**
    * `below` — точки под каруселью (по умолчанию).
@@ -44,6 +55,9 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     slides,
     className,
     slideClassName,
+    slideMinWidthClassName,
+    trackGapClassName = "gap-3",
+    trackGapPx = 12,
     showDots = true,
     dotsPlacement = "below",
     dotsAriaLabel,
@@ -98,8 +112,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
 
     const onScroll = () => {
       const slideWidth = el.firstElementChild?.clientWidth ?? 1;
-      const gap = 12;
-      const idx = Math.round(el.scrollLeft / (slideWidth + gap));
+      const idx = Math.round(el.scrollLeft / (slideWidth + trackGapPx));
       const next = Math.min(slides.length - 1, Math.max(0, idx));
       if (activeRef.current === next) return;
       activeRef.current = next;
@@ -109,7 +122,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
 
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [slides.length, notifyParentIndex]);
+  }, [slides.length, notifyParentIndex, trackGapPx]);
 
   if (slides.length === 0) return null;
 
@@ -167,7 +180,8 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
         <div
           ref={scrollerRef}
           className={cn(
-            "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
+            "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
+            trackGapClassName,
             dotsPlacement === "below" && "pb-1",
             "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           )}
@@ -176,7 +190,8 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
             <div
               key={slide.id}
               className={cn(
-                "flex min-h-0 min-w-full shrink-0 snap-start flex-col",
+                "flex min-h-0 shrink-0 snap-start flex-col",
+                slideMinWidthClassName ?? "min-w-full",
                 slideClassName,
               )}
             >
