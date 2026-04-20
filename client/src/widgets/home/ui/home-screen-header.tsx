@@ -1,6 +1,10 @@
+"use client";
+
 import { MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
 import { UserAvatar } from "@/shared/ui/avatar";
-import { cn } from "@/shared/lib";
+import { cn, motion } from "@/shared/lib";
 import { LocaleSwitcher } from "./locale-switcher";
 
 export type HomeScreenHeaderProps = {
@@ -20,6 +24,8 @@ export function HomeScreenHeader({
   avatarFallback,
   className,
 }: HomeScreenHeaderProps) {
+  const tHeader = useTranslations("homeScreenHeader");
+
   return (
     <header
       className={cn("flex items-start justify-between gap-3", className)}
@@ -36,12 +42,21 @@ export function HomeScreenHeader({
           {title}
         </h1>
       </div>
-      <UserAvatar
-        src={avatarSrc}
-        alt={avatarAlt}
-        fallback={avatarFallback}
-        size="lg"
-      />
+      <Link
+        href="/profile"
+        aria-label={tHeader("avatarLinkAria")}
+        className={cn(
+          motion.interactivePressStrong,
+          "shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+        )}
+      >
+        <UserAvatar
+          src={avatarSrc}
+          alt={avatarAlt}
+          fallback={avatarFallback}
+          size="lg"
+        />
+      </Link>
     </header>
   );
 }

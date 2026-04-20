@@ -1,6 +1,9 @@
 {
   "messages": {
     "en": {
+      "homeScreenHeader": {
+        "avatarLinkAria": "Open profile"
+      },
       "locale": {
         "switchAria": "Choose language",
         "name": {
@@ -11,6 +14,9 @@
       }
     },
     "vi": {
+      "homeScreenHeader": {
+        "avatarLinkAria": "Mở hồ sơ"
+      },
       "locale": {
         "switchAria": "Chọn ngôn ngữ",
         "name": {
@@ -21,6 +27,9 @@
       }
     },
     "ru": {
+      "homeScreenHeader": {
+        "avatarLinkAria": "Открыть профиль"
+      },
       "locale": {
         "switchAria": "Выбор языка",
         "name": {

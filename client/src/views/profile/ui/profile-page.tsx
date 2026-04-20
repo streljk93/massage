@@ -5,8 +5,10 @@ import {
   ChevronRight,
   CreditCard,
   FileText,
+  Globe,
   HelpCircle,
   LogOut,
+  MapPin,
   UserPen,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -27,6 +29,20 @@ export function ProfilePage() {
       icon: UserPen,
       variant: "default" as const,
       href: "/profile/edit" as const,
+    },
+    {
+      id: "language" as const,
+      labelKey: "language" as const,
+      icon: Globe,
+      variant: "default" as const,
+      href: "/profile/language" as const,
+    },
+    {
+      id: "location" as const,
+      labelKey: "location" as const,
+      icon: MapPin,
+      variant: "default" as const,
+      href: "/profile/location" as const,
     },
     {
       id: "notifications" as const,

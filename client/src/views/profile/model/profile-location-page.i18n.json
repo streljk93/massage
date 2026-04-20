@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "profileLocation": {
+        "title": "Location",
+        "hint": "We use this to show nearby salons and travel times.",
+        "cityPhuQuoc": "Phu Quoc",
+        "cityHoChiMinh": "Ho Chi Minh City",
+        "cityHanoi": "Hanoi",
+        "cityDaNang": "Da Nang"
+      }
+    },
+    "vi": {
+      "profileLocation": {
+        "title": "Khu vực",
+        "hint": "Dùng để hiển thị salon gần bạn và thời gian di chuyển.",
+        "cityPhuQuoc": "Phú Quốc",
+        "cityHoChiMinh": "TP. Hồ Chí Minh",
+        "cityHanoi": "Hà Nội",
+        "cityDaNang": "Đà Nẵng"
+      }
+    },
+    "ru": {
+      "profileLocation": {
+        "title": "Локация",
+        "hint": "Показываем салоны рядом и время в пути.",
+        "cityPhuQuoc": "Фукуок",
+        "cityHoChiMinh": "Хошимин",
+        "cityHanoi": "Ханой",
+        "cityDaNang": "Дананг"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "profileLanguage": {
+        "title": "Language",
+        "hint": "App language for menus and booking confirmations."
+      }
+    },
+    "vi": {
+      "profileLanguage": {
+        "title": "Ngôn ngữ",
+        "hint": "Ngôn ngữ giao diện và xác nhận đặt chỗ."
+      }
+    },
+    "ru": {
+      "profileLanguage": {
+        "title": "Язык",
+        "hint": "Язык интерфейса и подтверждений бронирования."
+      }
+    }
+  }
+}

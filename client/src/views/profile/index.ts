@@ -1,11 +1,15 @@
 export { default as profileEditPageI18n } from "./model/profile-edit-page.i18n.json";
 export { default as profileHelpPageI18n } from "./model/profile-help-page.i18n.json";
+export { default as profileLanguagePageI18n } from "./model/profile-language-page.i18n.json";
 export { default as profileNotificationsPageI18n } from "./model/profile-notifications-page.i18n.json";
 export { default as profilePageI18n } from "./model/profile-page.i18n.json";
+export { default as profileLocationPageI18n } from "./model/profile-location-page.i18n.json";
 export { default as profilePaymentPageI18n } from "./model/profile-payment-page.i18n.json";
 export { default as profileSubpageShellI18n } from "./model/profile-subpage-shell.i18n.json";
 export { default as profileTermsPageI18n } from "./model/profile-terms-page.i18n.json";
 export { ProfileEditPage } from "./ui/profile-edit-page";
+export { ProfileLanguagePage } from "./ui/profile-language-page";
+export { ProfileLocationPage } from "./ui/profile-location-page";
 export { ProfileHelpPage } from "./ui/profile-help-page";
 export { ProfileNotificationsPage } from "./ui/profile-notifications-page";
 export { ProfilePage } from "./ui/profile-page";

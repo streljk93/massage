@@ -13,6 +13,8 @@ import { homePageI18n } from "@/views/home";
 import {
   profileEditPageI18n,
   profileHelpPageI18n,
+  profileLanguagePageI18n,
+  profileLocationPageI18n,
   profileNotificationsPageI18n,
   profilePageI18n,
   profilePaymentPageI18n,
@@ -44,6 +46,8 @@ const bundles: ColocatedI18nBundle[] = [
   profilePageI18n,
   profileSubpageShellI18n,
   profileEditPageI18n,
+  profileLanguagePageI18n,
+  profileLocationPageI18n,
   profileNotificationsPageI18n,
   profilePaymentPageI18n,
   profileHelpPageI18n,
