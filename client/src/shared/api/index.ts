@@ -1,15 +1,15 @@
 /**
- * Типы REST API бэкенда (генерация из `back/openapi/openapi.json`).
+ * REST API: сгенерированный typed SDK (`@hey-api/openapi-ts`) из `back/openapi/openapi.json`.
  *
- * Обновление из корня монорепо: `npm run openapi:sync` (или по шагам
- * `npm run openapi:export` / `npm run openapi:types` — см. `scripts/openapi.mjs`).
+ * Обновление из корня: `npm run openapi:sync` (`openapi:export` + `api:sdk`).
+ *
+ * На сервере (RSC, route handlers) для запросов к Nest задавайте свой клиент через
+ * {@link createServerSdkClient} и передавайте `client` в вызовы SDK (экспорт `client` из
+ * сгенерированного кода по умолчанию с `baseUrl: '/v1'` — только для относительных URL).
  */
-export type { components, operations, paths } from "./generated/openapi";
+export * from "./generated/sdk";
 
-/** Совпадает с `setGlobalPrefix("v1")` на бэкенде и `servers[0].url` в OpenAPI. */
+export { createServerSdkClient } from "./create-server-sdk-client";
+
+/** Совпадает с `setGlobalPrefix("v1")` на бэкенде. */
 export const API_V1_PREFIX = "/v1" as const;
-
-/** Полный path вида `/v1/auth/login` для сопоставления с `paths` в спеке. */
-export function apiV1Path(path: keyof import("./generated/openapi").paths): string {
-  return `${API_V1_PREFIX}${path}`;
-}

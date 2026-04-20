@@ -2,7 +2,10 @@
   "messages": {
     "en": {
       "homeScreenHeader": {
-        "avatarLinkAria": "Open profile"
+        "avatarLinkAria": "Open profile",
+        "avatarLinkLoginAria": "Sign in",
+        "guestWelcome": "Welcome",
+        "welcomeWithName": "Welcome, {name}"
       },
       "locale": {
         "switchAria": "Choose language",
@@ -15,7 +18,10 @@
     },
     "vi": {
       "homeScreenHeader": {
-        "avatarLinkAria": "Mở hồ sơ"
+        "avatarLinkAria": "Mở hồ sơ",
+        "avatarLinkLoginAria": "Đăng nhập",
+        "guestWelcome": "Xin chào",
+        "welcomeWithName": "Xin chào, {name}"
       },
       "locale": {
         "switchAria": "Chọn ngôn ngữ",
@@ -28,7 +34,10 @@
     },
     "ru": {
       "homeScreenHeader": {
-        "avatarLinkAria": "Открыть профиль"
+        "avatarLinkAria": "Открыть профиль",
+        "avatarLinkLoginAria": "Вход",
+        "guestWelcome": "Добро пожаловать",
+        "welcomeWithName": "Добро пожаловать, {name}"
       },
       "locale": {
         "switchAria": "Выбор языка",

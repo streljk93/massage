@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,7 +9,26 @@ datasource db {
   provider = "postgresql"
 }
 
-/// Учётная запись пользователя приложения (клиент маркетплейса). Пароль только для email-входа; OAuth — отдельная связка позже.
+// --- Enums ---
+
+/// Статус бронирования (жизненный цикл записи к специалисту).
+enum BookingStatus {
+  pending
+  expired
+  reject_by_master
+  reject_by_client
+  confirmed
+  canceled_by_master
+  canceled_by_client
+  no_show_by_client
+  no_show_by_master
+  in_progress
+  done
+}
+
+// --- Core user ---
+
+/// Учётная запись пользователя. Пароль только для email-входа; OAuth — отдельная связка позже.
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -19,7 +36,308 @@ model User {
   name         String
   /// Argon2/bcrypt-хэш; null если пользователь только через OAuth (будущее).
   passwordHash String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
+  /// Телефон (редактируемый профиль).
+  phone        String?
+  /// URL аватара.
+  avatarUrl    String?
+  /// Предпочитаемая локаль UI (например vi, en, ru).
+  locale       String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  specialistProfile Specialist?
+  clientBookings    Booking[]              @relation("ClientBookings")
+  bookingChanges    BookingStatusHistory[]
+  orgReviews        OrganizationReview[]
+  specialistReviews SpecialistReview[]
+  ownedOrganizations Organization[]        @relation("OrganizationOwner")
+}
+
+/// Большая категория услуг (вертикаль): массаж, в будущем — бьюти, стрижки и т.д.
+model MajorServiceCategory {
+  id        String  @id @default(uuid())
+  name      String
+  slug      String  @unique
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  categories ServiceCategory[]
+}
+
+/// Категория внутри большой (например «массаж стоп», «расслабляющий»): полное имя, короткое, slug.
+model ServiceCategory {
+  id                   String @id @default(uuid())
+  majorServiceCategoryId String
+  majorServiceCategory MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
+
+  name      String
+  shortName String
+  slug      String
+  /// Описание для SEO/карточек (опционально).
+  description String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  services Service[]
+
+  @@unique([majorServiceCategoryId, slug])
+  @@index([majorServiceCategoryId])
+}
+
+/// Организация (салон, парикмахерская и т.д.); в UI часто «салон массажа».
+model Organization {
+  id   String @id @default(uuid())
+  name String
+  slug String @unique
+
+  /// Владелец организации в системе (пользователь).
+  ownerUserId String?
+  ownerUser   User?   @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+
+  description     String?
+  phone           String?
+  email           String?
+  website         String?
+  addressLine     String?
+  city            String?
+  latitude        Float?
+  longitude       Float?
+  imageUrl        String?
+  imageAlt        String?
+  yearsInBusiness Int?
+
+  /// Денормализованные агрегаты (обновляются при отзывах / фоново).
+  ratingAverage Float @default(0)
+  reviewsCount  Int   @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  reviews              OrganizationReview[]
+  services             Service[]
+  bookings             Booking[]
+  specialistEmployments SpecialistOrganizationEmployment[]
+
+  @@index([ownerUserId])
+  @@index([city])
+}
+
+/// Отзыв о организации.
+model OrganizationReview {
+  id             String @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  /// Привязка к завершённому бронированию (верифицированный отзыв), опционально.
+  bookingId String?  @unique
+  booking   Booking? @relation("OrganizationReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
+
+  rating  Int
+  comment String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organizationId])
+  @@index([authorUserId])
+}
+
+/// Профиль специалиста (мастер), 1:1 с пользователем со «статусом специалиста».
+model Specialist {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio             String?
+  /// Строка специализаций для карточки (аналог specialtiesLine в UI).
+  specialtiesLine String?
+  experienceYears Int?
+  /// Подпись вида «1.5k +» для демо/UI.
+  clientsLabel    String?
+
+  ratingAverage Float @default(0)
+  reviewsCount  Int   @default(0)
+  imageUrl      String?
+  imageAlt      String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  employments SpecialistOrganizationEmployment[]
+  services    Service[]
+  bookings    Booking[]
+  reviews     SpecialistReview[]
+}
+
+/// Период работы специалиста в организации (история смены салонов).
+model SpecialistOrganizationEmployment {
+  id             String @id @default(uuid())
+  specialistId   String
+  specialist     Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([specialistId])
+  @@index([organizationId])
+  @@index([isActive])
+}
+
+/// Услуга в каталоге организации (и привязка к категории).
+model Service {
+  id             String @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  specialistId String?
+  specialist   Specialist? @relation(fields: [specialistId], references: [id], onDelete: SetNull)
+
+  name        String
+  slug        String
+  description String?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  priceOptions ServicePriceOption[]
+  bookings     Booking[]
+
+  @@unique([organizationId, slug])
+  @@index([categoryId])
+  @@index([specialistId])
+}
+
+/// Варианты длительности и цены для услуги.
+model ServicePriceOption {
+  id        String  @id @default(uuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  durationMinutes Int
+  /// Сумма в минимальных единицах валюты (например донги VND целиком).
+  priceAmount     Int
+  currency        String @default("VND")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, durationMinutes])
+  @@index([serviceId])
+}
+
+/// Отзыв о специалисте.
+model SpecialistReview {
+  id           String     @id @default(uuid())
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  authorUserId String
+  author       User   @relation(fields: [authorUserId], references: [id], onDelete: Cascade)
+
+  bookingId String?  @unique
+  booking   Booking? @relation("SpecialistReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
+
+  rating  Int
+  comment String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([specialistId])
+  @@index([authorUserId])
+}
+
+/// Бронирование (запись к специалисту); текущее состояние в `status`, история — в BookingStatusHistory.
+model Booking {
+  id String @id @default(uuid())
+
+  clientUserId String
+  client       User   @relation("ClientBookings", fields: [clientUserId], references: [id], onDelete: Cascade)
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  serviceId String?
+  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  /// Снимок на момент записи (если услугу удалили из каталога).
+  serviceNameSnapshot String?
+  durationMinutes     Int
+  priceAmountSnapshot Int?
+  currencySnapshot    String? @default("VND")
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  status BookingStatus @default(pending)
+
+  /// Дедлайн авто-истечения для pending (не подтвердили за N минут).
+  pendingExpiresAt DateTime?
+
+  cancelReason String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  statusHistory      BookingStatusHistory[]
+  organizationReview OrganizationReview? @relation("OrganizationReviewBooking")
+  specialistReview   SpecialistReview?   @relation("SpecialistReviewBooking")
+
+  @@index([clientUserId])
+  @@index([specialistId])
+  @@index([organizationId])
+  @@index([startsAt])
+  @@index([status])
+}
+
+/// История переходов статусов бронирования.
+model BookingStatusHistory {
+  id        String  @id @default(uuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+
+  /// Кто инициировал смену (клиент, специалист, система — userId может быть null для cron).
+  actorUserId String?
+  actor       User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
 }

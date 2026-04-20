@@ -22,7 +22,8 @@ npm run init
 2. Создаёт в корне файл **`.env`** с `JWT_SECRET` и `AUTH_SECRET` (для `docker compose`), если их ещё нет
 3. При необходимости дописывает **`client/.env.local`**: `AUTH_SECRET` и `AUTH_BACKEND_URL=http://localhost:3001`
 4. Поднимает стек: **`docker compose up --build -d`**
-5. Ждёт готовности PostgreSQL и выполняет **`openapi:sync`** (нужен доступ к БД на `localhost:5432`)
+5. Ждёт готовности PostgreSQL, применяет миграции и **сидирует каталог по умолчанию** (большая категория «Массаж» и подкатегории — см. `back/prisma/seed.mjs`)
+6. Выполняет **`openapi:sync`** (экспорт OpenAPI + генерация typed SDK на клиенте; нужен доступ к БД на `localhost:5432`)
 
 ### После успешного `init`
 
@@ -39,7 +40,7 @@ npm run init
 |------|------------|
 | `--deps-only` | Только `npm install` в `back` и `client` |
 | `--skip-docker` | Без Docker; при заданном `DATABASE_URL` попытается `openapi:sync` |
-| `--skip-openapi` | Без генерации типов API на клиенте |
+| `--skip-openapi` | Без генерации OpenAPI SDK на клиенте |
 
 ---
 
@@ -60,7 +61,7 @@ npm run docker:up           # docker compose up --build -d
 docker compose up postgres -d
 ```
 
-Укажите **`DATABASE_URL`** в `back/.env` (см. `back/.env.example`) и выполните миграции вручную при необходимости: `cd back && npx prisma migrate deploy`.
+Укажите **`DATABASE_URL`** в `back/.env` (см. `back/.env.example`) и выполните миграции и сид при необходимости: `cd back && npx prisma migrate deploy && npx prisma db seed` (каталог «Массаж» и подкатегории создаются идемпотентно).
 
 ### Пересборка типов клиента после смены API
 

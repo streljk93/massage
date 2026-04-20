@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bell,
   ChevronRight,
@@ -11,8 +12,9 @@ import {
   MapPin,
   UserPen,
 } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/app/i18n/navigation";
+import { Link, useRouter } from "@/app/i18n/navigation";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { cn, motion } from "@/shared/lib";
 import { profileUserDemo } from "../lib/mock-data";
@@ -21,6 +23,26 @@ const menuIconClass = "size-[1.125rem] shrink-0 text-muted-foreground";
 
 export function ProfilePage() {
   const t = useTranslations("profile");
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [signOutPending, setSignOutPending] = useState(false);
+
+  const accountName =
+    session?.user?.name?.trim() ||
+    session?.user?.email?.split("@")[0] ||
+    profileUserDemo.firstName;
+  const accountEmail = session?.user?.email ?? profileUserDemo.email;
+
+  const onSignOut = async () => {
+    setSignOutPending(true);
+    try {
+      await signOut({ redirect: false });
+      router.replace("/");
+      router.refresh();
+    } finally {
+      setSignOutPending(false);
+    }
+  };
 
   const menuItems = [
     {
@@ -88,9 +110,9 @@ export function ProfilePage() {
           <HomeScreenHeader
             locationLabel={profileUserDemo.locationLabel}
             title={t("title")}
-            avatarSrc={profileUserDemo.avatarSrc}
-            avatarAlt={profileUserDemo.firstName}
-            avatarFallback={profileUserDemo.firstName.slice(0, 2).toUpperCase()}
+            titleVariant="section"
+            avatarAlt={accountName}
+            avatarFallback={accountName.slice(0, 2).toUpperCase()}
           />
 
           <section
@@ -103,7 +125,7 @@ export function ProfilePage() {
                   {t("displayName")}
                 </dt>
                 <dd className="mt-0.5 text-base font-semibold text-foreground">
-                  {profileUserDemo.firstName}
+                  {accountName}
                 </dd>
               </div>
               <div>
@@ -111,7 +133,7 @@ export function ProfilePage() {
                   {t("emailLabel")}
                 </dt>
                 <dd className="mt-0.5 break-all text-sm text-foreground">
-                  {profileUserDemo.email}
+                  {accountEmail}
                 </dd>
               </div>
             </dl>
@@ -154,7 +176,13 @@ export function ProfilePage() {
                         {inner}
                       </Link>
                     ) : (
-                      <button type="button" className={rowClassName}>
+                      <button
+                        type="button"
+                        className={rowClassName}
+                        disabled={signOutPending}
+                        aria-busy={signOutPending}
+                        onClick={() => void onSignOut()}
+                      >
                         {inner}
                       </button>
                     )}

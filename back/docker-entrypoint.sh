@@ -8,4 +8,7 @@ else
   echo "No SQL migrations in prisma/migrations; skipping migrate deploy."
 fi
 
+echo "Seeding default catalog (idempotent)..."
+npx prisma db seed
+
 exec node dist/src/main.js

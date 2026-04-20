@@ -4,8 +4,8 @@
  *
  * Запуск из корня монорепо:
  *   npm run openapi:export  — только back/openapi/openapi.json
- *   npm run openapi:types   — только client (нужен актуальный openapi.json)
- *   npm run openapi:sync    — export + types (полная синхронизация)
+ *   npm run openapi:types   — только client SDK (нужен актуальный openapi.json)
+ *   npm run openapi:sync    — export + SDK (полная синхронизация)
  */
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -26,8 +26,10 @@ function runExport() {
 }
 
 function runTypes() {
-  console.log("[openapi] client → src/shared/api/generated/openapi.d.ts");
-  execSync("npm run api:types", {
+  console.log(
+    "[openapi] client → src/shared/api/generated/sdk (@hey-api/openapi-ts)",
+  );
+  execSync("npm run api:sdk", {
     cwd: clientDir,
     stdio: "inherit",
     env: process.env,
@@ -48,7 +50,7 @@ try {
     console.error(
       "Usage: node scripts/openapi.mjs [export|types|sync]\n" +
         "  export — только генерация openapi.json в back\n" +
-        "  types  — только openapi-typescript в client\n" +
+        "  types  — только генерация SDK в client (openapi-ts)\n" +
         "  sync   — оба шага (по умолчанию)",
     );
     process.exit(1);

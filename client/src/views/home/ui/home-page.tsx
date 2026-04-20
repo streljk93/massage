@@ -13,11 +13,17 @@ import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { cn } from "@/shared/lib";
 import {
+  catalogGetCategoriesByMajorSlug,
+  createServerSdkClient,
+  type CatalogGetCategoriesByMajorSlugResponse,
+} from "@/shared/api";
+import {
   HomeBottomNav,
   HomeScreenHeader,
 } from "@/widgets/home";
+import { categoryEmojiFromIndex } from "@/widgets/home/lib/category-emoji";
 import {
-  categories,
+  categories as fallbackCategories,
   currentBooking,
   homeUser,
   promoSlides,
@@ -71,9 +77,38 @@ function slotGroupsFromSeed(
   }));
 }
 
+const HOME_MAJOR_CATEGORY_SLUG = "massage" as const;
+
 export async function HomePage() {
   const t = await getTranslations();
   const format = await getFormatter();
+
+  const sdkClient = createServerSdkClient();
+  let catalog: CatalogGetCategoriesByMajorSlugResponse | null = null;
+  if (sdkClient) {
+    const { data, error } = await catalogGetCategoriesByMajorSlug({
+      client: sdkClient,
+      path: { majorSlug: HOME_MAJOR_CATEGORY_SLUG },
+    });
+    if (!error && data) {
+      catalog = data;
+    }
+  }
+
+  const categoryChips =
+    catalog?.categories?.length ?
+      catalog.categories.map((c, index) => ({
+        key: c.id,
+        label: c.shortName,
+        emoji: categoryEmojiFromIndex(index),
+        href: `/search?category=${encodeURIComponent(c.slug)}`,
+      }))
+    : fallbackCategories.map((c) => ({
+        key: c.id,
+        label: t(c.labelKey),
+        emoji: c.emoji,
+        href: `/search?category=${encodeURIComponent(c.id)}`,
+      }));
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
@@ -82,7 +117,7 @@ export async function HomePage() {
           <HomeScreenHeader
             locationLabel={homeUser.locationLabel}
             title={t("home.welcome", { name: homeUser.firstName })}
-            avatarSrc={homeUser.avatarSrc}
+            titleVariant="greeting"
             avatarAlt={homeUser.firstName}
             avatarFallback={homeUser.firstName.slice(0, 2).toUpperCase()}
           />
@@ -133,10 +168,11 @@ export async function HomePage() {
               {t("home.categoriesHeading")}
             </h2>
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {categories.map((c) => (
+              {categoryChips.map((c) => (
                 <CategoryCard
-                  key={c.id}
-                  label={t(c.labelKey)}
+                  key={c.key}
+                  href={c.href}
+                  label={c.label}
                   icon={<span className="text-2xl">{c.emoji}</span>}
                 />
               ))}

@@ -72,7 +72,6 @@ export function SearchPage() {
         <HomeScreenHeader
           locationLabel={homeUser.locationLabel}
           title={tSearch("title")}
-          avatarSrc={homeUser.avatarSrc}
           avatarAlt={homeUser.firstName}
           avatarFallback={homeUser.firstName.slice(0, 2).toUpperCase()}
         />

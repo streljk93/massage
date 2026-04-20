@@ -27,13 +27,13 @@ function log(msg) {
   console.log(`\n[init] ${msg}`);
 }
 
-function run(label, cmd, cmdArgs, cwd = repoRoot) {
+function run(label, cmd, cmdArgs, cwd = repoRoot, env = process.env) {
   log(`${label}: ${cmd} ${cmdArgs.join(" ")}`);
   const r = spawnSync(cmd, cmdArgs, {
     cwd,
     stdio: "inherit",
     shell: process.platform === "win32",
-    env: process.env,
+    env,
   });
   if (r.status !== 0) {
     console.error(`\n[init] Ошибка (${label}), код выхода ${r.status ?? "?"}`);
@@ -167,9 +167,24 @@ async function main() {
 
   await wait(5000);
 
+  const dbUrl =
+    "postgresql://postgres:postgres@127.0.0.1:5432/services?schema=public";
+  run(
+    "prisma migrate deploy",
+    "npm",
+    ["run", "prisma:deploy"],
+    path.join(repoRoot, "back"),
+    { ...process.env, DATABASE_URL: dbUrl },
+  );
+  run(
+    "prisma db seed",
+    "npm",
+    ["run", "prisma:seed"],
+    path.join(repoRoot, "back"),
+    { ...process.env, DATABASE_URL: dbUrl },
+  );
+
   if (!skipOpenapi) {
-    const dbUrl =
-      "postgresql://postgres:postgres@127.0.0.1:5432/services?schema=public";
     log("openapi:sync…");
     const r = spawnSync("npm", ["run", "openapi:sync"], {
       cwd: repoRoot,
