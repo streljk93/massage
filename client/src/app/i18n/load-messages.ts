@@ -5,12 +5,11 @@ import { specialistCardI18n } from "@/entities/specialists";
 import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { homePageI18n } from "@/views/home";
-import { searchPageI18n } from "@/views/search";
+import { searchMapPageI18n, searchPageI18n } from "@/views/search";
 import {
   homeBottomNavI18n,
   homeScreenHeaderI18n,
 } from "@/widgets/home";
-import { homeIntroI18n } from "@/widgets/home-intro";
 import type { ColocatedI18nBundle } from "./types";
 import { mergeBundlesForLocale } from "./merge-messages";
 
@@ -24,9 +23,9 @@ const bundles: ColocatedI18nBundle[] = [
   categoryCardI18n,
   bookingCardI18n,
   searchPageI18n,
+  searchMapPageI18n,
   organizationCardI18n,
   specialistCardI18n,
-  homeIntroI18n,
 ];
 
 export function loadMessagesForLocale(locale: string): Record<string, unknown> {

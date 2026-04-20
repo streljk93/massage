@@ -9,7 +9,8 @@
         "yourBooking": "Your booking",
         "topSalons": "Top salons",
         "topSpecialists": "Top specialists",
-        "seeAll": "See all"
+        "seeAll": "See all",
+        "promoSliderDotsAria": "Promotional slides"
       },
       "promo": {
         "promo1": {
@@ -33,7 +34,8 @@
         "yourBooking": "Lịch hẹn của bạn",
         "topSalons": "Salon nổi bật",
         "topSpecialists": "Chuyên viên nổi bật",
-        "seeAll": "Xem tất cả"
+        "seeAll": "Xem tất cả",
+        "promoSliderDotsAria": "Khuyến mãi"
       },
       "promo": {
         "promo1": {
@@ -57,7 +59,8 @@
         "yourBooking": "Ваша запись",
         "topSalons": "Топ салонов",
         "topSpecialists": "Топ специалистов",
-        "seeAll": "Смотреть все"
+        "seeAll": "Смотреть все",
+        "promoSliderDotsAria": "Акции и предложения"
       },
       "promo": {
         "promo1": {

@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "searchMap": {
+        "closeAria": "Close map and return to search",
+        "sliderDotsAria": "Results on map"
+      }
+    },
+    "vi": {
+      "searchMap": {
+        "closeAria": "Đóng bản đồ và quay lại tìm kiếm",
+        "sliderDotsAria": "Kết quả trên bản đồ"
+      }
+    },
+    "ru": {
+      "searchMap": {
+        "closeAria": "Закрыть карту и вернуться к поиску",
+        "sliderDotsAria": "Результаты на карте"
+      }
+    }
+  }
+}

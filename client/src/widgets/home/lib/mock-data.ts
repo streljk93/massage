@@ -31,10 +31,13 @@ export type SlotGroupSeed = {
   times: string[];
 };
 
+/** Координаты для карты (остров Phú Quốc), демо-данные. */
 export const topSalons = [
   {
     id: "s1",
     name: "Nguyễn Ngọc",
+    lat: 10.2152,
+    lng: 103.9628,
     imageSrc: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
     rating: 4.5,
     metaLine: "~ 1km from you | 123 Nguyen Trai str.",
@@ -47,6 +50,8 @@ export const topSalons = [
   {
     id: "s2",
     name: "Sen Spa",
+    lat: 10.2231,
+    lng: 103.9714,
     imageSrc: "https://images.unsplash.com/photo-1600334129128-685c5582fd35?w=200&h=200&fit=crop",
     rating: 4.8,
     metaLine: "~ 2km from you | Tran Hung Dao",
@@ -62,6 +67,8 @@ export const topSpecialists = [
   {
     id: "p1",
     name: "Nguyễn Ngọc",
+    lat: 10.2178,
+    lng: 103.9655,
     imageSrc: "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
     rating: 4.5,
     metaLine: "~ 1km from you | 123 Nguyen Trai str.",
@@ -74,6 +81,8 @@ export const topSpecialists = [
   {
     id: "p2",
     name: "Lan Anh",
+    lat: 10.2294,
+    lng: 103.9742,
     imageSrc: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
     rating: 4.9,
     metaLine: "~ 3km from you | Duong Dong",

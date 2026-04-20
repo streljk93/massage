@@ -99,6 +99,7 @@ export async function HomePage() {
                 />
               ),
             }))}
+            dotsAriaLabel={t("home.promoSliderDotsAria")}
           />
 
           <Link

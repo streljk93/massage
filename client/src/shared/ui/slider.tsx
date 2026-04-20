@@ -3,8 +3,10 @@
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
+  forwardRef,
   type ReactNode,
 } from "react";
 import { cn, motion } from "../lib";
@@ -14,22 +16,73 @@ export type SliderSlide = {
   content: ReactNode;
 };
 
+export type SliderHandle = {
+  scrollToIndex: (index: number) => void;
+};
+
 export type SliderProps = {
   slides: SliderSlide[];
   className?: string;
+  /** Дополнительные классы для каждого слайда (по умолчанию на всю ширину скролла). */
+  slideClassName?: string;
   showDots?: boolean;
+  /** Подпись для списка точек (a11y). */
+  dotsAriaLabel?: string;
+  /** Вызывается при смене активного слайда (скролл или программная прокрутка). */
+  onActiveIndexChange?: (index: number) => void;
 };
 
-export function Slider({ slides, className, showDots = true }: SliderProps) {
+export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
+  {
+    slides,
+    className,
+    slideClassName,
+    showDots = true,
+    dotsAriaLabel,
+    onActiveIndexChange,
+  },
+  ref,
+) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  /** Синхронное зеркало `active` для обработчика scroll без чтения state внутри setState. */
+  const activeRef = useRef(0);
+  const onActiveIndexChangeRef = useRef(onActiveIndexChange);
+  onActiveIndexChangeRef.current = onActiveIndexChange;
 
-  const scrollToIndex = useCallback((index: number) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    const child = el.children[index] as HTMLElement | undefined;
-    child?.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+  const notifyParentIndex = useCallback((index: number) => {
+    queueMicrotask(() => {
+      onActiveIndexChangeRef.current?.(index);
+    });
   }, []);
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const el = scrollerRef.current;
+      if (!el) return;
+      const clamped = Math.min(slides.length - 1, Math.max(0, index));
+      const child = el.children[clamped] as HTMLElement | undefined;
+      child?.scrollIntoView({
+        behavior: "smooth",
+        inline: "start",
+        block: "nearest",
+      });
+      if (activeRef.current !== clamped) {
+        activeRef.current = clamped;
+        setActive(clamped);
+        notifyParentIndex(clamped);
+      }
+    },
+    [slides.length, notifyParentIndex],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      scrollToIndex,
+    }),
+    [scrollToIndex],
+  );
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -39,12 +92,16 @@ export function Slider({ slides, className, showDots = true }: SliderProps) {
       const slideWidth = el.firstElementChild?.clientWidth ?? 1;
       const gap = 12;
       const idx = Math.round(el.scrollLeft / (slideWidth + gap));
-      setActive(Math.min(slides.length - 1, Math.max(0, idx)));
+      const next = Math.min(slides.length - 1, Math.max(0, idx));
+      if (activeRef.current === next) return;
+      activeRef.current = next;
+      setActive(next);
+      notifyParentIndex(next);
     };
 
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [slides.length]);
+  }, [slides.length, notifyParentIndex]);
 
   if (slides.length === 0) return null;
 
@@ -60,7 +117,10 @@ export function Slider({ slides, className, showDots = true }: SliderProps) {
         {slides.map((slide) => (
           <div
             key={slide.id}
-            className="flex min-h-0 min-w-full shrink-0 snap-start flex-col"
+            className={cn(
+              "flex min-h-0 min-w-full shrink-0 snap-start flex-col",
+              slideClassName,
+            )}
           >
             {slide.content}
           </div>
@@ -70,7 +130,7 @@ export function Slider({ slides, className, showDots = true }: SliderProps) {
         <div
           className="mt-2 flex justify-center gap-1.5"
           role="tablist"
-          aria-label="Слайды баннера"
+          aria-label={dotsAriaLabel}
         >
           {slides.map((slide, i) => (
             <button
@@ -90,4 +150,4 @@ export function Slider({ slides, className, showDots = true }: SliderProps) {
       ) : null}
     </div>
   );
-}
+});

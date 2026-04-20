@@ -1,10 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Map, Search as SearchIcon, SlidersHorizontal } from "lucide-react";
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
+import { Link, useRouter } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
@@ -16,13 +18,11 @@ import {
   type SlotGroupSeed,
 } from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
-
-type SearchTab = "organizations" | "specialists";
-
-const tabs: { id: SearchTab; labelKey: "tabSalons" | "tabSpecialists" }[] = [
-  { id: "organizations", labelKey: "tabSalons" },
-  { id: "specialists", labelKey: "tabSpecialists" },
-];
+import {
+  parseSearchTab,
+  SEARCH_TABS,
+  searchTabQueryValue,
+} from "../lib/search-tab";
 
 function slotGroupsFromSeed(
   groups: SlotGroupSeed[],
@@ -51,7 +51,9 @@ function matchesListQuery(
 export function SearchPage() {
   const tSearch = useTranslations("search");
   const tSlots = useTranslations("slots");
-  const [tab, setTab] = useState<SearchTab>("organizations");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tab = parseSearchTab(searchParams.get("tab"));
   const [listQuery, setListQuery] = useState("");
 
   const filteredSalons = useMemo(
@@ -80,7 +82,7 @@ export function SearchPage() {
           role="tablist"
           aria-label={tSearch("tablistAria")}
         >
-          {tabs.map(({ id, labelKey }) => {
+          {SEARCH_TABS.map(({ id, labelKey }) => {
             const selected = tab === id;
             return (
               <button
@@ -95,7 +97,9 @@ export function SearchPage() {
                     ? "bg-card text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
-                onClick={() => setTab(id)}
+                onClick={() => {
+                  router.replace(`/search?tab=${searchTabQueryValue(id)}`);
+                }}
               >
                 {tSearch(labelKey)}
               </button>
@@ -141,8 +145,11 @@ export function SearchPage() {
             tone="light"
             className="size-11 shrink-0 rounded-full p-0"
             aria-label={tSearch("mapAria")}
+            asChild
           >
-            <Map className="size-5 text-muted-foreground" aria-hidden />
+            <Link href={`/search/map?tab=${searchTabQueryValue(tab)}`}>
+              <Map className="size-5 text-muted-foreground" aria-hidden />
+            </Link>
           </Button>
         </div>
 

@@ -16,7 +16,12 @@ export {
   type AvailabilitySlotStripProps,
 } from "./availability-slot-strip";
 export { Rating, type RatingProps } from "./rating";
-export { Slider, type SliderProps, type SliderSlide } from "./slider";
+export {
+  Slider,
+  type SliderHandle,
+  type SliderProps,
+  type SliderSlide,
+} from "./slider";
 export {
   EntityCard,
   EntityCardImage,
