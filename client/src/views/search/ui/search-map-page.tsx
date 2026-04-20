@@ -96,11 +96,16 @@ function SearchMapInteractiveLayer({
             imageAlt={item.name}
             rating={item.rating}
             metaLine={item.metaLine}
+            profileHref={
+              tab === "organizations"
+                ? `/organizations/${item.id}`
+                : `/specialists/${item.id}`
+            }
             className={cardGlass}
           />
         ),
       })),
-    [list],
+    [list, tab],
   );
 
   return (

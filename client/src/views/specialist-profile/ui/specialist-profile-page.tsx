@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "@/app/i18n/navigation";
+import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
@@ -85,6 +86,25 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
   );
   const nameLine1 = nameParts[0] ?? "";
   const nameLine2 = nameParts.slice(1).join(" ");
+
+  const selectedService = useMemo(
+    () => profile.services.find((s) => s.id === serviceId),
+    [profile.services, serviceId],
+  );
+
+  const selectedBookingMinutes = useMemo(() => {
+    if (!selectedService) {
+      return undefined;
+    }
+    return (
+      durationByService[serviceId] ?? selectedService.durationMinutes[0]
+    );
+  }, [durationByService, selectedService, serviceId]);
+
+  const bookingPriceVnd =
+    selectedService && selectedBookingMinutes !== undefined
+      ? priceForDuration(selectedService, selectedBookingMinutes)
+      : undefined;
 
   const priceText = (vnd: number) =>
     format.number(vnd, {
@@ -365,70 +385,25 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                     const dur =
                       durationByService[svc.id] ?? svc.durationMinutes[0];
                     return (
-                      <div
+                      <ProfileServicePickCard
                         key={svc.id}
-                        className={cn(
-                          "rounded-2xl border p-4 transition-colors",
-                          selected
-                            ? "border-primary/35 bg-primary/[0.07]"
-                            : "border-border/60 bg-card hover:border-border",
-                        )}
-                      >
-                        <button
-                          type="button"
-                          className="flex w-full items-start justify-between gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                          onClick={() => setServiceId(svc.id)}
-                        >
-                          <p className="text-sm font-semibold leading-snug text-foreground">
-                            {t(`services.${svc.nameKey}`)}
-                          </p>
-                          <div className="flex shrink-0 items-center gap-3">
-                            <span className="text-sm font-semibold tabular-nums text-foreground">
-                              {priceText(svc.priceVnd)}
-                            </span>
-                            <span
-                              className={cn(
-                                "flex size-[1.125rem] shrink-0 items-center justify-center rounded-full border-2 transition-colors",
-                                selected
-                                  ? "border-primary bg-primary"
-                                  : "border-muted-foreground/35 bg-transparent",
-                              )}
-                              aria-hidden
-                            >
-                              {selected ? (
-                                <span className="size-1.5 rounded-full bg-primary-foreground" />
-                              ) : null}
-                            </span>
-                          </div>
-                        </button>
-                        <div className="mt-2.5 flex flex-wrap gap-1.5">
-                          {svc.durationMinutes.map((m) => {
-                            const active = selected && dur === m;
-                            return (
-                              <button
-                                key={m}
-                                type="button"
-                                className={cn(
-                                  motion.interactivePressStrong,
-                                  "inline-flex h-8 items-center rounded-full border px-3 text-sm transition-colors",
-                                  active
-                                    ? "border-primary/40 bg-primary/12 font-semibold text-primary"
-                                    : "border-transparent bg-muted/40 font-normal text-foreground hover:bg-muted/55",
-                                )}
-                                onClick={() => {
-                                  setDurationByService((prev) => ({
-                                    ...prev,
-                                    [svc.id]: m,
-                                  }));
-                                  setServiceId(svc.id);
-                                }}
-                              >
-                                {t("durationMin", { n: m })}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                        service={svc}
+                        selected={selected}
+                        selectedDurationMinutes={dur}
+                        serviceName={t(`services.${svc.nameKey}`)}
+                        formatPrice={priceText}
+                        formatDurationMinutes={(m) =>
+                          t("durationMin", { n: m })
+                        }
+                        onSelectService={() => setServiceId(svc.id)}
+                        onSelectDuration={(m) => {
+                          setDurationByService((prev) => ({
+                            ...prev,
+                            [svc.id]: m,
+                          }));
+                          setServiceId(svc.id);
+                        }}
+                      />
                     );
                   })}
                 </div>
@@ -445,8 +420,23 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
             type="button"
             variant="primary"
             className="h-12 w-full rounded-full text-base font-semibold"
+            aria-label={
+              bookingPriceVnd !== undefined
+                ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
+                : t("booking")
+            }
           >
-            {t("booking")}
+            {bookingPriceVnd !== undefined ? (
+              <>
+                {t("booking")}
+                <span className="tabular-nums">
+                  {" · "}
+                  {priceText(bookingPriceVnd)}
+                </span>
+              </>
+            ) : (
+              t("booking")
+            )}
           </Button>
         }
       />

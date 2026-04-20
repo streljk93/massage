@@ -176,6 +176,7 @@ export async function HomePage() {
                   key={s.id}
                   {...s}
                   imageAlt={s.name}
+                  profileHref={`/organizations/${s.id}`}
                   slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
                 />
               ))}

@@ -92,6 +92,62 @@ export const topSpecialists = [
       { dayKey: "tomorrow" as const, times: ["09:30", "13:00", "17:00"] },
     ] satisfies SlotGroupSeed[],
   },
+  {
+    id: "p3",
+    name: "Minh Tuấn",
+    lat: 10.2201,
+    lng: 103.9688,
+    imageSrc: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop",
+    rating: 4.7,
+    metaLine: "~ 1.5km from you | Tran Hung Dao",
+    servicesLine: "Deep tissue, sports massage, stretching…",
+    slotGroups: [
+      { dayKey: "today" as const, times: ["08:00", "14:00"] },
+      { dayKey: "tomorrow" as const, times: ["10:00", "16:00"] },
+    ] satisfies SlotGroupSeed[],
+  },
+  {
+    id: "p4",
+    name: "Thảo My",
+    lat: 10.232,
+    lng: 103.9695,
+    imageSrc: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop",
+    rating: 4.8,
+    metaLine: "~ 2km from you | Cua Duong",
+    servicesLine: "Aroma oil, hot stone, head & neck…",
+    slotGroups: [
+      { dayKey: "today" as const, times: ["09:00", "13:30"] },
+      { dayKey: "tomorrow" as const, times: ["11:00", "15:30"] },
+    ] satisfies SlotGroupSeed[],
+  },
+  {
+    id: "p5",
+    name: "Hải Long",
+    lat: 10.2185,
+    lng: 103.977,
+    imageSrc: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop",
+    rating: 4.6,
+    metaLine: "~ 4km from you | An Thoi",
+    servicesLine: "Foot reflexology, cupping, relax combo…",
+    slotGroups: [
+      { dayKey: "today" as const, times: ["10:30", "17:00"] },
+      { dayKey: "tomorrow" as const, times: ["08:30", "12:30"] },
+    ] satisfies SlotGroupSeed[],
+  },
+  {
+    id: "p6",
+    name: "Quỳnh Anh",
+    lat: 10.2245,
+    lng: 103.9635,
+    imageSrc: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop",
+    rating: 4.7,
+    metaLine: "~ 1km from you | Dinh Cậu",
+    servicesLine: "Lymphatic, facial massage, gentle relax…",
+    slotGroups: [
+      { dayKey: "today" as const, times: ["09:30", "14:30"] },
+      { dayKey: "tomorrow" as const, times: ["10:00", "16:00"] },
+    ] satisfies SlotGroupSeed[],
+  },
 ];
 
 export const promoSlides = [

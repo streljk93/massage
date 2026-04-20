@@ -5,6 +5,7 @@ import { specialistCardI18n } from "@/entities/specialists";
 import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { homePageI18n } from "@/views/home";
+import { organizationProfilePageI18n } from "@/views/organization-profile";
 import { specialistProfilePageI18n } from "@/views/specialist-profile";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
 import {
@@ -26,6 +27,7 @@ const bundles: ColocatedI18nBundle[] = [
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,
+  organizationProfilePageI18n,
   organizationCardI18n,
   specialistCardI18n,
 ];

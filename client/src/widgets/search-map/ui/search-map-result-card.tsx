@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { Link } from "@/app/i18n/navigation";
 import { cn } from "@/shared/lib";
 
 export type SearchMapResultCardProps = {
@@ -8,6 +9,8 @@ export type SearchMapResultCardProps = {
   rating: number;
   /** Одна строка: расстояние / адрес */
   metaLine: string;
+  /** Открыть профиль (организация или специалист). */
+  profileHref?: string;
   className?: string;
 };
 
@@ -17,9 +20,10 @@ export function SearchMapResultCard({
   imageAlt,
   rating,
   metaLine,
+  profileHref,
   className,
 }: SearchMapResultCardProps) {
-  return (
+  const body = (
     <article
       className={cn(
         "flex min-h-0 items-center gap-2 rounded-2xl p-2",
@@ -53,5 +57,19 @@ export function SearchMapResultCard({
         <p className="truncate text-xs text-muted-foreground">{metaLine}</p>
       </div>
     </article>
+  );
+
+  if (!profileHref) {
+    return body;
+  }
+
+  return (
+    <Link
+      href={profileHref}
+      className="block min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={name}
+    >
+      {body}
+    </Link>
   );
 }

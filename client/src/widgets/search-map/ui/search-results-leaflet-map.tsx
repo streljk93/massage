@@ -247,6 +247,31 @@ export function SearchResultsLeafletMap({
   interactionGate = false,
   interactionGateHint,
 }: SearchResultsLeafletMapProps) {
+  /**
+   * React 19 + Strict Mode: синхронный mount `MapContainer` + `TileLayer` даёт гонку с
+   * панелями Leaflet (`appendChild` of undefined) и «Map container is being reused».
+   * Монтируем карту после двух rAF; уникальный key на инстанс — без сброса в null в cleanup.
+   */
+  const [mapInstanceKey, setMapInstanceKey] = useState<string | null>(null);
+  useEffect(() => {
+    const key = `search-leaflet-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (!cancelled) {
+          setMapInstanceKey(key);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, []);
+
   /** В режиме `interactionGate` стартуем без фокуса — страница скроллится; иначе сразу «в фокусе». */
   const [mapFocused, setMapFocused] = useState(!interactionGate);
   /** Прокрутка над картой без фокуса — кратко показываем подсказку (не перехватывает указатель). */
@@ -364,76 +389,82 @@ export function SearchResultsLeafletMap({
         setScrollHintVisible(true);
       }}
     >
-      <MapContainer
-        center={PHU_QUOC_CENTER}
-        zoom={13}
-        zoomControl={false}
-        attributionControl={false}
-        className={cn(
-          "size-full min-h-[280px] z-0",
-          mapGesturesIsolatePage && "touch-none overscroll-contain",
-        )}
-        dragging={mapInteractive}
-        scrollWheelZoom={mapInteractive}
-        doubleClickZoom={mapInteractive}
-        touchZoom={mapInteractive}
-        boxZoom={mapInteractive}
-      >
-        <MapInteractionLockSync interactive={mapInteractive} />
-        <MapFocusOnBackgroundClick
-          enabled={Boolean(interactionGate && !mapFocused)}
-          onFocus={focusMap}
-        />
-        <MapStripLeafletBranding />
-        <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-      <MapEmptyAndUserSync
-        itemsLength={items.length}
-        userPosition={userPosition}
-      />
-      <MapViewSync
-        items={items}
-        selectedIndex={selectedIndex}
-        userPositionRef={userPositionRef}
-      />
-      <MapRegisterFlyTo onMapFlyReady={onMapFlyReady} />
-      {userPosition ? (
-        <CircleMarker
-          center={userPosition}
-          radius={11}
-          pathOptions={{
-            color: "#ffffff",
-            fillColor: "#2563eb",
-            fillOpacity: 1,
-            weight: 3,
-          }}
-        >
-          {userLocationAriaLabel ? (
-            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
-              {userLocationAriaLabel}
-            </Tooltip>
-          ) : null}
-        </CircleMarker>
-      ) : null}
-      {items.map((item, index) => (
-        <Marker
-          key={item.id}
-          position={[item.lat, item.lng]}
-          icon={createPinIcon(
-            index === safeIndex,
-            item.imageSrc,
-            item.rating,
+      {mapInstanceKey ? (
+        <MapContainer
+          key={mapInstanceKey}
+          center={PHU_QUOC_CENTER}
+          zoom={13}
+          zoomControl={false}
+          attributionControl={false}
+          style={{ height: "100%", width: "100%", minHeight: 280 }}
+          className={cn(
+            "z-0 [&_.leaflet-container]:size-full [&_.leaflet-container]:min-h-[280px]",
+            mapGesturesIsolatePage && "touch-none overscroll-contain",
           )}
-          eventHandlers={{
-            click: () => {
-              if (interactionGate && !mapFocused) {
-                setMapFocused(true);
-              }
-              onMarkerSelect(index);
-            },
-          }}
-        />
-      ))}
-      </MapContainer>
+          dragging={mapInteractive}
+          scrollWheelZoom={mapInteractive}
+          doubleClickZoom={mapInteractive}
+          touchZoom={mapInteractive}
+          boxZoom={mapInteractive}
+        >
+          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+          <MapInteractionLockSync interactive={mapInteractive} />
+          <MapFocusOnBackgroundClick
+            enabled={Boolean(interactionGate && !mapFocused)}
+            onFocus={focusMap}
+          />
+          <MapStripLeafletBranding />
+          <MapEmptyAndUserSync
+            itemsLength={items.length}
+            userPosition={userPosition}
+          />
+          <MapViewSync
+            items={items}
+            selectedIndex={selectedIndex}
+            userPositionRef={userPositionRef}
+          />
+          <MapRegisterFlyTo onMapFlyReady={onMapFlyReady} />
+          {userPosition ? (
+            <CircleMarker
+              center={userPosition}
+              radius={11}
+              pathOptions={{
+                color: "#ffffff",
+                fillColor: "#2563eb",
+                fillOpacity: 1,
+                weight: 3,
+              }}
+            >
+              {userLocationAriaLabel ? (
+                <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+                  {userLocationAriaLabel}
+                </Tooltip>
+              ) : null}
+            </CircleMarker>
+          ) : null}
+          {items.map((item, index) => (
+            <Marker
+              key={item.id}
+              position={[item.lat, item.lng]}
+              icon={createPinIcon(
+                index === safeIndex,
+                item.imageSrc,
+                item.rating,
+              )}
+              eventHandlers={{
+                click: () => {
+                  if (interactionGate && !mapFocused) {
+                    setMapFocused(true);
+                  }
+                  onMarkerSelect(index);
+                },
+              }}
+            />
+          ))}
+        </MapContainer>
+      ) : (
+        <div className="size-full min-h-[280px] bg-muted/20" aria-hidden />
+      )}
       {mapFocusOutline ? (
         <div
           aria-hidden

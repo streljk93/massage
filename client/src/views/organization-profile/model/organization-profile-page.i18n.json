@@ -1,0 +1,130 @@
+{
+  "messages": {
+    "en": {
+      "organizationProfile": {
+        "backAria": "Back",
+        "details": "Details",
+        "callAria": "Call",
+        "messageAria": "Message",
+        "favoriteAria": "Add to favorites",
+        "reviewsWord": "reviews",
+        "stats": {
+          "yearsValue": "{years} years",
+          "yearsLabel": "In business",
+          "specialistsLabel": "Specialists",
+          "reviewsLabel": "Reviews"
+        },
+        "mapTitle": "Location on map",
+        "mapUserLocationAria": "Your current location",
+        "mapWhereAmI": "Where am I",
+        "mapInteractionGateHint": "Tap the map to zoom and pan.",
+        "selectDate": "Select date",
+        "selectSlot": "Select slot",
+        "selectService": "Select service",
+        "selectSpecialist": "Select specialist",
+        "specialistSelectCta": "Select",
+        "specialistSelectedCta": "Selected",
+        "specialistOpenProfileAria": "Open profile: {name}",
+        "weekdays": {
+          "sun": "Sun",
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat"
+        },
+        "durationMin": "{n} min",
+        "services": {
+          "footMassage": "Foot massage",
+          "relaxMassage": "Relax massage"
+        },
+        "booking": "Booking"
+      }
+    },
+    "vi": {
+      "organizationProfile": {
+        "backAria": "Quay lại",
+        "details": "Chi tiết",
+        "callAria": "Gọi điện",
+        "messageAria": "Nhắn tin",
+        "favoriteAria": "Thêm vào yêu thích",
+        "reviewsWord": "đánh giá",
+        "stats": {
+          "yearsValue": "{years} năm",
+          "yearsLabel": "Hoạt động",
+          "specialistsLabel": "Chuyên gia",
+          "reviewsLabel": "Đánh giá"
+        },
+        "mapTitle": "Vị trí trên bản đồ",
+        "mapUserLocationAria": "Vị trí hiện tại của bạn",
+        "mapWhereAmI": "Tôi ở đâu",
+        "mapInteractionGateHint": "Chạm bản đồ để thu phóng và kéo.",
+        "selectDate": "Chọn ngày",
+        "selectSlot": "Chọn giờ",
+        "selectService": "Chọn dịch vụ",
+        "selectSpecialist": "Chọn chuyên gia",
+        "specialistSelectCta": "Chọn",
+        "specialistSelectedCta": "Đã chọn",
+        "specialistOpenProfileAria": "Mở hồ sơ: {name}",
+        "weekdays": {
+          "sun": "CN",
+          "mon": "T2",
+          "tue": "T3",
+          "wed": "T4",
+          "thu": "T5",
+          "fri": "T6",
+          "sat": "T7"
+        },
+        "durationMin": "{n} phút",
+        "services": {
+          "footMassage": "Massage chân",
+          "relaxMassage": "Massage thư giãn"
+        },
+        "booking": "Đặt lịch"
+      }
+    },
+    "ru": {
+      "organizationProfile": {
+        "backAria": "Назад",
+        "details": "Подробнее",
+        "callAria": "Позвонить",
+        "messageAria": "Написать",
+        "favoriteAria": "В избранное",
+        "reviewsWord": "отзывов",
+        "stats": {
+          "yearsValue": "{years} лет",
+          "yearsLabel": "На рынке",
+          "specialistsLabel": "Специалисты",
+          "reviewsLabel": "Отзывы"
+        },
+        "mapTitle": "Расположение на карте",
+        "mapUserLocationAria": "Ваше текущее местоположение",
+        "mapWhereAmI": "Где я",
+        "mapInteractionGateHint": "Нажмите на карту, чтобы масштабировать и двигать её.",
+        "selectDate": "Выберите дату",
+        "selectSlot": "Выберите время",
+        "selectService": "Выберите услугу",
+        "selectSpecialist": "Выберите специалиста",
+        "specialistSelectCta": "Выбрать",
+        "specialistSelectedCta": "Выбран",
+        "specialistOpenProfileAria": "Открыть профиль: {name}",
+        "weekdays": {
+          "sun": "Вс",
+          "mon": "Пн",
+          "tue": "Вт",
+          "wed": "Ср",
+          "thu": "Чт",
+          "fri": "Пт",
+          "sat": "Сб"
+        },
+        "durationMin": "{n} мин",
+        "services": {
+          "footMassage": "Массаж стоп",
+          "relaxMassage": "Расслабляющий массаж"
+        },
+        "booking": "Записаться"
+      }
+    }
+  }
+}
