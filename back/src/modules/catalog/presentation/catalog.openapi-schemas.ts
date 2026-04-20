@@ -44,3 +44,22 @@ export const catalogMajorCategoryNotFoundSchema = {
     code: { type: 'string', enum: ['MAJOR_CATEGORY_NOT_FOUND'] },
   },
 };
+
+export const catalogCategoryDetailResponseSchema = {
+  type: 'object',
+  required: ['majorCategory', 'category'],
+  properties: {
+    majorCategory: catalogMajorCategorySchema,
+    category: catalogServiceCategoryItemSchema,
+  },
+};
+
+export const catalogServiceCategoryNotFoundSchema = {
+  type: 'object',
+  required: ['statusCode', 'message'],
+  properties: {
+    statusCode: { type: 'number', example: 404 },
+    message: { type: 'string' },
+    code: { type: 'string', enum: ['SERVICE_CATEGORY_NOT_FOUND'] },
+  },
+};

@@ -18,5 +18,5 @@ export const profileLocationOptions: {
   { id: "hanoi", labelKey: "cityHanoi" },
 ];
 
-/** Совпадает с демо-профилем (`profileUserDemo.locationLabel` = Phu Quoc). */
+/** Дефолтный город в демо-профиле (Phu Quoc). */
 export const defaultProfileLocationId: ProfileLocationOptionId = "phu-quoc";

@@ -1,10 +1,9 @@
 "use client";
 
-import { MapPin } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
-import { UserAvatar } from "@/shared/ui/avatar";
+import { Separator, UserAvatar } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 import { LocaleSwitcher } from "./locale-switcher";
 
@@ -21,7 +20,6 @@ function initialsFromUser(user: {
 }
 
 export type HomeScreenHeaderProps = {
-  locationLabel: string;
   /** При `titleVariant: "section"` всегда показывается этот заголовок. */
   title: string;
   /**
@@ -35,7 +33,6 @@ export type HomeScreenHeaderProps = {
 };
 
 export function HomeScreenHeader({
-  locationLabel,
   title,
   titleVariant = "section",
   avatarAlt,
@@ -85,11 +82,26 @@ export function HomeScreenHeader({
     >
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <MapPin className="size-3.5 shrink-0" aria-hidden />
-            <span className="truncate">{locationLabel}</span>
-          </p>
           <LocaleSwitcher className="shrink-0" />
+          <span
+            className="inline-flex h-8 shrink-0 items-center justify-center"
+            aria-hidden
+          >
+            <Separator
+              orientation="vertical"
+              decorative
+              className="h-3.5 bg-muted-foreground/35 dark:bg-muted-foreground/45"
+            />
+          </span>
+          <Link
+            href="/become-specialist"
+            className={cn(
+              motion.interactivePress,
+              "shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline",
+            )}
+          >
+            {tHeader("becomeSpecialistLink")}
+          </Link>
         </div>
         <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">
           {headline}

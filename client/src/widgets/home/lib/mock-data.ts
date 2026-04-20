@@ -1,6 +1,5 @@
 export const homeUser = {
   firstName: "Evgenii",
-  locationLabel: "Phu Quoc",
   avatarSrc: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop",
 };
 

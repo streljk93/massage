@@ -1,5 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { ApiLocale } from '../../../common/i18n';
+import {
+  pickLocalizedMajorName,
+  pickLocalizedServiceCategoryFields,
+  type CategoryLocaleShape,
+} from '../../../common/i18n';
 import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
+import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
+import type {
+  MajorServiceCategoryWithLocales,
+  ServiceCategoryWithMajorAndLocales,
+} from '../infrastructure/catalog.repository';
 import { CatalogRepository } from '../infrastructure/catalog.repository';
 
 @Injectable()
@@ -8,6 +19,7 @@ export class CatalogService {
 
   async getServiceCategoriesByMajorSlug(
     majorSlug: string,
+    locale: ApiLocale,
   ): Promise<CatalogCategoriesResponseDto> {
     const row =
       await this.catalogRepository.findServiceCategoriesByMajorSlug(majorSlug);
@@ -22,10 +34,48 @@ export class CatalogService {
     return {
       majorCategory: {
         id: row.id,
-        name: row.name,
+        name: pickLocalizedMajorName(row, locale),
         slug: row.slug,
       },
-      categories: row.categories,
+      categories: row.categories.map((c) =>
+        pickLocalizedServiceCategoryFields(
+          c as unknown as CategoryLocaleShape,
+          locale,
+        ),
+      ),
+    };
+  }
+
+  async getServiceCategoryByMajorAndSlug(
+    majorSlug: string,
+    categorySlug: string,
+    locale: ApiLocale,
+  ): Promise<CatalogCategoryDetailResponseDto> {
+    const row =
+      await this.catalogRepository.findServiceCategoryByMajorAndCategorySlugs(
+        majorSlug,
+        categorySlug,
+      );
+
+    if (!row) {
+      throw new NotFoundException({
+        code: 'SERVICE_CATEGORY_NOT_FOUND',
+        message: `Service category not found: ${majorSlug}/${categorySlug}`,
+      });
+    }
+
+    const major = row.majorServiceCategory;
+
+    return {
+      majorCategory: {
+        id: major.id,
+        name: pickLocalizedMajorName(major, locale),
+        slug: major.slug,
+      },
+      category: pickLocalizedServiceCategoryFields(
+        row as unknown as CategoryLocaleShape,
+        locale,
+      ),
     };
   }
 }

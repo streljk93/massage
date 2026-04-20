@@ -43,7 +43,7 @@ export function ProfileLanguagePage() {
                     router.replace(pathname, { locale: loc });
                   }}
                 >
-                  <span className="min-w-0 flex-1">{tLocale(`name.${loc}`)}</span>
+                  <span className="min-w-0 flex-1">{tLocale(`language.${loc}`)}</span>
                   {selected ? (
                     <Check
                       className="size-4 shrink-0 text-primary"

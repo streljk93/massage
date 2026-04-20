@@ -391,6 +391,21 @@
             "schema": {
               "example": "massage"
             }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных названий (en, vi, ru). По умолчанию en.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "default": "en"
+            }
           }
         ],
         "responses": {
@@ -506,6 +521,160 @@
           }
         },
         "summary": "Подкатегории услуг по slug большой категории",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/catalog/major-categories/{majorSlug}/categories/{categorySlug}": {
+      "get": {
+        "description": "Возвращает большую категорию и одну активную подкатегорию по slug. Названия по query `locale` (en, vi, ru).",
+        "operationId": "Catalog_getCategoryByMajorAndSlug",
+        "parameters": [
+          {
+            "name": "majorSlug",
+            "required": true,
+            "in": "path",
+            "description": "Slug большой категории (MajorServiceCategory.slug)",
+            "schema": {
+              "example": "massage"
+            }
+          },
+          {
+            "name": "categorySlug",
+            "required": true,
+            "in": "path",
+            "description": "Slug подкатегории (ServiceCategory.slug внутри большой)",
+            "schema": {
+              "example": "neck"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных названий (en, vi, ru). По умолчанию en.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "default": "en"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "majorCategory",
+                    "category"
+                  ],
+                  "properties": {
+                    "majorCategory": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Массаж"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "example": "massage"
+                        }
+                      }
+                    },
+                    "category": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "shortName",
+                        "slug",
+                        "description",
+                        "sortOrder"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Массаж шеи и зоны декольте"
+                        },
+                        "shortName": {
+                          "type": "string",
+                          "example": "шея"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "example": "neck"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "sortOrder": {
+                          "type": "integer",
+                          "example": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат majorSlug, categorySlug или locale"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "message"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "number",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "SERVICE_CATEGORY_NOT_FOUND"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Одна подкатегория по slug внутри большой категории",
         "tags": [
           "catalog"
         ]

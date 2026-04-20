@@ -1,0 +1,28 @@
+{
+  "messages": {
+    "en": {
+      "becomeSpecialist": {
+        "title": "Become a specialist",
+        "intro": "Offer your services and accept bookings on the platform. Email us to get access and onboarding.",
+        "ctaEmail": "Email us",
+        "backAria": "Back to home"
+      }
+    },
+    "vi": {
+      "becomeSpecialist": {
+        "title": "Trở thành chuyên viên",
+        "intro": "Cung cấp dịch vụ và nhận lịch hẹn trên nền tảng. Gửi email để được cấp quyền và hướng dẫn.",
+        "ctaEmail": "Gửi email",
+        "backAria": "Về trang chủ"
+      }
+    },
+    "ru": {
+      "becomeSpecialist": {
+        "title": "Стать специалистом",
+        "intro": "Размещайте услуги и принимайте записи на платформе. Напишите нам, чтобы получить доступ и подключение.",
+        "ctaEmail": "Написать на почту",
+        "backAria": "Назад на главную"
+      }
+    }
+  }
+}

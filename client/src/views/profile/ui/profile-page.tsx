@@ -108,7 +108,6 @@ export function ProfilePage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-lg flex-1 space-y-4 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           <HomeScreenHeader
-            locationLabel={profileUserDemo.locationLabel}
             title={t("title")}
             titleVariant="section"
             avatarAlt={accountName}

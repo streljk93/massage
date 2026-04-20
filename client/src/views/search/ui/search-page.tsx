@@ -70,7 +70,6 @@ export function SearchPage() {
     <div className="flex min-h-0 flex-1 flex-col bg-surface-background">
       <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         <HomeScreenHeader
-          locationLabel={homeUser.locationLabel}
           title={tSearch("title")}
           avatarAlt={homeUser.firstName}
           avatarFallback={homeUser.firstName.slice(0, 2).toUpperCase()}

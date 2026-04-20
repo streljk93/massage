@@ -58,6 +58,7 @@ model User {
 /// Большая категория услуг (вертикаль): массаж, в будущем — бьюти, стрижки и т.д.
 model MajorServiceCategory {
   id        String  @id @default(uuid())
+  /// Каноническое / fallback-имя (например en), если нет строки в `locales` для запрошенной локали.
   name      String
   slug      String  @unique
   sortOrder Int     @default(0)
@@ -68,6 +69,24 @@ model MajorServiceCategory {
   deletedAt DateTime?
 
   categories ServiceCategory[]
+  locales    MajorServiceCategoryLocale[]
+}
+
+/// Локализованное имя большой категории (en / vi / ru; позже de и др. — новые строки без смены схемы).
+model MajorServiceCategoryLocale {
+  id                     String               @id @default(uuid())
+  majorServiceCategoryId String
+  majorServiceCategory   MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Cascade)
+
+  /// BCP-47 подмножество: en, vi, ru, …
+  locale String
+  name   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([majorServiceCategoryId, locale])
+  @@index([locale])
 }
 
 /// Категория внутри большой (например «массаж стоп», «расслабляющий»): полное имя, короткое, slug.
@@ -76,9 +95,10 @@ model ServiceCategory {
   majorServiceCategoryId String
   majorServiceCategory MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
 
-  name      String
-  shortName String
-  slug      String
+  /// Канонические / fallback `name`, `shortName`, `description` (часто en).
+  name        String
+  shortName   String
+  slug        String
   /// Описание для SEO/карточек (опционально).
   description String?
   sortOrder Int     @default(0)
@@ -89,14 +109,34 @@ model ServiceCategory {
   deletedAt DateTime?
 
   services Service[]
+  locales  ServiceCategoryLocale[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
 }
 
+/// Локализованные `name`, `shortName`, опционально `description` для подкатегории каталога.
+model ServiceCategoryLocale {
+  id                String          @id @default(uuid())
+  serviceCategoryId String
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+
+  locale      String
+  name        String
+  shortName   String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceCategoryId, locale])
+  @@index([locale])
+}
+
 /// Организация (салон, парикмахерская и т.д.); в UI часто «салон массажа».
 model Organization {
   id   String @id @default(uuid())
+  /// Каноническое / fallback название и описание.
   name String
   slug String @unique
 
@@ -128,9 +168,27 @@ model Organization {
   services             Service[]
   bookings             Booking[]
   specialistEmployments SpecialistOrganizationEmployment[]
+  locales               OrganizationLocale[]
 
   @@index([ownerUserId])
   @@index([city])
+}
+
+/// Локализованные название и описание организации (витрина / SEO на разных языках).
+model OrganizationLocale {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  locale      String
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, locale])
+  @@index([locale])
 }
 
 /// Отзыв о организации.
@@ -229,10 +287,28 @@ model Service {
 
   priceOptions ServicePriceOption[]
   bookings     Booking[]
+  locales      ServiceLocale[]
 
   @@unique([organizationId, slug])
   @@index([categoryId])
   @@index([specialistId])
+}
+
+/// Локализованные название и описание услуги в каталоге организации.
+model ServiceLocale {
+  id        String  @id @default(uuid())
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  locale      String
+  name        String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([serviceId, locale])
+  @@index([locale])
 }
 
 /// Варианты длительности и цены для услуги.

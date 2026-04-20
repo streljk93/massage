@@ -76,11 +76,7 @@ export const authUnauthorizedSchema = {
   properties: {
     code: {
       type: 'string',
-      enum: [
-        'INVALID_CREDENTIALS',
-        'INVALID_REFRESH_TOKEN',
-        'USER_NOT_FOUND',
-      ],
+      enum: ['INVALID_CREDENTIALS', 'INVALID_REFRESH_TOKEN', 'USER_NOT_FOUND'],
     },
     message: { type: 'string' },
   },

@@ -1,5 +1,5 @@
 /**
- * Начальные данные каталога: большая категория «Массаж» и подкатегории.
+ * Начальные данные каталога: большая категория «Массаж» и подкатегории + строки локалей (en, vi, ru).
  * Идемпотентно (upsert) — безопасно при повторном запуске.
  *
  * Prisma 7: клиент с драйвером pg (как в Nest `PrismaService`).
@@ -7,6 +7,12 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
+import {
+  majorMassageI18n,
+  massageCategorySeeds,
+  SUPPORTED_CATALOG_LOCALES,
+  serviceCategoryI18n,
+} from "./seed-catalog-i18n.mjs";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -16,47 +22,48 @@ if (!connectionString) {
 const pool = new Pool({ connectionString });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-/** Подкатегории массажа: полное имя, короткое имя (шея / тело / …), slug внутри большой категории. */
-const massageCategories = [
-  { name: "Массаж шеи и зоны декольте", shortName: "шея", slug: "neck", sortOrder: 0 },
-  { name: "Массаж тела (общий)", shortName: "тело", slug: "body", sortOrder: 1 },
-  { name: "Массаж ног и стоп", shortName: "ноги", slug: "legs", sortOrder: 2 },
-  { name: "СПА-программы и ритуалы", shortName: "спа", slug: "spa", sortOrder: 3 },
-  { name: "Массаж спины", shortName: "спина", slug: "back", sortOrder: 4 },
-  { name: "Массаж рук и кистей", shortName: "руки", slug: "arms", sortOrder: 5 },
-  { name: "Лицевой массаж", shortName: "лицо", slug: "face", sortOrder: 6 },
-  { name: "Расслабляющий массаж", shortName: "релакс", slug: "relaxing", sortOrder: 7 },
-  { name: "Спортивный массаж", shortName: "спорт", slug: "sports", sortOrder: 8 },
-  { name: "Головной массаж", shortName: "голова", slug: "head", sortOrder: 9 },
-  { name: "Лимфодренажный массаж", shortName: "лимфа", slug: "lymphatic", sortOrder: 10 },
-  { name: "Тайский массаж", shortName: "тайский", slug: "thai", sortOrder: 11 },
-  { name: "Массаж горячими камнями", shortName: "стоун", slug: "hot-stone", sortOrder: 12 },
-  { name: "Антицеллюлитный массаж", shortName: "антицеллюлит", slug: "anti-cellulite", sortOrder: 13 },
-  { name: "Медовый массаж", shortName: "медовый", slug: "honey", sortOrder: 14 },
-  { name: "Массаж стоп (рефлексология)", shortName: "стопы", slug: "feet-reflexology", sortOrder: 15 },
-  { name: "Прессотерапия", shortName: "прессо", slug: "pressotherapy", sortOrder: 16 },
-  { name: "Массаж для беременных", shortName: "беременность", slug: "pregnancy", sortOrder: 17 },
-  { name: "Аромамассаж", shortName: "арома", slug: "aroma", sortOrder: 18 },
-  { name: "Классический массаж", shortName: "классика", slug: "classic", sortOrder: 19 },
-];
-
 async function main() {
   const massage = await prisma.majorServiceCategory.upsert({
     where: { slug: "massage" },
     create: {
-      name: "Массаж",
+      name: majorMassageI18n.en,
       slug: "massage",
       sortOrder: 0,
       isActive: true,
     },
     update: {
-      name: "Массаж",
+      name: majorMassageI18n.en,
       isActive: true,
     },
   });
 
-  for (const row of massageCategories) {
-    await prisma.serviceCategory.upsert({
+  for (const loc of SUPPORTED_CATALOG_LOCALES) {
+    await prisma.majorServiceCategoryLocale.upsert({
+      where: {
+        majorServiceCategoryId_locale: {
+          majorServiceCategoryId: massage.id,
+          locale: loc,
+        },
+      },
+      create: {
+        majorServiceCategoryId: massage.id,
+        locale: loc,
+        name: majorMassageI18n[loc],
+      },
+      update: {
+        name: majorMassageI18n[loc],
+      },
+    });
+  }
+
+  for (const row of massageCategorySeeds) {
+    const i18n = serviceCategoryI18n[row.slug];
+    if (!i18n) {
+      throw new Error(`[seed] Нет переводов для slug=${row.slug}`);
+    }
+    const en = i18n.en;
+
+    const cat = await prisma.serviceCategory.upsert({
       where: {
         majorServiceCategoryId_slug: {
           majorServiceCategoryId: massage.id,
@@ -65,23 +72,47 @@ async function main() {
       },
       create: {
         majorServiceCategoryId: massage.id,
-        name: row.name,
-        shortName: row.shortName,
+        name: en.name,
+        shortName: en.shortName,
         slug: row.slug,
         sortOrder: row.sortOrder,
         isActive: true,
       },
       update: {
-        name: row.name,
-        shortName: row.shortName,
+        name: en.name,
+        shortName: en.shortName,
         sortOrder: row.sortOrder,
         isActive: true,
       },
     });
+
+    for (const loc of SUPPORTED_CATALOG_LOCALES) {
+      const t = i18n[loc];
+      await prisma.serviceCategoryLocale.upsert({
+        where: {
+          serviceCategoryId_locale: {
+            serviceCategoryId: cat.id,
+            locale: loc,
+          },
+        },
+        create: {
+          serviceCategoryId: cat.id,
+          locale: loc,
+          name: t.name,
+          shortName: t.shortName,
+          description: null,
+        },
+        update: {
+          name: t.name,
+          shortName: t.shortName,
+          description: null,
+        },
+      });
+    }
   }
 
   console.log(
-    `[seed] Каталог: большая категория «${massage.name}» (${massage.id}), подкатегорий: ${massageCategories.length}.`,
+    `[seed] Каталог: «${massage.slug}» (${massage.id}), подкатегорий: ${massageCategorySeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(", ")}.`,
   );
 }
 

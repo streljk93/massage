@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Globe } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -13,6 +12,7 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { routing } from "@/app/i18n/routing";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
+import { localeFlagEmoji } from "../lib/locale-flag";
 
 export type LocaleSwitcherProps = {
   className?: string;
@@ -33,20 +33,21 @@ export function LocaleSwitcher({ className }: LocaleSwitcherProps) {
           variant="ghost"
           className={cn(
             motion.interactivePress,
-            "-m-1.5 h-8 gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:text-foreground",
+            "-m-1.5 size-8 shrink-0 rounded-full p-0 text-lg leading-none text-muted-foreground hover:text-foreground",
             className,
           )}
           aria-label={t("switchAria")}
           aria-expanded={open}
           aria-haspopup="listbox"
         >
-          <Globe className="size-3.5 shrink-0" aria-hidden />
-          <span className="uppercase tabular-nums">{locale}</span>
+          <span aria-hidden className="select-none">
+            {localeFlagEmoji[locale]}
+          </span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-auto min-w-[9.5rem] p-1"
+        className="w-auto min-w-[12.5rem] p-1"
         sideOffset={6}
       >
         <ul
@@ -62,7 +63,7 @@ export function LocaleSwitcher({ className }: LocaleSwitcherProps) {
                 aria-selected={locale === loc}
                 className={cn(
                   motion.interactivePress,
-                  "flex w-full items-center rounded-md px-2.5 py-2 text-left text-sm",
+                  "flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-2.5 py-2 text-left text-sm",
                   locale === loc
                     ? "bg-muted font-medium text-foreground"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
@@ -72,7 +73,10 @@ export function LocaleSwitcher({ className }: LocaleSwitcherProps) {
                   router.replace(pathname, { locale: loc });
                 }}
               >
-                {t(`name.${loc}`)}
+                <span className="min-w-0 truncate">{t(`language.${loc}`)}</span>
+                <span className="shrink-0 text-base leading-none" aria-hidden>
+                  {localeFlagEmoji[loc]}
+                </span>
               </button>
             </li>
           ))}

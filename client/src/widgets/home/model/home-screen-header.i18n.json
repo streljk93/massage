@@ -5,14 +5,15 @@
         "avatarLinkAria": "Open profile",
         "avatarLinkLoginAria": "Sign in",
         "guestWelcome": "Welcome",
-        "welcomeWithName": "Welcome, {name}"
+        "welcomeWithName": "Welcome, {name}",
+        "becomeSpecialistLink": "Become a specialist"
       },
       "locale": {
         "switchAria": "Choose language",
-        "name": {
+        "language": {
           "en": "English",
-          "vi": "Tiếng Việt",
-          "ru": "Русский"
+          "vi": "Vietnamese",
+          "ru": "Russian"
         }
       }
     },
@@ -21,14 +22,15 @@
         "avatarLinkAria": "Mở hồ sơ",
         "avatarLinkLoginAria": "Đăng nhập",
         "guestWelcome": "Xin chào",
-        "welcomeWithName": "Xin chào, {name}"
+        "welcomeWithName": "Xin chào, {name}",
+        "becomeSpecialistLink": "Trở thành chuyên viên"
       },
       "locale": {
         "switchAria": "Chọn ngôn ngữ",
-        "name": {
-          "en": "English",
+        "language": {
+          "en": "Tiếng Anh",
           "vi": "Tiếng Việt",
-          "ru": "Русский"
+          "ru": "Tiếng Nga"
         }
       }
     },
@@ -37,13 +39,14 @@
         "avatarLinkAria": "Открыть профиль",
         "avatarLinkLoginAria": "Вход",
         "guestWelcome": "Добро пожаловать",
-        "welcomeWithName": "Добро пожаловать, {name}"
+        "welcomeWithName": "Добро пожаловать, {name}",
+        "becomeSpecialistLink": "Стать специалистом"
       },
       "locale": {
         "switchAria": "Выбор языка",
-        "name": {
-          "en": "English",
-          "vi": "Tiếng Việt",
+        "language": {
+          "en": "Английский",
+          "vi": "Вьетнамский",
           "ru": "Русский"
         }
       }

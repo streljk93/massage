@@ -1,4 +1,5 @@
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import type { AppLocale } from "@/app/i18n/routing";
 import { ScanLine, Search as SearchIcon } from "lucide-react";
 import { CategoryCard } from "@/entities/services";
 import {
@@ -82,6 +83,7 @@ const HOME_MAJOR_CATEGORY_SLUG = "massage" as const;
 export async function HomePage() {
   const t = await getTranslations();
   const format = await getFormatter();
+  const locale = (await getLocale()) as AppLocale;
 
   const sdkClient = createServerSdkClient();
   let catalog: CatalogGetCategoriesByMajorSlugResponse | null = null;
@@ -89,6 +91,7 @@ export async function HomePage() {
     const { data, error } = await catalogGetCategoriesByMajorSlug({
       client: sdkClient,
       path: { majorSlug: HOME_MAJOR_CATEGORY_SLUG },
+      query: { locale },
     });
     if (!error && data) {
       catalog = data;
@@ -115,7 +118,6 @@ export async function HomePage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           <HomeScreenHeader
-            locationLabel={homeUser.locationLabel}
             title={t("home.welcome", { name: homeUser.firstName })}
             titleVariant="greeting"
             avatarAlt={homeUser.firstName}

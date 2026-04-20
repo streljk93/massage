@@ -1,4 +1,5 @@
 export { Button, type ButtonProps, type ButtonTone } from "./button";
+export { Separator } from "./shadcn/separator";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";
 export { Input, type InputProps } from "./input";

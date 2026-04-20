@@ -39,7 +39,8 @@ export class AuthController {
   @ApiCreatedResponse({ schema: authTokensResponseSchema })
   @ApiConflictResponse({ schema: authEmailConflictSchema })
   @ApiBadRequestResponse({
-    description: 'Ошибка валидации (Zod): неверный формат email, пароль короче 8 символов и т.д.',
+    description:
+      'Ошибка валидации (Zod): неверный формат email, пароль короче 8 символов и т.д.',
   })
   async register(
     @Body(new ZodValidationPipe(registerBodySchema))

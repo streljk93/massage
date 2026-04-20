@@ -160,7 +160,12 @@ export type CatalogGetCategoriesByMajorSlugData = {
          */
         majorSlug: unknown;
     };
-    query?: never;
+    query?: {
+        /**
+         * Локаль для локализованных названий (en, vi, ru). По умолчанию en.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
     url: '/catalog/major-categories/{majorSlug}/categories';
 };
 
@@ -197,3 +202,58 @@ export type CatalogGetCategoriesByMajorSlugResponses = {
 };
 
 export type CatalogGetCategoriesByMajorSlugResponse = CatalogGetCategoriesByMajorSlugResponses[keyof CatalogGetCategoriesByMajorSlugResponses];
+
+export type CatalogGetCategoryByMajorAndSlugData = {
+    body?: never;
+    path: {
+        /**
+         * Slug большой категории (MajorServiceCategory.slug)
+         */
+        majorSlug: unknown;
+        /**
+         * Slug подкатегории (ServiceCategory.slug внутри большой)
+         */
+        categorySlug: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных названий (en, vi, ru). По умолчанию en.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/catalog/major-categories/{majorSlug}/categories/{categorySlug}';
+};
+
+export type CatalogGetCategoryByMajorAndSlugErrors = {
+    /**
+     * Неверный формат majorSlug, categorySlug или locale
+     */
+    400: unknown;
+    404: {
+        statusCode: number;
+        message: string;
+        code?: 'SERVICE_CATEGORY_NOT_FOUND';
+    };
+};
+
+export type CatalogGetCategoryByMajorAndSlugError = CatalogGetCategoryByMajorAndSlugErrors[keyof CatalogGetCategoryByMajorAndSlugErrors];
+
+export type CatalogGetCategoryByMajorAndSlugResponses = {
+    200: {
+        majorCategory: {
+            id: string;
+            name: string;
+            slug: string;
+        };
+        category: {
+            id: string;
+            name: string;
+            shortName: string;
+            slug: string;
+            description: string | null;
+            sortOrder: number;
+        };
+    };
+};
+
+export type CatalogGetCategoryByMajorAndSlugResponse = CatalogGetCategoryByMajorAndSlugResponses[keyof CatalogGetCategoryByMajorAndSlugResponses];

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, HealthGetHealthData, HealthGetHealthResponses } from './types.gen';
+import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, HealthGetHealthData, HealthGetHealthResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -65,3 +65,10 @@ export const authRefresh = <ThrowOnError extends boolean = false>(options: Optio
  * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder.
  */
 export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
+
+/**
+ * Одна подкатегория по slug внутри большой категории
+ *
+ * Возвращает большую категорию и одну активную подкатегорию по slug. Названия по query `locale` (en, vi, ru).
+ */
+export const catalogGetCategoryByMajorAndSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoryByMajorAndSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoryByMajorAndSlugResponses, CatalogGetCategoryByMajorAndSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories/{categorySlug}', ...options });
