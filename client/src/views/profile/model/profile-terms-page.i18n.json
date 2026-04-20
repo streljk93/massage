@@ -1,0 +1,40 @@
+{
+  "messages": {
+    "en": {
+      "profileTerms": {
+        "title": "Terms & privacy",
+        "updated": "Last updated: April 2026",
+        "s1Title": "Using the app",
+        "s1Body": "By using our services you agree to follow local rules, treat providers respectfully, and provide accurate contact details for bookings.",
+        "s2Title": "Data we collect",
+        "s2Body": "We process account information, booking history, and device settings needed to run notifications and improve recommendations.",
+        "s3Title": "Your rights",
+        "s3Body": "You may request access or deletion of personal data where applicable law allows. Marketing messages can be turned off in notification settings."
+      }
+    },
+    "vi": {
+      "profileTerms": {
+        "title": "Điều khoản & quyền riêng tư",
+        "updated": "Cập nhật lần cuối: tháng 4/2026",
+        "s1Title": "Sử dụng ứng dụng",
+        "s1Body": "Khi dùng dịch vụ, bạn đồng ý tuân thủ quy định địa phương, tôn trọng nhà cung cấp và cung cấp thông tin liên hệ chính xác cho lịch hẹn.",
+        "s2Title": "Dữ liệu chúng tôi thu thập",
+        "s2Body": "Chúng tôi xử lý thông tin tài khoản, lịch sử đặt chỗ và cài đặt thiết bị cần cho thông báo và gợi ý.",
+        "s3Title": "Quyền của bạn",
+        "s3Body": "Bạn có thể yêu cầu truy cập hoặc xóa dữ liệu cá nhân theo luật hiện hành. Có thể tắt tin nhắn quảng cáo trong mục thông báo."
+      }
+    },
+    "ru": {
+      "profileTerms": {
+        "title": "Условия и конфиденциальность",
+        "updated": "Обновлено: апрель 2026",
+        "s1Title": "Использование приложения",
+        "s1Body": "Пользуясь сервисом, вы соглашаетесь соблюдать местные правила, уважительно относиться к мастерам и указывать точные контакты для записей.",
+        "s2Title": "Какие данные мы обрабатываем",
+        "s2Body": "Мы обрабатываем данные аккаунта, историю записей и настройки устройства, необходимые для уведомлений и рекомендаций.",
+        "s3Title": "Ваши права",
+        "s3Body": "Вы можете запросить доступ или удаление персональных данных там, где это предусмотрено законом. Рекламные рассылки можно отключить в настройках уведомлений."
+      }
+    }
+  }
+}

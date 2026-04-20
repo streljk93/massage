@@ -1,0 +1,19 @@
+{
+  "messages": {
+    "en": {
+      "profileShell": {
+        "backAria": "Back to profile"
+      }
+    },
+    "vi": {
+      "profileShell": {
+        "backAria": "Quay lại hồ sơ"
+      }
+    },
+    "ru": {
+      "profileShell": {
+        "backAria": "Назад к профилю"
+      }
+    }
+  }
+}

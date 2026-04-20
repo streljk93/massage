@@ -1,0 +1,49 @@
+{
+  "messages": {
+    "en": {
+      "profileHelp": {
+        "title": "Help & support",
+        "intro": "We are here if something goes wrong with a booking or your account.",
+        "contactHeading": "Contact",
+        "contactBody": "Email us anytime. We usually reply within one business day.",
+        "emailAction": "Copy email",
+        "emailCopied": "Copied",
+        "faqHeading": "Common questions",
+        "faq1q": "How do I cancel a booking?",
+        "faq1a": "Open Bookings, choose the visit, and use Cancel if the salon allows it.",
+        "faq2q": "Can I change the specialist?",
+        "faq2a": "Yes — pick another time with the same salon or search for a new provider."
+      }
+    },
+    "vi": {
+      "profileHelp": {
+        "title": "Trợ giúp & hỗ trợ",
+        "intro": "Chúng tôi luôn sẵn sàng nếu bạn gặp sự cố với lịch hẹn hoặc tài khoản.",
+        "contactHeading": "Liên hệ",
+        "contactBody": "Gửi email cho chúng tôi bất cứ lúc nào. Thường phản hồi trong một ngày làm việc.",
+        "emailAction": "Sao chép email",
+        "emailCopied": "Đã sao chép",
+        "faqHeading": "Câu hỏi thường gặp",
+        "faq1q": "Làm sao để hủy lịch hẹn?",
+        "faq1a": "Mở Lịch hẹn, chọn lượt đến và dùng Hủy nếu tiệm cho phép.",
+        "faq2q": "Tôi có thể đổi chuyên viên không?",
+        "faq2a": "Có — chọn giờ khác cùng tiệm hoặc tìm nhà cung cấp mới."
+      }
+    },
+    "ru": {
+      "profileHelp": {
+        "title": "Помощь и поддержка",
+        "intro": "Напишите нам, если что-то пошло не так с записью или аккаунтом.",
+        "contactHeading": "Связаться",
+        "contactBody": "Пишите на почту в любое время. Обычно отвечаем в течение одного рабочего дня.",
+        "emailAction": "Скопировать email",
+        "emailCopied": "Скопировано",
+        "faqHeading": "Частые вопросы",
+        "faq1q": "Как отменить запись?",
+        "faq1a": "Откройте «Записи», выберите визит и нажмите «Отменить», если салон это допускает.",
+        "faq2q": "Можно ли сменить мастера?",
+        "faq2a": "Да — выберите другое время в том же салоне или найдите другого специалиста."
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "messages": {
+    "en": {
+      "profileEdit": {
+        "title": "Edit profile",
+        "firstNameLabel": "Display name",
+        "emailLabel": "Email",
+        "save": "Save changes",
+        "hint": "Changes apply to how your name appears in bookings."
+      }
+    },
+    "vi": {
+      "profileEdit": {
+        "title": "Chỉnh sửa hồ sơ",
+        "firstNameLabel": "Tên hiển thị",
+        "emailLabel": "Email",
+        "save": "Lưu thay đổi",
+        "hint": "Thay đổi sẽ hiển thị trong các lịch hẹn."
+      }
+    },
+    "ru": {
+      "profileEdit": {
+        "title": "Редактировать профиль",
+        "firstNameLabel": "Отображаемое имя",
+        "emailLabel": "Email",
+        "save": "Сохранить",
+        "hint": "Имя будет отображаться в ваших записях."
+      }
+    }
+  }
+}

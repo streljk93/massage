@@ -23,7 +23,7 @@ const items = [
   {
     id: "profile",
     icon: UserRound,
-    href: null,
+    href: "/profile" as const,
     labelKey: "nav.profile" as const,
   },
 ] as const;

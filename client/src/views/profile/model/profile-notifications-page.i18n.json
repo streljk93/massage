@@ -1,0 +1,43 @@
+{
+  "messages": {
+    "en": {
+      "profileNotifications": {
+        "title": "Notifications",
+        "bookingTitle": "Booking reminders",
+        "bookingDescription": "Alerts before your appointments",
+        "promoTitle": "Promotions & tips",
+        "promoDescription": "Discounts and wellness ideas",
+        "emailTitle": "Email summary",
+        "emailDescription": "Weekly digest of activity",
+        "on": "On",
+        "off": "Off"
+      }
+    },
+    "vi": {
+      "profileNotifications": {
+        "title": "Thông báo",
+        "bookingTitle": "Nhắc lịch hẹn",
+        "bookingDescription": "Cảnh báo trước giờ hẹn",
+        "promoTitle": "Khuyến mãi & mẹo",
+        "promoDescription": "Ưu đãi và gợi ý chăm sóc",
+        "emailTitle": "Email tóm tắt",
+        "emailDescription": "Tóm tắt hoạt động mỗi tuần",
+        "on": "Bật",
+        "off": "Tắt"
+      }
+    },
+    "ru": {
+      "profileNotifications": {
+        "title": "Уведомления",
+        "bookingTitle": "Напоминания о записях",
+        "bookingDescription": "Оповещения перед визитами",
+        "promoTitle": "Акции и советы",
+        "promoDescription": "Скидки и идеи для отдыха",
+        "emailTitle": "Email-дайджест",
+        "emailDescription": "Еженедельная сводка активности",
+        "on": "Вкл.",
+        "off": "Выкл."
+      }
+    }
+  }
+}

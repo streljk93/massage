@@ -1,0 +1,40 @@
+{
+  "messages": {
+    "en": {
+      "profilePayment": {
+        "title": "Payment methods",
+        "addMethod": "Add payment method",
+        "expires": "Expires {month}/{year}",
+        "defaultBadge": "Default",
+        "demoCash": "Cash",
+        "cashHint": "Pay when you visit",
+        "demoVisa": "Visa",
+        "demoMastercard": "Mastercard"
+      }
+    },
+    "vi": {
+      "profilePayment": {
+        "title": "Phương thức thanh toán",
+        "addMethod": "Thêm phương thức thanh toán",
+        "expires": "Hết hạn {month}/{year}",
+        "defaultBadge": "Mặc định",
+        "demoCash": "Tiền mặt",
+        "cashHint": "Thanh toán khi đến nơi",
+        "demoVisa": "Visa",
+        "demoMastercard": "Mastercard"
+      }
+    },
+    "ru": {
+      "profilePayment": {
+        "title": "Способы оплаты",
+        "addMethod": "Добавить способ оплаты",
+        "expires": "Действует до {month}/{year}",
+        "defaultBadge": "Основной",
+        "demoCash": "Наличные",
+        "cashHint": "Оплата при визите",
+        "demoVisa": "Visa",
+        "demoMastercard": "Mastercard"
+      }
+    }
+  }
+}

@@ -10,6 +10,15 @@ import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { bookingsPageI18n } from "@/views/bookings";
 import { homePageI18n } from "@/views/home";
+import {
+  profileEditPageI18n,
+  profileHelpPageI18n,
+  profileNotificationsPageI18n,
+  profilePageI18n,
+  profilePaymentPageI18n,
+  profileSubpageShellI18n,
+  profileTermsPageI18n,
+} from "@/views/profile";
 import { organizationProfilePageI18n } from "@/views/organization-profile";
 import { specialistProfilePageI18n } from "@/views/specialist-profile";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
@@ -32,6 +41,13 @@ const bundles: ColocatedI18nBundle[] = [
   bookingListCardI18n,
   bookingHistoryCardI18n,
   bookingsPageI18n,
+  profilePageI18n,
+  profileSubpageShellI18n,
+  profileEditPageI18n,
+  profileNotificationsPageI18n,
+  profilePaymentPageI18n,
+  profileHelpPageI18n,
+  profileTermsPageI18n,
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,

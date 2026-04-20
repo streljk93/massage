@@ -1,0 +1,49 @@
+{
+  "messages": {
+    "en": {
+      "profile": {
+        "title": "Profile",
+        "userSectionAria": "Account",
+        "menuSectionAria": "Settings",
+        "displayName": "Name",
+        "emailLabel": "Email",
+        "editProfile": "Edit profile",
+        "notifications": "Notifications",
+        "paymentMethods": "Payment methods",
+        "help": "Help & support",
+        "terms": "Terms & privacy",
+        "signOut": "Log out"
+      }
+    },
+    "vi": {
+      "profile": {
+        "title": "Hồ sơ",
+        "userSectionAria": "Tài khoản",
+        "menuSectionAria": "Cài đặt",
+        "displayName": "Tên",
+        "emailLabel": "Email",
+        "editProfile": "Chỉnh sửa hồ sơ",
+        "notifications": "Thông báo",
+        "paymentMethods": "Phương thức thanh toán",
+        "help": "Trợ giúp & hỗ trợ",
+        "terms": "Điều khoản & quyền riêng tư",
+        "signOut": "Đăng xuất"
+      }
+    },
+    "ru": {
+      "profile": {
+        "title": "Профиль",
+        "userSectionAria": "Аккаунт",
+        "menuSectionAria": "Настройки",
+        "displayName": "Имя",
+        "emailLabel": "Email",
+        "editProfile": "Редактировать профиль",
+        "notifications": "Уведомления",
+        "paymentMethods": "Способы оплаты",
+        "help": "Помощь и поддержка",
+        "terms": "Условия и конфиденциальность",
+        "signOut": "Выйти"
+      }
+    }
+  }
+}

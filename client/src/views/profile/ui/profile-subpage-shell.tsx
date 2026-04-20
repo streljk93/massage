@@ -1,0 +1,55 @@
+"use client";
+
+import type { ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
+import { HomeBottomNav } from "@/widgets/home";
+import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/lib";
+
+export type ProfileSubpageShellProps = {
+  title: string;
+  children: ReactNode;
+  className?: string;
+};
+
+export function ProfileSubpageShell({
+  title,
+  children,
+  className,
+}: ProfileSubpageShellProps) {
+  const t = useTranslations("profileShell");
+
+  return (
+    <div className="flex min-h-screen flex-col bg-surface-background">
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-surface-background/95 pb-2 backdrop-blur-md">
+        <div className="mx-auto flex max-w-lg items-center gap-2 px-4 pt-3">
+          <Button
+            variant="ghost"
+            className="size-11 shrink-0 rounded-full px-0"
+            asChild
+          >
+            <Link href="/profile" aria-label={t("backAria")}>
+              <ArrowLeft className="size-5 text-foreground" aria-hidden />
+            </Link>
+          </Button>
+          <h1 className="min-w-0 flex-1 font-heading text-lg font-bold tracking-tight text-foreground">
+            {title}
+          </h1>
+        </div>
+      </header>
+
+      <div
+        className={cn(
+          "mx-auto w-full max-w-lg flex-1 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4",
+          className,
+        )}
+      >
+        {children}
+      </div>
+
+      <HomeBottomNav activeId="profile" />
+    </div>
+  );
+}
