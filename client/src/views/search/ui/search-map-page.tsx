@@ -116,51 +116,51 @@ function SearchMapInteractiveLayer({
         />
       </div>
 
-      {/* Табы и закрытие — те же размеры табов, что на /search */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-center gap-1 pt-3 pl-3 pr-2"
-      >
-        <div className="pointer-events-auto flex min-w-0 flex-1 items-center justify-center px-1">
-          <div
-            className="flex w-full min-w-0 rounded-full bg-muted p-1"
-            role="tablist"
-            aria-label={tSearch("tablistAria")}
-          >
-            {SEARCH_TABS.map(({ id, labelKey }) => {
-              const selected = tab === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  className={cn(
-                    motion.interactivePressStrong,
-                    "min-w-0 flex-1 rounded-full py-2.5 text-center text-sm font-medium transition-colors",
-                    selected
-                      ? "bg-card text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  onClick={() => {
-                    onTabChange(id);
-                  }}
-                >
-                  {tSearch(labelKey)}
-                </button>
-              );
-            })}
+      {/* Табы и закрытие — как на /search: внутри max-w-lg + px-4 */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 pt-3">
+        <div className="pointer-events-none mx-auto flex w-full max-w-lg items-center gap-1 px-4">
+          <div className="pointer-events-auto flex min-w-0 flex-1 items-center justify-center px-1">
+            <div
+              className="flex w-full min-w-0 rounded-full bg-muted p-1"
+              role="tablist"
+              aria-label={tSearch("tablistAria")}
+            >
+              {SEARCH_TABS.map(({ id, labelKey }) => {
+                const selected = tab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    className={cn(
+                      motion.interactivePressStrong,
+                      "min-w-0 flex-1 rounded-full py-2.5 text-center text-sm font-medium transition-colors",
+                      selected
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                    onClick={() => {
+                      onTabChange(id);
+                    }}
+                  >
+                    {tSearch(labelKey)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
+          <Link
+            href={`/search?tab=${searchTabQueryValue(tab)}`}
+            aria-label={tMap("closeAria")}
+            className={cn(
+              motion.interactivePressStrong,
+              "pointer-events-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border-0 bg-neutral-700 p-0 text-neutral-50 outline-none hover:bg-neutral-600 focus-visible:ring-3 focus-visible:ring-ring/50",
+            )}
+          >
+            <X className="size-4 shrink-0" aria-hidden />
+          </Link>
         </div>
-        <Link
-          href={`/search?tab=${searchTabQueryValue(tab)}`}
-          aria-label={tMap("closeAria")}
-          className={cn(
-            motion.interactivePressStrong,
-            "pointer-events-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border-0 bg-neutral-700 p-0 text-neutral-50 outline-none hover:bg-neutral-600 focus-visible:ring-3 focus-visible:ring-ring/50",
-          )}
-        >
-          <X className="size-4 shrink-0" aria-hidden />
-        </Link>
       </div>
 
       <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-40 mx-auto max-w-lg px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">

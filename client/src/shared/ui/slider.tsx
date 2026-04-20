@@ -20,12 +20,19 @@ export type SliderHandle = {
   scrollToIndex: (index: number) => void;
 };
 
+export type SliderDotsPlacement = "below" | "overlay";
+
 export type SliderProps = {
   slides: SliderSlide[];
   className?: string;
   /** Дополнительные классы для каждого слайда (по умолчанию на всю ширину скролла). */
   slideClassName?: string;
   showDots?: boolean;
+  /**
+   * `below` — точки под каруселью (по умолчанию).
+   * `overlay` — внутри области слайда, у нижнего края (например поверх промо-карточки).
+   */
+  dotsPlacement?: SliderDotsPlacement;
   /** Подпись для списка точек (a11y). */
   dotsAriaLabel?: string;
   /** Вызывается при смене активного слайда (скролл или программная прокрутка). */
@@ -38,6 +45,7 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     className,
     slideClassName,
     showDots = true,
+    dotsPlacement = "below",
     dotsAriaLabel,
     onActiveIndexChange,
   },
@@ -105,49 +113,80 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
 
   if (slides.length === 0) return null;
 
-  return (
-    <div className={cn("w-full", className)}>
-      <div
-        ref={scrollerRef}
-        className={cn(
-          "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]",
-          "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-        )}
-      >
-        {slides.map((slide) => (
-          <div
-            key={slide.id}
-            className={cn(
-              "flex min-h-0 min-w-full shrink-0 snap-start flex-col",
-              slideClassName,
-            )}
-          >
-            {slide.content}
+  const dotButtons = slides.map((slide, i) => (
+    <button
+      key={slide.id}
+      type="button"
+      role="tab"
+      aria-selected={i === active}
+      className={cn(
+        motion.interactive,
+        "shrink-0 rounded-full transition-[width,background-color]",
+        dotsPlacement === "overlay"
+          ? cn(
+              "h-1.5",
+              i === active
+                ? "w-4 bg-foreground"
+                : "w-1.5 bg-muted-foreground/40",
+            )
+          : cn(
+              "h-1.5 w-1.5",
+              i === active ? "bg-foreground" : "bg-muted-foreground/30",
+            ),
+      )}
+      onClick={() => scrollToIndex(i)}
+    />
+  ));
+
+  const dotsRow =
+    showDots && slides.length > 1 ? (
+      dotsPlacement === "overlay" ? (
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-3"
+          role="tablist"
+          aria-label={dotsAriaLabel}
+        >
+          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border/35 bg-card/80 px-2 py-1 backdrop-blur-sm">
+            {dotButtons}
           </div>
-        ))}
-      </div>
-      {showDots && slides.length > 1 ? (
+        </div>
+      ) : (
         <div
           className="mt-1 flex justify-center gap-1"
           role="tablist"
           aria-label={dotsAriaLabel}
         >
-          {slides.map((slide, i) => (
-            <button
+          {dotButtons}
+        </div>
+      )
+    ) : null;
+
+  return (
+    <div className={cn("w-full", className)}>
+      <div className={cn(dotsPlacement === "overlay" && "relative")}>
+        <div
+          ref={scrollerRef}
+          className={cn(
+            "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch gap-3 overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
+            dotsPlacement === "below" && "pb-1",
+            "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          )}
+        >
+          {slides.map((slide) => (
+            <div
               key={slide.id}
-              type="button"
-              role="tab"
-              aria-selected={i === active}
               className={cn(
-                motion.interactive,
-                "h-1.5 w-1.5 shrink-0 rounded-full",
-                i === active ? "bg-foreground" : "bg-muted-foreground/30",
+                "flex min-h-0 min-w-full shrink-0 snap-start flex-col",
+                slideClassName,
               )}
-              onClick={() => scrollToIndex(i)}
-            />
+            >
+              {slide.content}
+            </div>
           ))}
         </div>
-      ) : null}
+        {dotsPlacement === "overlay" ? dotsRow : null}
+      </div>
+      {dotsPlacement === "below" ? dotsRow : null}
     </div>
   );
 });

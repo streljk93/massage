@@ -88,7 +88,8 @@ export async function HomePage() {
           />
 
           <Slider
-            showDots={false}
+            dotsPlacement="overlay"
+            dotsAriaLabel={t("home.promoSliderDotsAria")}
             slides={promoSlides.map((p) => ({
               id: p.id,
               content: (

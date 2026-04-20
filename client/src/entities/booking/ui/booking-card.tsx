@@ -23,7 +23,7 @@ export function BookingCard({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-neutral-800 px-4 py-3 text-white",
+        "rounded-2xl bg-neutral-800 p-3 text-white",
         className,
       )}
     >
