@@ -1,0 +1,37 @@
+{
+  "messages": {
+    "en": {
+      "bookingList": {
+        "statusPending": "Pending — {time}",
+        "statusConfirmed": "Confirmed",
+        "statusExpired": "Expired time",
+        "statusRejected": "Rejected by master",
+        "cancel": "Cancel",
+        "remindMe": "Remind me",
+        "findOther": "Find other"
+      }
+    },
+    "vi": {
+      "bookingList": {
+        "statusPending": "Chờ — {time}",
+        "statusConfirmed": "Đã xác nhận",
+        "statusExpired": "Hết hạn",
+        "statusRejected": "Bị từ chối",
+        "cancel": "Hủy",
+        "remindMe": "Nhắc tôi",
+        "findOther": "Tìm khác"
+      }
+    },
+    "ru": {
+      "bookingList": {
+        "statusPending": "Ожидание — {time}",
+        "statusConfirmed": "Подтверждено",
+        "statusExpired": "Истекло время",
+        "statusRejected": "Отклонено мастером",
+        "cancel": "Отменить",
+        "remindMe": "Напомнить",
+        "findOther": "Найти другое"
+      }
+    }
+  }
+}

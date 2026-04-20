@@ -1,0 +1,40 @@
+{
+  "messages": {
+    "en": {
+      "bookings": {
+        "title": "Booking page",
+        "tabNew": "New",
+        "tabHistory": "History",
+        "tablistAria": "Bookings",
+        "emptyHistory": "No booking history yet",
+        "historyReview1": "I like this master because the…",
+        "historyReview2": "Great atmosphere and very professional service.",
+        "historyReview3": "Will book again — convenient time slots."
+      }
+    },
+    "vi": {
+      "bookings": {
+        "title": "Đặt chỗ",
+        "tabNew": "Mới",
+        "tabHistory": "Lịch sử",
+        "tablistAria": "Đặt chỗ",
+        "emptyHistory": "Chưa có lịch sử đặt chỗ",
+        "historyReview1": "Tôi thích chuyên viên này vì…",
+        "historyReview2": "Không gian tốt, phục vụ chuyên nghiệp.",
+        "historyReview3": "Sẽ đặt lại — khung giờ thuận tiện."
+      }
+    },
+    "ru": {
+      "bookings": {
+        "title": "Бронирования",
+        "tabNew": "Новые",
+        "tabHistory": "История",
+        "tablistAria": "Бронирования",
+        "emptyHistory": "Истории бронирований пока нет",
+        "historyReview1": "Мне нравится этот мастер, потому что…",
+        "historyReview2": "Отличная атмосфера и очень профессиональный сервис.",
+        "historyReview3": "Запишусь снова — удобные слоты по времени."
+      }
+    }
+  }
+}

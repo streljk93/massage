@@ -1,0 +1,19 @@
+{
+  "messages": {
+    "en": {
+      "bookingHistory": {
+        "reviewMe": "Review me"
+      }
+    },
+    "vi": {
+      "bookingHistory": {
+        "reviewMe": "Đánh giá tôi"
+      }
+    },
+    "ru": {
+      "bookingHistory": {
+        "reviewMe": "Оцените визит"
+      }
+    }
+  }
+}

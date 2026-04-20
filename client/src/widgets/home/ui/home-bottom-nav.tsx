@@ -17,7 +17,7 @@ const items = [
   {
     id: "bookings",
     icon: CalendarDays,
-    href: null,
+    href: "/bookings" as const,
     labelKey: "nav.bookings" as const,
   },
   {

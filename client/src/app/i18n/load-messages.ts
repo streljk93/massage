@@ -1,9 +1,14 @@
-import { bookingCardI18n } from "@/entities/booking";
+import {
+  bookingCardI18n,
+  bookingHistoryCardI18n,
+  bookingListCardI18n,
+} from "@/entities/booking";
 import { organizationCardI18n } from "@/entities/organizations";
 import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
+import { bookingsPageI18n } from "@/views/bookings";
 import { homePageI18n } from "@/views/home";
 import { organizationProfilePageI18n } from "@/views/organization-profile";
 import { specialistProfilePageI18n } from "@/views/specialist-profile";
@@ -24,6 +29,9 @@ const bundles: ColocatedI18nBundle[] = [
   homePageI18n,
   categoryCardI18n,
   bookingCardI18n,
+  bookingListCardI18n,
+  bookingHistoryCardI18n,
+  bookingsPageI18n,
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,
