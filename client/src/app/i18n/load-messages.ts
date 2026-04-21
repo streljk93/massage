@@ -6,6 +6,7 @@ import {
 import { organizationCardI18n } from "@/entities/organizations";
 import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
+import { comingSoonI18n } from "@/features/coming-soon";
 import { metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { authLoginPageI18n, authRegisterPageI18n } from "@/views/auth";
@@ -36,6 +37,7 @@ import { mergeBundlesForLocale } from "./merge-messages";
 /** Порядок важен при конфликте ключей: последний выигрывает. */
 const bundles: ColocatedI18nBundle[] = [
   metaI18n,
+  comingSoonI18n,
   availabilitySlotStripI18n,
   homeBottomNavI18n,
   homeScreenHeaderI18n,

@@ -1,0 +1,25 @@
+{
+  "messages": {
+    "en": {
+      "comingSoon": {
+        "title": "Coming soon",
+        "description": "This feature isn’t available yet — we’re still building it. Check back later.",
+        "confirm": "OK"
+      }
+    },
+    "vi": {
+      "comingSoon": {
+        "title": "Sắp ra mắt",
+        "description": "Tính năng này chưa sẵn sàng — chúng tôi đang hoàn thiện. Hãy quay lại sau.",
+        "confirm": "Đã hiểu"
+      }
+    },
+    "ru": {
+      "comingSoon": {
+        "title": "Скоро",
+        "description": "Эта функция пока недоступна — мы её дорабатываем. Загляните позже.",
+        "confirm": "Понятно"
+      }
+    }
+  }
+}
