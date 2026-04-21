@@ -2,11 +2,16 @@
 
 export const authUserSchema = {
   type: 'object',
-  required: ['id', 'email', 'name'],
+  required: ['id', 'email', 'name', 'avatarUrl'],
   properties: {
     id: { type: 'string', format: 'uuid' },
     email: { type: 'string', format: 'email' },
     name: { type: 'string', example: 'Jane Doe' },
+    avatarUrl: {
+      type: 'string',
+      nullable: true,
+      description: 'Публичный URL или путь `/v1/files/public/...`',
+    },
   },
 };
 

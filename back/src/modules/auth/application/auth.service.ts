@@ -107,6 +107,7 @@ export class AuthService {
     id: string;
     email: string;
     name: string;
+    avatarUrl: string | null;
   }): AuthResponseDto {
     const accessExpiresSec = this.config.getOrThrow<number>(
       'jwt.accessExpiresSec',
@@ -130,7 +131,12 @@ export class AuthService {
     });
 
     return {
-      user: { id: user.id, email: user.email, name: user.name },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      },
       accessToken,
       refreshToken,
     };

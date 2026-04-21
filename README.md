@@ -21,9 +21,10 @@ npm run init
 1. Устанавливает зависимости в `back/` и `client/`
 2. Создаёт в корне файл **`.env`** с `JWT_SECRET` и `AUTH_SECRET` (для `docker compose`), если их ещё нет
 3. При необходимости дописывает **`client/.env.local`**: `AUTH_SECRET` и `AUTH_BACKEND_URL=http://localhost:3001`
-4. Поднимает стек: **`docker compose up --build -d`**
-5. Ждёт готовности PostgreSQL, применяет миграции и **сидирует каталог по умолчанию** (большая категория «Массаж» и подкатегории — см. `back/prisma/seed.mjs`)
-6. Выполняет **`openapi:sync`** (экспорт OpenAPI + генерация typed SDK на клиенте; нужен доступ к БД на `localhost:5432`)
+4. Поднимает стек: **`docker compose up --build -d`** (Postgres, **MinIO**, `back`, `client`)
+5. Ждёт готовности **PostgreSQL** и **MinIO** (S3 API), при необходимости дописывает **`back/.env`** переменные `S3_*` для `http://127.0.0.1:9000`
+6. Применяет миграции и **сидирует каталог по умолчанию** (большая категория «Массаж» и подкатегории — см. `back/prisma/seed.mjs`)
+7. Выполняет **`openapi:sync`** (экспорт OpenAPI + генерация typed SDK на клиенте; нужен доступ к БД на `localhost:5432`)
 
 ### После успешного `init`
 
@@ -33,6 +34,7 @@ npm run init
 | API (Nest) | http://localhost:3001 |
 | Swagger (OpenAPI UI) | http://localhost:3001/v1/docs |
 | PostgreSQL | `localhost:5432` (логин/пароль/БД — в `docker-compose.yml`) |
+| MinIO (файлы, S3 API) | http://localhost:9000 • консоль http://localhost:9001 (`minioadmin` / `minioadmin`) |
 
 ### Флаги `init`
 

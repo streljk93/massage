@@ -10,6 +10,10 @@ export {
   UserAvatar,
   type UserAvatarProps,
 } from "./avatar";
+export {
+  AvatarPhotoDropzone,
+  type AvatarPhotoDropzoneProps,
+} from "./avatar-photo-dropzone";
 export { Tag, tagVariants, type TagProps } from "./tag";
 export { default as availabilitySlotStripI18n } from "./availability-slot-strip.i18n.json";
 export {

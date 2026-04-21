@@ -9,6 +9,9 @@
  *   --skip-docker     не поднимать docker compose
  *   --skip-openapi    не вызывать openapi:sync
  *   --deps-only       только npm install в back и client
+ *
+ * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, back, client),
+ * ожидается готовность Postgres и MinIO, затем migrate + seed + openapi:sync.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -99,6 +102,52 @@ async function waitPostgresReady(timeoutMs = 120000) {
   return false;
 }
 
+async function waitMinioReady(timeoutMs = 120000) {
+  const stepMs = 2000;
+  const start = Date.now();
+  log("Ожидание готовности MinIO (S3 API на :9000)…");
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch("http://127.0.0.1:9000/minio/health/live", {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        log("MinIO готов (консоль: http://localhost:9001, логин minioadmin / minioadmin).");
+        return true;
+      }
+    } catch {
+      /* контейнер ещё стартует */
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
+function ensureBackEnvMinioLocal() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  if (/(?:^|\n)\s*S3_ENDPOINT\s*=/.test(text)) {
+    return;
+  }
+  const block =
+    "\n# init-project — MinIO из docker compose (сервис minio)\n" +
+    "S3_ENDPOINT=http://127.0.0.1:9000\n" +
+    "S3_ACCESS_KEY=minioadmin\n" +
+    "S3_SECRET_KEY=minioadmin\n" +
+    "S3_BUCKET=services-uploads\n" +
+    "S3_REGION=us-east-1\n";
+  const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
+  log("Добавлены S3_* в back/.env для загрузки файлов через localhost:9000.");
+}
+
 function ensureClientEnvBackendUrl() {
   const p = path.join(repoRoot, "client", ".env.local");
   let text = "";
@@ -145,7 +194,9 @@ async function main() {
         "OpenAPI: пропуск (нет DATABASE_URL в окружении; задайте и выполните npm run openapi:sync).",
       );
     }
-    log("Далее: поднимите Postgres и npm run docker:up или openapi:sync.");
+    log(
+      "Далее: docker compose up -d (postgres + minio + …), см. docker-compose.yml; для файлов — MinIO :9000.",
+    );
     process.exit(0);
   }
 
@@ -164,6 +215,15 @@ async function main() {
     );
     process.exit(1);
   }
+
+  if (!(await waitMinioReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания MinIO. Проверьте: docker compose ps, docker compose logs minio",
+    );
+    process.exit(1);
+  }
+
+  ensureBackEnvMinioLocal();
 
   await wait(5000);
 
@@ -208,6 +268,8 @@ async function main() {
   • API (Docker):    http://localhost:3001
   • Swagger:         http://localhost:3001/v1/docs
   • Postgres:        localhost:5432 (см. docker-compose)
+  • MinIO (S3):      http://localhost:9000  • консоль http://localhost:9001 (minioadmin / minioadmin)
+  • Файлы (MinIO): POST /v1/files/public | POST /v1/files/private (Bearer); GET /v1/files/public/:filename | GET /v1/files/private/:filename (Bearer)
 
   Локальный фронт без Docker: cd client && npm run dev
 `);

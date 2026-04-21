@@ -37,6 +37,286 @@
         ]
       }
     },
+    "/files/public": {
+      "post": {
+        "description": "Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Типы: jpeg, png, webp, gif, pdf; до 10 МБ.",
+        "operationId": "Files_uploadPublic",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "visibility",
+                    "key",
+                    "filename",
+                    "url",
+                    "contentType",
+                    "size"
+                  ],
+                  "properties": {
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "public",
+                        "private"
+                      ]
+                    },
+                    "key": {
+                      "type": "string",
+                      "example": "public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg",
+                      "description": "Полный ключ объекта в бакете (префикс + имя файла)"
+                    },
+                    "filename": {
+                      "type": "string",
+                      "example": "uploads-550e8400-e29b-41d4-a716-446655440000.jpg"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "/v1/files/public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg",
+                      "description": "GET: публичный — без токена; private — только с Bearer access"
+                    },
+                    "contentType": {
+                      "type": "string",
+                      "example": "image/jpeg"
+                    },
+                    "size": {
+                      "type": "integer",
+                      "example": 1024
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет файла или неподдерживаемый тип"
+          },
+          "503": {
+            "description": "Хранилище не настроено (нет S3_ENDPOINT)"
+          }
+        },
+        "summary": "Загрузить публичный файл",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/private": {
+      "post": {
+        "description": "Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`.",
+        "operationId": "Files_uploadPrivate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "visibility",
+                    "key",
+                    "filename",
+                    "url",
+                    "contentType",
+                    "size"
+                  ],
+                  "properties": {
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "public",
+                        "private"
+                      ]
+                    },
+                    "key": {
+                      "type": "string",
+                      "example": "public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg",
+                      "description": "Полный ключ объекта в бакете (префикс + имя файла)"
+                    },
+                    "filename": {
+                      "type": "string",
+                      "example": "uploads-550e8400-e29b-41d4-a716-446655440000.jpg"
+                    },
+                    "url": {
+                      "type": "string",
+                      "example": "/v1/files/public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg",
+                      "description": "GET: публичный — без токена; private — только с Bearer access"
+                    },
+                    "contentType": {
+                      "type": "string",
+                      "example": "image/jpeg"
+                    },
+                    "size": {
+                      "type": "integer",
+                      "example": 1024
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет файла или неподдерживаемый тип"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "503": {
+            "description": "Хранилище не настроено (нет S3_ENDPOINT)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Загрузить приватный файл",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/public/{filename}": {
+      "get": {
+        "description": "Имя файла — из ответа POST /files/public (`filename`).",
+        "operationId": "Files_downloadPublic",
+        "parameters": [
+          {
+            "name": "filename",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "uploads-550e8400-e29b-41d4-a716-446655440000.jpg"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Тело файла",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Получить публичный файл",
+        "tags": [
+          "files"
+        ]
+      }
+    },
+    "/files/private/{filename}": {
+      "get": {
+        "description": "Имя файла — из ответа POST /files/private. Требуется **Bearer access**.",
+        "operationId": "Files_downloadPrivate",
+        "parameters": [
+          {
+            "name": "filename",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "example": "uploads-550e8400-e29b-41d4-a716-446655440000.jpg"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Тело файла",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Получить приватный файл",
+        "tags": [
+          "files"
+        ]
+      }
+    },
     "/auth/register": {
       "post": {
         "operationId": "Auth_register",
@@ -92,7 +372,8 @@
                       "required": [
                         "id",
                         "email",
-                        "name"
+                        "name",
+                        "avatarUrl"
                       ],
                       "properties": {
                         "id": {
@@ -106,6 +387,11 @@
                         "name": {
                           "type": "string",
                           "example": "Jane Doe"
+                        },
+                        "avatarUrl": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Публичный URL или путь `/v1/files/public/...`"
                         }
                       }
                     },
@@ -203,7 +489,8 @@
                       "required": [
                         "id",
                         "email",
-                        "name"
+                        "name",
+                        "avatarUrl"
                       ],
                       "properties": {
                         "id": {
@@ -217,6 +504,11 @@
                         "name": {
                           "type": "string",
                           "example": "Jane Doe"
+                        },
+                        "avatarUrl": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Публичный URL или путь `/v1/files/public/...`"
                         }
                       }
                     },
@@ -311,7 +603,8 @@
                       "required": [
                         "id",
                         "email",
-                        "name"
+                        "name",
+                        "avatarUrl"
                       ],
                       "properties": {
                         "id": {
@@ -325,6 +618,11 @@
                         "name": {
                           "type": "string",
                           "example": "Jane Doe"
+                        },
+                        "avatarUrl": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Публичный URL или путь `/v1/files/public/...`"
                         }
                       }
                     },
@@ -375,6 +673,151 @@
         "summary": "Обновление пары JWT по refresh-токену",
         "tags": [
           "auth"
+        ]
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "Users_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "avatarUrl"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Пользователь удалён или не найден"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Текущий пользователь (профиль)",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "Users_patchMe",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "avatarUrl": {
+                    "description": "Путь `/v1/files/public/...` или абсолютный http(s) URL; **null** — убрать аватар",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2048
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "email",
+                    "name",
+                    "avatarUrl"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "avatarUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ошибка валидации тела запроса"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Пользователь удалён или не найден"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Обновить профиль (имя, аватар)",
+        "tags": [
+          "users"
         ]
       }
     },

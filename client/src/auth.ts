@@ -5,6 +5,7 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { z } from "zod";
 import { getOAuthEnvFlags } from "@/auth/oauth-env";
+import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 
 const flags = getOAuthEnvFlags();
 
@@ -21,7 +22,7 @@ const credentialsSchema = z.object({
 });
 
 type BackendAuthResponse = {
-  user: { id: string; email: string; name: string };
+  user: { id: string; email: string; name: string; avatarUrl: string | null };
   accessToken: string;
   refreshToken: string;
 };
@@ -48,7 +49,7 @@ async function loginViaBackend(
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.sub = user.id ?? token.sub;
         token.accessToken =
@@ -59,6 +60,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           "refreshToken" in user && typeof user.refreshToken === "string"
             ? user.refreshToken
             : undefined;
+        if (user.avatarUrl !== undefined) {
+          token.avatarUrl = user.avatarUrl;
+        }
+        if (user.image) {
+          token.picture = user.image;
+        }
+      }
+      if (trigger === "update" && session && typeof session === "object") {
+        const next = session as {
+          name?: string;
+          avatarUrl?: string | null;
+        };
+        if (typeof next.name === "string") {
+          token.name = next.name;
+        }
+        if ("avatarUrl" in next) {
+          token.avatarUrl = next.avatarUrl ?? null;
+        }
       }
       return token;
     },
@@ -68,6 +87,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           (typeof token.sub === "string" ? token.sub : session.user.email) ??
           session.user.email ??
           "";
+        if (typeof token.name === "string") {
+          session.user.name = token.name;
+        }
+        let nextImage: string | undefined;
+        if (typeof token.avatarUrl === "string") {
+          nextImage = resolveApiResourceUrl(token.avatarUrl);
+        } else if (token.avatarUrl === null) {
+          nextImage =
+            typeof token.picture === "string" ? token.picture : undefined;
+        } else {
+          nextImage =
+            (typeof token.picture === "string" ? token.picture : undefined) ??
+            session.user.image ??
+            undefined;
+        }
+        session.user.image = nextImage;
       }
       session.accessToken =
         typeof token.accessToken === "string" ? token.accessToken : undefined;
@@ -100,6 +135,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: fromApi.user.id,
             email: fromApi.user.email,
             name: fromApi.user.name,
+            avatarUrl: fromApi.user.avatarUrl,
             accessToken: fromApi.accessToken,
             refreshToken: fromApi.refreshToken,
           };

@@ -6,7 +6,17 @@
         "firstNameLabel": "Display name",
         "emailLabel": "Email",
         "save": "Save changes",
-        "hint": "Changes apply to how your name appears in bookings."
+        "saving": "Saving…",
+        "avatarHint": "JPEG, PNG, WebP or GIF — up to 10 MB. The image is uploaded when you save.",
+        "avatarDropzone": "Drag an image here or tap to choose",
+        "avatarDropzoneAria": "Upload profile photo",
+        "avatarEditAria": "Change profile photo",
+        "avatarPending": "Not saved yet — tap Save to upload.",
+        "avatarUploadFailed": "Could not upload the image. Try another file.",
+        "avatarRemove": "Remove photo",
+        "loadError": "Could not load your profile. Try again later.",
+        "saveError": "Could not save changes. Try again.",
+        "backendRequired": "Sign in with email and password to sync your profile with the server (including your photo)."
       }
     },
     "vi": {
@@ -15,7 +25,17 @@
         "firstNameLabel": "Tên hiển thị",
         "emailLabel": "Email",
         "save": "Lưu thay đổi",
-        "hint": "Thay đổi sẽ hiển thị trong các lịch hẹn."
+        "saving": "Đang lưu…",
+        "avatarHint": "JPEG, PNG, WebP hoặc GIF — tối đa 10 MB. Ảnh được tải lên khi bạn lưu.",
+        "avatarDropzone": "Kéo ảnh vào đây hoặc chạm để chọn",
+        "avatarDropzoneAria": "Tải ảnh đại diện",
+        "avatarEditAria": "Đổi ảnh đại diện",
+        "avatarPending": "Chưa lưu — chạm Lưu để tải ảnh lên.",
+        "avatarUploadFailed": "Không thể tải ảnh. Hãy thử tệp khác.",
+        "avatarRemove": "Xóa ảnh",
+        "loadError": "Không tải được hồ sơ. Thử lại sau.",
+        "saveError": "Không lưu được thay đổi. Thử lại.",
+        "backendRequired": "Đăng nhập bằng email và mật khẩu để đồng bộ hồ sơ với máy chủ (kể cả ảnh)."
       }
     },
     "ru": {
@@ -24,7 +44,17 @@
         "firstNameLabel": "Отображаемое имя",
         "emailLabel": "Email",
         "save": "Сохранить",
-        "hint": "Имя будет отображаться в ваших записях."
+        "saving": "Сохранение…",
+        "avatarHint": "JPEG, PNG, WebP или GIF — до 10 МБ. Файл отправляется при сохранении.",
+        "avatarDropzone": "Перетащите изображение или нажмите, чтобы выбрать",
+        "avatarDropzoneAria": "Загрузить фото профиля",
+        "avatarEditAria": "Изменить фото профиля",
+        "avatarPending": "Ещё не сохранено — нажмите «Сохранить», чтобы загрузить.",
+        "avatarUploadFailed": "Не удалось загрузить изображение. Попробуйте другой файл.",
+        "avatarRemove": "Убрать фото",
+        "loadError": "Не удалось загрузить профиль. Попробуйте позже.",
+        "saveError": "Не удалось сохранить изменения. Попробуйте снова.",
+        "backendRequired": "Войдите по email и паролю, чтобы синхронизировать профиль с сервером (включая фото)."
       }
     }
   }

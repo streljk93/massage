@@ -20,6 +20,131 @@ export type HealthGetHealthResponses = {
 
 export type HealthGetHealthResponse = HealthGetHealthResponses[keyof HealthGetHealthResponses];
 
+export type FilesUploadPublicData = {
+    body: {
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/files/public';
+};
+
+export type FilesUploadPublicErrors = {
+    /**
+     * Нет файла или неподдерживаемый тип
+     */
+    400: unknown;
+    /**
+     * Хранилище не настроено (нет S3_ENDPOINT)
+     */
+    503: unknown;
+};
+
+export type FilesUploadPublicResponses = {
+    200: {
+        visibility: 'public' | 'private';
+        /**
+         * Полный ключ объекта в бакете (префикс + имя файла)
+         */
+        key: string;
+        filename: string;
+        /**
+         * GET: публичный — без токена; private — только с Bearer access
+         */
+        url: string;
+        contentType: string;
+        size: number;
+    };
+};
+
+export type FilesUploadPublicResponse = FilesUploadPublicResponses[keyof FilesUploadPublicResponses];
+
+export type FilesUploadPrivateData = {
+    body: {
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/files/private';
+};
+
+export type FilesUploadPrivateErrors = {
+    /**
+     * Нет файла или неподдерживаемый тип
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Хранилище не настроено (нет S3_ENDPOINT)
+     */
+    503: unknown;
+};
+
+export type FilesUploadPrivateResponses = {
+    200: {
+        visibility: 'public' | 'private';
+        /**
+         * Полный ключ объекта в бакете (префикс + имя файла)
+         */
+        key: string;
+        filename: string;
+        /**
+         * GET: публичный — без токена; private — только с Bearer access
+         */
+        url: string;
+        contentType: string;
+        size: number;
+    };
+};
+
+export type FilesUploadPrivateResponse = FilesUploadPrivateResponses[keyof FilesUploadPrivateResponses];
+
+export type FilesDownloadPublicData = {
+    body?: never;
+    path: {
+        filename: unknown;
+    };
+    query?: never;
+    url: '/files/public/{filename}';
+};
+
+export type FilesDownloadPublicResponses = {
+    /**
+     * Тело файла
+     */
+    200: Blob | File;
+};
+
+export type FilesDownloadPublicResponse = FilesDownloadPublicResponses[keyof FilesDownloadPublicResponses];
+
+export type FilesDownloadPrivateData = {
+    body?: never;
+    path: {
+        filename: unknown;
+    };
+    query?: never;
+    url: '/files/private/{filename}';
+};
+
+export type FilesDownloadPrivateErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type FilesDownloadPrivateResponses = {
+    /**
+     * Тело файла
+     */
+    200: Blob | File;
+};
+
+export type FilesDownloadPrivateResponse = FilesDownloadPrivateResponses[keyof FilesDownloadPrivateResponses];
+
 export type AuthRegisterData = {
     body: {
         email: string;
@@ -50,6 +175,10 @@ export type AuthRegisterResponses = {
             id: string;
             email: string;
             name: string;
+            /**
+             * Публичный URL или путь `/v1/files/public/...`
+             */
+            avatarUrl: string | null;
         };
         /**
          * JWT access token (Authorization: Bearer …)
@@ -93,6 +222,10 @@ export type AuthLoginResponses = {
             id: string;
             email: string;
             name: string;
+            /**
+             * Публичный URL или путь `/v1/files/public/...`
+             */
+            avatarUrl: string | null;
         };
         /**
          * JWT access token (Authorization: Bearer …)
@@ -138,6 +271,10 @@ export type AuthRefreshResponses = {
             id: string;
             email: string;
             name: string;
+            /**
+             * Публичный URL или путь `/v1/files/public/...`
+             */
+            avatarUrl: string | null;
         };
         /**
          * JWT access token (Authorization: Bearer …)
@@ -151,6 +288,80 @@ export type AuthRefreshResponses = {
 };
 
 export type AuthRefreshResponse = AuthRefreshResponses[keyof AuthRefreshResponses];
+
+export type UsersMeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me';
+};
+
+export type UsersMeErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Пользователь удалён или не найден
+     */
+    404: unknown;
+};
+
+export type UsersMeResponses = {
+    200: {
+        id: string;
+        email: string;
+        name: string;
+        /**
+         * Путь `/v1/files/public/...` или абсолютный URL
+         */
+        avatarUrl: string | null;
+    };
+};
+
+export type UsersMeResponse = UsersMeResponses[keyof UsersMeResponses];
+
+export type UsersPatchMeData = {
+    body: {
+        name?: string;
+        /**
+         * Путь `/v1/files/public/...` или абсолютный http(s) URL; **null** — убрать аватар
+         */
+        avatarUrl?: string | unknown;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me';
+};
+
+export type UsersPatchMeErrors = {
+    /**
+     * Ошибка валидации тела запроса
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Пользователь удалён или не найден
+     */
+    404: unknown;
+};
+
+export type UsersPatchMeResponses = {
+    200: {
+        id: string;
+        email: string;
+        name: string;
+        /**
+         * Путь `/v1/files/public/...` или абсолютный URL
+         */
+        avatarUrl: string | null;
+    };
+};
+
+export type UsersPatchMeResponse = UsersPatchMeResponses[keyof UsersPatchMeResponses];
 
 export type CatalogGetMajorCategoriesData = {
     body?: never;

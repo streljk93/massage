@@ -2,6 +2,7 @@ export type AuthUserDto = {
   id: string;
   email: string;
   name: string;
+  avatarUrl: string | null;
 };
 
 export type AuthTokensDto = {

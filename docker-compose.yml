@@ -16,10 +16,26 @@
 #
 # Только база (для локальной разработки без сервисов из compose):
 #   docker compose up postgres -d
+#
+# Объекты (файлы) — MinIO: API http://localhost:9000, консоль http://localhost:9001
+#   Логин/пароль по умолчанию: minioadmin / minioadmin
 
 name: services-app
 
 services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -53,9 +69,16 @@ services:
       CLIENT_ORIGIN: http://localhost:3000
       # В production JWT_SECRET обязателен; для локального compose — дефолт (смените в деплое)
       JWT_SECRET: ${JWT_SECRET:-local-docker-jwt-secret-replace-in-real-deploy}
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: services-uploads
+      S3_REGION: us-east-1
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
 
   client:
     build:
@@ -78,3 +101,5 @@ services:
 volumes:
   postgres_data:
     name: services-app_postgres_data
+  minio_data:
+    name: services-app_minio_data

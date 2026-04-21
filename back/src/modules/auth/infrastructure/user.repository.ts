@@ -7,6 +7,7 @@ export type UserRecord = {
   email: string;
   name: string;
   passwordHash: string | null;
+  avatarUrl: string | null;
 };
 
 @Injectable()
@@ -40,6 +41,23 @@ export class UserRepository {
   async findActiveById(id: string): Promise<UserRecord | null> {
     return this.prisma.user.findFirst({
       where: { id, deletedAt: null },
+    });
+  }
+
+  async updateProfile(
+    id: string,
+    data: { name?: string; avatarUrl?: string | null },
+  ): Promise<UserRecord | null> {
+    const existing = await this.findActiveById(id);
+    if (!existing) {
+      return null;
+    }
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+      },
     });
   }
 
