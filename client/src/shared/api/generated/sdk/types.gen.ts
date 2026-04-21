@@ -501,6 +501,231 @@ export type CatalogGetCategoriesByMajorSlugResponses = {
 
 export type CatalogGetCategoriesByMajorSlugResponse = CatalogGetCategoriesByMajorSlugResponses[keyof CatalogGetCategoriesByMajorSlugResponses];
 
+export type SpecialistsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists';
+};
+
+export type SpecialistsListErrors = {
+    /**
+     * Неверный формат locale
+     */
+    400: unknown;
+};
+
+export type SpecialistsListResponses = {
+    200: {
+        specialists: Array<{
+            id: string;
+            userId: string;
+            name: string;
+            bio?: string | null;
+            specialtiesLine?: string | null;
+            experienceYears?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            latitude: number | null;
+            longitude: number | null;
+            addressLine?: string | null;
+            city?: string | null;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            slotGroups: Array<{
+                dayKey: 'today' | 'tomorrow';
+                times: Array<string>;
+            }>;
+        }>;
+    };
+};
+
+export type SpecialistsListResponse = SpecialistsListResponses[keyof SpecialistsListResponses];
+
+export type SpecialistsGetByIdData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/{id}';
+};
+
+export type SpecialistsGetByIdErrors = {
+    /**
+     * Неверный формат locale или id
+     */
+    400: unknown;
+    /**
+     * Специалист не найден
+     */
+    404: unknown;
+};
+
+export type SpecialistsGetByIdResponses = {
+    200: {
+        id: string;
+        userId: string;
+        name: string;
+        bio?: string | null;
+        specialtiesLine?: string | null;
+        experienceYears?: number | null;
+        ratingAverage: number;
+        rating: number;
+        reviewsCount: number;
+        latitude: number | null;
+        longitude: number | null;
+        addressLine?: string | null;
+        city?: string | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        metaLine: string;
+        servicesLine: string;
+        categories: Array<{
+            slug: string;
+            shortName: string;
+        }>;
+        slotGroups: Array<{
+            dayKey: 'today' | 'tomorrow';
+            times: Array<string>;
+        }>;
+    };
+};
+
+export type SpecialistsGetByIdResponse = SpecialistsGetByIdResponses[keyof SpecialistsGetByIdResponses];
+
+export type OrganizationsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations';
+};
+
+export type OrganizationsListErrors = {
+    /**
+     * Неверный формат locale
+     */
+    400: unknown;
+};
+
+export type OrganizationsListResponses = {
+    200: {
+        organizations: Array<{
+            id: string;
+            slug: string;
+            name: string;
+            description?: string | null;
+            city?: string | null;
+            addressLine: string | null;
+            phone: string | null;
+            yearsInBusiness: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            slotGroups: Array<{
+                dayKey: 'today' | 'tomorrow';
+                times: Array<string>;
+            }>;
+        }>;
+    };
+};
+
+export type OrganizationsListResponse = OrganizationsListResponses[keyof OrganizationsListResponses];
+
+export type OrganizationsGetByIdData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{id}';
+};
+
+export type OrganizationsGetByIdErrors = {
+    /**
+     * Неверный формат locale или id
+     */
+    400: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsGetByIdResponses = {
+    200: {
+        id: string;
+        slug: string;
+        name: string;
+        description?: string | null;
+        city?: string | null;
+        addressLine: string | null;
+        phone: string | null;
+        yearsInBusiness: number | null;
+        latitude?: number | null;
+        longitude?: number | null;
+        ratingAverage: number;
+        rating: number;
+        reviewsCount: number;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        metaLine: string;
+        servicesLine: string;
+        categories: Array<{
+            slug: string;
+            shortName: string;
+        }>;
+        slotGroups: Array<{
+            dayKey: 'today' | 'tomorrow';
+            times: Array<string>;
+        }>;
+        staff: Array<{
+            id: string;
+            userId: string;
+            name: string;
+            rating: number;
+            metaLine: string;
+            specialtiesLine?: string | null;
+            imageUrl?: string | null;
+        }>;
+    };
+};
+
+export type OrganizationsGetByIdResponse = OrganizationsGetByIdResponses[keyof OrganizationsGetByIdResponses];
+
 export type AdvertisingListByPlacementData = {
     body?: never;
     path?: never;

@@ -31,12 +31,14 @@ export class ObjectStorageService implements OnModuleInit {
       return;
     }
 
-    this.bucket = this.config.get<string>('storage.bucket') ?? 'services-uploads';
+    this.bucket =
+      this.config.get<string>('storage.bucket') ?? 'services-uploads';
     this.client = new S3Client({
       region: this.config.get<string>('storage.region') ?? 'us-east-1',
       endpoint,
       credentials: {
-        accessKeyId: this.config.get<string>('storage.accessKey') ?? 'minioadmin',
+        accessKeyId:
+          this.config.get<string>('storage.accessKey') ?? 'minioadmin',
         secretAccessKey:
           this.config.get<string>('storage.secretKey') ?? 'minioadmin',
       },
@@ -51,13 +53,9 @@ export class ObjectStorageService implements OnModuleInit {
       return;
     }
     try {
-      await this.client.send(
-        new HeadBucketCommand({ Bucket: this.bucket }),
-      );
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
     } catch {
-      await this.client.send(
-        new CreateBucketCommand({ Bucket: this.bucket }),
-      );
+      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
       this.logger.log(`MinIO/S3: создан бакет «${this.bucket}»`);
     }
   }

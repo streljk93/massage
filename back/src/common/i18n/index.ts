@@ -8,10 +8,14 @@ export type { ApiLocale, SupportedCatalogLocale } from './api-locale';
 export { ApiLocaleQueryDocs } from './api-locale-query.swagger';
 export {
   pickLocalizedMajorName,
+  pickLocalizedOrganizationListItem,
   pickLocalizedServiceCategoryFields,
   resolveLocalizedString,
 } from './locale-table.resolver';
-export type { CategoryLocaleShape } from './locale-table.resolver';
+export type {
+  CategoryLocaleShape,
+  OrganizationLocaleListShape,
+} from './locale-table.resolver';
 export { RequestLocale } from './request-locale.decorator';
 export {
   requestLocaleQueryFieldSchema,

@@ -1,7 +1,15 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import type { AppLocale } from "@/app/i18n/routing";
+import {
+  createServerSdkClient,
+  organizationsGetById,
+  serverSdkFetchNoStore,
+} from "@/shared/api";
 import {
   OrganizationProfilePage,
   getOrganizationProfile,
+  organizationProfileFromApiDetail,
 } from "@/views/organization-profile";
 
 type Props = {
@@ -10,10 +18,29 @@ type Props = {
 
 export default async function Page({ params }: Props) {
   const { id } = await params;
-  const profile = getOrganizationProfile(id);
-  if (!profile) {
-    notFound();
+  const locale = (await getLocale()) as AppLocale;
+  const sdk = createServerSdkClient();
+
+  if (sdk) {
+    const res = await organizationsGetById({
+      client: sdk,
+      path: { id },
+      query: { locale },
+      fetch: serverSdkFetchNoStore,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK types mark `path` as `never` for `/organizations/{id}`; runtime substitutes `{id}`.
+    } as any);
+    if (!res.error && res.data) {
+      return (
+        <OrganizationProfilePage
+          profile={organizationProfileFromApiDetail(res.data)}
+        />
+      );
+    }
   }
 
-  return <OrganizationProfilePage profile={profile} />;
+  const fallback = getOrganizationProfile(id);
+  if (!fallback) {
+    notFound();
+  }
+  return <OrganizationProfilePage profile={fallback} />;
 }

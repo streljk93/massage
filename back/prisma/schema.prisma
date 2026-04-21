@@ -32,6 +32,14 @@ enum AdvertOwnerKind {
   external
 }
 
+/// Роль специалиста в организации (членство + права). Не путать с глобальной ролью User.
+/// owner — владелец салона; admin — управление без владения; specialist — обычный мастер.
+enum OrganizationMembershipRole {
+  owner
+  admin
+  specialist
+}
+
 // --- Core user ---
 
 /// Учётная запись пользователя. Пароль только для email-входа; OAuth — отдельная связка позже.
@@ -117,6 +125,9 @@ model ServiceCategory {
   services Service[]
   locales  ServiceCategoryLocale[]
 
+  specialistTags    SpecialistServiceCategory[]
+  organizationTags OrganizationServiceCategory[]
+
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
 }
@@ -162,6 +173,13 @@ model Organization {
   imageAlt        String?
   yearsInBusiness Int?
 
+  /// Витрина главной/поиска: подпись под рейтингом (расстояние, адрес и т.п.).
+  listingMetaLine String?
+  /// Витрина: вторая строка услуг/форматов для карточки.
+  listingServicesLine String?
+  /// JSON: [{ "dayKey": "today" | "tomorrow", "times": ["09:00", ...] }] — превью слотов на карточке.
+  listingSlotGroups Json?
+
   /// Денормализованные агрегаты (обновляются при отзывах / фоново).
   ratingAverage Float @default(0)
   reviewsCount  Int   @default(0)
@@ -175,6 +193,7 @@ model Organization {
   bookings             Booking[]
   specialistEmployments SpecialistOrganizationEmployment[]
   locales               OrganizationLocale[]
+  serviceCategories     OrganizationServiceCategory[]
 
   @@index([ownerUserId])
   @@index([city])
@@ -195,6 +214,19 @@ model OrganizationLocale {
 
   @@unique([organizationId, locale])
   @@index([locale])
+}
+
+/// Выбранные подкатегории каталога у организации (витрина / фильтры).
+model OrganizationServiceCategory {
+  organizationId    String
+  serviceCategoryId String
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([organizationId, serviceCategoryId])
+  @@index([serviceCategoryId])
 }
 
 /// Отзыв о организации.
@@ -239,14 +271,64 @@ model Specialist {
   imageUrl      String?
   imageAlt      String?
 
+  /// Точка на карте (WGS84), как у организации.
+  latitude  Float?
+  longitude Float?
+
+  /// Адрес приёма клиентов (кабинет, на дому, точка выезда — текст как ввёл мастер).
+  addressLine String?
+  /// Город / населённый пункт (фильтры, карта).
+  city        String?
+
+  listingMetaLine     String?
+  listingServicesLine String?
+  listingSlotGroups   Json?
+
+  /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.
+  listedInDirectory Boolean @default(true)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  employments SpecialistOrganizationEmployment[]
-  services    Service[]
-  bookings    Booking[]
-  reviews     SpecialistReview[]
+  employments         SpecialistOrganizationEmployment[]
+  services            Service[]
+  bookings            Booking[]
+  reviews             SpecialistReview[]
+  serviceCategories   SpecialistServiceCategory[]
+  availabilitySlots   SpecialistAvailabilitySlot[]
+
+  @@index([city])
+}
+
+/// Выбранные подкатегории каталога у специалиста.
+model SpecialistServiceCategory {
+  specialistId      String
+  serviceCategoryId String
+  specialist        Specialist      @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  serviceCategory   ServiceCategory @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([specialistId, serviceCategoryId])
+  @@index([serviceCategoryId])
+}
+
+/// Свободные интервалы для записи к специалисту (источник правды для витрины; денормализация в listingSlotGroups опциональна).
+model SpecialistAvailabilitySlot {
+  id           String     @id @default(uuid())
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  startsAt DateTime
+  endsAt   DateTime
+  isBooked Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([specialistId, startsAt])
+  @@index([startsAt, isBooked])
 }
 
 /// Период работы специалиста в организации (история смены салонов).
@@ -256,6 +338,9 @@ model SpecialistOrganizationEmployment {
   specialist     Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Права в рамках этой организации (см. `Organization.ownerUserId` для владельца-сущности).
+  role OrganizationMembershipRole @default(specialist)
 
   startDate DateTime
   endDate   DateTime?
@@ -267,6 +352,7 @@ model SpecialistOrganizationEmployment {
   @@index([specialistId])
   @@index([organizationId])
   @@index([isActive])
+  @@index([role])
 }
 
 /// Услуга в каталоге организации (и привязка к категории).

@@ -9,7 +9,6 @@ import {
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
 import { Link } from "@/app/i18n/navigation";
-import type { AvailabilitySlotGroup } from "@/shared/ui";
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { cn } from "@/shared/lib";
@@ -17,22 +16,28 @@ import {
   advertisingListByPlacement,
   catalogGetCategoriesByMajorSlug,
   createServerSdkClient,
+  organizationsList,
   serverSdkFetchNoStore,
+  specialistsList,
   type CatalogGetCategoriesByMajorSlugResponse,
+  type OrganizationsListResponse,
+  type SpecialistsListResponse,
 } from "@/shared/api";
 import {
   HomeBottomNav,
   HomeScreenHeader,
 } from "@/widgets/home";
+import {
+  organizationCardSeedFromApi,
+  specialistCardSeedFromApi,
+} from "@/widgets/home/lib/directory-cards-from-api";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import {
   currentBooking,
   homeUser,
   promoSlides,
-  topSalons,
-  topSpecialists,
-  type SlotGroupSeed,
 } from "@/widgets/home/lib/mock-data";
+import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 
 function isAbsoluteHttpUrl(href: string): boolean {
   return /^https?:\/\//i.test(href);
@@ -87,23 +92,13 @@ function PromoSlide({
   );
 }
 
-function slotGroupsFromSeed(
-  groups: SlotGroupSeed[],
-  t: (key: string) => string,
-): AvailabilitySlotGroup[] {
-  return groups.map((g) => ({
-    dayLabel:
-      g.dayKey === "today" ? t("slots.today") : t("slots.tomorrow"),
-    times: g.times,
-  }));
-}
-
 const HOME_MAJOR_CATEGORY_SLUG = "massage" as const;
 /** Совпадает с `ADV_PLACEMENT_HOME_PROMO` в `back/prisma/seed-advertising.mjs`. */
 const HOME_PROMO_PLACEMENT = "home_promo" as const;
 
 export async function HomePage() {
   const t = await getTranslations();
+  const tSlots = await getTranslations("slots");
   const format = await getFormatter();
   const locale = (await getLocale()) as AppLocale;
 
@@ -117,6 +112,11 @@ export async function HomePage() {
     imageSrc: string;
     ctaHref: string | null;
   }> | null = null;
+
+  let specialistsFromApi: SpecialistsListResponse["specialists"] | null =
+    null;
+  let organizationsFromApi: OrganizationsListResponse["organizations"] | null =
+    null;
 
   if (sdkClient) {
     const { data, error } = await catalogGetCategoriesByMajorSlug({
@@ -142,6 +142,25 @@ export async function HomePage() {
         imageSrc: item.imageUrl,
         ctaHref: item.targetUrl,
       }));
+    }
+
+    const [specRes, orgRes] = await Promise.all([
+      specialistsList({
+        client: sdkClient,
+        query: { locale },
+        fetch: serverSdkFetchNoStore,
+      }),
+      organizationsList({
+        client: sdkClient,
+        query: { locale },
+        fetch: serverSdkFetchNoStore,
+      }),
+    ]);
+    if (!specRes.error && specRes.data) {
+      specialistsFromApi = specRes.data.specialists;
+    }
+    if (!orgRes.error && orgRes.data) {
+      organizationsFromApi = orgRes.data.organizations;
     }
   }
 
@@ -265,15 +284,18 @@ export async function HomePage() {
               {t("home.topSalons")}
             </h2>
             <div className="space-y-2.5">
-              {topSalons.map((s) => (
-                <OrganizationCard
-                  key={s.id}
-                  {...s}
-                  imageAlt={s.name}
-                  profileHref={`/organizations/${s.id}`}
-                  slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
-                />
-              ))}
+              {(organizationsFromApi ?? []).map((o) => {
+                const card = organizationCardSeedFromApi(o);
+                return (
+                  <OrganizationCard
+                    key={card.id}
+                    {...card}
+                    imageAlt={card.name}
+                    profileHref={`/organizations/${o.id}`}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                  />
+                );
+              })}
             </div>
             <Button
               variant="secondary"
@@ -292,15 +314,18 @@ export async function HomePage() {
               {t("home.topSpecialists")}
             </h2>
             <div className="space-y-2.5">
-              {topSpecialists.map((s) => (
-                <SpecialistCard
-                  key={s.id}
-                  {...s}
-                  imageAlt={s.name}
-                  profileHref={`/specialists/${s.id}`}
-                  slotGroups={slotGroupsFromSeed(s.slotGroups, t)}
-                />
-              ))}
+              {(specialistsFromApi ?? []).map((s) => {
+                const card = specialistCardSeedFromApi(s);
+                return (
+                  <SpecialistCard
+                    key={card.id}
+                    {...card}
+                    imageAlt={card.name}
+                    profileHref={`/specialists/${s.id}`}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                  />
+                );
+              })}
             </div>
             <Button
               variant="secondary"

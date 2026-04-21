@@ -1197,6 +1197,768 @@
         ]
       }
     },
+    "/specialists": {
+      "get": {
+        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Сортировка по имени. Подкатегории каталога и строка услуг учитывают `?locale` (en, vi, ru).",
+        "operationId": "Specialists_list",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "specialists"
+                  ],
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "userId",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "latitude",
+                          "longitude",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Иван"
+                          },
+                          "bio": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "specialtiesLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "experienceYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 12
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 10.7769
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 106.7009
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "123 Nguyen Trai, District 1"
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Ho Chi Minh City"
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string",
+                            "example": "~ 1 km | ул. Нгуен Тхай Хок"
+                          },
+                          "servicesLine": {
+                            "type": "string",
+                            "example": "Классический массаж, спорт"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "dayKey",
+                                "times"
+                              ],
+                              "properties": {
+                                "dayKey": {
+                                  "type": "string",
+                                  "enum": [
+                                    "today",
+                                    "tomorrow"
+                                  ]
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale"
+          }
+        },
+        "summary": "Список всех специалистов",
+        "tags": [
+          "specialists"
+        ]
+      }
+    },
+    "/specialists/{id}": {
+      "get": {
+        "description": "Профиль мастера: те же поля, что в списке специалистов.",
+        "operationId": "Specialists_getById",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "userId",
+                    "name",
+                    "ratingAverage",
+                    "rating",
+                    "reviewsCount",
+                    "latitude",
+                    "longitude",
+                    "metaLine",
+                    "servicesLine",
+                    "categories",
+                    "slotGroups"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string",
+                      "example": "Иван"
+                    },
+                    "bio": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "specialtiesLine": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experienceYears": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "ratingAverage": {
+                      "type": "number",
+                      "example": 4.8
+                    },
+                    "rating": {
+                      "type": "number",
+                      "example": 4.8
+                    },
+                    "reviewsCount": {
+                      "type": "integer",
+                      "example": 12
+                    },
+                    "latitude": {
+                      "type": "number",
+                      "nullable": true,
+                      "example": 10.7769
+                    },
+                    "longitude": {
+                      "type": "number",
+                      "nullable": true,
+                      "example": 106.7009
+                    },
+                    "addressLine": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": "123 Nguyen Trai, District 1"
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": "Ho Chi Minh City"
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "uri"
+                    },
+                    "imageAlt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "metaLine": {
+                      "type": "string",
+                      "example": "~ 1 km | ул. Нгуен Тхай Хок"
+                    },
+                    "servicesLine": {
+                      "type": "string",
+                      "example": "Классический массаж, спорт"
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slug",
+                          "shortName"
+                        ],
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "shortName": {
+                            "type": "string",
+                            "example": "Neck"
+                          }
+                        }
+                      }
+                    },
+                    "slotGroups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "dayKey",
+                          "times"
+                        ],
+                        "properties": {
+                          "dayKey": {
+                            "type": "string",
+                            "enum": [
+                              "today",
+                              "tomorrow"
+                            ]
+                          },
+                          "times": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "example": "09:00"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale или id"
+          },
+          "404": {
+            "description": "Специалист не найден"
+          }
+        },
+        "summary": "Специалист по id",
+        "tags": [
+          "specialists"
+        ]
+      }
+    },
+    "/organizations": {
+      "get": {
+        "description": "Активные организации (салоны), не удалённые. Название и описание по query `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности.",
+        "operationId": "Organizations_list",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizations"
+                  ],
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "addressLine",
+                          "phone",
+                          "yearsInBusiness",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "demo-salon-seed"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "yearsInBusiness": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string"
+                          },
+                          "servicesLine": {
+                            "type": "string"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "dayKey",
+                                "times"
+                              ],
+                              "properties": {
+                                "dayKey": {
+                                  "type": "string",
+                                  "enum": [
+                                    "today",
+                                    "tomorrow"
+                                  ]
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale"
+          }
+        },
+        "summary": "Список всех организаций",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{id}": {
+      "get": {
+        "description": "Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).",
+        "operationId": "Organizations_getById",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "slug",
+                    "name",
+                    "ratingAverage",
+                    "rating",
+                    "reviewsCount",
+                    "addressLine",
+                    "phone",
+                    "yearsInBusiness",
+                    "metaLine",
+                    "servicesLine",
+                    "categories",
+                    "slotGroups",
+                    "staff"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "slug": {
+                      "type": "string",
+                      "example": "demo-salon-seed"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "addressLine": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "yearsInBusiness": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "latitude": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "longitude": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "ratingAverage": {
+                      "type": "number",
+                      "example": 4.5
+                    },
+                    "rating": {
+                      "type": "number",
+                      "example": 4.5
+                    },
+                    "reviewsCount": {
+                      "type": "integer",
+                      "example": 3
+                    },
+                    "imageUrl": {
+                      "type": "string",
+                      "nullable": true,
+                      "format": "uri"
+                    },
+                    "imageAlt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "metaLine": {
+                      "type": "string"
+                    },
+                    "servicesLine": {
+                      "type": "string"
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slug",
+                          "shortName"
+                        ],
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "shortName": {
+                            "type": "string",
+                            "example": "Neck"
+                          }
+                        }
+                      }
+                    },
+                    "slotGroups": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "dayKey",
+                          "times"
+                        ],
+                        "properties": {
+                          "dayKey": {
+                            "type": "string",
+                            "enum": [
+                              "today",
+                              "tomorrow"
+                            ]
+                          },
+                          "times": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "example": "09:00"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "staff": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "userId",
+                          "name",
+                          "rating",
+                          "metaLine"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "rating": {
+                            "type": "number"
+                          },
+                          "metaLine": {
+                            "type": "string"
+                          },
+                          "specialtiesLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale или id"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "summary": "Организация по id",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
     "/advertisements": {
       "get": {
         "description": "Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.",

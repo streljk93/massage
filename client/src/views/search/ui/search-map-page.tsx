@@ -11,12 +11,20 @@ import {
   type SliderHandle,
   type SliderSlide,
 } from "@/shared/ui/slider";
+import type {
+  OrganizationsListResponse,
+  SpecialistsListResponse,
+} from "@/shared/api";
 import { HomeBottomNav } from "@/widgets/home";
 import {
   SearchMapResultCard,
   useUserGeolocation,
 } from "@/widgets/search-map";
-import { topSalons, topSpecialists } from "@/widgets/home/lib/mock-data";
+import {
+  type SearchMapListItem,
+  searchMapOrganizationsFromApi,
+  searchMapSpecialistsFromApi,
+} from "@/widgets/home/lib/search-map-list-from-api";
 import { cn, motion } from "@/shared/lib";
 import {
   parseSearchTab,
@@ -44,13 +52,18 @@ const cardGlass =
 function SearchMapInteractiveLayer({
   tab,
   onTabChange,
+  organizationItems,
+  specialistItems,
 }: {
   tab: SearchTab;
   onTabChange: (id: SearchTab) => void;
+  organizationItems: SearchMapListItem[];
+  specialistItems: SearchMapListItem[];
 }) {
   const tSearch = useTranslations("search");
   const tMap = useTranslations("searchMap");
-  const list = tab === "organizations" ? topSalons : topSpecialists;
+  const list =
+    tab === "organizations" ? organizationItems : specialistItems;
   const [activeCardIndex, setActiveCardIndex] = useState(0);
   const sliderRef = useRef<SliderHandle>(null);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
@@ -191,26 +204,51 @@ function SearchMapInteractiveLayer({
           </button>
         </div>
         <div className="pointer-events-auto">
-          <Slider
-            ref={sliderRef}
-            slides={slides}
-            slideClassName="!min-w-[min(276px,calc(100vw-2rem))] max-w-[276px]"
-            showDots
-            dotsAriaLabel={tMap("sliderDotsAria")}
-            onActiveIndexChange={onSlideIndexChange}
-            className="pb-1"
-          />
+          {list.length > 0 ?
+            <Slider
+              ref={sliderRef}
+              slides={slides}
+              slideClassName="!min-w-[min(276px,calc(100vw-2rem))] max-w-[276px]"
+              showDots
+              dotsAriaLabel={tMap("sliderDotsAria")}
+              onActiveIndexChange={onSlideIndexChange}
+              className="pb-1"
+            />
+          : <p
+              className="rounded-2xl border border-white/20 bg-card/80 px-3 py-3 text-center text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-card/60"
+              role="status"
+            >
+              {tMap("emptyResults")}
+            </p>
+          }
         </div>
       </div>
     </div>
   );
 }
 
-export function SearchMapPage() {
+export type SearchMapPageClientProps = {
+  initialOrganizations: OrganizationsListResponse["organizations"] | null;
+  initialSpecialists: SpecialistsListResponse["specialists"] | null;
+};
+
+export function SearchMapPageClient({
+  initialOrganizations,
+  initialSpecialists,
+}: SearchMapPageClientProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const tab = parseSearchTab(searchParams.get("tab"));
+
+  const organizationItems = useMemo(
+    () => searchMapOrganizationsFromApi(initialOrganizations ?? undefined),
+    [initialOrganizations],
+  );
+  const specialistItems = useMemo(
+    () => searchMapSpecialistsFromApi(initialSpecialists ?? undefined),
+    [initialSpecialists],
+  );
 
   const onTabChange = useCallback(
     (id: SearchTab) => {
@@ -226,6 +264,8 @@ export function SearchMapPage() {
           key={tab}
           tab={tab}
           onTabChange={onTabChange}
+          organizationItems={organizationItems}
+          specialistItems={specialistItems}
         />
       </div>
 

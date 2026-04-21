@@ -5,3 +5,4 @@ export {
   getSpecialistProfile,
   type SpecialistProfileData,
 } from "./lib/mock-data";
+export { specialistProfileFromApiDetail } from "./lib/specialist-profile-from-api";

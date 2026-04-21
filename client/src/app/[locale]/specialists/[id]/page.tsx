@@ -1,7 +1,15 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import type { AppLocale } from "@/app/i18n/routing";
+import {
+  createServerSdkClient,
+  specialistsGetById,
+  serverSdkFetchNoStore,
+} from "@/shared/api";
 import {
   SpecialistProfilePage,
   getSpecialistProfile,
+  specialistProfileFromApiDetail,
 } from "@/views/specialist-profile";
 
 type Props = {
@@ -10,10 +18,27 @@ type Props = {
 
 export default async function Page({ params }: Props) {
   const { id } = await params;
-  const profile = getSpecialistProfile(id);
-  if (!profile) {
-    notFound();
+  const locale = (await getLocale()) as AppLocale;
+  const sdk = createServerSdkClient();
+
+  if (sdk) {
+    const res = await specialistsGetById({
+      client: sdk,
+      path: { id },
+      query: { locale },
+      fetch: serverSdkFetchNoStore,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK types mark `path` as `never` for `/specialists/{id}`; runtime substitutes `{id}`.
+    } as any);
+    if (!res.error && res.data) {
+      return (
+        <SpecialistProfilePage profile={specialistProfileFromApiDetail(res.data)} />
+      );
+    }
   }
 
-  return <SpecialistProfilePage profile={profile} />;
+  const fallback = getSpecialistProfile(id);
+  if (!fallback) {
+    notFound();
+  }
+  return <SpecialistProfilePage profile={fallback} />;
 }

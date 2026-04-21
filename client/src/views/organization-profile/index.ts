@@ -5,3 +5,4 @@ export {
   getOrganizationProfile,
   type OrganizationProfileData,
 } from "./lib/mock-data";
+export { organizationProfileFromApiDetail } from "./lib/organization-profile-from-api";

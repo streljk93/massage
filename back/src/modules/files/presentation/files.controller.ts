@@ -101,8 +101,10 @@ export class FilesController {
   async downloadPublic(
     @Param('filename') filename: string,
   ): Promise<StreamableFile> {
-    const { body, contentType } =
-      await this.filesService.getObjectStream('public', filename);
+    const { body, contentType } = await this.filesService.getObjectStream(
+      'public',
+      filename,
+    );
     return new StreamableFile(body, {
       type: contentType,
       disposition: `inline; filename="${filename}"`,
@@ -130,8 +132,10 @@ export class FilesController {
   async downloadPrivate(
     @Param('filename') filename: string,
   ): Promise<StreamableFile> {
-    const { body, contentType } =
-      await this.filesService.getObjectStream('private', filename);
+    const { body, contentType } = await this.filesService.getObjectStream(
+      'private',
+      filename,
+    );
     return new StreamableFile(body, {
       type: contentType,
       disposition: `inline; filename="${filename}"`,

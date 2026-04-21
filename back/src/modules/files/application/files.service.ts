@@ -26,7 +26,9 @@ const STORAGE_FILENAME_RE = /^[a-zA-Z0-9._-]{8,240}$/;
 export class FilesService {
   constructor(private readonly objectStorage: ObjectStorageService) {}
 
-  assertFile(file: Express.Multer.File | undefined): asserts file is Express.Multer.File {
+  assertFile(
+    file: Express.Multer.File | undefined,
+  ): asserts file is Express.Multer.File {
     if (!file?.buffer?.length) {
       throw new BadRequestException({
         code: 'FILE_REQUIRED',

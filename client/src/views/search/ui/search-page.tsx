@@ -10,30 +10,22 @@ import { Link, useRouter } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
-import type { AvailabilitySlotGroup } from "@/shared/ui";
+import type {
+  OrganizationsListResponse,
+  SpecialistsListResponse,
+} from "@/shared/api";
 import {
-  homeUser,
-  topSalons,
-  topSpecialists,
-  type SlotGroupSeed,
-} from "@/widgets/home/lib/mock-data";
+  organizationCardSeedFromApi,
+  specialistCardSeedFromApi,
+} from "@/widgets/home/lib/directory-cards-from-api";
+import { homeUser } from "@/widgets/home/lib/mock-data";
+import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import { cn, motion } from "@/shared/lib";
 import {
   parseSearchTab,
   SEARCH_TABS,
   searchTabQueryValue,
 } from "../lib/search-tab";
-
-function slotGroupsFromSeed(
-  groups: SlotGroupSeed[],
-  t: (key: string) => string,
-): AvailabilitySlotGroup[] {
-  return groups.map((g) => ({
-    dayLabel:
-      g.dayKey === "today" ? t("today") : t("tomorrow"),
-    times: g.times,
-  }));
-}
 
 function matchesListQuery(
   q: string,
@@ -48,7 +40,15 @@ function matchesListQuery(
   );
 }
 
-export function SearchPage() {
+export type SearchPageClientProps = {
+  initialOrganizations: OrganizationsListResponse["organizations"] | null;
+  initialSpecialists: SpecialistsListResponse["specialists"] | null;
+};
+
+export function SearchPageClient({
+  initialOrganizations,
+  initialSpecialists,
+}: SearchPageClientProps) {
   const tSearch = useTranslations("search");
   const tSlots = useTranslations("slots");
   const searchParams = useSearchParams();
@@ -56,14 +56,31 @@ export function SearchPage() {
   const tab = parseSearchTab(searchParams.get("tab"));
   const [listQuery, setListQuery] = useState("");
 
+  const organizations = initialOrganizations ?? [];
+  const specialists = initialSpecialists ?? [];
+
   const filteredSalons = useMemo(
-    () => topSalons.filter((s) => matchesListQuery(listQuery, s)),
-    [listQuery],
+    () =>
+      organizations.filter((o) =>
+        matchesListQuery(listQuery, {
+          name: o.name,
+          metaLine: o.metaLine,
+          servicesLine: o.servicesLine,
+        }),
+      ),
+    [listQuery, organizations],
   );
 
   const filteredSpecialists = useMemo(
-    () => topSpecialists.filter((s) => matchesListQuery(listQuery, s)),
-    [listQuery],
+    () =>
+      specialists.filter((s) =>
+        matchesListQuery(listQuery, {
+          name: s.name,
+          metaLine: s.metaLine,
+          servicesLine: s.servicesLine,
+        }),
+      ),
+    [listQuery, specialists],
   );
 
   return (
@@ -153,24 +170,30 @@ export function SearchPage() {
 
         <div className="space-y-2.5" role="tabpanel">
           {tab === "organizations"
-            ? filteredSalons.map((s) => (
-                <OrganizationCard
-                  key={s.id}
-                  {...s}
-                  imageAlt={s.name}
-                  profileHref={`/organizations/${s.id}`}
-                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
-                />
-              ))
-            : filteredSpecialists.map((s) => (
-                <SpecialistCard
-                  key={s.id}
-                  {...s}
-                  imageAlt={s.name}
-                  profileHref={`/specialists/${s.id}`}
-                  slotGroups={slotGroupsFromSeed(s.slotGroups, tSlots)}
-                />
-              ))}
+            ? filteredSalons.map((o) => {
+                const card = organizationCardSeedFromApi(o);
+                return (
+                  <OrganizationCard
+                    key={card.id}
+                    {...card}
+                    imageAlt={card.name}
+                    profileHref={`/organizations/${o.id}`}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                  />
+                );
+              })
+            : filteredSpecialists.map((s) => {
+                const card = specialistCardSeedFromApi(s);
+                return (
+                  <SpecialistCard
+                    key={card.id}
+                    {...card}
+                    imageAlt={card.name}
+                    profileHref={`/specialists/${s.id}`}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                  />
+                );
+              })}
         </div>
 
         <Button

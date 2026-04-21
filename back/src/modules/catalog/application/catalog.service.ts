@@ -8,10 +8,6 @@ import {
 import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
 import type { CatalogMajorCategoriesListResponseDto } from '../dto/catalog-major-categories-list-response.dto';
-import type {
-  MajorServiceCategoryWithLocales,
-  ServiceCategoryWithMajorAndLocales,
-} from '../infrastructure/catalog.repository';
 import { CatalogRepository } from '../infrastructure/catalog.repository';
 
 @Injectable()
@@ -21,8 +17,7 @@ export class CatalogService {
   async getAllMajorServiceCategories(
     locale: ApiLocale,
   ): Promise<CatalogMajorCategoriesListResponseDto> {
-    const rows =
-      await this.catalogRepository.findAllMajorServiceCategories();
+    const rows = await this.catalogRepository.findAllMajorServiceCategories();
     return {
       majorCategories: rows.map((row) => ({
         id: row.id,

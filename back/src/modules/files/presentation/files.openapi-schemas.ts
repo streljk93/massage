@@ -14,8 +14,10 @@ export const fileUploadResponseSchema = {
     },
     url: {
       type: 'string',
-      example: '/v1/files/public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg',
-      description: 'GET: публичный — без токена; private — только с Bearer access',
+      example:
+        '/v1/files/public/uploads-550e8400-e29b-41d4-a716-446655440000.jpg',
+      description:
+        'GET: публичный — без токена; private — только с Bearer access',
     },
     contentType: { type: 'string', example: 'image/jpeg' },
     size: { type: 'integer', example: 1024 },

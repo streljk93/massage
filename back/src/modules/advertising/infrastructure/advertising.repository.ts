@@ -14,7 +14,9 @@ export type AdvertisementWithLocales = Prisma.AdvertisementGetPayload<{
 export class AdvertisingRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findActiveByPlacement(placement: string): Promise<AdvertisementWithLocales[]> {
+  findActiveByPlacement(
+    placement: string,
+  ): Promise<AdvertisementWithLocales[]> {
     return this.prisma.advertisement.findMany({
       where: {
         placement,

@@ -43,9 +43,10 @@ const majorServiceCategoryListInclude = {
   locales: true,
 } satisfies Prisma.MajorServiceCategoryInclude;
 
-export type MajorServiceCategoryListItem = Prisma.MajorServiceCategoryGetPayload<{
-  include: typeof majorServiceCategoryListInclude;
-}>;
+export type MajorServiceCategoryListItem =
+  Prisma.MajorServiceCategoryGetPayload<{
+    include: typeof majorServiceCategoryListInclude;
+  }>;
 
 @Injectable()
 export class CatalogRepository {
@@ -54,7 +55,9 @@ export class CatalogRepository {
   /**
    * Все активные большие категории с локалями (без подкатегорий), по `sortOrder`.
    */
-  async findAllMajorServiceCategories(): Promise<MajorServiceCategoryListItem[]> {
+  async findAllMajorServiceCategories(): Promise<
+    MajorServiceCategoryListItem[]
+  > {
     return this.prisma.majorServiceCategory.findMany({
       where: {
         deletedAt: null,
