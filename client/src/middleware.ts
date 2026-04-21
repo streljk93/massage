@@ -9,13 +9,21 @@ const profilePathRegex = new RegExp(
   `^\\/(${routing.locales.join("|")})\\/profile(\\/.*)?$`,
 );
 
+/** Гость может открыть только корень профиля и страницы языка, локации и помощи. */
+const profileGuestAllowedRegex = new RegExp(
+  `^\\/(${routing.locales.join("|")})\\/profile(?:\\/(language|location|help))?\\/?$`,
+);
+
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   if (profilePathRegex.test(pathname) && !req.auth) {
+    if (profileGuestAllowedRegex.test(pathname)) {
+      return intlMiddleware(req);
+    }
     const locale = pathname.split("/")[1] ?? routing.defaultLocale;
     const url = req.nextUrl.clone();
-    url.pathname = `/${locale}/login`;
+    url.pathname = `/${locale}/profile`;
     return NextResponse.redirect(url);
   }
 

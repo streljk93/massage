@@ -1,11 +1,12 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
-import { Separator, UserAvatar } from "@/shared/ui";
+import type { AppLocale } from "@/app/i18n/routing";
+import { UserAvatar } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
-import { LocaleSwitcher } from "./locale-switcher";
+import { localeFlagEmoji } from "../lib/locale-flag";
 
 function initialsFromUser(user: {
   name?: string | null;
@@ -43,6 +44,8 @@ export function HomeScreenHeader({
   className,
 }: HomeScreenHeaderProps) {
   const tHeader = useTranslations("homeScreenHeader");
+  const tLocale = useTranslations("locale");
+  const locale = useLocale() as AppLocale;
   const { data: session, status } = useSession();
 
   const isAuthed = status === "authenticated" && !!session?.user;
@@ -87,17 +90,6 @@ export function HomeScreenHeader({
         className={cn("min-w-0 flex-1", showHeadline && "space-y-1")}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <LocaleSwitcher className="shrink-0" />
-          <span
-            className="inline-flex h-8 shrink-0 items-center justify-center"
-            aria-hidden
-          >
-            <Separator
-              orientation="vertical"
-              decorative
-              className="h-3.5 bg-muted-foreground/35 dark:bg-muted-foreground/45"
-            />
-          </span>
           <Link
             href="/become-specialist"
             className={cn(
@@ -114,21 +106,30 @@ export function HomeScreenHeader({
           </h1>
         ) : null}
       </div>
-      <Link
-        href={profileHref}
-        aria-label={avatarAria}
-        className={cn(
-          motion.interactivePressStrong,
-          "shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-        )}
-      >
-        <UserAvatar
-          src={displaySrc}
-          alt={displayAlt}
-          fallback={displayFallback}
-          size="lg"
-        />
-      </Link>
+      <div className="relative shrink-0 self-start">
+        <span
+          className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
+          role="img"
+          aria-label={tLocale(`language.${locale}`)}
+        >
+          {localeFlagEmoji[locale]}
+        </span>
+        <Link
+          href={profileHref}
+          aria-label={avatarAria}
+          className={cn(
+            motion.interactivePressStrong,
+            "relative z-0 block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+          )}
+        >
+          <UserAvatar
+            src={displaySrc}
+            alt={displayAlt}
+            fallback={displayFallback}
+            size="lg"
+          />
+        </Link>
+      </div>
     </header>
   );
 }

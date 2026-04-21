@@ -14,7 +14,9 @@
         "paymentMethods": "Payment methods",
         "help": "Help & support",
         "terms": "Terms & privacy",
-        "signOut": "Log out"
+        "signOut": "Log out",
+        "signIn": "Log in",
+        "loadingAria": "Loading profile"
       }
     },
     "vi": {
@@ -31,7 +33,9 @@
         "paymentMethods": "Phương thức thanh toán",
         "help": "Trợ giúp & hỗ trợ",
         "terms": "Điều khoản & quyền riêng tư",
-        "signOut": "Đăng xuất"
+        "signOut": "Đăng xuất",
+        "signIn": "Đăng nhập",
+        "loadingAria": "Đang tải hồ sơ"
       }
     },
     "ru": {
@@ -48,7 +52,9 @@
         "paymentMethods": "Способы оплаты",
         "help": "Помощь и поддержка",
         "terms": "Условия и конфиденциальность",
-        "signOut": "Выйти"
+        "signOut": "Выйти",
+        "signIn": "Войти",
+        "loadingAria": "Загрузка профиля"
       }
     }
   }
