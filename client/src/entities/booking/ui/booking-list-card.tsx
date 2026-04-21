@@ -4,7 +4,7 @@ import { Calendar, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib";
+import { cn, listExitRowClassNames } from "@/shared/lib";
 
 /** Белая заливка + тонкая обводка (не `variant="secondary"` — там брендовый `--secondary`). */
 const actionOutlineButtonClass =
@@ -26,6 +26,12 @@ export type BookingListCardProps = {
    * Если не задано, для `expired` и `rejected` включается автоматически.
    */
   slotMuted?: boolean;
+  /** Отмена записи (вкладка «Новые» с API). */
+  onCancel?: () => void;
+  /** Запрос отмены для этой карточки уже идёт. */
+  cancelPending?: boolean;
+  /** Успешная отмена: плавное исчезновение перед удалением из списка. */
+  isExiting?: boolean;
   className?: string;
 };
 
@@ -38,6 +44,9 @@ export function BookingListCard({
   timeRange,
   avatarSrc,
   slotMuted,
+  onCancel,
+  cancelPending,
+  isExiting,
   className,
 }: BookingListCardProps) {
   const t = useTranslations("bookingList");
@@ -55,70 +64,88 @@ export function BookingListCard({
             ? t("statusExpired")
             : t("statusRejected");
 
+  const exit = listExitRowClassNames(
+    isExiting ?? false,
+    cn("rounded-2xl border border-border/60 bg-card p-3", className),
+  );
+
   return (
-    <article
-      className={cn(
-        "rounded-2xl border border-border/60 bg-card p-3",
-        className,
-      )}
-    >
-      <p className="text-[0.7rem] text-muted-foreground">{statusLine}</p>
+    <div className={exit.outer}>
+      <div className={exit.inner}>
+        <article aria-hidden={isExiting} className={exit.card}>
+          <p className="text-[0.7rem] text-muted-foreground">{statusLine}</p>
 
-      <div className="mt-2 flex gap-3">
-        <UserAvatar
-          src={avatarSrc}
-          alt={providerName}
-          fallback={providerName.slice(0, 2).toUpperCase()}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
-            {providerName}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{serviceLine}</p>
-        </div>
+          <div className="mt-2 flex gap-3">
+            <UserAvatar
+              src={avatarSrc}
+              alt={providerName}
+              fallback={providerName.slice(0, 2).toUpperCase()}
+              size="sm"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
+                {providerName}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{serviceLine}</p>
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "mt-3 flex flex-wrap gap-2 rounded-xl bg-muted/80 px-2.5 py-2 text-xs",
+              muted && "text-muted-foreground/70",
+            )}
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="size-3.5 shrink-0 opacity-80" aria-hidden />
+              {dateLabel}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="size-3.5 shrink-0 opacity-80" aria-hidden />
+              {timeRange}
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {status === "pending" ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className={actionOutlineButtonClass}
+                onClick={onCancel}
+                disabled={cancelPending || !onCancel}
+                aria-busy={cancelPending}
+              >
+                {t("cancel")}
+              </Button>
+            ) : null}
+
+            {status === "confirmed" ? (
+              <>
+                <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+                  {t("remindMe")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className={actionOutlineButtonClass}
+                  onClick={onCancel}
+                  disabled={cancelPending || !onCancel}
+                  aria-busy={cancelPending}
+                >
+                  {t("cancel")}
+                </Button>
+              </>
+            ) : null}
+
+            {status === "expired" || status === "rejected" ? (
+              <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+                {t("findOther")}
+              </Button>
+            ) : null}
+          </div>
+        </article>
       </div>
-
-      <div
-        className={cn(
-          "mt-3 flex flex-wrap gap-2 rounded-xl bg-muted/80 px-2.5 py-2 text-xs",
-          muted && "text-muted-foreground/70",
-        )}
-      >
-        <span className="inline-flex items-center gap-1.5">
-          <Calendar className="size-3.5 shrink-0 opacity-80" aria-hidden />
-          {dateLabel}
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Clock className="size-3.5 shrink-0 opacity-80" aria-hidden />
-          {timeRange}
-        </span>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        {status === "pending" ? (
-          <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-            {t("cancel")}
-          </Button>
-        ) : null}
-
-        {status === "confirmed" ? (
-          <>
-            <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-              {t("remindMe")}
-            </Button>
-            <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-              {t("cancel")}
-            </Button>
-          </>
-        ) : null}
-
-        {status === "expired" || status === "rejected" ? (
-          <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-            {t("findOther")}
-          </Button>
-        ) : null}
-      </div>
-    </article>
+    </div>
   );
 }

@@ -1,2 +1,2 @@
 export { cn } from "./utils";
-export { motion } from "./motion";
+export { listExitRowClassNames, motion } from "./motion";

@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
 import {
   BookingHistoryCard,
   BookingListCard,
@@ -11,50 +13,311 @@ import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { homeUser } from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
 import {
-  bookingsHistoryMock,
-  bookingsNewMock,
-  type BookingsHistoryMockItem,
-  type BookingsPageMockItem,
-} from "../lib/mock-data";
+  bookingsCancel,
+  bookingsList,
+  createBrowserSdkClient,
+} from "@/shared/api";
+import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import {
+  vnCalendarYmdString,
+  vnTomorrowFromNow,
+} from "@/views/specialist-profile/lib/booking-starts-at";
+import {
+  bookingIsNewTab,
+  mapApiStatusToListCard,
+} from "../lib/booking-api-to-ui";
 
 type BookingsTab = "new" | "history";
+
+/** Чуть дольше `--motion-duration-slow`, чтобы успели grid + fade на карточке. */
+const BOOKING_CANCEL_EXIT_MS = 360;
+
+type ApiBooking = {
+  id: string;
+  status: string;
+  specialistName: string;
+  specialistImageUrl?: string | null;
+  serviceName: string;
+  amount: number | null;
+  currency: string;
+  startsAt: string;
+  endsAt: string;
+  pendingExpiresAt?: string | null;
+};
+
+function specialistAvatarSrc(url: string | null | undefined): string | undefined {
+  if (url == null || url === "") {
+    return undefined;
+  }
+  return url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : resolveApiResourceUrl(url);
+}
 
 export function BookingsPage() {
   const t = useTranslations("bookings");
   const tRoot = useTranslations();
   const format = useFormatter();
+  const { data: session, status: sessionStatus } = useSession();
+  const accessToken = session?.accessToken;
+
   const [tab, setTab] = useState<BookingsTab>("new");
-
-  const newCards = useMemo(
-    () =>
-      bookingsNewMock.map((row: BookingsPageMockItem) => ({
-        ...row,
-        serviceLine: formatBookingServiceLineClient(tRoot, format, {
-          serviceLabel: tRoot(row.serviceNameKey),
-          amount: row.amount,
-          currency: row.currency,
-        }),
-        dateLabel: tRoot(row.dateLabelKey),
-      })),
-    [tRoot, format],
+  const [rows, setRows] = useState<ApiBooking[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [exitingBookingId, setExitingBookingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const cancelLock = useRef(false);
+  const exitRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
   );
 
-  const historyCards = useMemo(
-    () =>
-      bookingsHistoryMock.map((row: BookingsHistoryMockItem) => ({
-        ...row,
-        serviceLine: formatBookingServiceLineClient(tRoot, format, {
-          serviceLabel: tRoot(row.serviceNameKey),
-          amount: row.amount,
-          currency: row.currency,
-        }),
-        reviewExcerpt:
-          row.reviewed && row.reviewSnippetKey
-            ? t(row.reviewSnippetKey)
-            : undefined,
-      })),
-    [tRoot, format, t],
+  const refreshBookings = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
+    const res = await bookingsList({
+      client: createBrowserSdkClient(accessToken),
+    });
+    if (res.error || !res.data) {
+      setLoadError(true);
+      setRows([]);
+      return;
+    }
+    setLoadError(false);
+    setRows(res.data.bookings);
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (sessionStatus === "loading") {
+      return;
+    }
+    if (!accessToken) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const res = await bookingsList({
+        client: createBrowserSdkClient(accessToken),
+      });
+      if (cancelled) {
+        return;
+      }
+      if (res.error || !res.data) {
+        setLoadError(true);
+        setRows([]);
+        return;
+      }
+      setLoadError(false);
+      setRows(res.data.bookings);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, sessionStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (exitRefreshTimeoutRef.current != null) {
+        clearTimeout(exitRefreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCancel = useCallback(
+    async (bookingId: string) => {
+      if (!accessToken || cancelLock.current) {
+        return;
+      }
+      cancelLock.current = true;
+      setCancellingId(bookingId);
+      setCancelError(null);
+      try {
+        const res = await bookingsCancel({
+          client: createBrowserSdkClient(accessToken),
+          path: { id: bookingId },
+        });
+        if (res.error || !res.data) {
+          setCancelError(t("cancelError"));
+          return;
+        }
+        setExitingBookingId(bookingId);
+        if (exitRefreshTimeoutRef.current != null) {
+          clearTimeout(exitRefreshTimeoutRef.current);
+        }
+        exitRefreshTimeoutRef.current = setTimeout(() => {
+          exitRefreshTimeoutRef.current = null;
+          void refreshBookings();
+          setExitingBookingId(null);
+        }, BOOKING_CANCEL_EXIT_MS);
+      } finally {
+        cancelLock.current = false;
+        setCancellingId(null);
+      }
+    },
+    [accessToken, refreshBookings, t],
   );
+
+  const newRows = useMemo(
+    () => (rows ?? []).filter((b) => bookingIsNewTab(b.status)),
+    [rows],
+  );
+
+  const historyRows = useMemo(
+    () => (rows ?? []).filter((b) => !bookingIsNewTab(b.status)),
+    [rows],
+  );
+
+  const listCards = useMemo(() => {
+    const now = new Date();
+    const todayYmd = vnCalendarYmdString(now);
+    const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
+
+    return newRows.map((row) => {
+      const start = new Date(row.startsAt);
+      const end = new Date(row.endsAt);
+      const startYmd = vnCalendarYmdString(start);
+      let dateLabel: string;
+      if (startYmd === todayYmd) {
+        dateLabel = tRoot("booking.today");
+      } else if (startYmd === tomorrowYmd) {
+        dateLabel = tRoot("booking.tomorrow");
+      } else {
+        dateLabel = format.dateTime(start, { dateStyle: "medium" });
+      }
+
+      const timeRange = `${format.dateTime(start, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Ho_Chi_Minh",
+      })} – ${format.dateTime(end, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Ho_Chi_Minh",
+      })}`;
+
+      const pendingTime =
+        row.status === "pending" && row.pendingExpiresAt
+          ? format.dateTime(new Date(row.pendingExpiresAt), {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Asia/Ho_Chi_Minh",
+            })
+          : undefined;
+
+      const serviceLine =
+        row.amount != null
+          ? formatBookingServiceLineClient(tRoot, format, {
+              serviceLabel: row.serviceName,
+              amount: row.amount,
+              currency: row.currency,
+            })
+          : row.serviceName;
+
+      return {
+        id: row.id,
+        status: mapApiStatusToListCard(row.status),
+        pendingTime,
+        providerName: row.specialistName,
+        serviceLine,
+        dateLabel,
+        timeRange,
+        avatarSrc: specialistAvatarSrc(row.specialistImageUrl),
+      };
+    });
+  }, [format, newRows, tRoot]);
+
+  const historyCards = useMemo(() => {
+    const now = new Date();
+    const todayYmd = vnCalendarYmdString(now);
+    const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
+
+    return historyRows.map((row) => {
+      const start = new Date(row.startsAt);
+      const end = new Date(row.endsAt);
+      const startYmd = vnCalendarYmdString(start);
+      let dateLabel: string;
+      if (startYmd === todayYmd) {
+        dateLabel = tRoot("booking.today");
+      } else if (startYmd === tomorrowYmd) {
+        dateLabel = tRoot("booking.tomorrow");
+      } else {
+        dateLabel = format.dateTime(start, { dateStyle: "medium" });
+      }
+
+      const timeRange = `${format.dateTime(start, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Ho_Chi_Minh",
+      })} – ${format.dateTime(end, {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Asia/Ho_Chi_Minh",
+      })}`;
+
+      const serviceLine =
+        row.amount != null
+          ? formatBookingServiceLineClient(tRoot, format, {
+              serviceLabel: row.serviceName,
+              amount: row.amount,
+              currency: row.currency,
+            })
+          : row.serviceName;
+
+      return {
+        id: row.id,
+        providerName: row.specialistName,
+        serviceLine,
+        dateLabel,
+        timeRange,
+        avatarSrc: specialistAvatarSrc(row.specialistImageUrl),
+      };
+    });
+  }, [format, historyRows, tRoot]);
+
+  const headerName =
+    session?.user?.name?.trim() ||
+    session?.user?.email?.split("@")[0] ||
+    homeUser.firstName;
+  const headerFallback = headerName.slice(0, 2).toUpperCase();
+
+  const mainContent = (() => {
+    if (sessionStatus === "loading") {
+      return (
+        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+          {t("loading")}
+        </p>
+      );
+    }
+    if (!accessToken) {
+      return (
+        <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+          {t("signInToSee")}{" "}
+          <Link
+            href="/login"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            {tRoot("profile.signIn")}
+          </Link>
+        </p>
+      );
+    }
+    if (rows === null) {
+      return (
+        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+          {t("loading")}
+        </p>
+      );
+    }
+    if (loadError) {
+      return (
+        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-destructive">
+          {t("loadError")}
+        </p>
+      );
+    }
+    return null;
+  })();
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
@@ -62,8 +325,8 @@ export function BookingsPage() {
         <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
           <HomeScreenHeader
             title={t("title")}
-            avatarAlt={homeUser.firstName}
-            avatarFallback={homeUser.firstName.slice(0, 2).toUpperCase()}
+            avatarAlt={headerName}
+            avatarFallback={headerFallback}
           />
 
           <div
@@ -102,38 +365,58 @@ export function BookingsPage() {
           </div>
 
           <div className="space-y-2.5" role="tabpanel">
-            {tab === "new" ? (
-              newCards.map((row) => (
-                <BookingListCard
-                  key={row.id}
-                  status={row.status}
-                  pendingTime={row.pendingTime}
-                  providerName={row.providerName}
-                  serviceLine={row.serviceLine}
-                  dateLabel={row.dateLabel}
-                  timeRange={row.timeRange}
-                  avatarSrc={row.avatarSrc}
-                />
-              ))
-            ) : historyCards.length === 0 ? (
-              <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-                {t("emptyHistory")}
+            {mainContent}
+
+            {cancelError ? (
+              <p
+                role="alert"
+                className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive"
+              >
+                {cancelError}
               </p>
-            ) : (
-              historyCards.map((row) => (
-                <BookingHistoryCard
-                  key={row.id}
-                  providerName={row.providerName}
-                  serviceLine={row.serviceLine}
-                  dateLabel={row.dateDisplay}
-                  timeRange={row.timeRange}
-                  avatarSrc={row.avatarSrc}
-                  reviewed={row.reviewed}
-                  rating={row.rating}
-                  reviewExcerpt={row.reviewExcerpt}
-                />
-              ))
-            )}
+            ) : null}
+
+            {accessToken && rows !== null && !loadError ? (
+              tab === "new" ? (
+                listCards.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+                    {t("emptyNew")}
+                  </p>
+                ) : (
+                  listCards.map((row) => (
+                    <BookingListCard
+                      key={row.id}
+                      status={row.status}
+                      pendingTime={row.pendingTime}
+                      providerName={row.providerName}
+                      serviceLine={row.serviceLine}
+                      dateLabel={row.dateLabel}
+                      timeRange={row.timeRange}
+                      avatarSrc={row.avatarSrc}
+                      onCancel={() => void handleCancel(row.id)}
+                      cancelPending={cancellingId === row.id}
+                      isExiting={exitingBookingId === row.id}
+                    />
+                  ))
+                )
+              ) : historyCards.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t("emptyHistory")}
+                </p>
+              ) : (
+                historyCards.map((row) => (
+                  <BookingHistoryCard
+                    key={row.id}
+                    providerName={row.providerName}
+                    serviceLine={row.serviceLine}
+                    dateLabel={row.dateLabel}
+                    timeRange={row.timeRange}
+                    avatarSrc={row.avatarSrc}
+                    reviewed={false}
+                  />
+                ))
+              )
+            ) : null}
           </div>
         </main>
 

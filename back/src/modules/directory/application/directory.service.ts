@@ -3,14 +3,17 @@ import type { ApiLocale } from '../../../common/i18n';
 import {
   pickLocalizedOrganizationListItem,
   pickLocalizedServiceCategoryFields,
+  pickLocalizedServiceName,
   type CategoryLocaleShape,
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
 import { buildListingSlotGroupsFromSlotStarts } from '../domain/build-card-slot-groups';
+import { filterSlotGroupsByOccupiedKeys } from '../domain/filter-slot-groups-by-occupied';
 import {
   parseListingSlotGroups,
   type ListingSlotGroupSeed,
 } from '../domain/listing-slot-groups';
+import { formatOccupiedSlotKey } from '../domain/occupancy-slot-key';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
 import type {
   OrganizationDetailResponseDto,
@@ -18,7 +21,10 @@ import type {
 } from '../dto/organization-detail-response.dto';
 import type { OrganizationListItemDto } from '../dto/organizations-list-response.dto';
 import type { OrganizationsListResponseDto } from '../dto/organizations-list-response.dto';
-import type { SpecialistListItemDto } from '../dto/specialists-list-response.dto';
+import type {
+  SpecialistBookableServiceDto,
+  SpecialistListItemDto,
+} from '../dto/specialists-list-response.dto';
 import type { SpecialistsListResponseDto } from '../dto/specialists-list-response.dto';
 import type {
   OrganizationListRow,
@@ -50,18 +56,42 @@ function mapDirectoryCategoryTags(
   });
 }
 
-function mergeOrganizationSlotStarts(org: OrganizationListRow): Date[] {
+function mergeOrganizationSlotStarts(
+  org: OrganizationListRow,
+  occupiedMap: Map<string, Set<string>>,
+): Date[] {
   const starts: Date[] = [];
   for (const e of org.specialistEmployments) {
     if (!e.specialist.listedInDirectory) {
       continue;
     }
+    const occupied = occupiedMap.get(e.specialist.id) ?? new Set();
     for (const sl of e.specialist.availabilitySlots) {
+      const key = formatOccupiedSlotKey(sl.startsAt);
+      if (occupied.has(key)) {
+        continue;
+      }
       starts.push(sl.startsAt);
     }
   }
   starts.sort((a, b) => a.getTime() - b.getTime());
   return starts;
+}
+
+function unionOccupiedKeysForOrganization(
+  o: OrganizationListRow,
+  occupiedMap: Map<string, Set<string>>,
+): Set<string> {
+  const union = new Set<string>();
+  for (const e of o.specialistEmployments) {
+    if (!e.specialist.listedInDirectory) {
+      continue;
+    }
+    for (const k of occupiedMap.get(e.specialist.id) ?? []) {
+      union.add(k);
+    }
+  }
+  return union;
 }
 
 function resolveSlotGroups(
@@ -71,17 +101,59 @@ function resolveSlotGroups(
   return fromAvailability.length > 0 ? fromAvailability : jsonFallback;
 }
 
+type DirectoryServiceRow = SpecialistListRow['services'][number];
+
+function isVndPriceOption(p: { currency: string }): boolean {
+  return (p.currency ?? 'VND').toUpperCase() === 'VND';
+}
+
+/** Услуги из `Service` + `ServicePriceOption` (только VND). */
+function mapServiceRowsToBookable(
+  services: DirectoryServiceRow[],
+  locale: ApiLocale,
+): SpecialistBookableServiceDto[] {
+  const out: SpecialistBookableServiceDto[] = [];
+  for (const svc of services) {
+    const vndOpts = (svc.priceOptions ?? []).filter(isVndPriceOption);
+    if (vndOpts.length === 0) {
+      continue;
+    }
+    const name = pickLocalizedServiceName(svc, locale);
+    out.push({
+      id: svc.id,
+      name,
+      durationMinutes: vndOpts.map((p) => p.durationMinutes),
+      priceVndByDuration: vndOpts.map((p) => p.priceAmount),
+    });
+  }
+  return out;
+}
+
+/** Только `Service` с `specialistId` = этот мастер (см. `Specialist.services`). */
+function mapSpecialistOwnBookableServices(
+  services: SpecialistListRow['services'],
+  locale: ApiLocale,
+): SpecialistBookableServiceDto[] {
+  return mapServiceRowsToBookable(services, locale);
+}
+
 function mapSpecialistRowToListItem(
   s: SpecialistListRow,
   locale: ApiLocale,
   now: Date,
+  occupiedKeys: Set<string>,
 ): SpecialistListItemDto {
   const fromDb = buildListingSlotGroupsFromSlotStarts(
     s.availabilitySlots.map((x) => x.startsAt),
     now,
   );
   const fromJson = parseListingSlotGroups(s.listingSlotGroups);
-  const slotGroups = resolveSlotGroups(fromDb, fromJson);
+  const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
+  const slotGroups = filterSlotGroupsByOccupiedKeys(
+    slotGroupsRaw,
+    occupiedKeys,
+    now,
+  );
 
   const categoriesLine = joinLocalizedCategoryShortNames(
     s.serviceCategories,
@@ -92,17 +164,17 @@ function mapSpecialistRowToListItem(
     [s.addressLine, s.city].filter(Boolean).join(', ') ||
     s.bio?.trim() ||
     '';
+  // `listingServicesLine` — денормализация (часто en из сида); для витрины важнее
+  // локализованная склейка по M2M `serviceCategories`, если она есть.
   const servicesLine =
-    s.listingServicesLine?.trim() ||
     categoriesLine ||
-    s.specialtiesLine?.trim() ||
+    s.listingServicesLine?.trim() ||
     '';
   return {
     id: s.id,
     userId: s.userId,
     name: s.user.name,
     bio: s.bio,
-    specialtiesLine: s.specialtiesLine,
     experienceYears: s.experienceYears,
     ratingAverage: s.ratingAverage,
     rating: s.ratingAverage,
@@ -117,6 +189,7 @@ function mapSpecialistRowToListItem(
     servicesLine,
     categories: mapDirectoryCategoryTags(s.serviceCategories, locale),
     slotGroups,
+    bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
   };
 }
 
@@ -124,17 +197,24 @@ function mapOrganizationRowToListItem(
   o: OrganizationListRow,
   locale: ApiLocale,
   now: Date,
+  occupiedMap: Map<string, Set<string>>,
 ): OrganizationListItemDto {
   const localized = pickLocalizedOrganizationListItem(
     o as unknown as OrganizationLocaleListShape,
     locale,
   );
   const fromDb = buildListingSlotGroupsFromSlotStarts(
-    mergeOrganizationSlotStarts(o),
+    mergeOrganizationSlotStarts(o, occupiedMap),
     now,
   );
   const fromJson = parseListingSlotGroups(o.listingSlotGroups);
-  const slotGroups = resolveSlotGroups(fromDb, fromJson);
+  const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
+  const unionKeys = unionOccupiedKeysForOrganization(o, occupiedMap);
+  const slotGroups = filterSlotGroupsByOccupiedKeys(
+    slotGroupsRaw,
+    unionKeys,
+    now,
+  );
 
   const categoriesLine = joinLocalizedCategoryShortNames(
     o.serviceCategories,
@@ -142,8 +222,8 @@ function mapOrganizationRowToListItem(
   );
   const metaLine = o.listingMetaLine?.trim() || localized.city?.trim() || '';
   const servicesLine =
-    o.listingServicesLine?.trim() ||
     categoriesLine ||
+    o.listingServicesLine?.trim() ||
     localized.description?.trim() ||
     '';
   return {
@@ -171,6 +251,7 @@ function mapOrganizationRowToListItem(
 
 function mapSpecialistToStaffMember(
   s: OrganizationListRow['specialistEmployments'][number]['specialist'],
+  locale: ApiLocale,
 ): OrganizationStaffMemberDto {
   const metaLine =
     s.listingMetaLine?.trim() ||
@@ -183,8 +264,8 @@ function mapSpecialistToStaffMember(
     name: s.user.name,
     rating: s.ratingAverage,
     metaLine,
-    specialtiesLine: s.specialtiesLine,
     imageUrl: s.imageUrl,
+    bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
   };
 }
 
@@ -197,8 +278,20 @@ export class DirectoryService {
   ): Promise<SpecialistsListResponseDto> {
     const now = new Date();
     const rows = await this.directoryRepository.findAllSpecialists(now);
+    const occupiedMap =
+      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
+        rows.map((s) => s.id),
+        now,
+      );
     return {
-      specialists: rows.map((s) => mapSpecialistRowToListItem(s, locale, now)),
+      specialists: rows.map((s) =>
+        mapSpecialistRowToListItem(
+          s,
+          locale,
+          now,
+          occupiedMap.get(s.id) ?? new Set(),
+        ),
+      ),
     };
   }
 
@@ -207,9 +300,22 @@ export class DirectoryService {
   ): Promise<OrganizationsListResponseDto> {
     const now = new Date();
     const rows = await this.directoryRepository.findAllOrganizations(now);
+    const specialistIds = new Set<string>();
+    for (const o of rows) {
+      for (const e of o.specialistEmployments) {
+        if (e.isActive && e.specialist.listedInDirectory) {
+          specialistIds.add(e.specialist.id);
+        }
+      }
+    }
+    const occupiedMap =
+      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
+        [...specialistIds],
+        now,
+      );
     return {
       organizations: rows.map((o) =>
-        mapOrganizationRowToListItem(o, locale, now),
+        mapOrganizationRowToListItem(o, locale, now, occupiedMap),
       ),
     };
   }
@@ -223,7 +329,17 @@ export class DirectoryService {
     if (!row) {
       return null;
     }
-    return mapSpecialistRowToListItem(row, locale, now);
+    const occupiedMap =
+      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
+        [id],
+        now,
+      );
+    return mapSpecialistRowToListItem(
+      row,
+      locale,
+      now,
+      occupiedMap.get(id) ?? new Set(),
+    );
   }
 
   async getOrganizationById(
@@ -235,12 +351,20 @@ export class DirectoryService {
     if (!row) {
       return null;
     }
-    const base = mapOrganizationRowToListItem(row, locale, now);
+    const specialistIds = row.specialistEmployments
+      .filter((e) => e.isActive && e.specialist.listedInDirectory)
+      .map((e) => e.specialist.id);
+    const occupiedMap =
+      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
+        specialistIds,
+        now,
+      );
+    const base = mapOrganizationRowToListItem(row, locale, now, occupiedMap);
     // Только мастера, доступные для записи (как в каталоге). Владелец «без приёма»
     // (listedInDirectory: false) остаётся в employment, но не показывается в блоке сотрудников.
     const staff: OrganizationStaffMemberDto[] = row.specialistEmployments
       .filter((e) => e.isActive && e.specialist.listedInDirectory)
-      .map((e) => mapSpecialistToStaffMember(e.specialist));
+      .map((e) => mapSpecialistToStaffMember(e.specialist, locale));
     return {
       ...base,
       staff,

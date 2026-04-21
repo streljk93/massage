@@ -3,6 +3,7 @@
     "en": {
       "booking": {
         "today": "Today",
+        "tomorrow": "Tomorrow",
         "serviceLine": "{service} — {price}",
         "demoFootMassage": "Foot massage"
       }
@@ -10,6 +11,7 @@
     "vi": {
       "booking": {
         "today": "Hôm nay",
+        "tomorrow": "Ngày mai",
         "serviceLine": "{service} — {price}",
         "demoFootMassage": "Massage chân"
       }
@@ -17,6 +19,7 @@
     "ru": {
       "booking": {
         "today": "Сегодня",
+        "tomorrow": "Завтра",
         "serviceLine": "{service} — {price}",
         "demoFootMassage": "Массаж стоп"
       }

@@ -18,8 +18,10 @@
         "mapWhereAmI": "Where am I",
         "mapInteractionGateHint": "Tap the map to zoom and pan.",
         "selectDate": "Select date",
+        "noSlots": "No open slots in the next two days",
         "selectSlot": "Select slot",
         "selectService": "Select service",
+        "noServices": "No services listed yet",
         "weekdays": {
           "sun": "Sun",
           "mon": "Mon",
@@ -30,11 +32,10 @@
           "sat": "Sat"
         },
         "durationMin": "{n} min",
-        "services": {
-          "footMassage": "Foot massage",
-          "relaxMassage": "Relax massage"
-        },
-        "booking": "Booking"
+        "booking": "Booking",
+        "bookingAriaLoading": "Sending booking…",
+        "bookingPickSlot": "Choose a time slot and service.",
+        "bookingErrorGeneric": "Could not complete booking. Try again."
       }
     },
     "vi": {
@@ -55,8 +56,10 @@
         "mapWhereAmI": "Tôi ở đâu",
         "mapInteractionGateHint": "Chạm bản đồ để thu phóng và kéo.",
         "selectDate": "Chọn ngày",
+        "noSlots": "Không có giờ trống trong hai ngày tới",
         "selectSlot": "Chọn giờ",
         "selectService": "Chọn dịch vụ",
+        "noServices": "Chưa có dịch vụ",
         "weekdays": {
           "sun": "CN",
           "mon": "T2",
@@ -67,11 +70,10 @@
           "sat": "T7"
         },
         "durationMin": "{n} phút",
-        "services": {
-          "footMassage": "Massage chân",
-          "relaxMassage": "Massage thư giãn"
-        },
-        "booking": "Đặt lịch"
+        "booking": "Đặt lịch",
+        "bookingAriaLoading": "Đang gửi đặt lịch…",
+        "bookingPickSlot": "Chọn giờ và dịch vụ.",
+        "bookingErrorGeneric": "Không đặt được lịch. Thử lại."
       }
     },
     "ru": {
@@ -92,8 +94,10 @@
         "mapWhereAmI": "Где я",
         "mapInteractionGateHint": "Нажмите на карту, чтобы масштабировать и двигать её.",
         "selectDate": "Выберите дату",
+        "noSlots": "Нет свободных слотов на ближайшие два дня",
         "selectSlot": "Выберите время",
         "selectService": "Выберите услугу",
+        "noServices": "Услуги пока не добавлены",
         "weekdays": {
           "sun": "Вс",
           "mon": "Пн",
@@ -104,11 +108,10 @@
           "sat": "Сб"
         },
         "durationMin": "{n} мин",
-        "services": {
-          "footMassage": "Массаж стоп",
-          "relaxMassage": "Расслабляющий массаж"
-        },
-        "booking": "Записаться"
+        "booking": "Записаться",
+        "bookingAriaLoading": "Отправляем запись…",
+        "bookingPickSlot": "Выберите время и услугу.",
+        "bookingErrorGeneric": "Не удалось записаться. Попробуйте снова."
       }
     }
   }

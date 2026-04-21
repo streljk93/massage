@@ -21,6 +21,23 @@ const listingSlotGroupItemSchema = {
   },
 };
 
+const specialistBookableServiceSchema = {
+  type: 'object',
+  required: ['id', 'name', 'durationMinutes', 'priceVndByDuration'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Relaxing massage' },
+    durationMinutes: {
+      type: 'array',
+      items: { type: 'integer', example: 60 },
+    },
+    priceVndByDuration: {
+      type: 'array',
+      items: { type: 'integer', example: 450000 },
+    },
+  },
+};
+
 export const specialistListItemSchema = {
   type: 'object',
   required: [
@@ -36,13 +53,13 @@ export const specialistListItemSchema = {
     'servicesLine',
     'categories',
     'slotGroups',
+    'bookableServices',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     userId: { type: 'string', format: 'uuid' },
     name: { type: 'string', example: 'Иван' },
     bio: { type: 'string', nullable: true },
-    specialtiesLine: { type: 'string', nullable: true },
     experienceYears: { type: 'integer', nullable: true },
     ratingAverage: { type: 'number', example: 4.8 },
     rating: { type: 'number', example: 4.8 },
@@ -66,6 +83,10 @@ export const specialistListItemSchema = {
     slotGroups: {
       type: 'array',
       items: listingSlotGroupItemSchema,
+    },
+    bookableServices: {
+      type: 'array',
+      items: specialistBookableServiceSchema,
     },
   },
 };
@@ -140,15 +161,25 @@ export const organizationsListResponseSchema = {
 
 const organizationStaffMemberSchema = {
   type: 'object',
-  required: ['id', 'userId', 'name', 'rating', 'metaLine'],
+  required: [
+    'id',
+    'userId',
+    'name',
+    'rating',
+    'metaLine',
+    'bookableServices',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     userId: { type: 'string', format: 'uuid' },
     name: { type: 'string' },
     rating: { type: 'number' },
     metaLine: { type: 'string' },
-    specialtiesLine: { type: 'string', nullable: true },
     imageUrl: { type: 'string', nullable: true, format: 'uri' },
+    bookableServices: {
+      type: 'array',
+      items: specialistBookableServiceSchema,
+    },
   },
 };
 

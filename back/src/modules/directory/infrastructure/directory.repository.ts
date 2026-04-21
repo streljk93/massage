@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { formatOccupiedSlotKey } from '../domain/occupancy-slot-key';
 
 const availabilityWhere = (
   now: Date,
@@ -20,9 +21,19 @@ const serviceCategoryWithLocales = {
   },
 } as const;
 
+const directoryServiceInclude = {
+  where: { deletedAt: null, isActive: true },
+  orderBy: { sortOrder: 'asc' as const },
+  include: {
+    priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
+    locales: true,
+  },
+} satisfies Prisma.ServiceFindManyArgs;
+
 function specialistIncludeForOrgEmployment(now: Date) {
   return {
     user: { select: { id: true, name: true } },
+    services: directoryServiceInclude,
     availabilitySlots: {
       where: availabilityWhere(now),
       orderBy: { startsAt: 'asc' as const },
@@ -35,6 +46,8 @@ function specialistListInclude(now: Date) {
   return {
     user: { select: { id: true, name: true } },
     serviceCategories: serviceCategoryWithLocales,
+    /** Услуги каталога с `specialistId` = этот мастер. */
+    services: directoryServiceInclude,
     availabilitySlots: {
       where: availabilityWhere(now),
       orderBy: { startsAt: 'asc' as const },
@@ -79,9 +92,51 @@ export type OrganizationListRow = Prisma.OrganizationGetPayload<{
   include: typeof organizationListIncludeShape;
 }>;
 
+/** Активные записи: слот считается занятым до отмены / завершения. */
+const ACTIVE_BOOKING_STATUSES: Array<
+  'pending' | 'confirmed' | 'in_progress'
+> = ['pending', 'confirmed', 'in_progress'];
+
 @Injectable()
 export class DirectoryRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Ключи `день(VN)|HH:mm` по активным бронированиям в окне витрины (как у слотов).
+   */
+  async findOccupiedBookingKeysBySpecialistIds(
+    specialistIds: string[],
+    now: Date,
+  ): Promise<Map<string, Set<string>>> {
+    const result = new Map<string, Set<string>>();
+    for (const id of specialistIds) {
+      result.set(id, new Set());
+    }
+    if (specialistIds.length === 0) {
+      return result;
+    }
+    const windowStart = new Date(now.getTime() - 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const rows = await this.prisma.booking.findMany({
+      where: {
+        specialistId: { in: specialistIds },
+        deletedAt: null,
+        status: { in: ACTIVE_BOOKING_STATUSES },
+        startsAt: { gte: windowStart, lte: windowEnd },
+      },
+      select: { specialistId: true, startsAt: true },
+    });
+
+    for (const r of rows) {
+      const set = result.get(r.specialistId);
+      if (!set) {
+        continue;
+      }
+      set.add(formatOccupiedSlotKey(r.startsAt));
+    }
+    return result;
+  }
 
   findAllSpecialists(now: Date): Promise<SpecialistListRow[]> {
     return this.prisma.specialist.findMany({

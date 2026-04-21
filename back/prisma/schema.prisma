@@ -260,8 +260,6 @@ model Specialist {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   bio             String?
-  /// Строка специализаций для карточки (аналог specialtiesLine в UI).
-  specialtiesLine String?
   experienceYears Int?
   /// Подпись вида «1.5k +» для демо/UI.
   clientsLabel    String?

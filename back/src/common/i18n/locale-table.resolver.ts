@@ -119,6 +119,24 @@ export function pickLocalizedOrganizationListItem(
   };
 }
 
+/** Услуга организации с `ServiceLocale` для витрины. */
+export type ServiceLocaleShape = {
+  name: string;
+  locales: { locale: string; name: string }[];
+};
+
+export function pickLocalizedServiceName(
+  service: ServiceLocaleShape,
+  locale: ApiLocale,
+): string {
+  return resolveLocalizedString(
+    locale,
+    service.locales ?? [],
+    (l) => l.name,
+    service.name,
+  );
+}
+
 export function pickLocalizedServiceCategoryFields(
   cat: CategoryLocaleShape,
   locale: ApiLocale,

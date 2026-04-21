@@ -396,7 +396,7 @@ export function OrganizationProfilePage({
                         service={svc}
                         selected={selected}
                         selectedDurationMinutes={dur}
-                        serviceName={t(`services.${svc.nameKey}`)}
+                        serviceName={svc.title}
                         formatPrice={priceText}
                         formatDurationMinutes={(m) =>
                           t("durationMin", { n: m })
@@ -434,6 +434,8 @@ export function OrganizationProfilePage({
                         openProfileAriaLabel={t("specialistOpenProfileAria", {
                           name: pick.name,
                         })}
+                        serviceColumnLabel={t("specialistServiceCol")}
+                        durationColumnLabel={t("specialistDurationCol")}
                         onSelect={() =>
                           setSelectedSalonSpecialistId(pick.specialistId)
                         }

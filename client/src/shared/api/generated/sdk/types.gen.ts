@@ -527,7 +527,6 @@ export type SpecialistsListResponses = {
             userId: string;
             name: string;
             bio?: string | null;
-            specialtiesLine?: string | null;
             experienceYears?: number | null;
             ratingAverage: number;
             rating: number;
@@ -547,6 +546,12 @@ export type SpecialistsListResponses = {
             slotGroups: Array<{
                 dayKey: 'today' | 'tomorrow';
                 times: Array<string>;
+            }>;
+            bookableServices: Array<{
+                id: string;
+                name: string;
+                durationMinutes: Array<number>;
+                priceVndByDuration: Array<number>;
             }>;
         }>;
     };
@@ -583,7 +588,6 @@ export type SpecialistsGetByIdResponses = {
         userId: string;
         name: string;
         bio?: string | null;
-        specialtiesLine?: string | null;
         experienceYears?: number | null;
         ratingAverage: number;
         rating: number;
@@ -603,6 +607,12 @@ export type SpecialistsGetByIdResponses = {
         slotGroups: Array<{
             dayKey: 'today' | 'tomorrow';
             times: Array<string>;
+        }>;
+        bookableServices: Array<{
+            id: string;
+            name: string;
+            durationMinutes: Array<number>;
+            priceVndByDuration: Array<number>;
         }>;
     };
 };
@@ -718,8 +728,13 @@ export type OrganizationsGetByIdResponses = {
             name: string;
             rating: number;
             metaLine: string;
-            specialtiesLine?: string | null;
             imageUrl?: string | null;
+            bookableServices: Array<{
+                id: string;
+                name: string;
+                durationMinutes: Array<number>;
+                priceVndByDuration: Array<number>;
+            }>;
         }>;
     };
 };
@@ -766,3 +781,112 @@ export type AdvertisingListByPlacementResponses = {
 };
 
 export type AdvertisingListByPlacementResponse = AdvertisingListByPlacementResponses[keyof AdvertisingListByPlacementResponses];
+
+export type BookingsListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/bookings';
+};
+
+export type BookingsListErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type BookingsListResponses = {
+    200: {
+        bookings: Array<{
+            id: string;
+            status: string;
+            specialistName: string;
+            specialistImageUrl?: string | null;
+            serviceName: string;
+            amount: number | null;
+            currency: string;
+            startsAt: string;
+            endsAt: string;
+            pendingExpiresAt?: string | null;
+        }>;
+    };
+};
+
+export type BookingsListResponse = BookingsListResponses[keyof BookingsListResponses];
+
+export type BookingsCreateData = {
+    body: {
+        specialistId: string;
+        serviceId: string;
+        durationMinutes: number;
+        /**
+         * ISO 8601
+         */
+        startsAt: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/bookings';
+};
+
+export type BookingsCreateErrors = {
+    /**
+     * Невалидное тело или слот в прошлом
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type BookingsCreateResponses = {
+    201: {
+        id: string;
+        status: 'pending';
+        startsAt: string;
+        endsAt: string;
+        pendingExpiresAt?: string | null;
+    };
+};
+
+export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
+
+export type BookingsCancelData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/bookings/{id}/cancel';
+};
+
+export type BookingsCancelErrors = {
+    /**
+     * Нельзя отменить в текущем статусе
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Запись не найдена
+     */
+    404: unknown;
+};
+
+export type BookingsCancelResponses = {
+    200: {
+        id: string;
+        status: 'canceled_by_client';
+    };
+};
+
+export type BookingsCancelResponse = BookingsCancelResponses[keyof BookingsCancelResponses];

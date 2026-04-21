@@ -16,6 +16,11 @@ export function createOpenApiDocument(app: INestApplication) {
     .build();
 
   return SwaggerModule.createDocument(app, config, {
+    /**
+     * Иначе пути в спецификации уже содержат `/v1` (из `setGlobalPrefix`), а `addServer('/v1')`
+     * даёт второй префикс — в Swagger UI получается `/v1/v1/...`.
+     */
+    ignoreGlobalPrefix: true,
     operationIdFactory: (controllerKey: string, methodKey: string) => {
       const short = controllerKey.replace(/Controller$/, '');
       return `${short}_${methodKey}`;

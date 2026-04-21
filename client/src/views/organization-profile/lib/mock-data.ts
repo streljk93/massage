@@ -42,7 +42,7 @@ function salonSpecialistsFromIds(
         imageAlt: s.name,
         rating: s.rating,
         metaLine: s.metaLine,
-        specialtiesLine: s.servicesLine,
+        bookableServices: [],
       },
     ];
   });
@@ -81,19 +81,19 @@ const extraById: Record<
     services: [
       {
         id: "svc-1",
-        nameKey: "footMassage",
+        title: "Foot massage",
         durationMinutes: [60, 90, 120],
         priceVndByDuration: [320_000, 450_000, 580_000],
       },
       {
         id: "svc-2",
-        nameKey: "relaxMassage",
+        title: "Relax massage",
         durationMinutes: [60, 90, 120],
         priceVndByDuration: [550_000, 780_000, 990_000],
       },
       {
         id: "svc-3",
-        nameKey: "relaxMassage",
+        title: "Relax massage",
         durationMinutes: [60, 90, 120],
         priceVndByDuration: [550_000, 780_000, 990_000],
       },
@@ -118,13 +118,13 @@ const extraById: Record<
     services: [
       {
         id: "svc-1",
-        nameKey: "relaxMassage",
+        title: "Relax massage",
         durationMinutes: [60, 90, 120],
         priceVndByDuration: [490_000, 690_000, 880_000],
       },
       {
         id: "svc-2",
-        nameKey: "footMassage",
+        title: "Foot massage",
         durationMinutes: [60, 90],
         priceVndByDuration: [280_000, 390_000],
       },

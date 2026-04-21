@@ -8,13 +8,13 @@ import type { OrganizationProfileData } from "./mock-data";
 const DEFAULT_ORG_SERVICES: BookableServiceOption[] = [
   {
     id: "svc-1",
-    nameKey: "footMassage",
+    title: "Foot massage",
     durationMinutes: [60, 90, 120],
     priceVndByDuration: [320_000, 450_000, 580_000],
   },
   {
     id: "svc-2",
-    nameKey: "relaxMassage",
+    title: "Relax massage",
     durationMinutes: [60, 90, 120],
     priceVndByDuration: [550_000, 780_000, 990_000],
   },
@@ -49,7 +49,12 @@ export function organizationProfileFromApiDetail(
     imageAlt: s.name,
     rating: s.rating,
     metaLine: s.metaLine,
-    specialtiesLine: s.specialtiesLine ?? "",
+    bookableServices: (s.bookableServices ?? []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      durationMinutes: b.durationMinutes as readonly number[],
+      priceVndByDuration: b.priceVndByDuration as readonly number[],
+    })),
   }));
 
   return {

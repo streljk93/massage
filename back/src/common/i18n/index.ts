@@ -10,11 +10,13 @@ export {
   pickLocalizedMajorName,
   pickLocalizedOrganizationListItem,
   pickLocalizedServiceCategoryFields,
+  pickLocalizedServiceName,
   resolveLocalizedString,
 } from './locale-table.resolver';
 export type {
   CategoryLocaleShape,
   OrganizationLocaleListShape,
+  ServiceLocaleShape,
 } from './locale-table.resolver';
 export { RequestLocale } from './request-locale.decorator';
 export {

@@ -25,6 +25,8 @@
         "specialistSelectCta": "Select",
         "specialistSelectedCta": "Selected",
         "specialistOpenProfileAria": "Open profile: {name}",
+        "specialistServiceCol": "Service",
+        "specialistDurationCol": "Min",
         "weekdays": {
           "sun": "Sun",
           "mon": "Mon",
@@ -67,6 +69,8 @@
         "specialistSelectCta": "Chọn",
         "specialistSelectedCta": "Đã chọn",
         "specialistOpenProfileAria": "Mở hồ sơ: {name}",
+        "specialistServiceCol": "Dịch vụ",
+        "specialistDurationCol": "Phút",
         "weekdays": {
           "sun": "CN",
           "mon": "T2",
@@ -109,6 +113,8 @@
         "specialistSelectCta": "Выбрать",
         "specialistSelectedCta": "Выбран",
         "specialistOpenProfileAria": "Открыть профиль: {name}",
+        "specialistServiceCol": "Услуга",
+        "specialistDurationCol": "Мин",
         "weekdays": {
           "sun": "Вс",
           "mon": "Пн",

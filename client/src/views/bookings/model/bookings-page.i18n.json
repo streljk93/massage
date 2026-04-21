@@ -3,10 +3,15 @@
     "en": {
       "bookings": {
         "title": "Booking page",
+        "loading": "Loading…",
         "tabNew": "New",
         "tabHistory": "History",
         "tablistAria": "Bookings",
         "emptyHistory": "No booking history yet",
+        "emptyNew": "No active bookings",
+        "loadError": "Could not load bookings. Try again.",
+        "cancelError": "Could not cancel the booking. Try again.",
+        "signInToSee": "Sign in to see your bookings.",
         "historyReview1": "I like this master because the…",
         "historyReview2": "Great atmosphere and very professional service.",
         "historyReview3": "Will book again — convenient time slots."
@@ -15,10 +20,15 @@
     "vi": {
       "bookings": {
         "title": "Đặt chỗ",
+        "loading": "Đang tải…",
         "tabNew": "Mới",
         "tabHistory": "Lịch sử",
         "tablistAria": "Đặt chỗ",
         "emptyHistory": "Chưa có lịch sử đặt chỗ",
+        "emptyNew": "Chưa có lịch đang xử lý",
+        "loadError": "Không tải được lịch. Thử lại.",
+        "cancelError": "Không hủy được lịch. Thử lại.",
+        "signInToSee": "Đăng nhập để xem lịch của bạn.",
         "historyReview1": "Tôi thích chuyên viên này vì…",
         "historyReview2": "Không gian tốt, phục vụ chuyên nghiệp.",
         "historyReview3": "Sẽ đặt lại — khung giờ thuận tiện."
@@ -27,10 +37,15 @@
     "ru": {
       "bookings": {
         "title": "Бронирования",
+        "loading": "Загрузка…",
         "tabNew": "Новые",
         "tabHistory": "История",
         "tablistAria": "Бронирования",
         "emptyHistory": "Истории бронирований пока нет",
+        "emptyNew": "Нет активных бронирований",
+        "loadError": "Не удалось загрузить бронирования. Попробуйте снова.",
+        "cancelError": "Не удалось отменить запись. Попробуйте снова.",
+        "signInToSee": "Войдите, чтобы видеть свои бронирования.",
         "historyReview1": "Мне нравится этот мастер, потому что…",
         "historyReview2": "Отличная атмосфера и очень профессиональный сервис.",
         "historyReview3": "Запишусь снова — удобные слоты по времени."

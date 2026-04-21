@@ -17,6 +17,9 @@ export type SalonSpecialistPickCardProps = {
   profileHref?: string;
   /** Подпись для доступности всей карточки-ссылки (если задан `profileHref`). */
   openProfileAriaLabel?: string;
+  /** Заголовки таблицы услуг (при непустом `pick.bookableServices`). */
+  serviceColumnLabel?: string;
+  durationColumnLabel?: string;
   className?: string;
 };
 
@@ -29,6 +32,8 @@ export function SalonSpecialistPickCard({
   onSelect,
   profileHref,
   openProfileAriaLabel,
+  serviceColumnLabel = "Service",
+  durationColumnLabel = "Min",
   className,
 }: SalonSpecialistPickCardProps) {
   const router = useRouter();
@@ -97,9 +102,37 @@ export function SalonSpecialistPickCard({
         <p className="line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground">
           {pick.metaLine}
         </p>
-        <p className="line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground">
-          {pick.specialtiesLine}
-        </p>
+        {pick.bookableServices.length > 0 ? (
+          <div className="mt-1.5 overflow-x-auto rounded-lg border border-border/50 bg-muted/20">
+            <table className="w-full min-w-[12rem] border-collapse text-left text-[0.65rem] text-muted-foreground">
+              <thead>
+                <tr className="border-b border-border/40">
+                  <th className="px-2 py-1 font-semibold text-foreground/90">
+                    {serviceColumnLabel}
+                  </th>
+                  <th className="px-2 py-1 font-semibold text-foreground/90">
+                    {durationColumnLabel}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pick.bookableServices.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-b border-border/30 last:border-b-0"
+                  >
+                    <td className="max-w-[8rem] px-2 py-1 align-top leading-snug">
+                      {row.name}
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-1 align-top tabular-nums">
+                      {row.durationMinutes.join(" · ")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
         <div className="mt-auto w-full pt-1.5">
           <Button
             type="button"

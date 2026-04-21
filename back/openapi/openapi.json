@@ -1244,7 +1244,8 @@
                           "metaLine",
                           "servicesLine",
                           "categories",
-                          "slotGroups"
+                          "slotGroups",
+                          "bookableServices"
                         ],
                         "properties": {
                           "id": {
@@ -1260,10 +1261,6 @@
                             "example": "Иван"
                           },
                           "bio": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "specialtiesLine": {
                             "type": "string",
                             "nullable": true
                           },
@@ -1365,6 +1362,42 @@
                                 }
                               }
                             }
+                          },
+                          "bookableServices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "durationMinutes",
+                                "priceVndByDuration"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "example": "Relaxing massage"
+                                },
+                                "durationMinutes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 60
+                                  }
+                                },
+                                "priceVndByDuration": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 450000
+                                  }
+                                }
+                              }
+                            }
                           }
                         }
                       }
@@ -1423,7 +1456,8 @@
                     "metaLine",
                     "servicesLine",
                     "categories",
-                    "slotGroups"
+                    "slotGroups",
+                    "bookableServices"
                   ],
                   "properties": {
                     "id": {
@@ -1439,10 +1473,6 @@
                       "example": "Иван"
                     },
                     "bio": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "specialtiesLine": {
                       "type": "string",
                       "nullable": true
                     },
@@ -1540,6 +1570,42 @@
                             "items": {
                               "type": "string",
                               "example": "09:00"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "bookableServices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "durationMinutes",
+                          "priceVndByDuration"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Relaxing massage"
+                          },
+                          "durationMinutes": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "example": 60
+                            }
+                          },
+                          "priceVndByDuration": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer",
+                              "example": 450000
                             }
                           }
                         }
@@ -1909,7 +1975,8 @@
                           "userId",
                           "name",
                           "rating",
-                          "metaLine"
+                          "metaLine",
+                          "bookableServices"
                         ],
                         "properties": {
                           "id": {
@@ -1929,14 +1996,46 @@
                           "metaLine": {
                             "type": "string"
                           },
-                          "specialtiesLine": {
-                            "type": "string",
-                            "nullable": true
-                          },
                           "imageUrl": {
                             "type": "string",
                             "nullable": true,
                             "format": "uri"
+                          },
+                          "bookableServices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "durationMinutes",
+                                "priceVndByDuration"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "example": "Relaxing massage"
+                                },
+                                "durationMinutes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 60
+                                  }
+                                },
+                                "priceVndByDuration": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 450000
+                                  }
+                                }
+                              }
+                            }
                           }
                         }
                       }
@@ -2070,6 +2169,272 @@
         "summary": "Реклама и баннеры по слоту показа",
         "tags": [
           "advertising"
+        ]
+      }
+    },
+    "/bookings": {
+      "post": {
+        "description": "Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.",
+        "operationId": "Bookings_create",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "specialistId",
+                  "serviceId",
+                  "durationMinutes",
+                  "startsAt"
+                ],
+                "properties": {
+                  "specialistId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "serviceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "description": "ISO 8601"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status",
+                    "startsAt",
+                    "endsAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending"
+                      ]
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "pendingExpiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело или слот в прошлом"
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать бронирование",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "get": {
+        "description": "Список записей текущего пользователя (клиента), новые сверху.",
+        "operationId": "Bookings_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bookings"
+                  ],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "status",
+                          "specialistName",
+                          "serviceName",
+                          "amount",
+                          "currency",
+                          "startsAt",
+                          "endsAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "specialistName": {
+                            "type": "string"
+                          },
+                          "specialistImageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "serviceName": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "pendingExpiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Мои бронирования",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/cancel": {
+      "post": {
+        "description": "Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.",
+        "operationId": "Bookings_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "canceled_by_client"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нельзя отменить в текущем статусе"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "404": {
+            "description": "Запись не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Отменить бронирование (клиент)",
+        "tags": [
+          "bookings"
         ]
       }
     }

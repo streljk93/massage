@@ -5,6 +5,7 @@ import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdvertisingModule } from './modules/advertising/advertising.module';
+import { BookingsModule } from './modules/bookings/bookings.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DirectoryModule } from './modules/directory/directory.module';
 import { FilesModule } from './modules/files/files.module';
@@ -27,6 +28,7 @@ import { UsersModule } from './modules/users/users.module';
     CatalogModule,
     DirectoryModule,
     AdvertisingModule,
+    BookingsModule,
   ],
 })
 export class AppModule {}

@@ -13,15 +13,19 @@ import {
   Phone,
   Users,
 } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useLocale, useFormatter, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useRouter } from "@/app/i18n/navigation";
+import type { AppLocale } from "@/app/i18n/routing";
+import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import { cn, motion } from "@/shared/lib";
-import type { SpecialistProfileData } from "../lib/mock-data";
+import type { SpecialistProfileData } from "../model/specialist-profile-data";
+import { bookingStartsAtIsoUtc } from "../lib/booking-starts-at";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -44,6 +48,13 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
   const t = useTranslations("specialistProfile");
   const format = useFormatter();
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const { data: session, status: sessionStatus } = useSession();
+  const accessToken = session?.accessToken;
+  const [bookingPending, setBookingPending] = useState(false);
+  const [bookingErrorKey, setBookingErrorKey] = useState<
+    "bookingPickSlot" | "bookingErrorGeneric" | null
+  >(null);
 
   const [favorite, setFavorite] = useState(false);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
@@ -67,8 +78,12 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
     ],
     [profile],
   );
-  const [dayIndex, setDayIndex] = useState(2);
-  const [slot, setSlot] = useState(profile.timeSlots[1] ?? profile.timeSlots[0]);
+  const [dayIndex, setDayIndex] = useState(0);
+  const [slot, setSlot] = useState(
+    () => profile.timeSlotsByDay[0]?.[0] ?? "",
+  );
+
+  const daySlots = profile.timeSlotsByDay[dayIndex] ?? [];
   const [serviceId, setServiceId] = useState(profile.services[0]?.id ?? "");
   const [durationByService, setDurationByService] = useState<
     Record<string, number>
@@ -113,6 +128,71 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
       maximumFractionDigits: 0,
     });
 
+  const onBooking = useCallback(async () => {
+    setBookingErrorKey(null);
+    if (bookingPending) {
+      return;
+    }
+    if (sessionStatus === "loading") {
+      return;
+    }
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+    if (
+      !slot.trim() ||
+      !selectedService ||
+      selectedBookingMinutes === undefined
+    ) {
+      setBookingErrorKey("bookingPickSlot");
+      return;
+    }
+    const slotDayKey = profile.slotDayKeys[dayIndex] ?? "today";
+    const startsAt = bookingStartsAtIsoUtc({ slotDayKey, slotTime: slot });
+    setBookingPending(true);
+    try {
+      const res = await bookingsCreate({
+        client: createBrowserSdkClient(accessToken),
+        body: {
+          specialistId: profile.id,
+          serviceId,
+          durationMinutes: selectedBookingMinutes,
+          startsAt,
+        },
+        query: { locale },
+      });
+      if (res.error || !res.data) {
+        setBookingErrorKey("bookingErrorGeneric");
+        return;
+      }
+      router.push("/bookings");
+    } catch {
+      setBookingErrorKey("bookingErrorGeneric");
+    } finally {
+      setBookingPending(false);
+    }
+  }, [
+    accessToken,
+    bookingPending,
+    dayIndex,
+    profile.id,
+    profile.slotDayKeys,
+    router,
+    selectedBookingMinutes,
+    selectedService,
+    serviceId,
+    sessionStatus,
+    slot,
+    locale,
+  ]);
+
+  const bookingDisabled =
+    bookingPending ||
+    profile.services.length === 0 ||
+    daySlots.length === 0 ||
+    !slot.trim();
+
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
       {/* Hero: мягкий градиент + «ореол» */}
@@ -151,9 +231,11 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                 value={profile.rating}
                 className="[&_span:last-child]:text-xs [&_span:last-child]:text-muted-foreground"
               />
-              <p className="text-sm leading-snug text-muted-foreground">
-                {profile.specialtiesLine}
-              </p>
+              {profile.servicesLine.trim() ? (
+                <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                  {profile.servicesLine}
+                </p>
+              ) : null}
             </div>
 
             {/* Портрет: скругление + лёгкая маска снизу */}
@@ -314,13 +396,22 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                   {t("selectDate")}
                 </h2>
                 <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {profile.calendarDays.length === 0 ? (
+                    <p className="px-1 text-sm text-muted-foreground">
+                      {t("noSlots")}
+                    </p>
+                  ) : null}
                   {profile.calendarDays.map((d, i) => {
                     const selected = i === dayIndex;
                     return (
                       <button
-                        key={`${d.weekdayKey}-${d.dayOfMonth}`}
+                        key={`${i}-${d.weekdayKey}-${d.dayOfMonth}`}
                         type="button"
-                        onClick={() => setDayIndex(i)}
+                        onClick={() => {
+                          setDayIndex(i);
+                          const next = profile.timeSlotsByDay[i] ?? [];
+                          setSlot(next[0] ?? "");
+                        }}
                         className={cn(
                           motion.interactivePressStrong,
                           "flex w-[3.25rem] shrink-0 flex-col items-center gap-1 rounded-3xl border px-2 py-3 text-center transition-colors",
@@ -353,25 +444,29 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                   {t("selectSlot")}
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {profile.timeSlots.map((time) => {
-                    const selected = time === slot;
-                    return (
-                      <button
-                        key={time}
-                        type="button"
-                        onClick={() => setSlot(time)}
-                        className={cn(
-                          motion.interactivePressStrong,
-                          "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
-                          selected
-                            ? "border-primary/45 bg-primary/12 text-primary"
-                            : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
-                        )}
-                      >
-                        {time}
-                      </button>
-                    );
-                  })}
+                  {daySlots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
+                  ) : (
+                    daySlots.map((time) => {
+                      const selected = time === slot;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => setSlot(time)}
+                          className={cn(
+                            motion.interactivePressStrong,
+                            "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
+                            selected
+                              ? "border-primary/45 bg-primary/12 text-primary"
+                              : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
+                          )}
+                        >
+                          {time}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </section>
 
@@ -380,6 +475,11 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                   {t("selectService")}
                 </h2>
                 <div className="space-y-2.5">
+                  {profile.services.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("noServices")}
+                    </p>
+                  ) : null}
                   {profile.services.map((svc) => {
                     const selected = svc.id === serviceId;
                     const dur =
@@ -390,7 +490,7 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                         service={svc}
                         selected={selected}
                         selectedDurationMinutes={dur}
-                        serviceName={t(`services.${svc.nameKey}`)}
+                        serviceName={svc.title}
                         formatPrice={priceText}
                         formatDurationMinutes={(m) =>
                           t("durationMin", { n: m })
@@ -413,6 +513,15 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
         </div>
       </div>
 
+      {bookingErrorKey ? (
+        <p
+          role="alert"
+          className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
+        >
+          {t(bookingErrorKey)}
+        </p>
+      ) : null}
+
       <HomeBottomNav
         activeId="search"
         actions={
@@ -420,11 +529,16 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
             type="button"
             variant="primary"
             className="h-12 w-full rounded-full text-base font-semibold"
+            disabled={bookingDisabled}
+            aria-busy={bookingPending}
             aria-label={
-              bookingPriceVnd !== undefined
-                ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
-                : t("booking")
+              bookingPending
+                ? t("bookingAriaLoading")
+                : bookingPriceVnd !== undefined
+                  ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
+                  : t("booking")
             }
+            onClick={() => void onBooking()}
           >
             {bookingPriceVnd !== undefined ? (
               <>

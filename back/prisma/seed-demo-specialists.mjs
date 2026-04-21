@@ -149,7 +149,6 @@ export async function seedDemoSpecialists(prisma) {
     create: {
       userId: ownerUser.id,
       bio: "Владелец демо-салона, массажист.",
-      specialtiesLine: "Классический массаж, спорт",
       experienceYears: 10,
       latitude: OWNER_SPEC_LAT,
       longitude: OWNER_SPEC_LNG,
@@ -164,7 +163,6 @@ export async function seedDemoSpecialists(prisma) {
     },
     update: {
       bio: "Владелец демо-салона, массажист.",
-      specialtiesLine: "Классический массаж, спорт",
       experienceYears: 10,
       latitude: OWNER_SPEC_LAT,
       longitude: OWNER_SPEC_LNG,
@@ -184,7 +182,6 @@ export async function seedDemoSpecialists(prisma) {
     create: {
       userId: workerUser.id,
       bio: "Мастер салона (сотрудник).",
-      specialtiesLine: "Релакс, антистресс",
       experienceYears: 5,
       latitude: WORKER_SPEC_LAT,
       longitude: WORKER_SPEC_LNG,
@@ -199,7 +196,6 @@ export async function seedDemoSpecialists(prisma) {
     },
     update: {
       bio: "Мастер салона (сотрудник).",
-      specialtiesLine: "Релакс, антистресс",
       experienceYears: 5,
       latitude: WORKER_SPEC_LAT,
       longitude: WORKER_SPEC_LNG,
@@ -347,6 +343,121 @@ export async function seedDemoSpecialists(prisma) {
       listingServicesLine: listingServicesLineFromCategories(workerPick),
     },
   });
+
+  /** Услуги мастеров: `Service` + `ServicePriceOption` (60/90/120 мин) + `ServiceLocale`. */
+  await prisma.service.deleteMany({
+    where: {
+      organizationId: org.id,
+      slug: {
+        in: [
+          "demo-seed-owner-sports",
+          "demo-seed-worker-relax",
+          "demo-seed-worker-foot",
+          "demo-seed-worker-neck",
+        ],
+      },
+    },
+  });
+
+  const serviceSeedRows = [
+    {
+      specialistId: ownerSpecialist.id,
+      categorySlug: "sports",
+      slug: "demo-seed-owner-sports",
+      sortOrder: 0,
+      priceTiers: [
+        [60, 450_000],
+        [90, 620_000],
+        [120, 790_000],
+      ],
+      locales: {
+        en: { name: "Sports massage" },
+        vi: { name: "Massage thể thao" },
+        ru: { name: "Спортивный массаж" },
+      },
+    },
+    {
+      specialistId: workerSpecialist.id,
+      categorySlug: "relaxing",
+      slug: "demo-seed-worker-relax",
+      sortOrder: 0,
+      priceTiers: [
+        [60, 400_000],
+        [90, 550_000],
+        [120, 700_000],
+      ],
+      locales: {
+        en: { name: "Relaxing massage" },
+        vi: { name: "Massage thư giãn" },
+        ru: { name: "Расслабляющий массаж" },
+      },
+    },
+    {
+      specialistId: workerSpecialist.id,
+      categorySlug: "feet-reflexology",
+      slug: "demo-seed-worker-foot",
+      sortOrder: 1,
+      priceTiers: [
+        [60, 320_000],
+        [90, 450_000],
+        [120, 580_000],
+      ],
+      locales: {
+        en: { name: "Foot reflexology" },
+        vi: { name: "Phản xạ học bàn chân" },
+        ru: { name: "Рефлексология стоп" },
+      },
+    },
+    {
+      specialistId: workerSpecialist.id,
+      categorySlug: "neck",
+      slug: "demo-seed-worker-neck",
+      sortOrder: 2,
+      priceTiers: [
+        [30, 280_000],
+        [45, 380_000],
+        [60, 480_000],
+      ],
+      locales: {
+        en: { name: "Neck & shoulder massage" },
+        vi: { name: "Massage cổ và vai" },
+        ru: { name: "Массаж шеи и плеч" },
+      },
+    },
+  ];
+
+  for (const row of serviceSeedRows) {
+    const cat = bySlug[row.categorySlug];
+    if (!cat) {
+      throw new Error(
+        `[seed-demo-specialists] category slug not found: ${row.categorySlug}`,
+      );
+    }
+    await prisma.service.create({
+      data: {
+        organizationId: org.id,
+        categoryId: cat.id,
+        specialistId: row.specialistId,
+        name: row.locales.en.name,
+        slug: row.slug,
+        sortOrder: row.sortOrder,
+        isActive: true,
+        locales: {
+          create: ["en", "vi", "ru"].map((locale) => ({
+            locale,
+            name: row.locales[locale].name,
+          })),
+        },
+        priceOptions: {
+          create: row.priceTiers.map(([durationMinutes, priceAmount]) => ({
+            durationMinutes,
+            priceAmount,
+            currency: "VND",
+          })),
+        },
+      },
+    });
+  }
 
   await prisma.specialistAvailabilitySlot.deleteMany({
     where: {

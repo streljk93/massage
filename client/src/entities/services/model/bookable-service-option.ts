@@ -1,9 +1,10 @@
-/** Услуга с выбором длительности и ценой за каждый вариант (демо / будущий API). */
+/** Услуга с вариантами длительности и ценой за каждый вариант (каталог / API). */
 export type BookableServiceOption = {
   id: string;
-  nameKey: "footMassage" | "relaxMassage";
+  /** Локализованное название (из API или мока). */
+  title: string;
   durationMinutes: readonly number[];
-  /** Длина массива совпадает с `durationMinutes`: цена в VND за сессию. */
+  /** Длина совпадает с `durationMinutes`: цена в VND за сессию. */
   priceVndByDuration: readonly number[];
 };
 
