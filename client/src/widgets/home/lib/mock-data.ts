@@ -3,14 +3,6 @@ export const homeUser = {
   avatarSrc: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop",
 };
 
-export const categories = [
-  { id: "neck", labelKey: "categories.neck" as const, emoji: "🧘" },
-  { id: "body", labelKey: "categories.body" as const, emoji: "✋" },
-  { id: "foot", labelKey: "categories.foot" as const, emoji: "🦶" },
-  { id: "spa", labelKey: "categories.spa" as const, emoji: "💆" },
-  { id: "combo", labelKey: "categories.combo" as const, emoji: "⭐" },
-];
-
 export const currentBooking = {
   specialistName: "Nha Trang",
   /** Демо: с API придут `nameKey` / готовая строка + числовые поля для Intl. */

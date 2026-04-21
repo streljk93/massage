@@ -2,6 +2,20 @@ import { createClient, createConfig } from "./generated/sdk/client";
 import type { ClientOptions } from "./generated/sdk/types.gen";
 
 /**
+ * `fetch` без кэша Data Cache Next.js — для баннеров и другого контента, который
+ * должен совпадать с API сразу после сида/админки (иначе до `revalidate` виден старый JSON).
+ */
+export function serverSdkFetchNoStore(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  return fetch(input, {
+    ...init,
+    cache: "no-store",
+  });
+}
+
+/**
  * Typed SDK-клиент для серверных вызовов (RSC, route handlers) к Nest API.
  * `baseUrl` = `AUTH_BACKEND_URL` + `/v1`. Без переменной — `null`.
  */

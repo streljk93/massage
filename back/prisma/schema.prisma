@@ -26,6 +26,12 @@ enum BookingStatus {
   done
 }
 
+/// Рекламный баннер: внутренний (продукт) или внешний партнёр.
+enum AdvertOwnerKind {
+  internal
+  external
+}
+
 // --- Core user ---
 
 /// Учётная запись пользователя. Пароль только для email-входа; OAuth — отдельная связка позже.
@@ -416,4 +422,51 @@ model BookingStatusHistory {
   createdAt DateTime @default(now())
 
   @@index([bookingId])
+}
+
+/// Рекламное объявление / баннер по слоту показа (`placement`), с мультиязычными текстами.
+model Advertisement {
+  id        String @id @default(uuid())
+  /// Слот: `home_promo`, `search_banner`, … — выборка по query `placement`.
+  placement String
+  ownerKind AdvertOwnerKind @default(internal)
+
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  /// Канонические тексты (fallback, обычно en).
+  title    String
+  subtitle String
+  ctaLabel String
+
+  imageUrl  String
+  targetUrl String?
+
+  /// Стабильный ключ для сидов (upsert); null у записей из админки / API.
+  refKey String? @unique
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  locales AdvertisementLocale[]
+
+  @@index([placement, isActive, deletedAt, sortOrder])
+}
+
+model AdvertisementLocale {
+  id              String        @id @default(uuid())
+  advertisementId String
+  advertisement   Advertisement @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
+
+  locale String
+  title  String
+  subtitle String
+  ctaLabel String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([advertisementId, locale])
+  @@index([locale])
 }

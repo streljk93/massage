@@ -7,6 +7,7 @@ import {
 } from '../../../common/i18n';
 import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
+import type { CatalogMajorCategoriesListResponseDto } from '../dto/catalog-major-categories-list-response.dto';
 import type {
   MajorServiceCategoryWithLocales,
   ServiceCategoryWithMajorAndLocales,
@@ -16,6 +17,21 @@ import { CatalogRepository } from '../infrastructure/catalog.repository';
 @Injectable()
 export class CatalogService {
   constructor(private readonly catalogRepository: CatalogRepository) {}
+
+  async getAllMajorServiceCategories(
+    locale: ApiLocale,
+  ): Promise<CatalogMajorCategoriesListResponseDto> {
+    const rows =
+      await this.catalogRepository.findAllMajorServiceCategories();
+    return {
+      majorCategories: rows.map((row) => ({
+        id: row.id,
+        name: pickLocalizedMajorName(row, locale),
+        slug: row.slug,
+        sortOrder: row.sortOrder,
+      })),
+    };
+  }
 
   async getServiceCategoriesByMajorSlug(
     majorSlug: string,

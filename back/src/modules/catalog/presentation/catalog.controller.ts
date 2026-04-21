@@ -16,6 +16,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CatalogService } from '../application/catalog.service';
 import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
+import type { CatalogMajorCategoriesListResponseDto } from '../dto/catalog-major-categories-list-response.dto';
 import {
   majorAndCategorySlugParamSchema,
   majorSlugParamSchema,
@@ -25,6 +26,7 @@ import {
 import {
   catalogCategoriesResponseSchema,
   catalogCategoryDetailResponseSchema,
+  catalogMajorCategoriesListResponseSchema,
   catalogMajorCategoryNotFoundSchema,
   catalogServiceCategoryNotFoundSchema,
 } from './catalog.openapi-schemas';
@@ -33,6 +35,23 @@ import {
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
+
+  @Get('major-categories')
+  @ApiOperation({
+    summary: 'Все большие категории услуг',
+    description:
+      'Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiOkResponse({ schema: catalogMajorCategoriesListResponseSchema })
+  @ApiBadRequestResponse({
+    description: 'Неверный формат locale',
+  })
+  async getMajorCategories(
+    @RequestLocale() locale: ApiLocale,
+  ): Promise<CatalogMajorCategoriesListResponseDto> {
+    return this.catalogService.getAllMajorServiceCategories(locale);
+  }
 
   /** Более специфичный маршрут — объявляем до списка `.../categories`. */
   @Get('major-categories/:majorSlug/categories/:categorySlug')

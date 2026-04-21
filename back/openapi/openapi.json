@@ -378,33 +378,23 @@
         ]
       }
     },
-    "/catalog/major-categories/{majorSlug}/categories": {
+    "/catalog/major-categories": {
       "get": {
-        "description": "Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder.",
-        "operationId": "Catalog_getCategoriesByMajorSlug",
+        "description": "Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.",
+        "operationId": "Catalog_getMajorCategories",
         "parameters": [
-          {
-            "name": "majorSlug",
-            "required": true,
-            "in": "path",
-            "description": "Slug большой категории (MajorServiceCategory.slug)",
-            "schema": {
-              "example": "massage"
-            }
-          },
           {
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных названий (en, vi, ru). По умолчанию en.",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
             "schema": {
-              "type": "string",
               "enum": [
                 "en",
                 "vi",
                 "ru"
               ],
-              "default": "en"
+              "type": "string"
             }
           }
         ],
@@ -416,42 +406,17 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "majorCategory",
-                    "categories"
+                    "majorCategories"
                   ],
                   "properties": {
-                    "majorCategory": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "name",
-                        "slug"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "name": {
-                          "type": "string",
-                          "example": "Массаж"
-                        },
-                        "slug": {
-                          "type": "string",
-                          "example": "massage"
-                        }
-                      }
-                    },
-                    "categories": {
+                    "majorCategories": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "required": [
                           "id",
                           "name",
-                          "shortName",
                           "slug",
-                          "description",
                           "sortOrder"
                         ],
                         "properties": {
@@ -461,19 +426,11 @@
                           },
                           "name": {
                             "type": "string",
-                            "example": "Массаж шеи и зоны декольте"
-                          },
-                          "shortName": {
-                            "type": "string",
-                            "example": "шея"
+                            "example": "Массаж"
                           },
                           "slug": {
                             "type": "string",
-                            "example": "neck"
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true
+                            "example": "massage"
                           },
                           "sortOrder": {
                             "type": "integer",
@@ -488,39 +445,10 @@
             }
           },
           "400": {
-            "description": "Неверный формат majorSlug (ожидается slug)"
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "statusCode",
-                    "message"
-                  ],
-                  "properties": {
-                    "statusCode": {
-                      "type": "number",
-                      "example": 404
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "code": {
-                      "type": "string",
-                      "enum": [
-                        "MAJOR_CATEGORY_NOT_FOUND"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
+            "description": "Неверный формат locale"
           }
         },
-        "summary": "Подкатегории услуг по slug большой категории",
+        "summary": "Все большие категории услуг",
         "tags": [
           "catalog"
         ]
@@ -528,16 +456,21 @@
     },
     "/catalog/major-categories/{majorSlug}/categories/{categorySlug}": {
       "get": {
-        "description": "Возвращает большую категорию и одну активную подкатегорию по slug. Названия по query `locale` (en, vi, ru).",
+        "description": "Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.",
         "operationId": "Catalog_getCategoryByMajorAndSlug",
         "parameters": [
           {
-            "name": "majorSlug",
-            "required": true,
-            "in": "path",
-            "description": "Slug большой категории (MajorServiceCategory.slug)",
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
             "schema": {
-              "example": "massage"
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
             }
           },
           {
@@ -550,18 +483,12 @@
             }
           },
           {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных названий (en, vi, ru). По умолчанию en.",
+            "name": "majorSlug",
+            "required": true,
+            "in": "path",
+            "description": "Slug большой категории (MajorServiceCategory.slug)",
             "schema": {
-              "type": "string",
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "default": "en"
+              "example": "massage"
             }
           }
         ],
@@ -677,6 +604,267 @@
         "summary": "Одна подкатегория по slug внутри большой категории",
         "tags": [
           "catalog"
+        ]
+      }
+    },
+    "/catalog/major-categories/{majorSlug}/categories": {
+      "get": {
+        "description": "Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder. Названия подставляются по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.",
+        "operationId": "Catalog_getCategoriesByMajorSlug",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "majorSlug",
+            "required": true,
+            "in": "path",
+            "description": "Slug большой категории (MajorServiceCategory.slug)",
+            "schema": {
+              "example": "massage"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "majorCategory",
+                    "categories"
+                  ],
+                  "properties": {
+                    "majorCategory": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Массаж"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "example": "massage"
+                        }
+                      }
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "shortName",
+                          "slug",
+                          "description",
+                          "sortOrder"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Массаж шеи и зоны декольте"
+                          },
+                          "shortName": {
+                            "type": "string",
+                            "example": "шея"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "sortOrder": {
+                            "type": "integer",
+                            "example": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат majorSlug или locale"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "message"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "number",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "MAJOR_CATEGORY_NOT_FOUND"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Подкатегории услуг по slug большой категории",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
+    "/advertisements": {
+      "get": {
+        "description": "Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.",
+        "operationId": "Advertising_listByPlacement",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "placement",
+            "required": true,
+            "in": "query",
+            "description": "Слот показа: home_promo (главная), в будущем — search_banner и др.",
+            "schema": {
+              "example": "home_promo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "placement",
+                    "items"
+                  ],
+                  "properties": {
+                    "placement": {
+                      "type": "string",
+                      "example": "home_promo"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "ownerKind",
+                          "sortOrder",
+                          "imageUrl",
+                          "targetUrl",
+                          "title",
+                          "subtitle",
+                          "ctaLabel"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "ownerKind": {
+                            "type": "string",
+                            "enum": [
+                              "internal",
+                              "external"
+                            ]
+                          },
+                          "sortOrder": {
+                            "type": "integer",
+                            "example": 0
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "targetUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "title": {
+                            "type": "string",
+                            "example": "Скидка 25%"
+                          },
+                          "subtitle": {
+                            "type": "string",
+                            "example": "Новым клиентам"
+                          },
+                          "ctaLabel": {
+                            "type": "string",
+                            "example": "Регистрация"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат placement или locale"
+          }
+        },
+        "summary": "Реклама и баннеры по слоту показа",
+        "tags": [
+          "advertising"
         ]
       }
     }

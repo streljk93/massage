@@ -23,6 +23,28 @@ export const catalogMajorCategorySchema = {
   },
 };
 
+export const catalogMajorCategoryListItemSchema = {
+  type: 'object',
+  required: ['id', 'name', 'slug', 'sortOrder'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Массаж' },
+    slug: { type: 'string', example: 'massage' },
+    sortOrder: { type: 'integer', example: 0 },
+  },
+};
+
+export const catalogMajorCategoriesListResponseSchema = {
+  type: 'object',
+  required: ['majorCategories'],
+  properties: {
+    majorCategories: {
+      type: 'array',
+      items: catalogMajorCategoryListItemSchema,
+    },
+  },
+};
+
 export const catalogCategoriesResponseSchema = {
   type: 'object',
   required: ['majorCategory', 'categories'],

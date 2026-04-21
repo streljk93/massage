@@ -7,6 +7,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { Pool } from "pg";
+import { seedAdvertising } from "./seed-advertising.mjs";
 import {
   majorMassageI18n,
   massageCategorySeeds,
@@ -114,6 +115,8 @@ async function main() {
   console.log(
     `[seed] Каталог: «${massage.slug}» (${massage.id}), подкатегорий: ${massageCategorySeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(", ")}.`,
   );
+
+  await seedAdvertising(prisma);
 }
 
 main()

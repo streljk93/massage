@@ -39,9 +39,31 @@ export type ServiceCategoryWithMajorAndLocales = NonNullable<
   Prisma.ServiceCategoryGetPayload<typeof serviceCategoryWithMajorLocalesArgs>
 >;
 
+const majorServiceCategoryListInclude = {
+  locales: true,
+} satisfies Prisma.MajorServiceCategoryInclude;
+
+export type MajorServiceCategoryListItem = Prisma.MajorServiceCategoryGetPayload<{
+  include: typeof majorServiceCategoryListInclude;
+}>;
+
 @Injectable()
 export class CatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Все активные большие категории с локалями (без подкатегорий), по `sortOrder`.
+   */
+  async findAllMajorServiceCategories(): Promise<MajorServiceCategoryListItem[]> {
+    return this.prisma.majorServiceCategory.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+      include: majorServiceCategoryListInclude,
+    });
+  }
 
   /**
    * Активная большая категория по slug, подкатегории и все строки локалей (разрешение на сервисе).

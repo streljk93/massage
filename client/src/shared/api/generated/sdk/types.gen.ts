@@ -152,72 +152,53 @@ export type AuthRefreshResponses = {
 
 export type AuthRefreshResponse = AuthRefreshResponses[keyof AuthRefreshResponses];
 
-export type CatalogGetCategoriesByMajorSlugData = {
+export type CatalogGetMajorCategoriesData = {
     body?: never;
-    path: {
-        /**
-         * Slug большой категории (MajorServiceCategory.slug)
-         */
-        majorSlug: unknown;
-    };
+    path?: never;
     query?: {
         /**
-         * Локаль для локализованных названий (en, vi, ru). По умолчанию en.
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
-    url: '/catalog/major-categories/{majorSlug}/categories';
+    url: '/catalog/major-categories';
 };
 
-export type CatalogGetCategoriesByMajorSlugErrors = {
+export type CatalogGetMajorCategoriesErrors = {
     /**
-     * Неверный формат majorSlug (ожидается slug)
+     * Неверный формат locale
      */
     400: unknown;
-    404: {
-        statusCode: number;
-        message: string;
-        code?: 'MAJOR_CATEGORY_NOT_FOUND';
-    };
 };
 
-export type CatalogGetCategoriesByMajorSlugError = CatalogGetCategoriesByMajorSlugErrors[keyof CatalogGetCategoriesByMajorSlugErrors];
-
-export type CatalogGetCategoriesByMajorSlugResponses = {
+export type CatalogGetMajorCategoriesResponses = {
     200: {
-        majorCategory: {
+        majorCategories: Array<{
             id: string;
             name: string;
             slug: string;
-        };
-        categories: Array<{
-            id: string;
-            name: string;
-            shortName: string;
-            slug: string;
-            description: string | null;
             sortOrder: number;
         }>;
     };
 };
 
-export type CatalogGetCategoriesByMajorSlugResponse = CatalogGetCategoriesByMajorSlugResponses[keyof CatalogGetCategoriesByMajorSlugResponses];
+export type CatalogGetMajorCategoriesResponse = CatalogGetMajorCategoriesResponses[keyof CatalogGetMajorCategoriesResponses];
 
 export type CatalogGetCategoryByMajorAndSlugData = {
     body?: never;
     path: {
         /**
-         * Slug большой категории (MajorServiceCategory.slug)
-         */
-        majorSlug: unknown;
-        /**
          * Slug подкатегории (ServiceCategory.slug внутри большой)
          */
         categorySlug: unknown;
+        /**
+         * Slug большой категории (MajorServiceCategory.slug)
+         */
+        majorSlug: unknown;
     };
     query?: {
         /**
-         * Локаль для локализованных названий (en, vi, ru). По умолчанию en.
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -257,3 +238,95 @@ export type CatalogGetCategoryByMajorAndSlugResponses = {
 };
 
 export type CatalogGetCategoryByMajorAndSlugResponse = CatalogGetCategoryByMajorAndSlugResponses[keyof CatalogGetCategoryByMajorAndSlugResponses];
+
+export type CatalogGetCategoriesByMajorSlugData = {
+    body?: never;
+    path: {
+        /**
+         * Slug большой категории (MajorServiceCategory.slug)
+         */
+        majorSlug: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/catalog/major-categories/{majorSlug}/categories';
+};
+
+export type CatalogGetCategoriesByMajorSlugErrors = {
+    /**
+     * Неверный формат majorSlug или locale
+     */
+    400: unknown;
+    404: {
+        statusCode: number;
+        message: string;
+        code?: 'MAJOR_CATEGORY_NOT_FOUND';
+    };
+};
+
+export type CatalogGetCategoriesByMajorSlugError = CatalogGetCategoriesByMajorSlugErrors[keyof CatalogGetCategoriesByMajorSlugErrors];
+
+export type CatalogGetCategoriesByMajorSlugResponses = {
+    200: {
+        majorCategory: {
+            id: string;
+            name: string;
+            slug: string;
+        };
+        categories: Array<{
+            id: string;
+            name: string;
+            shortName: string;
+            slug: string;
+            description: string | null;
+            sortOrder: number;
+        }>;
+    };
+};
+
+export type CatalogGetCategoriesByMajorSlugResponse = CatalogGetCategoriesByMajorSlugResponses[keyof CatalogGetCategoriesByMajorSlugResponses];
+
+export type AdvertisingListByPlacementData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+        /**
+         * Слот показа: home_promo (главная), в будущем — search_banner и др.
+         */
+        placement: unknown;
+    };
+    url: '/advertisements';
+};
+
+export type AdvertisingListByPlacementErrors = {
+    /**
+     * Неверный формат placement или locale
+     */
+    400: unknown;
+};
+
+export type AdvertisingListByPlacementResponses = {
+    200: {
+        placement: string;
+        items: Array<{
+            id: string;
+            ownerKind: 'internal' | 'external';
+            sortOrder: number;
+            imageUrl: string;
+            targetUrl: string | null;
+            title: string;
+            subtitle: string;
+            ctaLabel: string;
+        }>;
+    };
+};
+
+export type AdvertisingListByPlacementResponse = AdvertisingListByPlacementResponses[keyof AdvertisingListByPlacementResponses];

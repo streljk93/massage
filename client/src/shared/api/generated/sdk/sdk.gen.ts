@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, HealthGetHealthData, HealthGetHealthResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, HealthGetHealthData, HealthGetHealthResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -60,15 +60,29 @@ export const authRefresh = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Подкатегории услуг по slug большой категории
+ * Все большие категории услуг
  *
- * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder.
+ * Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.
  */
-export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
+export const catalogGetMajorCategories = <ThrowOnError extends boolean = false>(options?: Options<CatalogGetMajorCategoriesData, ThrowOnError>) => (options?.client ?? client).get<CatalogGetMajorCategoriesResponses, CatalogGetMajorCategoriesErrors, ThrowOnError>({ url: '/catalog/major-categories', ...options });
 
 /**
  * Одна подкатегория по slug внутри большой категории
  *
- * Возвращает большую категорию и одну активную подкатегорию по slug. Названия по query `locale` (en, vi, ru).
+ * Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
  */
 export const catalogGetCategoryByMajorAndSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoryByMajorAndSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoryByMajorAndSlugResponses, CatalogGetCategoryByMajorAndSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories/{categorySlug}', ...options });
+
+/**
+ * Подкатегории услуг по slug большой категории
+ *
+ * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder. Названия подставляются по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
+ */
+export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
+
+/**
+ * Реклама и баннеры по слоту показа
+ *
+ * Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.
+ */
+export const advertisingListByPlacement = <ThrowOnError extends boolean = false>(options: Options<AdvertisingListByPlacementData, ThrowOnError>) => (options.client ?? client).get<AdvertisingListByPlacementResponses, AdvertisingListByPlacementErrors, ThrowOnError>({ url: '/advertisements', ...options });

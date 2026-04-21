@@ -14,17 +14,18 @@ import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
 import { cn } from "@/shared/lib";
 import {
+  advertisingListByPlacement,
   catalogGetCategoriesByMajorSlug,
   createServerSdkClient,
+  serverSdkFetchNoStore,
   type CatalogGetCategoriesByMajorSlugResponse,
 } from "@/shared/api";
 import {
   HomeBottomNav,
   HomeScreenHeader,
 } from "@/widgets/home";
-import { categoryEmojiFromIndex } from "@/widgets/home/lib/category-emoji";
+import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import {
-  categories as fallbackCategories,
   currentBooking,
   homeUser,
   promoSlides,
@@ -33,17 +34,38 @@ import {
   type SlotGroupSeed,
 } from "@/widgets/home/lib/mock-data";
 
+function isAbsoluteHttpUrl(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
 function PromoSlide({
   title,
   subtitle,
   cta,
   imageSrc,
+  ctaHref,
 }: {
   title: string;
   subtitle: string;
   cta: string;
   imageSrc: string;
+  ctaHref?: string | null;
 }) {
+  const ctaButton =
+    ctaHref ?
+      isAbsoluteHttpUrl(ctaHref) ?
+        <Button variant="primary" className="mt-1 w-fit rounded-xl px-5" asChild>
+          <a href={ctaHref} target="_blank" rel="noopener noreferrer">
+            {cta}
+          </a>
+        </Button>
+      : <Button variant="primary" className="mt-1 w-fit rounded-xl px-5" asChild>
+          <Link href={ctaHref}>{cta}</Link>
+        </Button>
+    : <Button variant="primary" className="mt-1 w-fit rounded-xl px-5">
+        {cta}
+      </Button>;
+
   return (
     <div className="flex min-h-[9.5rem] flex-1 flex-row overflow-hidden rounded-2xl bg-muted">
       <div className="flex flex-1 flex-col justify-center gap-2 p-4 sm:gap-3">
@@ -51,9 +73,7 @@ function PromoSlide({
           {title}
         </h2>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
-        <Button variant="primary" className="mt-1 w-fit rounded-xl px-5">
-          {cta}
-        </Button>
+        {ctaButton}
       </div>
       <div className="relative w-[38%] max-w-[9rem] shrink-0 sm:max-w-none sm:flex-1">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -79,6 +99,8 @@ function slotGroupsFromSeed(
 }
 
 const HOME_MAJOR_CATEGORY_SLUG = "massage" as const;
+/** Совпадает с `ADV_PLACEMENT_HOME_PROMO` в `back/prisma/seed-advertising.mjs`. */
+const HOME_PROMO_PLACEMENT = "home_promo" as const;
 
 export async function HomePage() {
   const t = await getTranslations();
@@ -87,6 +109,15 @@ export async function HomePage() {
 
   const sdkClient = createServerSdkClient();
   let catalog: CatalogGetCategoriesByMajorSlugResponse | null = null;
+  let promoFromApi: Array<{
+    id: string;
+    title: string;
+    subtitle: string;
+    cta: string;
+    imageSrc: string;
+    ctaHref: string | null;
+  }> | null = null;
+
   if (sdkClient) {
     const { data, error } = await catalogGetCategoriesByMajorSlug({
       client: sdkClient,
@@ -96,22 +127,44 @@ export async function HomePage() {
     if (!error && data) {
       catalog = data;
     }
+
+    const ads = await advertisingListByPlacement({
+      client: sdkClient,
+      query: { placement: HOME_PROMO_PLACEMENT, locale },
+      fetch: serverSdkFetchNoStore,
+    });
+    if (!ads.error && ads.data?.items?.length) {
+      promoFromApi = ads.data.items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        cta: item.ctaLabel,
+        imageSrc: item.imageUrl,
+        ctaHref: item.targetUrl,
+      }));
+    }
   }
+
+  const promoSlidesResolved =
+    promoFromApi ??
+    promoSlides.map((p) => ({
+      id: p.id,
+      title: t(p.titleKey),
+      subtitle: t(p.subtitleKey),
+      cta: t(p.ctaKey),
+      imageSrc: p.imageSrc,
+      ctaHref: null as string | null,
+    }));
 
   const categoryChips =
     catalog?.categories?.length ?
       catalog.categories.map((c, index) => ({
         key: c.id,
         label: c.shortName,
-        emoji: categoryEmojiFromIndex(index),
+        emoji: massageCategoryEmoji(c.slug, index),
         href: `/search?category=${encodeURIComponent(c.slug)}`,
       }))
-    : fallbackCategories.map((c) => ({
-        key: c.id,
-        label: t(c.labelKey),
-        emoji: c.emoji,
-        href: `/search?category=${encodeURIComponent(c.id)}`,
-      }));
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
@@ -127,14 +180,15 @@ export async function HomePage() {
           <Slider
             dotsPlacement="overlay"
             dotsAriaLabel={t("home.promoSliderDotsAria")}
-            slides={promoSlides.map((p) => ({
+            slides={promoSlidesResolved.map((p) => ({
               id: p.id,
               content: (
                 <PromoSlide
-                  title={t(p.titleKey)}
-                  subtitle={t(p.subtitleKey)}
-                  cta={t(p.ctaKey)}
+                  title={p.title}
+                  subtitle={p.subtitle}
+                  cta={p.cta}
                   imageSrc={p.imageSrc}
+                  ctaHref={p.ctaHref}
                 />
               ),
             }))}
@@ -165,21 +219,23 @@ export async function HomePage() {
             </div>
           </Link>
 
-          <section aria-labelledby="categories-heading">
-            <h2 id="categories-heading" className="sr-only">
-              {t("home.categoriesHeading")}
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {categoryChips.map((c) => (
-                <CategoryCard
-                  key={c.key}
-                  href={c.href}
-                  label={c.label}
-                  icon={<span className="text-2xl">{c.emoji}</span>}
-                />
-              ))}
-            </div>
-          </section>
+          {categoryChips.length > 0 ?
+            <section aria-labelledby="categories-heading">
+              <h2 id="categories-heading" className="sr-only">
+                {t("home.categoriesHeading")}
+              </h2>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {categoryChips.map((c) => (
+                  <CategoryCard
+                    key={c.key}
+                    href={c.href}
+                    label={c.label}
+                    icon={<span className="text-2xl">{c.emoji}</span>}
+                  />
+                ))}
+              </div>
+            </section>
+          : null}
 
           <section className="space-y-2.5" aria-labelledby="booking-heading">
             <h2
