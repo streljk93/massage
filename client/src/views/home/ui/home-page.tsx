@@ -1,11 +1,7 @@
-import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
 import { ScanLine, Search as SearchIcon } from "lucide-react";
 import { CategoryCard } from "@/entities/services";
-import {
-  BookingCard,
-  formatBookingServiceLine,
-} from "@/entities/booking";
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
 import { Link } from "@/app/i18n/navigation";
@@ -32,11 +28,8 @@ import {
   specialistCardSeedFromApi,
 } from "@/widgets/home/lib/directory-cards-from-api";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
-import {
-  currentBooking,
-  homeUser,
-  promoSlides,
-} from "@/widgets/home/lib/mock-data";
+import { HomeCurrentBookingSection } from "./home-current-booking-section";
+import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 
 function isAbsoluteHttpUrl(href: string): boolean {
@@ -99,7 +92,6 @@ const HOME_PROMO_PLACEMENT = "home_promo" as const;
 export async function HomePage() {
   const t = await getTranslations();
   const tSlots = await getTranslations("slots");
-  const format = await getFormatter();
   const locale = (await getLocale()) as AppLocale;
 
   const sdkClient = createServerSdkClient();
@@ -256,25 +248,7 @@ export async function HomePage() {
             </section>
           : null}
 
-          <section className="space-y-2.5" aria-labelledby="booking-heading">
-            <h2
-              id="booking-heading"
-              className="font-heading text-lg font-semibold tracking-tight"
-            >
-              {t("home.yourBooking")}
-            </h2>
-            <BookingCard
-              specialistName={currentBooking.specialistName}
-              serviceLine={formatBookingServiceLine(t, format, {
-                serviceLabel: t(currentBooking.service.nameKey),
-                amount: currentBooking.service.amount,
-                currency: currentBooking.service.currency,
-              })}
-              dateLabel={t("booking.today")}
-              timeRange={currentBooking.timeRange}
-              avatarSrc={currentBooking.avatarSrc}
-            />
-          </section>
+          <HomeCurrentBookingSection />
 
           <section className="space-y-2.5" aria-labelledby="salons-heading">
             <h2

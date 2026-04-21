@@ -1,0 +1,201 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useFormatter, useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
+import {
+  BookingCard,
+  formatBookingServiceLineClient,
+  type BookingCardProps,
+} from "@/entities/booking";
+import { Slider } from "@/shared/ui/slider";
+import { cn, motion } from "@/shared/lib";
+import { bookingsList, createBrowserSdkClient } from "@/shared/api";
+import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import { bookingIsNewTab } from "@/views/bookings/lib/booking-api-to-ui";
+import {
+  vnCalendarYmdString,
+  vnTomorrowFromNow,
+} from "@/views/specialist-profile/lib/booking-starts-at";
+
+type ApiBooking = {
+  id: string;
+  status: string;
+  specialistName: string;
+  specialistImageUrl?: string | null;
+  serviceName: string;
+  amount: number | null;
+  currency: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+function specialistAvatarSrc(url: string | null | undefined): string | undefined {
+  if (url == null || url === "") {
+    return undefined;
+  }
+  return url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : resolveApiResourceUrl(url);
+}
+
+function pickUpcomingBookings(rows: ApiBooking[]): ApiBooking[] {
+  const now = Date.now();
+  return rows
+    .filter((b) => bookingIsNewTab(b.status))
+    .filter((b) => new Date(b.endsAt).getTime() > now - 60_000)
+    .sort(
+      (a, b) =>
+        new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
+}
+
+function apiBookingToCardProps(
+  booking: ApiBooking,
+  tRoot: ReturnType<typeof useTranslations>,
+  format: ReturnType<typeof useFormatter>,
+): BookingCardProps {
+  const now = new Date();
+  const todayYmd = vnCalendarYmdString(now);
+  const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
+  const start = new Date(booking.startsAt);
+  const end = new Date(booking.endsAt);
+  const startYmd = vnCalendarYmdString(start);
+  let dateLabel: string;
+  if (startYmd === todayYmd) {
+    dateLabel = tRoot("booking.today");
+  } else if (startYmd === tomorrowYmd) {
+    dateLabel = tRoot("booking.tomorrow");
+  } else {
+    dateLabel = format.dateTime(start, { dateStyle: "medium" });
+  }
+  const timeRange = `${format.dateTime(start, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
+  })} – ${format.dateTime(end, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
+  })}`;
+  const serviceLine =
+    booking.amount != null
+      ? formatBookingServiceLineClient(tRoot, format, {
+          serviceLabel: booking.serviceName,
+          amount: booking.amount,
+          currency: booking.currency,
+        })
+      : booking.serviceName;
+
+  return {
+    specialistName: booking.specialistName,
+    serviceLine,
+    dateLabel,
+    timeRange,
+    avatarSrc: specialistAvatarSrc(booking.specialistImageUrl),
+  };
+}
+
+const linkCardClass = cn(
+  motion.interactive,
+  "block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+);
+
+/**
+ * «Ваши записи» на главной: только при JWT и если есть предстоящие активные брони.
+ * Несколько записей — карусель {@link Slider}.
+ */
+export function HomeCurrentBookingSection() {
+  const t = useTranslations("home");
+  const tRoot = useTranslations();
+  const format = useFormatter();
+  const { data: session, status: sessionStatus } = useSession();
+  const accessToken = session?.accessToken;
+
+  const [bookings, setBookings] = useState<ApiBooking[] | null | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    if (sessionStatus === "loading") {
+      return;
+    }
+    if (!accessToken) {
+      queueMicrotask(() => {
+        setBookings(null);
+      });
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const res = await bookingsList({
+        client: createBrowserSdkClient(accessToken),
+      });
+      if (cancelled) {
+        return;
+      }
+      if (res.error || !res.data) {
+        setBookings(null);
+        return;
+      }
+      setBookings(pickUpcomingBookings(res.data.bookings));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, sessionStatus]);
+
+  const cardPropsList = useMemo(() => {
+    if (!bookings?.length) {
+      return [];
+    }
+    return bookings.map((b) => apiBookingToCardProps(b, tRoot, format));
+  }, [bookings, format, tRoot]);
+
+  if (!bookings?.length) {
+    return null;
+  }
+
+  const total = bookings.length;
+
+  return (
+    <section className="space-y-2.5" aria-labelledby="booking-heading">
+      <h2
+        id="booking-heading"
+        className="font-heading text-lg font-semibold tracking-tight"
+      >
+        {t("yourBooking")}
+      </h2>
+      {total === 1 ? (
+        <Link
+          href="/bookings"
+          className={linkCardClass}
+          aria-label={t("yourBooking")}
+        >
+          <BookingCard {...cardPropsList[0]!} />
+        </Link>
+      ) : (
+        <Slider
+          dotsPlacement="below"
+          dotsAriaLabel={t("bookingsSliderDotsAria")}
+          slides={bookings.map((booking, i) => ({
+            id: booking.id,
+            content: (
+              <Link
+                href="/bookings"
+                className={linkCardClass}
+                aria-label={t("bookingSlideAria", {
+                  current: i + 1,
+                  total,
+                })}
+              >
+                <BookingCard {...cardPropsList[i]!} />
+              </Link>
+            ),
+          }))}
+        />
+      )}
+    </section>
+  );
+}
