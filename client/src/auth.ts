@@ -46,6 +46,44 @@ async function loginViaBackend(
   return (await res.json()) as BackendAuthResponse;
 }
 
+/** `exp` из access JWT (секунды), без проверки подписи — только для решения об обновлении. */
+function decodeAccessTokenExpSec(accessToken: string): number | null {
+  try {
+    const part = accessToken.split(".")[1];
+    if (!part) {
+      return null;
+    }
+    const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padLen = (4 - (base64.length % 4)) % 4;
+    const padded = base64 + "=".repeat(padLen);
+    const json = new TextDecoder().decode(
+      Uint8Array.from(atob(padded), (c) => c.charCodeAt(0)),
+    );
+    const payload = JSON.parse(json) as { exp?: number };
+    return typeof payload.exp === "number" ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshViaBackend(
+  refreshToken: string,
+): Promise<BackendAuthResponse | null> {
+  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  if (!base) {
+    return null;
+  }
+  const res = await fetch(`${base}/v1/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!res.ok) {
+    return null;
+  }
+  return (await res.json()) as BackendAuthResponse;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   callbacks: {
@@ -79,6 +117,33 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.avatarUrl = next.avatarUrl ?? null;
         }
       }
+
+      const access =
+        typeof token.accessToken === "string" ? token.accessToken : undefined;
+      const refresh =
+        typeof token.refreshToken === "string" ? token.refreshToken : undefined;
+      if (access && refresh) {
+        const exp = decodeAccessTokenExpSec(access);
+        const nowSec = Math.floor(Date.now() / 1000);
+        const skewSec = 60;
+        const shouldRefresh =
+          exp !== null && exp - skewSec <= nowSec;
+        if (shouldRefresh) {
+          const next = await refreshViaBackend(refresh);
+          if (next) {
+            token.accessToken = next.accessToken;
+            token.refreshToken = next.refreshToken;
+            if (next.user.avatarUrl !== undefined) {
+              token.avatarUrl = next.user.avatarUrl;
+            }
+            token.name = next.user.name;
+          } else {
+            delete token.accessToken;
+            delete token.refreshToken;
+          }
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {

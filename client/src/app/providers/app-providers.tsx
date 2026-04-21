@@ -24,7 +24,7 @@ export function AppProviders({ children }: AppProvidersProps) {
   );
 
   return (
-    <SessionProvider>
+    <SessionProvider refetchInterval={300}>
       <QueryClientProvider client={queryClient}>
         <PortraitOrientationLock />
         <ComingSoonDialogHost />

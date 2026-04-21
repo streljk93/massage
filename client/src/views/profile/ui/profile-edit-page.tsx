@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { Pencil } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { ProfileSubpageShell } from "./profile-subpage-shell";
 import { profileUserDemo } from "../lib/mock-data";
 import { Button } from "@/shared/ui/button";
@@ -238,30 +238,51 @@ export function ProfileEditPage() {
             }}
           />
 
-          <button
-            type="button"
-            disabled={!canUseApi || saving}
-            onClick={openAvatarPicker}
-            className={cn(
-              "group relative shrink-0 rounded-full p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              (!canUseApi || saving) && "cursor-not-allowed opacity-50",
-            )}
-            aria-label={t("avatarEditAria")}
-          >
-            <UserAvatar
-              src={avatarDisplaySrc}
-              alt={firstName.trim() || email}
-              fallback={avatarFallback}
-              size="default"
-              className="size-44 border-2 border-border/70 sm:size-52 [&_[data-slot=avatar-fallback]]:text-3xl sm:[&_[data-slot=avatar-fallback]]:text-4xl"
-            />
-            <span
-              className="absolute right-0.5 bottom-0.5 z-10 flex size-10 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background sm:right-1 sm:bottom-1 sm:size-11"
-              aria-hidden
+          <div className="relative flex w-44 shrink-0 justify-center sm:w-52">
+            {showRemovePhoto ? (
+              <button
+                type="button"
+                disabled={!canUseApi || saving}
+                className={cn(
+                  "absolute top-0 right-0 z-20 flex size-10 items-center justify-center rounded-full bg-white text-destructive ring-2 ring-background sm:size-11",
+                  "dark:bg-card",
+                  "outline-none hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-card/90",
+                  (!canUseApi || saving) && "cursor-not-allowed opacity-50",
+                )}
+                aria-label={t("avatarRemove")}
+                onClick={() => {
+                  setPendingFile(null);
+                  setRemoveAvatarRequested(true);
+                  setSaveError(null);
+                }}
+              >
+                <Trash2
+                  className="size-[18px] shrink-0 sm:size-5"
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </button>
+            ) : null}
+
+            <button
+              type="button"
+              disabled={!canUseApi || saving}
+              onClick={openAvatarPicker}
+              className={cn(
+                "shrink-0 rounded-full p-0 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                (!canUseApi || saving) && "cursor-not-allowed opacity-50",
+              )}
+              aria-label={t("avatarEditAria")}
             >
-              <Pencil className="size-[18px] sm:size-5" strokeWidth={2} />
-            </span>
-          </button>
+              <UserAvatar
+                src={avatarDisplaySrc}
+                alt={firstName.trim() || email}
+                fallback={avatarFallback}
+                size="default"
+                className="size-44 border-2 border-border/70 sm:size-52 [&_[data-slot=avatar-fallback]]:text-3xl sm:[&_[data-slot=avatar-fallback]]:text-4xl"
+              />
+            </button>
+          </div>
 
           {pendingFile && !saving ? (
             <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-500">
@@ -272,24 +293,6 @@ export function ProfileEditPage() {
           <p className="max-w-sm text-center text-xs text-muted-foreground">
             {t("avatarHint")}
           </p>
-
-          {showRemovePhoto ? (
-            <Button
-              type="button"
-              variant="secondary"
-              tone="light"
-              size="sm"
-              className="max-w-xs border border-border/80 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              disabled={!canUseApi || saving}
-              onClick={() => {
-                setPendingFile(null);
-                setRemoveAvatarRequested(true);
-                setSaveError(null);
-              }}
-            >
-              {t("avatarRemove")}
-            </Button>
-          ) : null}
         </div>
 
         <div className="space-y-4">
