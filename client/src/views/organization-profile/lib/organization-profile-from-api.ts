@@ -30,7 +30,7 @@ export function organizationProfileFromApiDetail(
   }));
 
   const { calendarDays, timeSlotsByDay, slotCalendarDates } =
-    availabilityFromDirectorySlotGroups(detail.slotGroups, new Date());
+    availabilityFromDirectorySlotGroups(detail.slotGroups);
 
   return {
     id: detail.id,

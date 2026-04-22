@@ -24,6 +24,10 @@ import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
+import {
+  interpretBookingCreateResponse,
+  type BookingCreateMessageKey,
+} from "@/shared/lib/bookings/booking-create-outcome";
 import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
@@ -49,20 +53,24 @@ export type SpecialistProfilePageProps = {
   bookingSlotFromSearch: BookingSlotSearch | null;
 };
 
+type SpecialistBookingErrorKey =
+  | "bookingPickSlotSpecialist"
+  | BookingCreateMessageKey;
+
 export function SpecialistProfilePage({
   profile,
   bookingSlotFromSearch,
 }: SpecialistProfilePageProps) {
   const t = useTranslations("specialistProfile");
+  const tApiErrors = useTranslations("apiErrorToast");
   const format = useFormatter();
   const router = useRouter();
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
   const [bookingPending, setBookingPending] = useState(false);
-  const [bookingErrorKey, setBookingErrorKey] = useState<
-    "bookingPickSlot" | "bookingErrorGeneric" | null
-  >(null);
+  const [bookingErrorKey, setBookingErrorKey] =
+    useState<SpecialistBookingErrorKey | null>(null);
 
   const [favorite, setFavorite] = useState(false);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
@@ -173,12 +181,12 @@ export function SpecialistProfilePage({
       !selectedService ||
       selectedBookingMinutes === undefined
     ) {
-      setBookingErrorKey("bookingPickSlot");
+      setBookingErrorKey("bookingPickSlotSpecialist");
       return;
     }
     const calendarDate = profile.slotCalendarDates[dayIndex];
     if (!calendarDate) {
-      setBookingErrorKey("bookingPickSlot");
+      setBookingErrorKey("bookingPickSlotSpecialist");
       return;
     }
     const startsAt = bookingStartsAtIsoUtc({
@@ -188,7 +196,7 @@ export function SpecialistProfilePage({
     setBookingPending(true);
     try {
       const res = await bookingsCreate({
-        client: createBrowserSdkClient(accessToken),
+        client: createBrowserSdkClient(accessToken, { locale }),
         body: {
           specialistId: profile.id,
           serviceId,
@@ -197,15 +205,15 @@ export function SpecialistProfilePage({
         },
         query: { locale },
       });
-      if (res.error || !res.data) {
-        setBookingErrorKey("bookingErrorGeneric");
+      const outcome = interpretBookingCreateResponse(res);
+      if (!outcome.ok) {
         return;
       }
       notify.success(t("bookingSuccess"));
       router.refresh();
       router.push("/bookings");
     } catch {
-      setBookingErrorKey("bookingErrorGeneric");
+      /* неожиданные ошибки вне SDK — тосты не показываем здесь */
     } finally {
       setBookingPending(false);
     }
@@ -568,7 +576,7 @@ export function SpecialistProfilePage({
           role="alert"
           className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
         >
-          {t(bookingErrorKey)}
+          {tApiErrors(bookingErrorKey)}
         </p>
       ) : null}
 

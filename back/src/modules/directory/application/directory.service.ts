@@ -150,7 +150,7 @@ function mapSpecialistRowToListItem(
   occupiedKeys: Set<string>,
   freeSlotStarts: Date[],
 ): SpecialistListItemDto {
-  const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts, now);
+  const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts);
   const fromJson = parseListingSlotGroups(s.listingSlotGroups);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
   const slotGroups = dropPastListingSlotGroups(
@@ -206,7 +206,6 @@ function mapOrganizationRowToListItem(
   );
   const fromDb = buildListingSlotGroupsFromSlotStarts(
     mergeOrganizationFreeSlotStarts(o, freeBySpec),
-    now,
   );
   const fromJson = parseListingSlotGroups(o.listingSlotGroups);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);

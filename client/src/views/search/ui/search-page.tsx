@@ -59,8 +59,14 @@ export function SearchPageClient({
   const tab = parseSearchTab(searchParams.get("tab"));
   const [listQuery, setListQuery] = useState("");
 
-  const organizations = initialOrganizations ?? [];
-  const specialists = initialSpecialists ?? [];
+  const organizations = useMemo(
+    () => initialOrganizations ?? [],
+    [initialOrganizations],
+  );
+  const specialists = useMemo(
+    () => initialSpecialists ?? [],
+    [initialSpecialists],
+  );
 
   const filteredSalons = useMemo(
     () =>

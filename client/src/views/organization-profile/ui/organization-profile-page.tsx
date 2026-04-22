@@ -27,6 +27,10 @@ import { Button } from "@/shared/ui/button";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
+import {
+  interpretBookingCreateResponse,
+  type BookingCreateMessageKey,
+} from "@/shared/lib/bookings/booking-create-outcome";
 import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
@@ -64,11 +68,16 @@ export type OrganizationProfilePageProps = {
   bookingSlotFromSearch: BookingSlotSearch | null;
 };
 
+type OrganizationBookingErrorKey =
+  | "bookingPickSlotOrganization"
+  | BookingCreateMessageKey;
+
 export function OrganizationProfilePage({
   profile,
   bookingSlotFromSearch,
 }: OrganizationProfilePageProps) {
   const t = useTranslations("organizationProfile");
+  const tApiErrors = useTranslations("apiErrorToast");
   const format = useFormatter();
   const router = useRouter();
   const locale = useLocale() as AppLocale;
@@ -76,9 +85,8 @@ export function OrganizationProfilePage({
   const accessToken = session?.accessToken;
 
   const [bookingPending, setBookingPending] = useState(false);
-  const [bookingErrorKey, setBookingErrorKey] = useState<
-    "bookingPickSlot" | "bookingErrorGeneric" | null
-  >(null);
+  const [bookingErrorKey, setBookingErrorKey] =
+    useState<OrganizationBookingErrorKey | null>(null);
 
   const [favorite, setFavorite] = useState(false);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
@@ -228,12 +236,12 @@ export function OrganizationProfilePage({
       !selectedService ||
       selectedBookingMinutes === undefined
     ) {
-      setBookingErrorKey("bookingPickSlot");
+      setBookingErrorKey("bookingPickSlotOrganization");
       return;
     }
     const calendarDate = profile.slotCalendarDates[dayIndex];
     if (!calendarDate) {
-      setBookingErrorKey("bookingPickSlot");
+      setBookingErrorKey("bookingPickSlotOrganization");
       return;
     }
     const startsAt = bookingStartsAtIsoUtc({
@@ -243,7 +251,7 @@ export function OrganizationProfilePage({
     setBookingPending(true);
     try {
       const res = await bookingsCreate({
-        client: createBrowserSdkClient(accessToken),
+        client: createBrowserSdkClient(accessToken, { locale }),
         body: {
           specialistId: selectedSalonSpecialistId,
           serviceId,
@@ -252,14 +260,14 @@ export function OrganizationProfilePage({
         },
         query: { locale },
       });
-      if (res.error || !res.data) {
-        setBookingErrorKey("bookingErrorGeneric");
+      const outcome = interpretBookingCreateResponse(res);
+      if (!outcome.ok) {
         return;
       }
       notify.success(t("bookingSuccess"));
       router.push("/bookings");
     } catch {
-      setBookingErrorKey("bookingErrorGeneric");
+      /* неожиданные ошибки вне SDK — тосты не показываем здесь */
     } finally {
       setBookingPending(false);
     }
@@ -665,7 +673,7 @@ export function OrganizationProfilePage({
           role="alert"
           className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
         >
-          {t(bookingErrorKey)}
+          {tApiErrors(bookingErrorKey)}
         </p>
       ) : null}
 

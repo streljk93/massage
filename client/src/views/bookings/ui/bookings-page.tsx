@@ -81,7 +81,6 @@ export function BookingsPage() {
   const [loadError, setLoadError] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [exitingBookingId, setExitingBookingId] = useState<string | null>(null);
-  const [cancelError, setCancelError] = useState<string | null>(null);
   const cancelLock = useRef(false);
   const exitRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -92,7 +91,7 @@ export function BookingsPage() {
       return;
     }
     const res = await bookingsList({
-      client: createBrowserSdkClient(accessToken),
+      client: createBrowserSdkClient(accessToken, { locale }),
       query: { locale },
     });
     if (res.error || !res.data) {
@@ -119,7 +118,7 @@ export function BookingsPage() {
     let cancelled = false;
     (async () => {
       const res = await bookingsList({
-        client: createBrowserSdkClient(accessToken),
+        client: createBrowserSdkClient(accessToken, { locale }),
         query: { locale },
       });
       if (cancelled) {
@@ -163,14 +162,12 @@ export function BookingsPage() {
       }
       cancelLock.current = true;
       setCancellingId(bookingId);
-      setCancelError(null);
       try {
         const res = await bookingsCancel({
-          client: createBrowserSdkClient(accessToken),
+          client: createBrowserSdkClient(accessToken, { locale }),
           path: { id: bookingId },
         });
         if (res.error || !res.data) {
-          setCancelError(t("cancelError"));
           return;
         }
         notify.success(t("cancelSuccess"));
@@ -188,7 +185,7 @@ export function BookingsPage() {
         setCancellingId(null);
       }
     },
-    [accessToken, refreshBookings, t],
+    [accessToken, locale, refreshBookings, t],
   );
 
   const newRows = useMemo(
@@ -394,15 +391,6 @@ export function BookingsPage() {
 
           <div className="space-y-2.5" role="tabpanel">
             {mainContent}
-
-            {cancelError ? (
-              <p
-                role="alert"
-                className="rounded-2xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-center text-sm text-destructive"
-              >
-                {cancelError}
-              </p>
-            ) : null}
 
             {accessToken && rows !== null && !loadError ? (
               tab === "new" ? (

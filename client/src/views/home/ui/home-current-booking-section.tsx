@@ -135,7 +135,7 @@ export function HomeCurrentBookingSection() {
       return;
     }
     const res = await bookingsList({
-      client: createBrowserSdkClient(accessToken),
+      client: createBrowserSdkClient(accessToken, { locale }),
       query: { locale },
     });
     if (res.error || !res.data) {
@@ -158,7 +158,7 @@ export function HomeCurrentBookingSection() {
     let cancelled = false;
     (async () => {
       const res = await bookingsList({
-        client: createBrowserSdkClient(accessToken),
+        client: createBrowserSdkClient(accessToken, { locale }),
         query: { locale },
       });
       if (cancelled) {

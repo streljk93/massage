@@ -7,7 +7,8 @@ import {
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/app/i18n/routing";
 import { Trash2 } from "lucide-react";
 import { ProfileSubpageShell } from "./profile-subpage-shell";
 import { profileUserDemo } from "../lib/mock-data";
@@ -40,6 +41,7 @@ function pickFirstImageFile(fileList: FileList | undefined): File | undefined {
 
 export function ProfileEditPage() {
   const t = useTranslations("profileEdit");
+  const locale = useLocale() as AppLocale;
   const { data: session, status, update } = useSession();
   const accessToken = session?.accessToken;
 
@@ -55,8 +57,6 @@ export function ProfileEditPage() {
 
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export function ProfileEditPage() {
     let cancelled = false;
     (async () => {
       setLoadState("loading");
-      const client = createBrowserSdkClient(accessToken);
+      const client = createBrowserSdkClient(accessToken, { locale });
       const res = await usersMe({ client });
       if (cancelled) {
         return;
@@ -112,7 +112,7 @@ export function ProfileEditPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, session?.user?.email, session?.user?.name, status]);
+  }, [accessToken, locale, session?.user?.email, session?.user?.name, status]);
 
   const demoFallbackImage =
     loadState === "demo" ? session?.user?.image : undefined;
@@ -140,10 +140,9 @@ export function ProfileEditPage() {
     if (!accessToken || loadState !== "ready") {
       return;
     }
-    setSaveError(null);
     setSaving(true);
     try {
-      const client = createBrowserSdkClient(accessToken);
+      const client = createBrowserSdkClient(accessToken, { locale });
 
       let avatarUrl: string | null;
       if (removeAvatarRequested) {
@@ -154,7 +153,6 @@ export function ProfileEditPage() {
           body: { file: pendingFile },
         });
         if (up.error || !up.data) {
-          setSaveError(t("avatarUploadFailed"));
           return;
         }
         avatarUrl = up.data.url;
@@ -170,7 +168,6 @@ export function ProfileEditPage() {
         },
       });
       if (res.error || !res.data) {
-        setSaveError(t("saveError"));
         return;
       }
       await update({
@@ -199,7 +196,6 @@ export function ProfileEditPage() {
     if (!file) {
       return;
     }
-    setSaveError(null);
     setRemoveAvatarRequested(false);
     setPendingFile(file);
   };
@@ -253,7 +249,6 @@ export function ProfileEditPage() {
                 onClick={() => {
                   setPendingFile(null);
                   setRemoveAvatarRequested(true);
-                  setSaveError(null);
                 }}
               >
                 <Trash2
@@ -317,12 +312,6 @@ export function ProfileEditPage() {
             />
           </div>
         </div>
-
-        {saveError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {saveError}
-          </p>
-        ) : null}
 
         <Button
           type="button"

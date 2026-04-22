@@ -15,10 +15,6 @@ function parseSlotHm(slot: string): { h: number; m: number } {
   };
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
 /**
  * ISO UTC для начала слота: календарная дата витрины (yyyy-MM-dd, VN) + время HH:mm.
  */

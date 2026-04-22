@@ -42,6 +42,29 @@ export class BookingsRepository {
     });
   }
 
+  countPendingForClient(clientUserId: string): Promise<number> {
+    return this.prisma.booking.count({
+      where: {
+        clientUserId,
+        deletedAt: null,
+        status: 'pending',
+      },
+    });
+  }
+
+  countClientBookingsCreatedSince(
+    clientUserId: string,
+    since: Date,
+  ): Promise<number> {
+    return this.prisma.booking.count({
+      where: {
+        clientUserId,
+        deletedAt: null,
+        createdAt: { gte: since },
+      },
+    });
+  }
+
   findManyForClient(clientUserId: string): Promise<BookingListRow[]> {
     return this.prisma.booking.findMany({
       where: { clientUserId, deletedAt: null },

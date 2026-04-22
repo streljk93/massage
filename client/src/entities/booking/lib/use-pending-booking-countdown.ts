@@ -59,7 +59,6 @@ export function usePendingBookingCountdown(
   if (!enabled || !expiresAtIso) {
     return null;
   }
-  // eslint-disable-next-line react-hooks/purity -- wall-clock countdown; `pulse` обновляется раз в секунду
   const deadlineDate = parseISO(expiresAtIso);
   if (!isValid(deadlineDate)) {
     return null;

@@ -1,9 +1,12 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { addMinutes, parseISO } from 'date-fns';
+import { ConfigService } from '@nestjs/config';
+import { addMinutes, parseISO, subHours } from 'date-fns';
 import type { BookingStatus } from '@prisma/client';
 import {
   BOOKING_START_TOLERANCE_MS,
@@ -39,6 +42,7 @@ function isVndCurrency(currency: string | null | undefined): boolean {
 export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
     private readonly bookingsRepository: BookingsRepository,
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
   ) {}
@@ -57,11 +61,69 @@ export class BookingsService {
     return parseApiLocale(user?.locale);
   }
 
+  /**
+   * Лимиты на создание брони: одновременные pending + скорость создания (скользящие окна).
+   * Значения по умолчанию комфортны для обычного пользователя (несколько сравнений мастеров);
+   * при необходимости — env `BOOKING_CLIENT_*` в {@link configuration}.
+   */
+  private async assertClientBookingCreationLimits(
+    clientUserId: string,
+  ): Promise<void> {
+    const limits = this.config.getOrThrow<{
+      maxPendingPerClient: number;
+      maxCreatesPerHour: number;
+      maxCreatesPerDay: number;
+    }>('bookingCreationLimits');
+
+    const [pendingCount, hourCount, dayCount] = await Promise.all([
+      this.bookingsRepository.countPendingForClient(clientUserId),
+      this.bookingsRepository.countClientBookingsCreatedSince(
+        clientUserId,
+        subHours(new Date(), 1),
+      ),
+      this.bookingsRepository.countClientBookingsCreatedSince(
+        clientUserId,
+        subHours(new Date(), 24),
+      ),
+    ]);
+
+    if (pendingCount >= limits.maxPendingPerClient) {
+      throw new HttpException(
+        {
+          code: 'BOOKING_CLIENT_PENDING_LIMIT',
+          message:
+            'Too many bookings awaiting confirmation. Cancel or wait for expiry before creating new ones.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (hourCount >= limits.maxCreatesPerHour) {
+      throw new HttpException(
+        {
+          code: 'BOOKING_CLIENT_CREATE_RATE_HOUR',
+          message: 'Booking creation limit reached. Try again later.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    if (dayCount >= limits.maxCreatesPerDay) {
+      throw new HttpException(
+        {
+          code: 'BOOKING_CLIENT_CREATE_RATE_DAY',
+          message: 'Daily booking creation limit reached. Try again tomorrow.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
   async createBooking(
     clientUserId: string,
     body: CreateBookingBody,
     locale: ApiLocale,
   ) {
+    await this.assertClientBookingCreationLimits(clientUserId);
+
     const startsAt = parseISO(body.startsAt);
     if (Number.isNaN(startsAt.getTime())) {
       throw new BadRequestException({

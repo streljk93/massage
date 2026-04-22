@@ -44,7 +44,6 @@ function vnCalendarDay(date: Date): DirectoryCalendarDay {
 /** Слоты по календарным дням витрины + подписи дней. */
 export function availabilityFromDirectorySlotGroups(
   slotGroups: DirectorySlotGroup[] | null | undefined,
-  _now: Date,
 ): {
   calendarDays: DirectoryCalendarDay[];
   timeSlotsByDay: string[][];

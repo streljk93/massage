@@ -20,6 +20,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
@@ -62,6 +63,10 @@ export class BookingsController {
   @ApiBody({ schema: createBookingRequestSchema })
   @ApiCreatedResponse({ schema: createBookingResponseSchema })
   @ApiBadRequestResponse({ description: 'Невалидное тело или слот в прошлом' })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*',
+  })
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
   async create(
     @Req() req: AuthedRequest,

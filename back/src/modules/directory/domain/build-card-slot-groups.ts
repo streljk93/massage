@@ -9,7 +9,6 @@ import {
  */
 export function buildListingSlotGroupsFromSlotStarts(
   startsAtList: Date[],
-  _now: Date,
 ): ListingSlotGroupSeed[] {
   const byDay = new Map<string, string[]>();
   for (const s of startsAtList) {

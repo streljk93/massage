@@ -57,7 +57,9 @@ export function parseListingSlotGroups(
     if (!Array.isArray(times)) {
       continue;
     }
-    const filteredTimes = times.filter((t): t is string => typeof t === 'string');
+    const filteredTimes = times.filter(
+      (t): t is string => typeof t === 'string',
+    );
 
     let calendarDate: string | null = null;
     if (

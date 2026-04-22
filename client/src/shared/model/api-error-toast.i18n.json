@@ -1,0 +1,64 @@
+{
+  "messages": {
+    "en": {
+      "apiErrorToast": {
+        "genericTitle": "Something went wrong",
+        "networkTitle": "Connection problem. Check your network and try again.",
+        "unauthorizedTitle": "Sign in again to continue",
+        "forbiddenTitle": "You don't have permission",
+        "serverTitle": "Server error. Try again later.",
+        "tooManyRequestsTitle": "Booking limit reached. Please wait a bit and try again.",
+        "bookingGeneric": "Could not complete booking. Try again.",
+        "bookingLimitPending": "Too many bookings are waiting for confirmation. Cancel one or wait until they expire, then try again.",
+        "bookingLimitHour": "You've reached the limit for new bookings this hour. Please try again later.",
+        "bookingLimitDay": "You've reached the daily limit for new bookings. Please try again tomorrow.",
+        "bookingSlotTaken": "This time is no longer available. Choose another slot.",
+        "bookingInvalidTime": "The selected time isn't valid for booking. Pick another time.",
+        "bookingTargetGone": "This specialist or service isn't available anymore.",
+        "bookingServiceOption": "This duration or price isn't available. Try another service or length.",
+        "bookingPickSlotSpecialist": "Choose a service and a time.",
+        "bookingPickSlotOrganization": "Choose a specialist, service, and time."
+      }
+    },
+    "vi": {
+      "apiErrorToast": {
+        "genericTitle": "Đã xảy ra lỗi",
+        "networkTitle": "Lỗi kết nối. Kiểm tra mạng và thử lại.",
+        "unauthorizedTitle": "Đăng nhập lại để tiếp tục",
+        "forbiddenTitle": "Bạn không có quyền thực hiện thao tác này",
+        "serverTitle": "Lỗi máy chủ. Vui lòng thử lại sau.",
+        "tooManyRequestsTitle": "Đã đạt giới hạn đặt lịch. Đợi một lúc rồi thử lại.",
+        "bookingGeneric": "Không đặt được lịch. Thử lại.",
+        "bookingLimitPending": "Bạn có quá nhiều lịch đang chờ xác nhận. Hãy hủy bớt hoặc đợi hết hạn, rồi thử lại.",
+        "bookingLimitHour": "Bạn đã đạt giới hạn đặt lịch trong giờ này. Vui lòng thử lại sau.",
+        "bookingLimitDay": "Bạn đã đạt giới hạn đặt lịch trong ngày. Vui lòng thử lại vào ngày mai.",
+        "bookingSlotTaken": "Khung giờ này không còn trống. Chọn giờ khác.",
+        "bookingInvalidTime": "Thời gian chọn không hợp lệ để đặt lịch. Chọn giờ khác.",
+        "bookingTargetGone": "Chuyên gia hoặc dịch vụ này không còn khả dụng.",
+        "bookingServiceOption": "Thời lượng hoặc giá này không khả dụng. Thử dịch vụ hoặc thời lượng khác.",
+        "bookingPickSlotSpecialist": "Chọn dịch vụ và giờ.",
+        "bookingPickSlotOrganization": "Chọn chuyên gia, dịch vụ và giờ."
+      }
+    },
+    "ru": {
+      "apiErrorToast": {
+        "genericTitle": "Что-то пошло не так",
+        "networkTitle": "Проблема со связью. Проверьте сеть и попробуйте снова.",
+        "unauthorizedTitle": "Войдите снова, чтобы продолжить",
+        "forbiddenTitle": "Недостаточно прав",
+        "serverTitle": "Ошибка сервера. Попробуйте позже.",
+        "tooManyRequestsTitle": "Достигнут лимит бронирования. Подождите немного и попробуйте снова.",
+        "bookingGeneric": "Не удалось записаться. Попробуйте снова.",
+        "bookingLimitPending": "Слишком много записей ждут подтверждения. Отмените одну или дождитесь истечения срока, затем попробуйте снова.",
+        "bookingLimitHour": "Достигнут лимит новых записей за час. Попробуйте позже.",
+        "bookingLimitDay": "Достигнут дневной лимит новых записей. Попробуйте завтра.",
+        "bookingSlotTaken": "Это время уже занято. Выберите другой слот.",
+        "bookingInvalidTime": "Выбранное время нельзя использовать для записи. Укажите другое.",
+        "bookingTargetGone": "Специалист или услуга больше недоступны.",
+        "bookingServiceOption": "Такая длительность или цена недоступны. Выберите другую услугу или длительность.",
+        "bookingPickSlotSpecialist": "Выберите услугу и время.",
+        "bookingPickSlotOrganization": "Выберите специалиста, услугу и время."
+      }
+    }
+  }
+}

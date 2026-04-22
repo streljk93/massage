@@ -25,8 +25,10 @@ type ToastState = {
   dismiss: (id: string) => void;
 };
 
-function mapKindToDuration(_kind: NotificationKind): number {
-  return 1_500;
+const DEFAULT_TOAST_MS = 2_000;
+
+function mapKindToDuration(): number {
+  return DEFAULT_TOAST_MS;
 }
 
 export const useNotificationToastStore = create<ToastState>((set) => ({
@@ -40,7 +42,7 @@ export const useNotificationToastStore = create<ToastState>((set) => ({
       title,
       description,
       kind,
-      duration: duration ?? mapKindToDuration(kind),
+      duration: duration ?? mapKindToDuration(),
     };
     set((s) => ({
       toasts: [next, ...s.toasts].slice(0, TOAST_LIMIT),

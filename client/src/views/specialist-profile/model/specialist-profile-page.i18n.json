@@ -35,8 +35,6 @@
         "durationMin": "{n} min",
         "booking": "Booking",
         "bookingAriaLoading": "Sending booking…",
-        "bookingPickSlot": "Choose a service and a time.",
-        "bookingErrorGeneric": "Could not complete booking. Try again.",
         "bookingSuccess": "Booking confirmed"
       }
     },
@@ -75,8 +73,6 @@
         "durationMin": "{n} phút",
         "booking": "Đặt lịch",
         "bookingAriaLoading": "Đang gửi đặt lịch…",
-        "bookingPickSlot": "Chọn dịch vụ và giờ.",
-        "bookingErrorGeneric": "Không đặt được lịch. Thử lại.",
         "bookingSuccess": "Đã đặt lịch thành công"
       }
     },
@@ -115,8 +111,6 @@
         "durationMin": "{n} мин",
         "booking": "Записаться",
         "bookingAriaLoading": "Отправляем запись…",
-        "bookingPickSlot": "Выберите услугу и время.",
-        "bookingErrorGeneric": "Не удалось записаться. Попробуйте снова.",
         "bookingSuccess": "Запись создана"
       }
     }
