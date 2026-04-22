@@ -26,7 +26,7 @@ import type { SalonSpecialistPick } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
-import type { BookingSlotSearch } from "@/shared/lib/profile-booking-initial-from-search";
+import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
 import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
@@ -231,9 +231,13 @@ export function OrganizationProfilePage({
       setBookingErrorKey("bookingPickSlot");
       return;
     }
-    const slotDayKey = profile.slotDayKeys[dayIndex] ?? "today";
+    const calendarDate = profile.slotCalendarDates[dayIndex];
+    if (!calendarDate) {
+      setBookingErrorKey("bookingPickSlot");
+      return;
+    }
     const startsAt = bookingStartsAtIsoUtc({
-      slotDayKey,
+      calendarDate,
       slotTime: effectiveSlot,
     });
     setBookingPending(true);
@@ -265,7 +269,7 @@ export function OrganizationProfilePage({
     dayIndex,
     effectiveSlot,
     locale,
-    profile.slotDayKeys,
+    profile.slotCalendarDates,
     router,
     selectedBookingMinutes,
     selectedSalonSpecialistId,
@@ -572,7 +576,7 @@ export function OrganizationProfilePage({
                         const selected = i === dayIndex;
                         return (
                           <button
-                            key={`${i}-${d.weekdayKey}-${d.dayOfMonth}`}
+                            key={profile.slotCalendarDates[i] ?? i}
                             type="button"
                             onClick={() => {
                               setDayIndex(i);

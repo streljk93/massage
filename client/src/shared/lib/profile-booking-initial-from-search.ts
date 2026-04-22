@@ -1,11 +1,9 @@
-import type { BookingUrlSlotDay } from "@/shared/lib/booking-slot-search-params";
+import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
 
 export type ProfileSlotGrid = {
-  slotDayKeys: Array<BookingUrlSlotDay>;
+  slotCalendarDates: string[];
   timeSlotsByDay: string[][];
 };
-
-export type BookingSlotSearch = { dayKey: BookingUrlSlotDay; time: string };
 
 export function initialDayAndSlotFromSearch(
   profile: ProfileSlotGrid,
@@ -14,7 +12,9 @@ export function initialDayAndSlotFromSearch(
   if (!search) {
     return { dayIndex: 0, slot: "" };
   }
-  const dayIdx = profile.slotDayKeys.findIndex((k) => k === search.dayKey);
+  const dayIdx = profile.slotCalendarDates.findIndex(
+    (d) => d === search.calendarDate,
+  );
   if (dayIdx < 0) {
     return { dayIndex: 0, slot: "" };
   }

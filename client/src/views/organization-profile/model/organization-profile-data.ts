@@ -15,6 +15,6 @@ export type OrganizationProfileData = {
   specialistsCount: number;
   calendarDays: DirectoryCalendarDay[];
   timeSlotsByDay: string[][];
-  slotDayKeys: Array<"today" | "tomorrow">;
+  slotCalendarDates: string[];
   specialists: SalonSpecialistPick[];
 };

@@ -9,9 +9,15 @@ import {
   checkListingBookability,
 } from '../../../common/availability/listing-slot-policy';
 import type { ApiLocale } from '../../../common/i18n';
-import { pickLocalizedServiceName } from '../../../common/i18n';
+import {
+  buildBookingStatusLabelMap,
+  parseApiLocale,
+  pickBookingStatusLabel,
+  pickLocalizedServiceName,
+} from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
+import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
@@ -33,7 +39,22 @@ export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
   ) {}
+
+  private async resolveBookingsListLocale(
+    clientUserId: string,
+    localeFromQuery: ApiLocale | undefined,
+  ): Promise<ApiLocale> {
+    if (localeFromQuery !== undefined) {
+      return localeFromQuery;
+    }
+    const user = await this.prisma.user.findFirst({
+      where: { id: clientUserId, deletedAt: null },
+      select: { locale: true },
+    });
+    return parseApiLocale(user?.locale);
+  }
 
   async createBooking(
     clientUserId: string,
@@ -186,12 +207,21 @@ export class BookingsService {
     };
   }
 
-  async listMine(clientUserId: string) {
-    const rows = await this.bookingsRepository.findManyForClient(clientUserId);
+  async listMine(clientUserId: string, localeFromQuery: ApiLocale | undefined) {
+    const locale = await this.resolveBookingsListLocale(
+      clientUserId,
+      localeFromQuery,
+    );
+    const [rows, localeRows] = await Promise.all([
+      this.bookingsRepository.findManyForClient(clientUserId),
+      this.bookingStatusLocaleRepository.findAll(),
+    ]);
+    const labelMap = buildBookingStatusLabelMap(localeRows);
     return {
       bookings: rows.map((b) => ({
         id: b.id,
         status: b.status,
+        statusLabel: pickBookingStatusLabel(b.status, locale, labelMap),
         specialistId: b.specialistId,
         specialistName: b.specialist.user.name,
         specialistImageUrl: b.specialist.imageUrl,

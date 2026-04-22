@@ -26,6 +26,7 @@ import type { Request } from 'express';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import {
   ApiLocaleQueryDocs,
+  OptionalRequestLocale,
   RequestLocale,
   type ApiLocale,
 } from '../../../common/i18n';
@@ -77,12 +78,16 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Мои бронирования',
     description:
-      'Список записей текущего пользователя (клиента), новые сверху.',
+      'Список записей текущего пользователя (клиента), новые сверху. `statusLabel` — подпись статуса на языке query `locale`; если `locale` не передан, используется `User.locale`, иначе en.',
   })
+  @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: bookingsListResponseSchema })
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
-  async list(@Req() req: AuthedRequest) {
-    return this.bookingsService.listMine(req.user.id);
+  async list(
+    @Req() req: AuthedRequest,
+    @OptionalRequestLocale() locale: ApiLocale | undefined,
+  ) {
+    return this.bookingsService.listMine(req.user.id, locale);
   }
 
   @Post(':id/cancel')

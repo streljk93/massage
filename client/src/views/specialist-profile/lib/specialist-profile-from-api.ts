@@ -25,7 +25,7 @@ export function specialistProfileFromApiDetail(
   const card = specialistCardSeedFromApi(
     detail as Parameters<typeof specialistCardSeedFromApi>[0],
   );
-  const { calendarDays, timeSlotsByDay, slotDayKeys } =
+  const { calendarDays, timeSlotsByDay, slotCalendarDates } =
     availabilityFromDirectorySlotGroups(detail.slotGroups, new Date());
 
   return {
@@ -42,7 +42,7 @@ export function specialistProfileFromApiDetail(
     reviewsCount: detail.reviewsCount,
     calendarDays: calendarDays as SpecialistCalendarDay[],
     timeSlotsByDay,
-    slotDayKeys,
+    slotCalendarDates,
     services: bookableServicesFromApi(detail),
   };
 }

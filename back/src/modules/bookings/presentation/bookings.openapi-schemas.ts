@@ -28,6 +28,7 @@ export const bookingListItemSchema = {
   required: [
     'id',
     'status',
+    'statusLabel',
     'specialistId',
     'specialistName',
     'serviceName',
@@ -39,6 +40,11 @@ export const bookingListItemSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     status: { type: 'string' },
+    statusLabel: {
+      type: 'string',
+      description:
+        'Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`).',
+    },
     specialistId: { type: 'string', format: 'uuid' },
     specialistName: { type: 'string' },
     specialistImageUrl: { type: 'string', nullable: true, format: 'uri' },

@@ -21,7 +21,7 @@ export type SpecialistProfileData = {
   calendarDays: SpecialistCalendarDay[];
   /** Свободные слоты по дням (индекс совпадает с `calendarDays`). */
   timeSlotsByDay: string[][];
-  /** Порядок как у `calendarDays` / `timeSlotsByDay` (сортировка слотов с бэкенда). */
-  slotDayKeys: Array<"today" | "tomorrow">;
+  /** yyyy-MM-dd витрины по каждому дню (индекс = `calendarDays`). */
+  slotCalendarDates: string[];
   services: BookableServiceOption[];
 };

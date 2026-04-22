@@ -42,3 +42,31 @@ export const RequestLocale = createParamDecorator(
     return parsed.data;
   },
 );
+
+/**
+ * `?locale=` для ручек, где пустой query означает «не задано» (например fallback на `User.locale`).
+ * Невалидная строка — 400.
+ */
+export const OptionalRequestLocale = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): ApiLocale | undefined => {
+    const raw = readRawLocale(ctx.switchToHttp().getRequest<Request>());
+    if (raw === undefined || raw === '') {
+      return undefined;
+    }
+    if (typeof raw !== 'string') {
+      throw new BadRequestException({
+        code: 'INVALID_LOCALE',
+        message: 'Query parameter locale must be a string',
+      });
+    }
+    const normalized = raw.trim().toLowerCase();
+    const parsed = requestLocaleQueryFieldSchema.safeParse(normalized);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        code: 'INVALID_LOCALE',
+        message: `Unsupported locale: ${raw}`,
+      });
+    }
+    return parsed.data;
+  },
+);

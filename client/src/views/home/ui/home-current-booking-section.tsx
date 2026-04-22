@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/app/i18n/routing";
 import { Link } from "@/app/i18n/navigation";
 import {
   BookingCard,
@@ -30,6 +31,7 @@ type ApiBooking = {
   startsAt: string;
   endsAt: string;
   pendingExpiresAt?: string | null;
+  statusLabel: string;
 };
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
@@ -115,6 +117,7 @@ export function HomeCurrentBookingSection() {
   const t = useTranslations("home");
   const tRoot = useTranslations();
   const format = useFormatter();
+  const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
 
@@ -128,13 +131,14 @@ export function HomeCurrentBookingSection() {
     }
     const res = await bookingsList({
       client: createBrowserSdkClient(accessToken),
+      query: { locale },
     });
     if (res.error || !res.data) {
       setBookings(null);
       return;
     }
     setBookings(pickUpcomingBookings(res.data.bookings));
-  }, [accessToken]);
+  }, [accessToken, locale]);
 
   useEffect(() => {
     if (sessionStatus === "loading") {
@@ -150,6 +154,7 @@ export function HomeCurrentBookingSection() {
     (async () => {
       const res = await bookingsList({
         client: createBrowserSdkClient(accessToken),
+        query: { locale },
       });
       if (cancelled) {
         return;
@@ -163,7 +168,7 @@ export function HomeCurrentBookingSection() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, sessionStatus]);
+  }, [accessToken, locale, sessionStatus]);
 
   const cardPropsList = useMemo(() => {
     if (!bookings?.length) {

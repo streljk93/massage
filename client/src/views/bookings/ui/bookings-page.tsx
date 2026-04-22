@@ -9,12 +9,13 @@ import {
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import type { AppLocale } from "@/app/i18n/routing";
 import { Link } from "@/app/i18n/navigation";
 import {
-  BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT,
   BookingHistoryCard,
   BookingListCard,
+  bookingHistoryDateTagsMuted,
   formatBookingServiceLineClient,
 } from "@/entities/booking";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
@@ -54,6 +55,7 @@ type ApiBooking = {
   endsAt: string;
   pendingExpiresAt?: string | null;
   cancelReason?: string | null;
+  statusLabel: string;
 };
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
@@ -67,9 +69,9 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 
 export function BookingsPage() {
   const t = useTranslations("bookings");
-  const tHistory = useTranslations("bookingHistory");
   const tRoot = useTranslations();
   const format = useFormatter();
+  const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
 
@@ -90,6 +92,7 @@ export function BookingsPage() {
     }
     const res = await bookingsList({
       client: createBrowserSdkClient(accessToken),
+      query: { locale },
     });
     if (res.error || !res.data) {
       setLoadError(true);
@@ -98,7 +101,7 @@ export function BookingsPage() {
     }
     setLoadError(false);
     setRows(res.data.bookings);
-  }, [accessToken]);
+  }, [accessToken, locale]);
 
   const refreshBookingsRef = useRef(refreshBookings);
   useLayoutEffect(() => {
@@ -116,6 +119,7 @@ export function BookingsPage() {
     (async () => {
       const res = await bookingsList({
         client: createBrowserSdkClient(accessToken),
+        query: { locale },
       });
       if (cancelled) {
         return;
@@ -131,7 +135,7 @@ export function BookingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, sessionStatus]);
+  }, [accessToken, locale, sessionStatus]);
 
   useEffect(() => {
     return () => {
@@ -284,12 +288,6 @@ export function BookingsPage() {
             })
           : row.serviceName;
 
-      const systemNote =
-        row.status === "expired" &&
-        row.cancelReason === BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT
-          ? tHistory("systemCanceledNoConfirmation")
-          : undefined;
-
       return {
         id: row.id,
         providerName: row.specialistName,
@@ -297,10 +295,12 @@ export function BookingsPage() {
         dateLabel,
         timeRange,
         avatarSrc: specialistAvatarSrc(row.specialistImageUrl),
-        systemNote,
+        specialistProfileHref: `/specialists/${row.specialistId}`,
+        dateTagsMuted: bookingHistoryDateTagsMuted(row.status),
+        statusLabel: row.statusLabel,
       };
     });
-  }, [format, historyRows, tHistory, tRoot]);
+  }, [format, historyRows, tRoot]);
 
   const headerName =
     session?.user?.name?.trim() ||
@@ -438,12 +438,14 @@ export function BookingsPage() {
                 historyCards.map((row) => (
                   <BookingHistoryCard
                     key={row.id}
+                    statusLabel={row.statusLabel}
                     providerName={row.providerName}
                     serviceLine={row.serviceLine}
                     dateLabel={row.dateLabel}
                     timeRange={row.timeRange}
                     avatarSrc={row.avatarSrc}
-                    systemNote={row.systemNote}
+                    specialistProfileHref={row.specialistProfileHref}
+                    dateTagsMuted={row.dateTagsMuted}
                     reviewed={false}
                   />
                 ))

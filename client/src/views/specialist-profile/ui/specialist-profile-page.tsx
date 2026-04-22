@@ -23,7 +23,7 @@ import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
-import type { BookingSlotSearch } from "@/shared/lib/profile-booking-initial-from-search";
+import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
 import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
@@ -176,9 +176,13 @@ export function SpecialistProfilePage({
       setBookingErrorKey("bookingPickSlot");
       return;
     }
-    const slotDayKey = profile.slotDayKeys[dayIndex] ?? "today";
+    const calendarDate = profile.slotCalendarDates[dayIndex];
+    if (!calendarDate) {
+      setBookingErrorKey("bookingPickSlot");
+      return;
+    }
     const startsAt = bookingStartsAtIsoUtc({
-      slotDayKey,
+      calendarDate,
       slotTime: effectiveSlot,
     });
     setBookingPending(true);
@@ -198,6 +202,7 @@ export function SpecialistProfilePage({
         return;
       }
       notify.success(t("bookingSuccess"));
+      router.refresh();
       router.push("/bookings");
     } catch {
       setBookingErrorKey("bookingErrorGeneric");
@@ -209,7 +214,7 @@ export function SpecialistProfilePage({
     bookingPending,
     dayIndex,
     profile.id,
-    profile.slotDayKeys,
+    profile.slotCalendarDates,
     router,
     selectedBookingMinutes,
     selectedService,
@@ -478,7 +483,7 @@ export function SpecialistProfilePage({
                     const selected = i === dayIndex;
                     return (
                       <button
-                        key={`${i}-${d.weekdayKey}-${d.dayOfMonth}`}
+                        key={profile.slotCalendarDates[i] ?? i}
                         type="button"
                         onClick={() => {
                           setDayIndex(i);

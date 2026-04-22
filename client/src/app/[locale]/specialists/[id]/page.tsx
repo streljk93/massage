@@ -20,9 +20,11 @@ type Props = {
 export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
   const sp = (await searchParams) ?? {};
-  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp);
+  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp, {
+    now: new Date(),
+  });
   const slotNavKey = bookingSlotFromSearch
-    ? `${bookingSlotFromSearch.dayKey}-${bookingSlotFromSearch.time}`
+    ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}`
     : "none";
   const locale = (await getLocale()) as AppLocale;
   const sdk = createServerSdkClient();

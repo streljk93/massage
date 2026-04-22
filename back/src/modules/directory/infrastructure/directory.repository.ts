@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { LISTING_SLOT_WINDOW_MS } from '../../../common/availability/listing-slot-policy';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 
 const serviceCategoryWithLocales = {
@@ -78,7 +79,7 @@ export class DirectoryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Брони, пересекающиеся с окном витрины слотов (сегодня/завтра, как у вычисляемых слотов).
+   * Брони, пересекающиеся с окном витрины слотов (горизонт как у вычисляемых слотов).
    */
   findActiveBookingsForListingOccupancy(
     specialistIds: string[],
@@ -88,7 +89,7 @@ export class DirectoryRepository {
       return Promise.resolve([]);
     }
     const windowStart = new Date(now.getTime() - 60 * 60 * 1000);
-    const windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const windowEnd = new Date(now.getTime() + LISTING_SLOT_WINDOW_MS);
     return this.prisma.booking.findMany({
       where: {
         specialistId: { in: specialistIds },

@@ -10,6 +10,7 @@ import {
 import { buildListingSlotGroupsFromSlotStarts } from '../domain/build-card-slot-groups';
 import { filterSlotGroupsByOccupiedKeys } from '../domain/filter-slot-groups-by-occupied';
 import {
+  dropPastListingSlotGroups,
   parseListingSlotGroups,
   type ListingSlotGroupSeed,
 } from '../domain/listing-slot-groups';
@@ -150,11 +151,10 @@ function mapSpecialistRowToListItem(
   freeSlotStarts: Date[],
 ): SpecialistListItemDto {
   const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts, now);
-  const fromJson = parseListingSlotGroups(s.listingSlotGroups);
+  const fromJson = parseListingSlotGroups(s.listingSlotGroups, now);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
-  const slotGroups = filterSlotGroupsByOccupiedKeys(
-    slotGroupsRaw,
-    occupiedKeys,
+  const slotGroups = dropPastListingSlotGroups(
+    filterSlotGroupsByOccupiedKeys(slotGroupsRaw, occupiedKeys),
     now,
   );
 
@@ -208,12 +208,11 @@ function mapOrganizationRowToListItem(
     mergeOrganizationFreeSlotStarts(o, freeBySpec),
     now,
   );
-  const fromJson = parseListingSlotGroups(o.listingSlotGroups);
+  const fromJson = parseListingSlotGroups(o.listingSlotGroups, now);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
   const unionKeys = unionOccupiedKeysForOrganization(o, occupiedMap);
-  const slotGroups = filterSlotGroupsByOccupiedKeys(
-    slotGroupsRaw,
-    unionKeys,
+  const slotGroups = dropPastListingSlotGroups(
+    filterSlotGroupsByOccupiedKeys(slotGroupsRaw, unionKeys),
     now,
   );
 

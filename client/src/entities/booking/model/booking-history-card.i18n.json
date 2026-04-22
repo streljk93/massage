@@ -3,19 +3,19 @@
     "en": {
       "bookingHistory": {
         "reviewMe": "Review me",
-        "systemCanceledNoConfirmation": "Canceled automatically: the visit was not confirmed in time."
+        "statusUnknown": "Status unavailable"
       }
     },
     "vi": {
       "bookingHistory": {
         "reviewMe": "Đánh giá tôi",
-        "systemCanceledNoConfirmation": "Đã hủy tự động: lịch không được xác nhận đúng hạn."
+        "statusUnknown": "Không xác định trạng thái"
       }
     },
     "ru": {
       "bookingHistory": {
         "reviewMe": "Оцените визит",
-        "systemCanceledNoConfirmation": "Отменено автоматически: запись не была подтверждена вовремя."
+        "statusUnknown": "Статус недоступен"
       }
     }
   }

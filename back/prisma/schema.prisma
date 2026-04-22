@@ -26,6 +26,16 @@ enum BookingStatus {
   done
 }
 
+/// Локализованные подписи статусов бронирования для API (веб, мобильные клиенты).
+model BookingStatusLocale {
+  status BookingStatus
+  locale String
+  label  String
+
+  @@id([status, locale])
+  @@index([locale])
+}
+
 /// Рекламный баннер: внутренний (продукт) или внешний партнёр.
 enum AdvertOwnerKind {
   internal

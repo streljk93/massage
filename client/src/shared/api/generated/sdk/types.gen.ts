@@ -368,7 +368,7 @@ export type CatalogGetMajorCategoriesData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -409,7 +409,7 @@ export type CatalogGetCategoryByMajorAndSlugData = {
     };
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -460,7 +460,7 @@ export type CatalogGetCategoriesByMajorSlugData = {
     };
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -506,7 +506,7 @@ export type SpecialistsListData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -544,7 +544,10 @@ export type SpecialistsListResponses = {
                 shortName: string;
             }>;
             slotGroups: Array<{
-                dayKey: 'today' | 'tomorrow';
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
                 times: Array<string>;
             }>;
             bookableServices: Array<{
@@ -564,7 +567,7 @@ export type SpecialistsGetByIdData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -605,7 +608,10 @@ export type SpecialistsGetByIdResponses = {
             shortName: string;
         }>;
         slotGroups: Array<{
-            dayKey: 'today' | 'tomorrow';
+            /**
+             * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+             */
+            calendarDate: string;
             times: Array<string>;
         }>;
         bookableServices: Array<{
@@ -624,7 +630,7 @@ export type OrganizationsListData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -663,7 +669,10 @@ export type OrganizationsListResponses = {
                 shortName: string;
             }>;
             slotGroups: Array<{
-                dayKey: 'today' | 'tomorrow';
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
                 times: Array<string>;
             }>;
         }>;
@@ -677,7 +686,7 @@ export type OrganizationsGetByIdData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };
@@ -719,7 +728,10 @@ export type OrganizationsGetByIdResponses = {
             shortName: string;
         }>;
         slotGroups: Array<{
-            dayKey: 'today' | 'tomorrow';
+            /**
+             * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+             */
+            calendarDate: string;
             times: Array<string>;
         }>;
         staff: Array<{
@@ -746,7 +758,7 @@ export type AdvertisingListByPlacementData = {
     path?: never;
     query: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
         /**
@@ -785,7 +797,12 @@ export type AdvertisingListByPlacementResponse = AdvertisingListByPlacementRespo
 export type BookingsListData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
     url: '/bookings';
 };
 
@@ -801,6 +818,10 @@ export type BookingsListResponses = {
         bookings: Array<{
             id: string;
             status: string;
+            /**
+             * Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`).
+             */
+            statusLabel: string;
             specialistId: string;
             specialistName: string;
             specialistImageUrl?: string | null;
@@ -830,7 +851,7 @@ export type BookingsCreateData = {
     path?: never;
     query?: {
         /**
-         * Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
     };

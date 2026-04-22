@@ -830,7 +830,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -906,7 +906,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1059,7 +1059,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1206,7 +1206,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1342,16 +1342,15 @@
                             "items": {
                               "type": "object",
                               "required": [
-                                "dayKey",
+                                "calendarDate",
                                 "times"
                               ],
                               "properties": {
-                                "dayKey": {
+                                "calendarDate": {
                                   "type": "string",
-                                  "enum": [
-                                    "today",
-                                    "tomorrow"
-                                  ]
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
                                 },
                                 "times": {
                                   "type": "array",
@@ -1426,7 +1425,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1554,16 +1553,15 @@
                       "items": {
                         "type": "object",
                         "required": [
-                          "dayKey",
+                          "calendarDate",
                           "times"
                         ],
                         "properties": {
-                          "dayKey": {
+                          "calendarDate": {
                             "type": "string",
-                            "enum": [
-                              "today",
-                              "tomorrow"
-                            ]
+                            "format": "date",
+                            "example": "2026-04-23",
+                            "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
                           },
                           "times": {
                             "type": "array",
@@ -1638,7 +1636,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1771,16 +1769,15 @@
                             "items": {
                               "type": "object",
                               "required": [
-                                "dayKey",
+                                "calendarDate",
                                 "times"
                               ],
                               "properties": {
-                                "dayKey": {
+                                "calendarDate": {
                                   "type": "string",
-                                  "enum": [
-                                    "today",
-                                    "tomorrow"
-                                  ]
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
                                 },
                                 "times": {
                                   "type": "array",
@@ -1819,7 +1816,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -1945,16 +1942,15 @@
                       "items": {
                         "type": "object",
                         "required": [
-                          "dayKey",
+                          "calendarDate",
                           "times"
                         ],
                         "properties": {
-                          "dayKey": {
+                          "calendarDate": {
                             "type": "string",
-                            "enum": [
-                              "today",
-                              "tomorrow"
-                            ]
+                            "format": "date",
+                            "example": "2026-04-23",
+                            "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
                           },
                           "times": {
                             "type": "array",
@@ -2067,7 +2063,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -2181,7 +2177,7 @@
             "name": "locale",
             "required": false,
             "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale (по умолчанию en). Невалидное значение — 400.",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
             "schema": {
               "enum": [
                 "en",
@@ -2286,9 +2282,24 @@
         ]
       },
       "get": {
-        "description": "Список записей текущего пользователя (клиента), новые сверху.",
+        "description": "Список записей текущего пользователя (клиента), новые сверху. `statusLabel` — подпись статуса на языке query `locale`; если `locale` не передан, используется `User.locale`, иначе en.",
         "operationId": "Bookings_list",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2307,6 +2318,7 @@
                         "required": [
                           "id",
                           "status",
+                          "statusLabel",
                           "specialistId",
                           "specialistName",
                           "serviceName",
@@ -2322,6 +2334,10 @@
                           },
                           "status": {
                             "type": "string"
+                          },
+                          "statusLabel": {
+                            "type": "string",
+                            "description": "Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`)."
                           },
                           "specialistId": {
                             "type": "string",

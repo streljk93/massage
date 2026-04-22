@@ -84,7 +84,7 @@ export function SpecialistCard({
         return;
       }
       const q = new URLSearchParams();
-      q.set(BOOKING_URL_SLOT_DAY, p.dayKey);
+      q.set(BOOKING_URL_SLOT_DAY, p.calendarDate);
       q.set(BOOKING_URL_SLOT_TIME, p.time);
       router.push(`${profileHref}?${q.toString()}`);
     });

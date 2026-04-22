@@ -29,7 +29,7 @@ export function organizationProfileFromApiDetail(
     })),
   }));
 
-  const { calendarDays, timeSlotsByDay, slotDayKeys } =
+  const { calendarDays, timeSlotsByDay, slotCalendarDates } =
     availabilityFromDirectorySlotGroups(detail.slotGroups, new Date());
 
   return {
@@ -46,7 +46,7 @@ export function organizationProfileFromApiDetail(
     specialistsCount: specialists.length,
     calendarDays,
     timeSlotsByDay,
-    slotDayKeys,
+    slotCalendarDates,
     specialists,
   };
 }

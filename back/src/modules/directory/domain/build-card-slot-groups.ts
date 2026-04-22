@@ -1,43 +1,33 @@
-import { addDays } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
 import type { ListingSlotGroupSeed } from './listing-slot-groups';
 
 import { LISTING_DISPLAY_TZ } from '../../../common/availability/listing-slot-policy';
 
 /**
- * Группирует свободные слоты по «сегодня / завтра» в таймзоне витрины (Вьетнам).
+ * Группирует свободные слоты по календарным дням витрины (Asia/Ho_Chi_Minh).
  */
 export function buildListingSlotGroupsFromSlotStarts(
   startsAtList: Date[],
-  now: Date,
+  _now: Date,
 ): ListingSlotGroupSeed[] {
-  const todayKey = formatInTimeZone(now, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
-  const zonedNow = toZonedTime(now, LISTING_DISPLAY_TZ);
-  const tomorrowKey = formatInTimeZone(
-    addDays(zonedNow, 1),
-    LISTING_DISPLAY_TZ,
-    'yyyy-MM-dd',
-  );
-
-  const todayTimes: string[] = [];
-  const tomorrowTimes: string[] = [];
-
+  const byDay = new Map<string, string[]>();
   for (const s of startsAtList) {
     const k = formatInTimeZone(s, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
     const label = formatInTimeZone(s, LISTING_DISPLAY_TZ, 'HH:mm');
-    if (k === todayKey) {
-      todayTimes.push(label);
-    } else if (k === tomorrowKey) {
-      tomorrowTimes.push(label);
-    }
+    const arr = byDay.get(k) ?? [];
+    arr.push(label);
+    byDay.set(k, arr);
   }
 
+  const dates = [...byDay.keys()].sort();
   const out: ListingSlotGroupSeed[] = [];
-  if (todayTimes.length > 0) {
-    out.push({ dayKey: 'today', times: todayTimes });
-  }
-  if (tomorrowTimes.length > 0) {
-    out.push({ dayKey: 'tomorrow', times: tomorrowTimes });
+  for (const calendarDate of dates) {
+    const times = [...new Set(byDay.get(calendarDate) ?? [])].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
+    if (times.length > 0) {
+      out.push({ calendarDate, times });
+    }
   }
   return out;
 }

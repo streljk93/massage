@@ -1,21 +1,34 @@
+import { listingCalendarDayKeys } from "@/shared/lib/directory-slot-calendar";
+
 /** Query-параметры для предзаполнения даты/времени записи с витрины. */
 export const BOOKING_URL_SLOT_DAY = "slotDay";
 export const BOOKING_URL_SLOT_TIME = "slotTime";
 
-export type BookingUrlSlotDay = "today" | "tomorrow";
+const ISO_CALENDAR_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+export type BookingSlotSearch = { calendarDate: string; time: string };
 
 export function parseBookingSlotSearchParams(
   searchParams: URLSearchParams,
-): { dayKey: BookingUrlSlotDay; time: string } | null {
-  const dayRaw = searchParams.get(BOOKING_URL_SLOT_DAY);
+  options?: { now?: Date },
+): BookingSlotSearch | null {
+  const dayRaw = searchParams.get(BOOKING_URL_SLOT_DAY)?.trim() ?? "";
   const time = searchParams.get(BOOKING_URL_SLOT_TIME)?.trim() ?? "";
-  if (time === "") {
+  if (time === "" || dayRaw === "") {
     return null;
   }
-  if (dayRaw !== "today" && dayRaw !== "tomorrow") {
+  const now = options?.now ?? new Date();
+  let calendarDate: string | null = null;
+  if (ISO_CALENDAR_DAY.test(dayRaw)) {
+    calendarDate = dayRaw;
+  } else if (dayRaw === "today" || dayRaw === "tomorrow") {
+    const { todayKey, tomorrowKey } = listingCalendarDayKeys(now);
+    calendarDate = dayRaw === "today" ? todayKey : tomorrowKey;
+  }
+  if (!calendarDate) {
     return null;
   }
-  return { dayKey: dayRaw, time };
+  return { calendarDate, time };
 }
 
 function nextSearchParamValue(
@@ -33,7 +46,8 @@ function nextSearchParamValue(
 /** Парсинг `searchParams` страницы Next.js (App Router). */
 export function parseBookingSlotFromNextSearchParams(
   searchParams: Record<string, string | string[] | undefined>,
-): { dayKey: BookingUrlSlotDay; time: string } | null {
+  options?: { now?: Date },
+): BookingSlotSearch | null {
   const params = new URLSearchParams();
   const day = nextSearchParamValue(searchParams[BOOKING_URL_SLOT_DAY]);
   const time = nextSearchParamValue(searchParams[BOOKING_URL_SLOT_TIME]);
@@ -43,5 +57,5 @@ export function parseBookingSlotFromNextSearchParams(
   if (time) {
     params.set(BOOKING_URL_SLOT_TIME, time);
   }
-  return parseBookingSlotSearchParams(params);
+  return parseBookingSlotSearchParams(params, options);
 }

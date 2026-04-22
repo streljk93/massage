@@ -6,17 +6,15 @@ import { useTranslations } from "next-intl";
 import { cn, motion } from "../lib";
 import { Tag, tagVariants } from "./tag";
 
-export type AvailabilitySlotDayKey = "today" | "tomorrow";
-
 export type AvailabilitySlotGroup = {
   dayLabel: string;
-  /** Стабильный ключ дня (для deep-link); обязателен для навигации с карточки. */
-  dayKey: AvailabilitySlotDayKey;
+  /** yyyy-MM-dd в календаре витрины (Asia/Ho_Chi_Minh), для deep-link. */
+  calendarDate: string;
   times: string[];
 };
 
 export type AvailabilitySlotSelectPayload = {
-  dayKey: AvailabilitySlotDayKey;
+  calendarDate: string;
   dayLabel: string;
   time: string;
 };
@@ -49,7 +47,7 @@ export function AvailabilitySlotStrip({
       )}
     >
       {groups.map((group, groupIndex) => (
-        <Fragment key={groupIndex}>
+        <Fragment key={`${group.calendarDate}-${groupIndex}`}>
           <Tag
             variant="default"
             bordered
@@ -60,7 +58,7 @@ export function AvailabilitySlotStrip({
           </Tag>
           {group.times.map((time) => (
             <button
-              key={`${groupIndex}-${time}`}
+              key={`${group.calendarDate}-${time}`}
               type="button"
               className={cn(
                 tagVariants({ variant: "slot" }),
@@ -69,7 +67,7 @@ export function AvailabilitySlotStrip({
               )}
               onClick={() =>
                 onSelectTime?.({
-                  dayKey: group.dayKey,
+                  calendarDate: group.calendarDate,
                   dayLabel: group.dayLabel,
                   time,
                 })

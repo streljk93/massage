@@ -11,9 +11,15 @@ const directoryCategoryTagSchema = {
 
 const listingSlotGroupItemSchema = {
   type: 'object',
-  required: ['dayKey', 'times'],
+  required: ['calendarDate', 'times'],
   properties: {
-    dayKey: { type: 'string', enum: ['today', 'tomorrow'] },
+    calendarDate: {
+      type: 'string',
+      format: 'date',
+      example: '2026-04-23',
+      description:
+        'Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.',
+    },
     times: {
       type: 'array',
       items: { type: 'string', example: '09:00' },

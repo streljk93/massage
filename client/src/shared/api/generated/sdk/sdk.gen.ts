@@ -189,7 +189,7 @@ export const advertisingListByPlacement = <ThrowOnError extends boolean = false>
 /**
  * Мои бронирования
  *
- * Список записей текущего пользователя (клиента), новые сверху.
+ * Список записей текущего пользователя (клиента), новые сверху. `statusLabel` — подпись статуса на языке query `locale`; если `locale` не передан, используется `User.locale`, иначе en.
  */
 export const bookingsList = <ThrowOnError extends boolean = false>(options?: Options<BookingsListData, ThrowOnError>) => (options?.client ?? client).get<BookingsListResponses, BookingsListErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

@@ -13,12 +13,19 @@ export {
   pickLocalizedServiceName,
   resolveLocalizedString,
 } from './locale-table.resolver';
+export {
+  buildBookingStatusLabelMap,
+  pickBookingStatusLabel,
+} from './booking-status-label.resolver';
 export type {
   CategoryLocaleShape,
   OrganizationLocaleListShape,
   ServiceLocaleShape,
 } from './locale-table.resolver';
-export { RequestLocale } from './request-locale.decorator';
+export {
+  OptionalRequestLocale,
+  RequestLocale,
+} from './request-locale.decorator';
 export {
   requestLocaleQueryFieldSchema,
   requestLocaleQuerySchema,

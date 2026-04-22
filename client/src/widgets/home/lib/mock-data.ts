@@ -16,11 +16,13 @@ export const currentBooking = {
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop",
 };
 
-/** Сырые группы для карточек: ключ дня переводится на экране через `slots.*`. */
-export type SlotGroupSeed = {
-  dayKey: "today" | "tomorrow";
-  times: string[];
-};
+/**
+ * Сырые группы для карточек.
+ * `dayKey` — относительный день (моки); с API приходит `calendarDate` (yyyy-MM-dd, VN).
+ */
+export type SlotGroupSeed =
+  | { dayKey: "today" | "tomorrow"; times: string[] }
+  | { calendarDate: string; times: string[] };
 
 /** Координаты для карты (остров Phú Quốc), демо-данные. */
 export const topSalons = [

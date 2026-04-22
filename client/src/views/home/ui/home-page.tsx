@@ -266,7 +266,9 @@ export async function HomePage() {
                     {...card}
                     imageAlt={card.name}
                     profileHref={`/organizations/${o.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      maxGroups: 5,
+                    })}
                   />
                 );
               })}
@@ -296,7 +298,9 @@ export async function HomePage() {
                     {...card}
                     imageAlt={card.name}
                     profileHref={`/specialists/${s.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots)}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      maxGroups: 5,
+                    })}
                   />
                 );
               })}

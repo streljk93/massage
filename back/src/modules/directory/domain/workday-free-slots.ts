@@ -1,14 +1,16 @@
 import { addDays } from 'date-fns';
-import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz';
 import {
   BOOKING_START_TOLERANCE_MS,
   DEFAULT_WORKDAY,
   LISTING_DISPLAY_TZ,
+  LISTING_SLOT_CALENDAR_DAYS,
+  LISTING_SLOT_WINDOW_MS,
+  listingCalendarDayKeys,
   SLOT_GRID_MINUTES,
+  vnWallClockToUtcDate,
 } from '../../../common/availability/listing-slot-policy';
 import { formatOccupiedSlotKey } from './occupancy-slot-key';
-
-const WINDOW_FUTURE_MS = 48 * 60 * 60 * 1000;
 
 function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
   const dayKeys: string[] = [];
@@ -25,12 +27,8 @@ function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
       seen.add(dk);
       dayKeys.push(dk);
     }
-    const z = toZonedTime(new Date(cursor), LISTING_DISPLAY_TZ);
-    const nextMidnight = fromZonedTime(
-      new Date(z.getFullYear(), z.getMonth(), z.getDate() + 1, 0, 0, 0, 0),
-      LISTING_DISPLAY_TZ,
-    );
-    cursor = nextMidnight.getTime();
+    const [y, mo, d] = dk.split('-').map(Number);
+    cursor = addDays(vnWallClockToUtcDate(y, mo, d, 0, 0), 1).getTime();
   }
   return dayKeys;
 }
@@ -44,9 +42,7 @@ function slotInstantsForWorkday(dayKey: string): Date[] {
   for (let m = dayStartMin; m <= lastStartMin; m += SLOT_GRID_MINUTES) {
     const hh = Math.floor(m / 60);
     const mm = m % 60;
-    out.push(
-      fromZonedTime(new Date(y, mo - 1, d, hh, mm, 0, 0), LISTING_DISPLAY_TZ),
-    );
+    out.push(vnWallClockToUtcDate(y, mo, d, hh, mm));
   }
   return out;
 }
@@ -91,28 +87,27 @@ export function mergeBookingsToOccupiedKeysPerSpecialist(
   return m;
 }
 
-/** Кандидаты витрины: все старты сетки на «сегодня» и «завтра» в DISPLAY_TZ. */
+/** Кандидаты витрины: сетка на каждый из {@link LISTING_SLOT_CALENDAR_DAYS} дней от «сегодня» в DISPLAY_TZ. */
 export function generateCandidateListingSlotInstants(now: Date): Date[] {
-  const todayKey = formatInTimeZone(now, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
-  const zonedNow = toZonedTime(now, LISTING_DISPLAY_TZ);
-  const tomorrowKey = formatInTimeZone(
-    addDays(zonedNow, 1),
-    LISTING_DISPLAY_TZ,
-    'yyyy-MM-dd',
-  );
-  return [
-    ...slotInstantsForWorkday(todayKey),
-    ...slotInstantsForWorkday(tomorrowKey),
-  ];
+  const { todayKey } = listingCalendarDayKeys(now);
+  const [ty, tm, td] = todayKey.split('-').map(Number);
+  const startMidnight = vnWallClockToUtcDate(ty, tm, td, 0, 0);
+  const out: Date[] = [];
+  for (let i = 0; i < LISTING_SLOT_CALENDAR_DAYS; i++) {
+    const dayStart = addDays(startMidnight, i);
+    const dk = formatInTimeZone(dayStart, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
+    out.push(...slotInstantsForWorkday(dk));
+  }
+  return out;
 }
 
-/** Свободные старты слотов для карточки (окно как у прежнего запроса к БД). */
+/** Свободные старты слотов для карточки (окно как у выборки броней под занятость). */
 export function computeFreeSlotStartsForSpecialist(
   now: Date,
   occupiedKeys: Set<string>,
 ): Date[] {
   const windowStart = now.getTime() - BOOKING_START_TOLERANCE_MS;
-  const windowEnd = now.getTime() + WINDOW_FUTURE_MS;
+  const windowEnd = now.getTime() + LISTING_SLOT_WINDOW_MS;
   const out: Date[] = [];
   for (const S of generateCandidateListingSlotInstants(now)) {
     const t = S.getTime();
