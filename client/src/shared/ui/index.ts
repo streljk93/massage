@@ -18,7 +18,9 @@ export { Tag, tagVariants, type TagProps } from "./tag";
 export { default as availabilitySlotStripI18n } from "./availability-slot-strip.i18n.json";
 export {
   AvailabilitySlotStrip,
+  type AvailabilitySlotDayKey,
   type AvailabilitySlotGroup,
+  type AvailabilitySlotSelectPayload,
   type AvailabilitySlotStripProps,
 } from "./availability-slot-strip";
 export { Rating, type RatingProps } from "./rating";

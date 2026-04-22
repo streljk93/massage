@@ -3,8 +3,12 @@
     "en": {
       "bookingList": {
         "statusPending": "Pending — {time}",
+        "statusPendingAwaiting": "Awaiting confirmation",
+        "statusPendingTimer": "Time left: {minutes} min {seconds} sec",
+        "statusPendingTimeCompact": "{minutes} min {seconds} sec",
         "statusConfirmed": "Confirmed",
         "statusExpired": "Expired time",
+        "statusExpiredNoConfirmation": "Canceled: not confirmed in time",
         "statusRejected": "Rejected by master",
         "cancel": "Cancel",
         "remindMe": "Remind me",
@@ -15,8 +19,12 @@
     "vi": {
       "bookingList": {
         "statusPending": "Chờ — {time}",
+        "statusPendingAwaiting": "Đang chờ xác nhận",
+        "statusPendingTimer": "Còn lại: {minutes} phút {seconds} giây",
+        "statusPendingTimeCompact": "{minutes} phút {seconds} giây",
         "statusConfirmed": "Đã xác nhận",
         "statusExpired": "Hết hạn",
+        "statusExpiredNoConfirmation": "Đã hủy: không xác nhận kịp",
         "statusRejected": "Bị từ chối",
         "cancel": "Hủy",
         "remindMe": "Nhắc tôi",
@@ -27,8 +35,12 @@
     "ru": {
       "bookingList": {
         "statusPending": "Ожидание — {time}",
+        "statusPendingAwaiting": "Ожидает подтверждения",
+        "statusPendingTimer": "Осталось: {minutes} мин {seconds} сек",
+        "statusPendingTimeCompact": "{minutes} мин {seconds} сек",
         "statusConfirmed": "Подтверждено",
         "statusExpired": "Истекло время",
+        "statusExpiredNoConfirmation": "Отменено: не подтвердили вовремя",
         "statusRejected": "Отклонено мастером",
         "cancel": "Отменить",
         "remindMe": "Напомнить",

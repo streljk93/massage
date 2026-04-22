@@ -6,14 +6,24 @@ import { useTranslations } from "next-intl";
 import { cn, motion } from "../lib";
 import { Tag, tagVariants } from "./tag";
 
+export type AvailabilitySlotDayKey = "today" | "tomorrow";
+
 export type AvailabilitySlotGroup = {
   dayLabel: string;
+  /** Стабильный ключ дня (для deep-link); обязателен для навигации с карточки. */
+  dayKey: AvailabilitySlotDayKey;
   times: string[];
+};
+
+export type AvailabilitySlotSelectPayload = {
+  dayKey: AvailabilitySlotDayKey;
+  dayLabel: string;
+  time: string;
 };
 
 export type AvailabilitySlotStripProps = {
   groups: AvailabilitySlotGroup[];
-  onSelectTime?: (payload: { dayLabel: string; time: string }) => void;
+  onSelectTime?: (payload: AvailabilitySlotSelectPayload) => void;
   onOpenCalendar?: () => void;
   className?: string;
 };
@@ -57,7 +67,13 @@ export function AvailabilitySlotStrip({
                 motion.interactivePressStrong,
                 "shrink-0 cursor-pointer touch-pan-x text-[0.65rem]",
               )}
-              onClick={() => onSelectTime?.({ dayLabel: group.dayLabel, time })}
+              onClick={() =>
+                onSelectTime?.({
+                  dayKey: group.dayKey,
+                  dayLabel: group.dayLabel,
+                  time,
+                })
+              }
               aria-label={`${time}, ${group.dayLabel}`}
             >
               {time}

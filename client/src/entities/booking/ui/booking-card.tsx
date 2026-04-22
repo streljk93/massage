@@ -1,7 +1,8 @@
-import { Calendar, Clock } from "lucide-react";
-import { UserAvatar } from "@/shared/ui/avatar";
-import { Tag } from "@/shared/ui/tag";
-import { cn } from "@/shared/lib";
+"use client";
+
+import { useTranslations } from "next-intl";
+import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown";
+import { BookingShowcaseCard } from "./booking-showcase-card";
 
 export type BookingCardProps = {
   specialistName: string;
@@ -10,6 +11,10 @@ export type BookingCardProps = {
   timeRange: string;
   avatarSrc?: string | null;
   className?: string;
+  /** Если запись в статусе pending — дедлайн подтверждения (ISO). */
+  pendingConfirmationExpiresAt?: string | null;
+  /** Когда таймер дошёл до нуля — перезагрузить список с главной. */
+  onPendingConfirmationExpired?: () => void;
 };
 
 export function BookingCard({
@@ -19,38 +24,51 @@ export function BookingCard({
   timeRange,
   avatarSrc,
   className,
+  pendingConfirmationExpiresAt,
+  onPendingConfirmationExpired,
 }: BookingCardProps) {
+  const t = useTranslations("booking");
+  const countdown = usePendingBookingCountdown(
+    pendingConfirmationExpiresAt,
+    Boolean(pendingConfirmationExpiresAt),
+    onPendingConfirmationExpired,
+  );
+
+  const statusFooter =
+    pendingConfirmationExpiresAt != null && pendingConfirmationExpiresAt !== ""
+      ? countdown != null ? (
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="min-w-0 flex-1 font-medium leading-snug text-white">
+              {t("pendingAwaiting")}
+            </p>
+            <p
+              className="shrink-0 tabular-nums text-white/75"
+              aria-label={t("pendingTimer", {
+                minutes: countdown.minutes,
+                seconds: countdown.seconds,
+              })}
+            >
+              {t("pendingTimeCompact", {
+                minutes: countdown.minutes,
+                seconds: countdown.seconds,
+              })}
+            </p>
+          </div>
+        ) : (
+          <p className="font-medium text-white">{t("pendingAwaiting")}</p>
+        )
+      : undefined;
+
   return (
-    <div
-      className={cn(
-        "rounded-2xl bg-neutral-800 p-3 text-white",
-        className,
-      )}
-    >
-      <div className="flex gap-3">
-        <UserAvatar
-          src={avatarSrc}
-          alt={specialistName}
-          fallback={specialistName.slice(0, 2).toUpperCase()}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-heading text-sm font-semibold tracking-tight">
-            {specialistName}
-          </p>
-          <p className="mt-0.5 text-xs text-white/65">{serviceLine}</p>
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Tag variant="inverse" className="text-[0.7rem]">
-          <Calendar className="size-3.5" aria-hidden />
-          {dateLabel}
-        </Tag>
-        <Tag variant="inverse" className="text-[0.7rem]">
-          <Clock className="size-3.5" aria-hidden />
-          {timeRange}
-        </Tag>
-      </div>
-    </div>
+    <BookingShowcaseCard
+      variant="dark"
+      specialistName={specialistName}
+      serviceLine={serviceLine}
+      dateLabel={dateLabel}
+      timeRange={timeRange}
+      avatarSrc={avatarSrc}
+      className={className}
+      statusFooter={statusFooter}
+    />
   );
 }

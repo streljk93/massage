@@ -23,6 +23,8 @@ import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
+import type { BookingSlotSearch } from "@/shared/lib/profile-booking-initial-from-search";
+import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
 import type { SpecialistProfileData } from "../model/specialist-profile-data";
@@ -44,9 +46,13 @@ const SearchResultsLeafletMap = dynamic(
 
 export type SpecialistProfilePageProps = {
   profile: SpecialistProfileData;
+  bookingSlotFromSearch: BookingSlotSearch | null;
 };
 
-export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
+export function SpecialistProfilePage({
+  profile,
+  bookingSlotFromSearch,
+}: SpecialistProfilePageProps) {
   const t = useTranslations("specialistProfile");
   const format = useFormatter();
   const router = useRouter();
@@ -80,8 +86,10 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
     ],
     [profile],
   );
-  const [dayIndex, setDayIndex] = useState(0);
-  const [slot, setSlot] = useState("");
+  const { dayIndex: initialDayIndex, slot: initialSlot } =
+    initialDayAndSlotFromSearch(profile, bookingSlotFromSearch);
+  const [dayIndex, setDayIndex] = useState(initialDayIndex);
+  const [slot, setSlot] = useState(initialSlot);
 
   const daySlots = useMemo(
     () => profile.timeSlotsByDay[dayIndex] ?? [],

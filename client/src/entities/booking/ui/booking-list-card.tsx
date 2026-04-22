@@ -1,11 +1,11 @@
 "use client";
 
-import { Calendar, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/app/i18n/navigation";
-import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
-import { cn, listExitRowClassNames, motion } from "@/shared/lib";
+import { cn, listExitRowClassNames } from "@/shared/lib";
+import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown";
+import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from "../model/booking-cancel-reasons";
+import { BookingShowcaseCard } from "./booking-showcase-card";
 
 /** Белая заливка + тонкая обводка (не `variant="secondary"` — там брендовый `--secondary`). */
 const actionOutlineButtonClass =
@@ -15,8 +15,12 @@ export type BookingListStatus = "pending" | "confirmed" | "expired" | "rejected"
 
 export type BookingListCardProps = {
   status: BookingListStatus;
-  /** Время в строке статуса для `pending`, например `14:32`. */
-  pendingTime?: string;
+  /** Дедлайн подтверждения (ISO); для `pending` показываем обратный отсчёт. */
+  pendingExpiresAt?: string | null;
+  /** После авто-истечения pending — обновить список. */
+  onPendingConfirmationExpired?: () => void;
+  /** Сырые причины с API (для истёкших из-за таймаута подтверждения). */
+  cancelReason?: string | null;
   providerName: string;
   serviceLine: string;
   dateLabel: string;
@@ -40,7 +44,9 @@ export type BookingListCardProps = {
 
 export function BookingListCard({
   status,
-  pendingTime,
+  pendingExpiresAt,
+  onPendingConfirmationExpired,
+  cancelReason,
   providerName,
   serviceLine,
   dateLabel,
@@ -54,128 +60,106 @@ export function BookingListCard({
   className,
 }: BookingListCardProps) {
   const t = useTranslations("bookingList");
+  const countdown = usePendingBookingCountdown(
+    pendingExpiresAt,
+    status === "pending",
+    onPendingConfirmationExpired,
+  );
   const muted =
     slotMuted ?? (status === "expired" || status === "rejected");
 
   const statusLine =
-    status === "pending" && pendingTime
-      ? t("statusPending", { time: pendingTime })
-      : status === "pending"
-        ? t("statusPending", { time: "—" })
-        : status === "confirmed"
-          ? t("statusConfirmed")
-          : status === "expired"
-            ? t("statusExpired")
-            : t("statusRejected");
+    status === "pending"
+      ? t("statusPendingAwaiting")
+      : status === "confirmed"
+        ? t("statusConfirmed")
+        : status === "expired"
+          ? cancelReason === BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT
+            ? t("statusExpiredNoConfirmation")
+            : t("statusExpired")
+          : t("statusRejected");
+
+  const statusFooter =
+    status === "pending" && countdown != null ? (
+      <div className="flex w-full min-w-0 items-baseline justify-between gap-3">
+        <p className="min-w-0 flex-1 font-medium leading-snug text-foreground">
+          {statusLine}
+        </p>
+        <p
+          className="shrink-0 tabular-nums text-muted-foreground"
+          aria-label={t("statusPendingTimer", {
+            minutes: countdown.minutes,
+            seconds: countdown.seconds,
+          })}
+        >
+          {t("statusPendingTimeCompact", {
+            minutes: countdown.minutes,
+            seconds: countdown.seconds,
+          })}
+        </p>
+      </div>
+    ) : (
+      <p className="w-full font-medium text-foreground">{statusLine}</p>
+    );
 
   const exit = listExitRowClassNames(
     isExiting ?? false,
-    cn("rounded-2xl border border-border/60 bg-card p-3", className),
+    cn("bg-transparent p-0", className),
   );
+
+  const actions =
+    status === "pending" ? (
+      <Button
+        type="button"
+        variant="ghost"
+        className={actionOutlineButtonClass}
+        onClick={onCancel}
+        disabled={cancelPending || !onCancel}
+        aria-busy={cancelPending}
+      >
+        {t("cancel")}
+      </Button>
+    ) : status === "confirmed" ? (
+      <>
+        <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+          {t("remindMe")}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className={actionOutlineButtonClass}
+          onClick={onCancel}
+          disabled={cancelPending || !onCancel}
+          aria-busy={cancelPending}
+        >
+          {t("cancel")}
+        </Button>
+      </>
+    ) : status === "expired" || status === "rejected" ? (
+      <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+        {t("findOther")}
+      </Button>
+    ) : null;
 
   return (
     <div className={exit.outer}>
       <div className={exit.inner}>
         <article aria-hidden={isExiting} className={exit.card}>
-          <p className="text-[0.7rem] text-muted-foreground">{statusLine}</p>
-
-          {specialistProfileHref ? (
-            <Link
-              href={specialistProfileHref}
-              className={cn(
-                motion.interactivePressStrong,
-                "mt-2 flex gap-3 rounded-xl px-1 py-0.5 text-left outline-none ring-border/40 transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
-              )}
-              aria-label={t("openSpecialistProfile", { name: providerName })}
-            >
-              <UserAvatar
-                src={avatarSrc}
-                alt=""
-                fallback={providerName.slice(0, 2).toUpperCase()}
-                size="sm"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
-                  {providerName}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {serviceLine}
-                </p>
-              </div>
-            </Link>
-          ) : (
-            <div className="mt-2 flex gap-3">
-              <UserAvatar
-                src={avatarSrc}
-                alt={providerName}
-                fallback={providerName.slice(0, 2).toUpperCase()}
-                size="sm"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
-                  {providerName}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {serviceLine}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div
-            className={cn(
-              "mt-3 flex flex-wrap gap-2 rounded-xl bg-muted/80 px-2.5 py-2 text-xs",
-              muted && "text-muted-foreground/70",
-            )}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              {dateLabel}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="size-3.5 shrink-0 opacity-80" aria-hidden />
-              {timeRange}
-            </span>
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {status === "pending" ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className={actionOutlineButtonClass}
-                onClick={onCancel}
-                disabled={cancelPending || !onCancel}
-                aria-busy={cancelPending}
-              >
-                {t("cancel")}
-              </Button>
-            ) : null}
-
-            {status === "confirmed" ? (
-              <>
-                <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-                  {t("remindMe")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={actionOutlineButtonClass}
-                  onClick={onCancel}
-                  disabled={cancelPending || !onCancel}
-                  aria-busy={cancelPending}
-                >
-                  {t("cancel")}
-                </Button>
-              </>
-            ) : null}
-
-            {status === "expired" || status === "rejected" ? (
-              <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
-                {t("findOther")}
-              </Button>
-            ) : null}
-          </div>
+          <BookingShowcaseCard
+            variant="light"
+            specialistName={providerName}
+            serviceLine={serviceLine}
+            dateLabel={dateLabel}
+            timeRange={timeRange}
+            avatarSrc={avatarSrc}
+            specialistProfileHref={specialistProfileHref}
+            specialistLinkAriaLabel={t("openSpecialistProfile", {
+              name: providerName,
+            })}
+            statusFooter={statusFooter}
+            dateTagsMuted={muted}
+            actions={actions}
+          />
         </article>
       </div>
     </div>

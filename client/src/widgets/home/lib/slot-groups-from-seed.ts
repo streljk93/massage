@@ -8,6 +8,7 @@ export function slotGroupsFromSeed(
 ): AvailabilitySlotGroup[] {
   const list = groups ?? [];
   return list.map((g) => ({
+    dayKey: g.dayKey === "tomorrow" ? "tomorrow" : "today",
     dayLabel:
       g.dayKey === "today" ? tSlots("today") : tSlots("tomorrow"),
     times: g.times ?? [],

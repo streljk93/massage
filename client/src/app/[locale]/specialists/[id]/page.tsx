@@ -6,6 +6,7 @@ import {
   specialistsGetById,
   serverSdkFetchNoStore,
 } from "@/shared/api";
+import { parseBookingSlotFromNextSearchParams } from "@/shared/lib/booking-slot-search-params";
 import {
   SpecialistProfilePage,
   specialistProfileFromApiDetail,
@@ -13,10 +14,16 @@ import {
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
+  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp);
+  const slotNavKey = bookingSlotFromSearch
+    ? `${bookingSlotFromSearch.dayKey}-${bookingSlotFromSearch.time}`
+    : "none";
   const locale = (await getLocale()) as AppLocale;
   const sdk = createServerSdkClient();
 
@@ -38,8 +45,9 @@ export default async function Page({ params }: Props) {
 
   return (
     <SpecialistProfilePage
-      key={id}
+      key={`${id}-${slotNavKey}`}
       profile={specialistProfileFromApiDetail(res.data)}
+      bookingSlotFromSearch={bookingSlotFromSearch}
     />
   );
 }

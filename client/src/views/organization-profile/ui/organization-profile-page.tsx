@@ -26,6 +26,8 @@ import type { SalonSpecialistPick } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
+import type { BookingSlotSearch } from "@/shared/lib/profile-booking-initial-from-search";
+import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
 import { bookingStartsAtIsoUtc } from "@/views/specialist-profile/lib/booking-starts-at";
@@ -59,10 +61,12 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
 
 export type OrganizationProfilePageProps = {
   profile: OrganizationProfileData;
+  bookingSlotFromSearch: BookingSlotSearch | null;
 };
 
 export function OrganizationProfilePage({
   profile,
+  bookingSlotFromSearch,
 }: OrganizationProfilePageProps) {
   const t = useTranslations("organizationProfile");
   const format = useFormatter();
@@ -119,8 +123,10 @@ export function OrganizationProfilePage({
     return init;
   });
 
-  const [dayIndex, setDayIndex] = useState(0);
-  const [slot, setSlot] = useState("");
+  const { dayIndex: initialDayIndex, slot: initialSlot } =
+    initialDayAndSlotFromSearch(profile, bookingSlotFromSearch);
+  const [dayIndex, setDayIndex] = useState(initialDayIndex);
+  const [slot, setSlot] = useState(initialSlot);
 
   const selectedPick = useMemo(
     () =>

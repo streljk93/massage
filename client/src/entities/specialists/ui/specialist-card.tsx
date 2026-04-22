@@ -1,7 +1,7 @@
 "use client";
 
 import { UserRound } from "lucide-react";
-import { Link } from "@/app/i18n/navigation";
+import { Link, useRouter } from "@/app/i18n/navigation";
 import {
   EntityCard,
   EntityCardContent,
@@ -11,7 +11,12 @@ import { Rating } from "@/shared/ui/rating";
 import {
   AvailabilitySlotStrip,
   type AvailabilitySlotGroup,
+  type AvailabilitySlotSelectPayload,
 } from "@/shared/ui";
+import {
+  BOOKING_URL_SLOT_DAY,
+  BOOKING_URL_SLOT_TIME,
+} from "@/shared/lib/booking-slot-search-params";
 import { cn, motion } from "@/shared/lib";
 
 export type SpecialistCardProps = {
@@ -24,7 +29,7 @@ export type SpecialistCardProps = {
   slotGroups: AvailabilitySlotGroup[];
   /** Ссылка в профиль: один hit-layer на карточку + анимация нажатия на всё, кроме полосы времён. */
   profileHref?: string;
-  onSelectSlotTime?: (payload: { dayLabel: string; time: string }) => void;
+  onSelectSlotTime?: (payload: AvailabilitySlotSelectPayload) => void;
   onOpenCalendar?: () => void;
   className?: string;
 };
@@ -71,6 +76,19 @@ export function SpecialistCard({
   onOpenCalendar,
   className,
 }: SpecialistCardProps) {
+  const router = useRouter();
+  const navigateSlotSelection =
+    onSelectSlotTime ??
+    ((p: AvailabilitySlotSelectPayload) => {
+      if (!profileHref) {
+        return;
+      }
+      const q = new URLSearchParams();
+      q.set(BOOKING_URL_SLOT_DAY, p.dayKey);
+      q.set(BOOKING_URL_SLOT_TIME, p.time);
+      router.push(`${profileHref}?${q.toString()}`);
+    });
+
   const textBlock = (
     <CardTextBlock
       name={name}
@@ -83,7 +101,7 @@ export function SpecialistCard({
   const strip = (
     <AvailabilitySlotStrip
       groups={slotGroups}
-      onSelectTime={onSelectSlotTime}
+      onSelectTime={navigateSlotSelection}
       onOpenCalendar={onOpenCalendar}
     />
   );

@@ -48,6 +48,7 @@ export const bookingListItemSchema = {
     startsAt: { type: 'string', format: 'date-time' },
     endsAt: { type: 'string', format: 'date-time' },
     pendingExpiresAt: { type: 'string', format: 'date-time', nullable: true },
+    cancelReason: { type: 'string', nullable: true },
   },
 };
 

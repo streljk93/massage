@@ -1,10 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
 import {
+  BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT,
   BookingHistoryCard,
   BookingListCard,
   formatBookingServiceLineClient,
@@ -45,6 +53,7 @@ type ApiBooking = {
   startsAt: string;
   endsAt: string;
   pendingExpiresAt?: string | null;
+  cancelReason?: string | null;
 };
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
@@ -58,6 +67,7 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 
 export function BookingsPage() {
   const t = useTranslations("bookings");
+  const tHistory = useTranslations("bookingHistory");
   const tRoot = useTranslations();
   const format = useFormatter();
   const { data: session, status: sessionStatus } = useSession();
@@ -89,6 +99,11 @@ export function BookingsPage() {
     setLoadError(false);
     setRows(res.data.bookings);
   }, [accessToken]);
+
+  const refreshBookingsRef = useRef(refreshBookings);
+  useLayoutEffect(() => {
+    refreshBookingsRef.current = refreshBookings;
+  }, [refreshBookings]);
 
   useEffect(() => {
     if (sessionStatus === "loading") {
@@ -209,15 +224,6 @@ export function BookingsPage() {
         timeZone: "Asia/Ho_Chi_Minh",
       })}`;
 
-      const pendingTime =
-        row.status === "pending" && row.pendingExpiresAt
-          ? format.dateTime(new Date(row.pendingExpiresAt), {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: "Asia/Ho_Chi_Minh",
-            })
-          : undefined;
-
       const serviceLine =
         row.amount != null
           ? formatBookingServiceLineClient(tRoot, format, {
@@ -230,7 +236,7 @@ export function BookingsPage() {
       return {
         id: row.id,
         status: mapApiStatusToListCard(row.status),
-        pendingTime,
+        pendingExpiresAt: row.pendingExpiresAt,
         specialistProfileHref: `/specialists/${row.specialistId}`,
         providerName: row.specialistName,
         serviceLine,
@@ -278,6 +284,12 @@ export function BookingsPage() {
             })
           : row.serviceName;
 
+      const systemNote =
+        row.status === "expired" &&
+        row.cancelReason === BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT
+          ? tHistory("systemCanceledNoConfirmation")
+          : undefined;
+
       return {
         id: row.id,
         providerName: row.specialistName,
@@ -285,9 +297,10 @@ export function BookingsPage() {
         dateLabel,
         timeRange,
         avatarSrc: specialistAvatarSrc(row.specialistImageUrl),
+        systemNote,
       };
     });
-  }, [format, historyRows, tRoot]);
+  }, [format, historyRows, tHistory, tRoot]);
 
   const headerName =
     session?.user?.name?.trim() ||
@@ -401,7 +414,10 @@ export function BookingsPage() {
                     <BookingListCard
                       key={row.id}
                       status={row.status}
-                      pendingTime={row.pendingTime}
+                      pendingExpiresAt={row.pendingExpiresAt}
+                      onPendingConfirmationExpired={() =>
+                        void refreshBookingsRef.current()
+                      }
                       specialistProfileHref={row.specialistProfileHref}
                       providerName={row.providerName}
                       serviceLine={row.serviceLine}
@@ -427,6 +443,7 @@ export function BookingsPage() {
                     dateLabel={row.dateLabel}
                     timeRange={row.timeRange}
                     avatarSrc={row.avatarSrc}
+                    systemNote={row.systemNote}
                     reviewed={false}
                   />
                 ))

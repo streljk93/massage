@@ -46,6 +46,8 @@ export type BookingHistoryCardProps = {
   dateLabel: string;
   timeRange: string;
   avatarSrc?: string | null;
+  /** Системное пояснение (например авто-отмена из-за отсутствия подтверждения). */
+  systemNote?: string;
   /** Есть ли отзыв; если нет — блок «Review me» и пустые звёзды. */
   reviewed: boolean;
   /** 1–5 при `reviewed`. */
@@ -61,6 +63,7 @@ export function BookingHistoryCard({
   dateLabel,
   timeRange,
   avatarSrc,
+  systemNote,
   reviewed,
   rating = 0,
   reviewExcerpt,
@@ -101,6 +104,15 @@ export function BookingHistoryCard({
           {timeRange}
         </span>
       </div>
+
+      {systemNote ? (
+        <p
+          role="note"
+          className="mt-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-2 text-xs text-muted-foreground"
+        >
+          {systemNote}
+        </p>
+      ) : null}
 
       <div className="mt-3 border-t border-border/50 pt-3">
         {!reviewed ? (

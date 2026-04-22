@@ -810,6 +810,7 @@ export type BookingsListResponses = {
             startsAt: string;
             endsAt: string;
             pendingExpiresAt?: string | null;
+            cancelReason?: string | null;
         }>;
     };
 };

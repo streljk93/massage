@@ -14,7 +14,8 @@ import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
 
-const PENDING_EXPIRES_MINUTES = 120;
+/** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
+const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
 
 /** Клиент может отменить до визита / до начала приёма. */
 const CLIENT_CANCELLABLE_STATUSES: readonly BookingStatus[] = [
@@ -129,9 +130,24 @@ export class BookingsService {
       });
     const organizationId = employment?.organizationId ?? null;
 
+    let graceMinutes = DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES;
+    if (organizationId) {
+      const org = await this.prisma.organization.findFirst({
+        where: { id: organizationId, deletedAt: null },
+        select: { bookingConfirmationGraceMinutes: true },
+      });
+      if (
+        org &&
+        Number.isFinite(org.bookingConfirmationGraceMinutes) &&
+        org.bookingConfirmationGraceMinutes > 0
+      ) {
+        graceMinutes = org.bookingConfirmationGraceMinutes;
+      }
+    }
+
     const serviceNameSnapshot = pickLocalizedServiceName(service, locale);
 
-    const pendingExpiresAt = new Date(now + PENDING_EXPIRES_MINUTES * 60_000);
+    const pendingExpiresAt = new Date(now + graceMinutes * 60_000);
 
     const booking = await this.prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
@@ -185,8 +201,14 @@ export class BookingsService {
         startsAt: b.startsAt.toISOString(),
         endsAt: b.endsAt.toISOString(),
         pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
+        cancelReason: b.cancelReason,
       })),
     };
+  }
+
+  /** Вызывается cron: авто-expired для просроченного pending. */
+  async expirePendingPastDeadline(): Promise<number> {
+    return this.bookingsRepository.expirePendingPastDeadline(new Date());
   }
 
   async cancelByClient(clientUserId: string, bookingId: string) {

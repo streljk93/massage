@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from '../domain/booking-cancel-reason';
 
 const bookingListInclude = {
   specialist: {
@@ -46,6 +47,43 @@ export class BookingsRepository {
       where: { clientUserId, deletedAt: null },
       include: bookingListInclude,
       orderBy: { startsAt: 'desc' },
+    });
+  }
+
+  /**
+   * Истечение ожидания подтверждения: pending с истёкшим pendingExpiresAt → expired.
+   */
+  async expirePendingPastDeadline(now: Date): Promise<number> {
+    return this.prisma.$transaction(async (tx) => {
+      const due = await tx.booking.findMany({
+        where: {
+          status: 'pending',
+          deletedAt: null,
+          pendingExpiresAt: { lte: now },
+        },
+        select: { id: true },
+      });
+      const reason = BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT;
+      for (const row of due) {
+        await tx.booking.update({
+          where: { id: row.id },
+          data: {
+            status: 'expired',
+            pendingExpiresAt: null,
+            cancelReason: reason,
+          },
+        });
+        await tx.bookingStatusHistory.create({
+          data: {
+            bookingId: row.id,
+            fromStatus: 'pending',
+            toStatus: 'expired',
+            actorUserId: null,
+            reason,
+          },
+        });
+      }
+      return due.length;
     });
   }
 }

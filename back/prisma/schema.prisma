@@ -184,6 +184,9 @@ model Organization {
   ratingAverage Float @default(0)
   reviewsCount  Int   @default(0)
 
+  /// Сколько минут ждать подтверждения записи мастером/салоном (pending → иначе авто-expired). По умолчанию 15.
+  bookingConfirmationGraceMinutes Int @default(15)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -469,6 +472,7 @@ model Booking {
   @@index([organizationId])
   @@index([startsAt])
   @@index([status])
+  @@index([status, pendingExpiresAt])
 }
 
 /// История переходов статусов бронирования.

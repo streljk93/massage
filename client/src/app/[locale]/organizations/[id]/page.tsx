@@ -6,6 +6,7 @@ import {
   organizationsGetById,
   serverSdkFetchNoStore,
 } from "@/shared/api";
+import { parseBookingSlotFromNextSearchParams } from "@/shared/lib/booking-slot-search-params";
 import {
   OrganizationProfilePage,
   organizationProfileFromApiDetail,
@@ -13,10 +14,16 @@ import {
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function Page({ params }: Props) {
+export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
+  const sp = (await searchParams) ?? {};
+  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp);
+  const slotNavKey = bookingSlotFromSearch
+    ? `${bookingSlotFromSearch.dayKey}-${bookingSlotFromSearch.time}`
+    : "none";
   const locale = (await getLocale()) as AppLocale;
   const sdk = createServerSdkClient();
 
@@ -38,7 +45,9 @@ export default async function Page({ params }: Props) {
 
   return (
     <OrganizationProfilePage
+      key={`${id}-${slotNavKey}`}
       profile={organizationProfileFromApiDetail(res.data)}
+      bookingSlotFromSearch={bookingSlotFromSearch}
     />
   );
 }

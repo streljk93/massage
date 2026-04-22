@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
@@ -29,6 +29,7 @@ type ApiBooking = {
   currency: string;
   startsAt: string;
   endsAt: string;
+  pendingExpiresAt?: string | null;
 };
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
@@ -55,6 +56,7 @@ function apiBookingToCardProps(
   booking: ApiBooking,
   tRoot: ReturnType<typeof useTranslations>,
   format: ReturnType<typeof useFormatter>,
+  onPendingExpired: () => void,
 ): BookingCardProps {
   const now = new Date();
   const todayYmd = vnCalendarYmdString(now);
@@ -94,6 +96,9 @@ function apiBookingToCardProps(
     dateLabel,
     timeRange,
     avatarSrc: specialistAvatarSrc(booking.specialistImageUrl),
+    pendingConfirmationExpiresAt:
+      booking.status === "pending" ? (booking.pendingExpiresAt ?? null) : null,
+    onPendingConfirmationExpired: onPendingExpired,
   };
 }
 
@@ -116,6 +121,20 @@ export function HomeCurrentBookingSection() {
   const [bookings, setBookings] = useState<ApiBooking[] | null | undefined>(
     undefined,
   );
+
+  const loadBookings = useCallback(async () => {
+    if (!accessToken) {
+      return;
+    }
+    const res = await bookingsList({
+      client: createBrowserSdkClient(accessToken),
+    });
+    if (res.error || !res.data) {
+      setBookings(null);
+      return;
+    }
+    setBookings(pickUpcomingBookings(res.data.bookings));
+  }, [accessToken]);
 
   useEffect(() => {
     if (sessionStatus === "loading") {
@@ -150,8 +169,10 @@ export function HomeCurrentBookingSection() {
     if (!bookings?.length) {
       return [];
     }
-    return bookings.map((b) => apiBookingToCardProps(b, tRoot, format));
-  }, [bookings, format, tRoot]);
+    return bookings.map((b) =>
+      apiBookingToCardProps(b, tRoot, format, () => void loadBookings()),
+    );
+  }, [bookings, format, loadBookings, tRoot]);
 
   if (!bookings?.length) {
     return null;
