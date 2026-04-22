@@ -8,7 +8,8 @@
         "statusRejected": "Rejected by master",
         "cancel": "Cancel",
         "remindMe": "Remind me",
-        "findOther": "Find other"
+        "findOther": "Find other",
+        "openSpecialistProfile": "Open profile: {name}"
       }
     },
     "vi": {
@@ -19,7 +20,8 @@
         "statusRejected": "Bị từ chối",
         "cancel": "Hủy",
         "remindMe": "Nhắc tôi",
-        "findOther": "Tìm khác"
+        "findOther": "Tìm khác",
+        "openSpecialistProfile": "Mở hồ sơ: {name}"
       }
     },
     "ru": {
@@ -30,7 +32,8 @@
         "statusRejected": "Отклонено мастером",
         "cancel": "Отменить",
         "remindMe": "Напомнить",
-        "findOther": "Найти другое"
+        "findOther": "Найти другое",
+        "openSpecialistProfile": "Открыть профиль: {name}"
       }
     }
   }

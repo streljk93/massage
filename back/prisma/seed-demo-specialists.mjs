@@ -4,7 +4,7 @@
  * — сотрудник: тот же салон через employment, роль specialist (не владелец по ownerUserId).
  *
  * Дополнительно: гео (Organization + Specialist; у User в схеме нет lat/lng — только phone/avatar),
- * выбранные категории (M2M), слоты SpecialistAvailabilitySlot, отзывы и денормализованный рейтинг,
+ * выбранные категории (M2M), отзывы и денормализованный рейтинг,
  * listedInDirectory: владелец скрыт из каталога мастеров, сотрудник — в каталоге.
  *
  * Идемпотентно: фиксированные email и slug организации.
@@ -55,10 +55,6 @@ const LISTING_SLOTS_WORKER = [
   { dayKey: "today", times: ["11:00", "15:00"] },
   { dayKey: "tomorrow", times: ["09:30", "13:00", "17:00"] },
 ];
-
-function addHours(base, h) {
-  return new Date(base.getTime() + h * 3600000);
-}
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
@@ -455,33 +451,6 @@ export async function seedDemoSpecialists(prisma) {
             currency: "VND",
           })),
         },
-      },
-    });
-  }
-
-  await prisma.specialistAvailabilitySlot.deleteMany({
-    where: {
-      specialistId: { in: [ownerSpecialist.id, workerSpecialist.id] },
-    },
-  });
-  const now = new Date();
-  const slotTemplates = [
-    { specialistId: ownerSpecialist.id, h: 2 },
-    { specialistId: ownerSpecialist.id, h: 5 },
-    { specialistId: ownerSpecialist.id, h: 28 },
-    { specialistId: workerSpecialist.id, h: 3 },
-    { specialistId: workerSpecialist.id, h: 7 },
-    { specialistId: workerSpecialist.id, h: 30 },
-  ];
-  for (const row of slotTemplates) {
-    const start = addHours(now, row.h);
-    const end = addHours(now, row.h + 1);
-    await prisma.specialistAvailabilitySlot.create({
-      data: {
-        specialistId: row.specialistId,
-        startsAt: start,
-        endsAt: end,
-        isBooked: false,
       },
     });
   }

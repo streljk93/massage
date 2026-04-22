@@ -2,9 +2,10 @@
 
 import { Calendar, Clock } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
 import { UserAvatar } from "@/shared/ui/avatar";
 import { Button } from "@/shared/ui/button";
-import { cn, listExitRowClassNames } from "@/shared/lib";
+import { cn, listExitRowClassNames, motion } from "@/shared/lib";
 
 /** Белая заливка + тонкая обводка (не `variant="secondary"` — там брендовый `--secondary`). */
 const actionOutlineButtonClass =
@@ -32,6 +33,8 @@ export type BookingListCardProps = {
   cancelPending?: boolean;
   /** Успешная отмена: плавное исчезновение перед удалением из списка. */
   isExiting?: boolean;
+  /** Ссылка на профиль специалиста (например `/specialists/{id}`). */
+  specialistProfileHref?: string;
   className?: string;
 };
 
@@ -47,6 +50,7 @@ export function BookingListCard({
   onCancel,
   cancelPending,
   isExiting,
+  specialistProfileHref,
   className,
 }: BookingListCardProps) {
   const t = useTranslations("bookingList");
@@ -75,20 +79,48 @@ export function BookingListCard({
         <article aria-hidden={isExiting} className={exit.card}>
           <p className="text-[0.7rem] text-muted-foreground">{statusLine}</p>
 
-          <div className="mt-2 flex gap-3">
-            <UserAvatar
-              src={avatarSrc}
-              alt={providerName}
-              fallback={providerName.slice(0, 2).toUpperCase()}
-              size="sm"
-            />
-            <div className="min-w-0 flex-1">
-              <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
-                {providerName}
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{serviceLine}</p>
+          {specialistProfileHref ? (
+            <Link
+              href={specialistProfileHref}
+              className={cn(
+                motion.interactivePressStrong,
+                "mt-2 flex gap-3 rounded-xl px-1 py-0.5 text-left outline-none ring-border/40 transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
+              )}
+              aria-label={t("openSpecialistProfile", { name: providerName })}
+            >
+              <UserAvatar
+                src={avatarSrc}
+                alt=""
+                fallback={providerName.slice(0, 2).toUpperCase()}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
+                  {providerName}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {serviceLine}
+                </p>
+              </div>
+            </Link>
+          ) : (
+            <div className="mt-2 flex gap-3">
+              <UserAvatar
+                src={avatarSrc}
+                alt={providerName}
+                fallback={providerName.slice(0, 2).toUpperCase()}
+                size="sm"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-sm font-semibold tracking-tight text-foreground">
+                  {providerName}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {serviceLine}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
 
           <div
             className={cn(

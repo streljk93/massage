@@ -161,14 +161,7 @@ export const organizationsListResponseSchema = {
 
 const organizationStaffMemberSchema = {
   type: 'object',
-  required: [
-    'id',
-    'userId',
-    'name',
-    'rating',
-    'metaLine',
-    'bookableServices',
-  ],
+  required: ['id', 'userId', 'name', 'rating', 'metaLine', 'bookableServices'],
   properties: {
     id: { type: 'string', format: 'uuid' },
     userId: { type: 'string', format: 'uuid' },

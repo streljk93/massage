@@ -14,15 +14,23 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useRouter } from "@/app/i18n/navigation";
+import type { AppLocale } from "@/app/i18n/routing";
+import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
+import type { BookableServiceOption } from "@/entities/services";
 import { SalonSpecialistPickCard } from "@/entities/specialists";
+import type { SalonSpecialistPick } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import { cn, motion } from "@/shared/lib";
-import type { OrganizationProfileData } from "../lib/mock-data";
+import { notify } from "@/shared/lib/notifications";
+import { bookingStartsAtIsoUtc } from "@/views/specialist-profile/lib/booking-starts-at";
+import { filterSlotTimesForDuration } from "@/views/specialist-profile/lib/filter-slots-for-duration";
+import type { OrganizationProfileData } from "../model/organization-profile-data";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -37,6 +45,18 @@ const SearchResultsLeafletMap = dynamic(
   },
 );
 
+function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
+  if (!pick) return [];
+  return pick.bookableServices.map(
+    (b): BookableServiceOption => ({
+      id: b.id,
+      title: b.name,
+      durationMinutes: b.durationMinutes,
+      priceVndByDuration: b.priceVndByDuration,
+    }),
+  );
+}
+
 export type OrganizationProfilePageProps = {
   profile: OrganizationProfileData;
 };
@@ -47,6 +67,14 @@ export function OrganizationProfilePage({
   const t = useTranslations("organizationProfile");
   const format = useFormatter();
   const router = useRouter();
+  const locale = useLocale() as AppLocale;
+  const { data: session, status: sessionStatus } = useSession();
+  const accessToken = session?.accessToken;
+
+  const [bookingPending, setBookingPending] = useState(false);
+  const [bookingErrorKey, setBookingErrorKey] = useState<
+    "bookingPickSlot" | "bookingErrorGeneric" | null
+  >(null);
 
   const [favorite, setFavorite] = useState(false);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
@@ -71,25 +99,71 @@ export function OrganizationProfilePage({
     [profile],
   );
 
-  const [dayIndex, setDayIndex] = useState(2);
-  const [slot, setSlot] = useState(profile.timeSlots[1] ?? profile.timeSlots[0]);
-  const [serviceId, setServiceId] = useState(profile.services[0]?.id ?? "");
-  const [durationByService, setDurationByService] = useState<
-    Record<string, number>
-  >(() => {
-    const init: Record<string, number> = {};
-    for (const s of profile.services) {
-      init[s.id] = s.durationMinutes[0];
-    }
-    return init;
-  });
   const [selectedSalonSpecialistId, setSelectedSalonSpecialistId] = useState(
     () => profile.specialists[0]?.specialistId ?? "",
   );
 
+  const [serviceId, setServiceId] = useState(() => {
+    const pick = profile.specialists[0];
+    return pickToBookableOptions(pick)[0]?.id ?? "";
+  });
+  const [durationByService, setDurationByService] = useState<
+    Record<string, number>
+  >(() => {
+    const pick = profile.specialists[0];
+    const opts = pickToBookableOptions(pick);
+    const init: Record<string, number> = {};
+    for (const s of opts) {
+      init[s.id] = s.durationMinutes[0];
+    }
+    return init;
+  });
+
+  const [dayIndex, setDayIndex] = useState(0);
+  const [slot, setSlot] = useState("");
+
+  const selectedPick = useMemo(
+    () =>
+      profile.specialists.find(
+        (p) => p.specialistId === selectedSalonSpecialistId,
+      ),
+    [profile.specialists, selectedSalonSpecialistId],
+  );
+
+  const bookableServiceOptions = useMemo(
+    () => pickToBookableOptions(selectedPick),
+    [selectedPick],
+  );
+
+  const onSelectSpecialist = useCallback(
+    (specialistId: string) => {
+      setSelectedSalonSpecialistId(specialistId);
+      setDayIndex(0);
+      setSlot("");
+      const pick = profile.specialists.find(
+        (p) => p.specialistId === specialistId,
+      );
+      const opts = pickToBookableOptions(pick);
+      setServiceId(opts[0]?.id ?? "");
+      setDurationByService(() => {
+        const init: Record<string, number> = {};
+        for (const s of opts) {
+          init[s.id] = s.durationMinutes[0];
+        }
+        return init;
+      });
+    },
+    [profile.specialists],
+  );
+
+  const daySlots = useMemo(
+    () => profile.timeSlotsByDay[dayIndex] ?? [],
+    [profile.timeSlotsByDay, dayIndex],
+  );
+
   const selectedService = useMemo(
-    () => profile.services.find((s) => s.id === serviceId),
-    [profile.services, serviceId],
+    () => bookableServiceOptions.find((s) => s.id === serviceId),
+    [bookableServiceOptions, serviceId],
   );
 
   const selectedBookingMinutes = useMemo(() => {
@@ -100,6 +174,23 @@ export function OrganizationProfilePage({
       durationByService[serviceId] ?? selectedService.durationMinutes[0]
     );
   }, [durationByService, selectedService, serviceId]);
+
+  const filteredDaySlots = useMemo(() => {
+    if (selectedBookingMinutes === undefined) {
+      return [];
+    }
+    return filterSlotTimesForDuration(daySlots, selectedBookingMinutes);
+  }, [daySlots, selectedBookingMinutes]);
+
+  const effectiveSlot = useMemo(() => {
+    if (filteredDaySlots.length === 0) {
+      return "";
+    }
+    if (filteredDaySlots.includes(slot)) {
+      return slot;
+    }
+    return filteredDaySlots[0] ?? "";
+  }, [filteredDaySlots, slot]);
 
   const bookingPriceVnd =
     selectedService && selectedBookingMinutes !== undefined
@@ -113,6 +204,83 @@ export function OrganizationProfilePage({
       maximumFractionDigits: 0,
     });
 
+  const onBooking = useCallback(async () => {
+    setBookingErrorKey(null);
+    if (bookingPending) {
+      return;
+    }
+    if (sessionStatus === "loading") {
+      return;
+    }
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+    if (
+      !selectedSalonSpecialistId ||
+      !effectiveSlot.trim() ||
+      !selectedService ||
+      selectedBookingMinutes === undefined
+    ) {
+      setBookingErrorKey("bookingPickSlot");
+      return;
+    }
+    const slotDayKey = profile.slotDayKeys[dayIndex] ?? "today";
+    const startsAt = bookingStartsAtIsoUtc({
+      slotDayKey,
+      slotTime: effectiveSlot,
+    });
+    setBookingPending(true);
+    try {
+      const res = await bookingsCreate({
+        client: createBrowserSdkClient(accessToken),
+        body: {
+          specialistId: selectedSalonSpecialistId,
+          serviceId,
+          durationMinutes: selectedBookingMinutes,
+          startsAt,
+        },
+        query: { locale },
+      });
+      if (res.error || !res.data) {
+        setBookingErrorKey("bookingErrorGeneric");
+        return;
+      }
+      notify.success(t("bookingSuccess"));
+      router.push("/bookings");
+    } catch {
+      setBookingErrorKey("bookingErrorGeneric");
+    } finally {
+      setBookingPending(false);
+    }
+  }, [
+    accessToken,
+    bookingPending,
+    dayIndex,
+    effectiveSlot,
+    locale,
+    profile.slotDayKeys,
+    router,
+    selectedBookingMinutes,
+    selectedSalonSpecialistId,
+    selectedService,
+    serviceId,
+    sessionStatus,
+    t,
+  ]);
+
+  const bookingDisabled =
+    bookingPending ||
+    profile.specialists.length === 0 ||
+    !selectedSalonSpecialistId ||
+    bookableServiceOptions.length === 0 ||
+    selectedBookingMinutes === undefined ||
+    filteredDaySlots.length === 0 ||
+    !effectiveSlot.trim();
+
+  const showBookingFlow =
+    profile.specialists.length > 0 && selectedPick !== undefined;
+
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
       <div className="relative overflow-hidden pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
@@ -125,7 +293,6 @@ export function OrganizationProfilePage({
           aria-hidden
         />
 
-        {/* Верх: герой организации (как в макете) */}
         <div className="relative z-10 mx-auto w-full max-w-lg">
           <div className="relative aspect-[375/460] min-h-[16.5rem] w-full overflow-hidden sm:aspect-[375/503] sm:min-h-[18rem]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -234,7 +401,6 @@ export function OrganizationProfilePage({
           </div>
         </div>
 
-        {/* Ниже: та же карточка, что у профиля специалиста (без дублирующей панели Details) */}
         <div className="relative z-10 mx-auto mt-4 w-full max-w-lg px-4">
           <div className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-card">
             <div className="grid grid-cols-3 divide-x divide-border/60 bg-card px-0.5 py-2 sm:px-1">
@@ -315,106 +481,6 @@ export function OrganizationProfilePage({
                 </div>
               </section>
 
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectDate")}
-                </h2>
-                <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {profile.calendarDays.map((d, i) => {
-                    const selected = i === dayIndex;
-                    return (
-                      <button
-                        key={`${d.weekdayKey}-${d.dayOfMonth}`}
-                        type="button"
-                        onClick={() => setDayIndex(i)}
-                        className={cn(
-                          motion.interactivePressStrong,
-                          "flex w-[3.25rem] shrink-0 flex-col items-center gap-1 rounded-3xl border px-2 py-3 text-center transition-colors",
-                          selected
-                            ? "border-primary/50 bg-primary/10 text-foreground"
-                            : "border-transparent bg-muted/38 text-foreground hover:bg-muted/55",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-[0.7rem] font-medium uppercase",
-                            selected
-                              ? "text-primary"
-                              : "text-muted-foreground/75",
-                          )}
-                        >
-                          {t(`weekdays.${d.weekdayKey}`)}
-                        </span>
-                        <span className="text-base font-semibold tabular-nums">
-                          {d.dayOfMonth}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectSlot")}
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {profile.timeSlots.map((time) => {
-                    const selected = time === slot;
-                    return (
-                      <button
-                        key={time}
-                        type="button"
-                        onClick={() => setSlot(time)}
-                        className={cn(
-                          motion.interactivePressStrong,
-                          "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
-                          selected
-                            ? "border-primary/45 bg-primary/12 text-primary"
-                            : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
-                        )}
-                      >
-                        {time}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectService")}
-                </h2>
-                <div className="space-y-2.5">
-                  {profile.services.map((svc) => {
-                    const selected = svc.id === serviceId;
-                    const dur =
-                      durationByService[svc.id] ?? svc.durationMinutes[0];
-                    return (
-                      <ProfileServicePickCard
-                        key={svc.id}
-                        service={svc}
-                        selected={selected}
-                        selectedDurationMinutes={dur}
-                        serviceName={svc.title}
-                        formatPrice={priceText}
-                        formatDurationMinutes={(m) =>
-                          t("durationMin", { n: m })
-                        }
-                        onSelectService={() => setServiceId(svc.id)}
-                        onSelectDuration={(m) => {
-                          setDurationByService((prev) => ({
-                            ...prev,
-                            [svc.id]: m,
-                          }));
-                          setServiceId(svc.id);
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-
               {profile.specialists.length > 0 ? (
                 <section className="space-y-2.5">
                   <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
@@ -434,20 +500,164 @@ export function OrganizationProfilePage({
                         openProfileAriaLabel={t("specialistOpenProfileAria", {
                           name: pick.name,
                         })}
-                        serviceColumnLabel={t("specialistServiceCol")}
-                        durationColumnLabel={t("specialistDurationCol")}
+                        showBookableServices={false}
                         onSelect={() =>
-                          setSelectedSalonSpecialistId(pick.specialistId)
+                          onSelectSpecialist(pick.specialistId)
                         }
                       />
                     ))}
                   </div>
                 </section>
               ) : null}
+
+              {showBookingFlow && bookableServiceOptions.length > 0 ? (
+                <section className="space-y-2.5">
+                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                    {t("selectService")}
+                  </h2>
+                  <div className="space-y-2.5">
+                    {bookableServiceOptions.map((svc) => {
+                      const selected = svc.id === serviceId;
+                      const dur =
+                        durationByService[svc.id] ?? svc.durationMinutes[0];
+                      return (
+                        <ProfileServicePickCard
+                          key={svc.id}
+                          service={svc}
+                          selected={selected}
+                          selectedDurationMinutes={dur}
+                          serviceName={svc.title}
+                          formatPrice={priceText}
+                          formatDurationMinutes={(m) =>
+                            t("durationMin", { n: m })
+                          }
+                          onSelectService={() => setServiceId(svc.id)}
+                          onSelectDuration={(m) => {
+                            setDurationByService((prev) => ({
+                              ...prev,
+                              [svc.id]: m,
+                            }));
+                            setServiceId(svc.id);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : showBookingFlow ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("noServicesForSpecialist")}
+                </p>
+              ) : null}
+
+              {showBookingFlow && bookableServiceOptions.length > 0 ? (
+                <>
+                  <section className="space-y-2.5">
+                    <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                      {t("selectDate")}
+                    </h2>
+                    <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {profile.calendarDays.length === 0 ? (
+                        <p className="px-1 text-sm text-muted-foreground">
+                          {t("noSlots")}
+                        </p>
+                      ) : null}
+                      {profile.calendarDays.map((d, i) => {
+                        const selected = i === dayIndex;
+                        return (
+                          <button
+                            key={`${i}-${d.weekdayKey}-${d.dayOfMonth}`}
+                            type="button"
+                            onClick={() => {
+                              setDayIndex(i);
+                              const raw = profile.timeSlotsByDay[i] ?? [];
+                              const next =
+                                selectedBookingMinutes !== undefined
+                                  ? filterSlotTimesForDuration(
+                                      raw,
+                                      selectedBookingMinutes,
+                                    )
+                                  : raw;
+                              setSlot(next[0] ?? "");
+                            }}
+                            className={cn(
+                              motion.interactivePressStrong,
+                              "flex w-[3.25rem] shrink-0 flex-col items-center gap-1 rounded-3xl border px-2 py-3 text-center transition-colors",
+                              selected
+                                ? "border-primary/50 bg-primary/10 text-foreground"
+                                : "border-transparent bg-muted/38 text-foreground hover:bg-muted/55",
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "text-[0.7rem] font-medium uppercase",
+                                selected
+                                  ? "text-primary"
+                                  : "text-muted-foreground/75",
+                              )}
+                            >
+                              {t(`weekdays.${d.weekdayKey}`)}
+                            </span>
+                            <span className="text-base font-semibold tabular-nums">
+                              {d.dayOfMonth}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="space-y-2.5">
+                    <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                      {t("selectSlot")}
+                    </h2>
+                    <div className="flex flex-wrap gap-2">
+                      {daySlots.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t("noSlots")}
+                        </p>
+                      ) : filteredDaySlots.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t("noSlotsForDuration")}
+                        </p>
+                      ) : (
+                        filteredDaySlots.map((time) => {
+                          const selected = time === effectiveSlot;
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={() => setSlot(time)}
+                              className={cn(
+                                motion.interactivePressStrong,
+                                "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
+                                selected
+                                  ? "border-primary/45 bg-primary/12 text-primary"
+                                  : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
+                              )}
+                            >
+                              {time}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </section>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
       </div>
+
+      {bookingErrorKey ? (
+        <p
+          role="alert"
+          className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
+        >
+          {t(bookingErrorKey)}
+        </p>
+      ) : null}
 
       <HomeBottomNav
         activeId="search"
@@ -456,11 +666,16 @@ export function OrganizationProfilePage({
             type="button"
             variant="primary"
             className="h-12 w-full rounded-full text-base font-semibold"
+            disabled={bookingDisabled}
+            aria-busy={bookingPending}
             aria-label={
-              bookingPriceVnd !== undefined
-                ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
-                : t("booking")
+              bookingPending
+                ? t("bookingAriaLoading")
+                : bookingPriceVnd !== undefined
+                  ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
+                  : t("booking")
             }
+            onClick={() => void onBooking()}
           >
             {bookingPriceVnd !== undefined ? (
               <>

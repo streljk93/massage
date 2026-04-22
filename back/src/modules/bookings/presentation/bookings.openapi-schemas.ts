@@ -28,6 +28,7 @@ export const bookingListItemSchema = {
   required: [
     'id',
     'status',
+    'specialistId',
     'specialistName',
     'serviceName',
     'amount',
@@ -38,6 +39,7 @@ export const bookingListItemSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     status: { type: 'string' },
+    specialistId: { type: 'string', format: 'uuid' },
     specialistName: { type: 'string' },
     specialistImageUrl: { type: 'string', nullable: true, format: 'uri' },
     serviceName: { type: 'string' },

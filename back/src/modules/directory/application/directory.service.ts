@@ -13,7 +13,10 @@ import {
   parseListingSlotGroups,
   type ListingSlotGroupSeed,
 } from '../domain/listing-slot-groups';
-import { formatOccupiedSlotKey } from '../domain/occupancy-slot-key';
+import {
+  computeFreeSlotStartsForSpecialist,
+  mergeBookingsToOccupiedKeysPerSpecialist,
+} from '../domain/workday-free-slots';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
 import type {
   OrganizationDetailResponseDto,
@@ -56,26 +59,28 @@ function mapDirectoryCategoryTags(
   });
 }
 
-function mergeOrganizationSlotStarts(
+function mergeOrganizationFreeSlotStarts(
   org: OrganizationListRow,
-  occupiedMap: Map<string, Set<string>>,
+  freeBySpec: Map<string, Date[]>,
 ): Date[] {
   const starts: Date[] = [];
   for (const e of org.specialistEmployments) {
     if (!e.specialist.listedInDirectory) {
       continue;
     }
-    const occupied = occupiedMap.get(e.specialist.id) ?? new Set();
-    for (const sl of e.specialist.availabilitySlots) {
-      const key = formatOccupiedSlotKey(sl.startsAt);
-      if (occupied.has(key)) {
-        continue;
-      }
-      starts.push(sl.startsAt);
-    }
+    starts.push(...(freeBySpec.get(e.specialist.id) ?? []));
   }
   starts.sort((a, b) => a.getTime() - b.getTime());
-  return starts;
+  const seen = new Set<number>();
+  const deduped: Date[] = [];
+  for (const s of starts) {
+    const t = s.getTime();
+    if (!seen.has(t)) {
+      seen.add(t);
+      deduped.push(s);
+    }
+  }
+  return deduped;
 }
 
 function unionOccupiedKeysForOrganization(
@@ -142,11 +147,9 @@ function mapSpecialistRowToListItem(
   locale: ApiLocale,
   now: Date,
   occupiedKeys: Set<string>,
+  freeSlotStarts: Date[],
 ): SpecialistListItemDto {
-  const fromDb = buildListingSlotGroupsFromSlotStarts(
-    s.availabilitySlots.map((x) => x.startsAt),
-    now,
-  );
+  const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts, now);
   const fromJson = parseListingSlotGroups(s.listingSlotGroups);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
   const slotGroups = filterSlotGroupsByOccupiedKeys(
@@ -166,10 +169,7 @@ function mapSpecialistRowToListItem(
     '';
   // `listingServicesLine` — денормализация (часто en из сида); для витрины важнее
   // локализованная склейка по M2M `serviceCategories`, если она есть.
-  const servicesLine =
-    categoriesLine ||
-    s.listingServicesLine?.trim() ||
-    '';
+  const servicesLine = categoriesLine || s.listingServicesLine?.trim() || '';
   return {
     id: s.id,
     userId: s.userId,
@@ -198,13 +198,14 @@ function mapOrganizationRowToListItem(
   locale: ApiLocale,
   now: Date,
   occupiedMap: Map<string, Set<string>>,
+  freeBySpec: Map<string, Date[]>,
 ): OrganizationListItemDto {
   const localized = pickLocalizedOrganizationListItem(
     o as unknown as OrganizationLocaleListShape,
     locale,
   );
   const fromDb = buildListingSlotGroupsFromSlotStarts(
-    mergeOrganizationSlotStarts(o, occupiedMap),
+    mergeOrganizationFreeSlotStarts(o, freeBySpec),
     now,
   );
   const fromJson = parseListingSlotGroups(o.listingSlotGroups);
@@ -273,13 +274,40 @@ function mapSpecialistToStaffMember(
 export class DirectoryService {
   constructor(private readonly directoryRepository: DirectoryRepository) {}
 
+  private async buildOccupiedAndFreeSlotMaps(
+    specialistIds: string[],
+    now: Date,
+  ): Promise<{
+    occupiedBySpecialist: Map<string, Set<string>>;
+    freeBySpecialist: Map<string, Date[]>;
+  }> {
+    const bookingRows =
+      await this.directoryRepository.findActiveBookingsForListingOccupancy(
+        specialistIds,
+        now,
+      );
+    const occupiedBySpecialist =
+      mergeBookingsToOccupiedKeysPerSpecialist(bookingRows);
+    const freeBySpecialist = new Map<string, Date[]>();
+    for (const id of specialistIds) {
+      freeBySpecialist.set(
+        id,
+        computeFreeSlotStartsForSpecialist(
+          now,
+          occupiedBySpecialist.get(id) ?? new Set(),
+        ),
+      );
+    }
+    return { occupiedBySpecialist, freeBySpecialist };
+  }
+
   async listSpecialists(
     locale: ApiLocale,
   ): Promise<SpecialistsListResponseDto> {
     const now = new Date();
-    const rows = await this.directoryRepository.findAllSpecialists(now);
-    const occupiedMap =
-      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
+    const rows = await this.directoryRepository.findAllSpecialists();
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps(
         rows.map((s) => s.id),
         now,
       );
@@ -289,7 +317,8 @@ export class DirectoryService {
           s,
           locale,
           now,
-          occupiedMap.get(s.id) ?? new Set(),
+          occupiedBySpecialist.get(s.id) ?? new Set(),
+          freeBySpecialist.get(s.id) ?? [],
         ),
       ),
     };
@@ -299,7 +328,7 @@ export class DirectoryService {
     locale: ApiLocale,
   ): Promise<OrganizationsListResponseDto> {
     const now = new Date();
-    const rows = await this.directoryRepository.findAllOrganizations(now);
+    const rows = await this.directoryRepository.findAllOrganizations();
     const specialistIds = new Set<string>();
     for (const o of rows) {
       for (const e of o.specialistEmployments) {
@@ -308,14 +337,17 @@ export class DirectoryService {
         }
       }
     }
-    const occupiedMap =
-      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
-        [...specialistIds],
-        now,
-      );
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps([...specialistIds], now);
     return {
       organizations: rows.map((o) =>
-        mapOrganizationRowToListItem(o, locale, now, occupiedMap),
+        mapOrganizationRowToListItem(
+          o,
+          locale,
+          now,
+          occupiedBySpecialist,
+          freeBySpecialist,
+        ),
       ),
     };
   }
@@ -325,20 +357,18 @@ export class DirectoryService {
     id: string,
   ): Promise<SpecialistListItemDto | null> {
     const now = new Date();
-    const row = await this.directoryRepository.findSpecialistById(id, now);
+    const row = await this.directoryRepository.findSpecialistById(id);
     if (!row) {
       return null;
     }
-    const occupiedMap =
-      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
-        [id],
-        now,
-      );
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps([id], now);
     return mapSpecialistRowToListItem(
       row,
       locale,
       now,
-      occupiedMap.get(id) ?? new Set(),
+      occupiedBySpecialist.get(id) ?? new Set(),
+      freeBySpecialist.get(id) ?? [],
     );
   }
 
@@ -347,19 +377,22 @@ export class DirectoryService {
     id: string,
   ): Promise<OrganizationDetailResponseDto | null> {
     const now = new Date();
-    const row = await this.directoryRepository.findOrganizationById(id, now);
+    const row = await this.directoryRepository.findOrganizationById(id);
     if (!row) {
       return null;
     }
     const specialistIds = row.specialistEmployments
       .filter((e) => e.isActive && e.specialist.listedInDirectory)
       .map((e) => e.specialist.id);
-    const occupiedMap =
-      await this.directoryRepository.findOccupiedBookingKeysBySpecialistIds(
-        specialistIds,
-        now,
-      );
-    const base = mapOrganizationRowToListItem(row, locale, now, occupiedMap);
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps(specialistIds, now);
+    const base = mapOrganizationRowToListItem(
+      row,
+      locale,
+      now,
+      occupiedBySpecialist,
+      freeBySpecialist,
+    );
     // Только мастера, доступные для записи (как в каталоге). Владелец «без приёма»
     // (listedInDirectory: false) остаётся в employment, но не показывается в блоке сотрудников.
     const staff: OrganizationStaffMemberDto[] = row.specialistEmployments

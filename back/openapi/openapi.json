@@ -2307,6 +2307,7 @@
                         "required": [
                           "id",
                           "status",
+                          "specialistId",
                           "specialistName",
                           "serviceName",
                           "amount",
@@ -2321,6 +2322,10 @@
                           },
                           "status": {
                             "type": "string"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
                           },
                           "specialistName": {
                             "type": "string"

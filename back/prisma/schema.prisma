@@ -294,7 +294,6 @@ model Specialist {
   bookings            Booking[]
   reviews             SpecialistReview[]
   serviceCategories   SpecialistServiceCategory[]
-  availabilitySlots   SpecialistAvailabilitySlot[]
 
   @@index([city])
 }
@@ -310,23 +309,6 @@ model SpecialistServiceCategory {
 
   @@id([specialistId, serviceCategoryId])
   @@index([serviceCategoryId])
-}
-
-/// Свободные интервалы для записи к специалисту (источник правды для витрины; денормализация в listingSlotGroups опциональна).
-model SpecialistAvailabilitySlot {
-  id           String     @id @default(uuid())
-  specialistId String
-  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
-
-  startsAt DateTime
-  endsAt   DateTime
-  isBooked Boolean  @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([specialistId, startsAt])
-  @@index([startsAt, isBooked])
 }
 
 /// Период работы специалиста в организации (история смены салонов).

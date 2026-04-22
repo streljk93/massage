@@ -2,7 +2,7 @@ import { addDays } from 'date-fns';
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 import type { ListingSlotGroupSeed } from './listing-slot-groups';
 
-const DISPLAY_TZ = 'Asia/Ho_Chi_Minh';
+import { LISTING_DISPLAY_TZ } from '../../../common/availability/listing-slot-policy';
 
 /**
  * Убирает из витринных групп слотов времена, для которых уже есть активное бронирование
@@ -16,11 +16,11 @@ export function filterSlotGroupsByOccupiedKeys(
   if (occupiedKeys.size === 0) {
     return slotGroups;
   }
-  const todayKey = formatInTimeZone(now, DISPLAY_TZ, 'yyyy-MM-dd');
-  const zonedNow = toZonedTime(now, DISPLAY_TZ);
+  const todayKey = formatInTimeZone(now, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
+  const zonedNow = toZonedTime(now, LISTING_DISPLAY_TZ);
   const tomorrowKey = formatInTimeZone(
     addDays(zonedNow, 1),
-    DISPLAY_TZ,
+    LISTING_DISPLAY_TZ,
     'yyyy-MM-dd',
   );
 

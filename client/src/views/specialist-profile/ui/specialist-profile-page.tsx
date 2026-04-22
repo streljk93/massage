@@ -24,8 +24,10 @@ import { Rating } from "@/shared/ui/rating";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import { cn, motion } from "@/shared/lib";
+import { notify } from "@/shared/lib/notifications";
 import type { SpecialistProfileData } from "../model/specialist-profile-data";
 import { bookingStartsAtIsoUtc } from "../lib/booking-starts-at";
+import { filterSlotTimesForDuration } from "../lib/filter-slots-for-duration";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -79,11 +81,12 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
     [profile],
   );
   const [dayIndex, setDayIndex] = useState(0);
-  const [slot, setSlot] = useState(
-    () => profile.timeSlotsByDay[0]?.[0] ?? "",
-  );
+  const [slot, setSlot] = useState("");
 
-  const daySlots = profile.timeSlotsByDay[dayIndex] ?? [];
+  const daySlots = useMemo(
+    () => profile.timeSlotsByDay[dayIndex] ?? [],
+    [profile.timeSlotsByDay, dayIndex],
+  );
   const [serviceId, setServiceId] = useState(profile.services[0]?.id ?? "");
   const [durationByService, setDurationByService] = useState<
     Record<string, number>
@@ -116,6 +119,23 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
     );
   }, [durationByService, selectedService, serviceId]);
 
+  const filteredDaySlots = useMemo(() => {
+    if (selectedBookingMinutes === undefined) {
+      return [];
+    }
+    return filterSlotTimesForDuration(daySlots, selectedBookingMinutes);
+  }, [daySlots, selectedBookingMinutes]);
+
+  const effectiveSlot = useMemo(() => {
+    if (filteredDaySlots.length === 0) {
+      return "";
+    }
+    if (filteredDaySlots.includes(slot)) {
+      return slot;
+    }
+    return filteredDaySlots[0] ?? "";
+  }, [filteredDaySlots, slot]);
+
   const bookingPriceVnd =
     selectedService && selectedBookingMinutes !== undefined
       ? priceForDuration(selectedService, selectedBookingMinutes)
@@ -141,7 +161,7 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
       return;
     }
     if (
-      !slot.trim() ||
+      !effectiveSlot.trim() ||
       !selectedService ||
       selectedBookingMinutes === undefined
     ) {
@@ -149,7 +169,10 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
       return;
     }
     const slotDayKey = profile.slotDayKeys[dayIndex] ?? "today";
-    const startsAt = bookingStartsAtIsoUtc({ slotDayKey, slotTime: slot });
+    const startsAt = bookingStartsAtIsoUtc({
+      slotDayKey,
+      slotTime: effectiveSlot,
+    });
     setBookingPending(true);
     try {
       const res = await bookingsCreate({
@@ -166,6 +189,7 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
         setBookingErrorKey("bookingErrorGeneric");
         return;
       }
+      notify.success(t("bookingSuccess"));
       router.push("/bookings");
     } catch {
       setBookingErrorKey("bookingErrorGeneric");
@@ -183,15 +207,17 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
     selectedService,
     serviceId,
     sessionStatus,
-    slot,
+    effectiveSlot,
     locale,
+    t,
   ]);
 
   const bookingDisabled =
     bookingPending ||
     profile.services.length === 0 ||
-    daySlots.length === 0 ||
-    !slot.trim();
+    selectedBookingMinutes === undefined ||
+    filteredDaySlots.length === 0 ||
+    !effectiveSlot.trim();
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
@@ -393,6 +419,45 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
 
               <section className="space-y-2.5">
                 <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                  {t("selectService")}
+                </h2>
+                <div className="space-y-2.5">
+                  {profile.services.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("noServices")}
+                    </p>
+                  ) : null}
+                  {profile.services.map((svc) => {
+                    const selected = svc.id === serviceId;
+                    const dur =
+                      durationByService[svc.id] ?? svc.durationMinutes[0];
+                    return (
+                      <ProfileServicePickCard
+                        key={svc.id}
+                        service={svc}
+                        selected={selected}
+                        selectedDurationMinutes={dur}
+                        serviceName={svc.title}
+                        formatPrice={priceText}
+                        formatDurationMinutes={(m) =>
+                          t("durationMin", { n: m })
+                        }
+                        onSelectService={() => setServiceId(svc.id)}
+                        onSelectDuration={(m) => {
+                          setDurationByService((prev) => ({
+                            ...prev,
+                            [svc.id]: m,
+                          }));
+                          setServiceId(svc.id);
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="space-y-2.5">
+                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                   {t("selectDate")}
                 </h2>
                 <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -409,7 +474,14 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                         type="button"
                         onClick={() => {
                           setDayIndex(i);
-                          const next = profile.timeSlotsByDay[i] ?? [];
+                          const raw = profile.timeSlotsByDay[i] ?? [];
+                          const next =
+                            selectedBookingMinutes !== undefined
+                              ? filterSlotTimesForDuration(
+                                  raw,
+                                  selectedBookingMinutes,
+                                )
+                              : raw;
                           setSlot(next[0] ?? "");
                         }}
                         className={cn(
@@ -446,9 +518,13 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                 <div className="flex flex-wrap gap-2">
                   {daySlots.length === 0 ? (
                     <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
+                  ) : filteredDaySlots.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      {t("noSlotsForDuration")}
+                    </p>
                   ) : (
-                    daySlots.map((time) => {
-                      const selected = time === slot;
+                    filteredDaySlots.map((time) => {
+                      const selected = time === effectiveSlot;
                       return (
                         <button
                           key={time}
@@ -467,45 +543,6 @@ export function SpecialistProfilePage({ profile }: SpecialistProfilePageProps) {
                       );
                     })
                   )}
-                </div>
-              </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectService")}
-                </h2>
-                <div className="space-y-2.5">
-                  {profile.services.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noServices")}
-                    </p>
-                  ) : null}
-                  {profile.services.map((svc) => {
-                    const selected = svc.id === serviceId;
-                    const dur =
-                      durationByService[svc.id] ?? svc.durationMinutes[0];
-                    return (
-                      <ProfileServicePickCard
-                        key={svc.id}
-                        service={svc}
-                        selected={selected}
-                        selectedDurationMinutes={dur}
-                        serviceName={svc.title}
-                        formatPrice={priceText}
-                        formatDurationMinutes={(m) =>
-                          t("durationMin", { n: m })
-                        }
-                        onSelectService={() => setServiceId(svc.id)}
-                        onSelectDuration={(m) => {
-                          setDurationByService((prev) => ({
-                            ...prev,
-                            [svc.id]: m,
-                          }));
-                          setServiceId(svc.id);
-                        }}
-                      />
-                    );
-                  })}
                 </div>
               </section>
             </div>

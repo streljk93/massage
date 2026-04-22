@@ -20,6 +20,8 @@ export type SalonSpecialistPickCardProps = {
   /** Заголовки таблицы услуг (при непустом `pick.bookableServices`). */
   serviceColumnLabel?: string;
   durationColumnLabel?: string;
+  /** Показывать таблицу услуг под описанием (по умолчанию да). */
+  showBookableServices?: boolean;
   className?: string;
 };
 
@@ -34,6 +36,7 @@ export function SalonSpecialistPickCard({
   openProfileAriaLabel,
   serviceColumnLabel = "Service",
   durationColumnLabel = "Min",
+  showBookableServices = true,
   className,
 }: SalonSpecialistPickCardProps) {
   const router = useRouter();
@@ -102,7 +105,7 @@ export function SalonSpecialistPickCard({
         <p className="line-clamp-2 text-[0.7rem] leading-snug text-muted-foreground">
           {pick.metaLine}
         </p>
-        {pick.bookableServices.length > 0 ? (
+        {showBookableServices && pick.bookableServices.length > 0 ? (
           <div className="mt-1.5 overflow-x-auto rounded-lg border border-border/50 bg-muted/20">
             <table className="w-full min-w-[12rem] border-collapse text-left text-[0.65rem] text-muted-foreground">
               <thead>

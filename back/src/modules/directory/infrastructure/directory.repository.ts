@@ -1,17 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
-import { formatOccupiedSlotKey } from '../domain/occupancy-slot-key';
-
-const availabilityWhere = (
-  now: Date,
-): Prisma.SpecialistAvailabilitySlotWhereInput => ({
-  isBooked: false,
-  startsAt: {
-    gte: new Date(now.getTime() - 60 * 60 * 1000),
-    lte: new Date(now.getTime() + 48 * 60 * 60 * 1000),
-  },
-});
 
 const serviceCategoryWithLocales = {
   include: {
@@ -30,33 +19,23 @@ const directoryServiceInclude = {
   },
 } satisfies Prisma.ServiceFindManyArgs;
 
-function specialistIncludeForOrgEmployment(now: Date) {
+function specialistIncludeForOrgEmployment() {
   return {
     user: { select: { id: true, name: true } },
     services: directoryServiceInclude,
-    availabilitySlots: {
-      where: availabilityWhere(now),
-      orderBy: { startsAt: 'asc' as const },
-      take: 24,
-    },
   } satisfies Prisma.SpecialistInclude;
 }
 
-function specialistListInclude(now: Date) {
+function specialistListInclude() {
   return {
     user: { select: { id: true, name: true } },
     serviceCategories: serviceCategoryWithLocales,
     /** Услуги каталога с `specialistId` = этот мастер. */
     services: directoryServiceInclude,
-    availabilitySlots: {
-      where: availabilityWhere(now),
-      orderBy: { startsAt: 'asc' as const },
-      take: 40,
-    },
   } satisfies Prisma.SpecialistInclude;
 }
 
-function organizationListInclude(now: Date) {
+function organizationListInclude() {
   return {
     locales: true,
     serviceCategories: serviceCategoryWithLocales,
@@ -64,7 +43,7 @@ function organizationListInclude(now: Date) {
       where: { isActive: true },
       include: {
         specialist: {
-          include: specialistIncludeForOrgEmployment(now),
+          include: specialistIncludeForOrgEmployment(),
         },
       },
     },
@@ -72,17 +51,15 @@ function organizationListInclude(now: Date) {
 }
 
 /**
- * Образец `include` для `GetPayload`: дата в `availabilityWhere` не влияет на форму типа.
+ * Образец `include` для `GetPayload`.
  * `ReturnType<typeof specialistListInclude>` в Prisma 7 + ESLint иногда даёт `never` в IDE.
  */
-export const specialistListIncludeShape = specialistListInclude(new Date(0));
+export const specialistListIncludeShape = specialistListInclude();
 
 /**
- * То же для карточки организации (вложенный specialist + слоты).
+ * То же для карточки организации (вложенный specialist).
  */
-export const organizationListIncludeShape = organizationListInclude(
-  new Date(0),
-);
+export const organizationListIncludeShape = organizationListInclude();
 
 export type SpecialistListRow = Prisma.SpecialistGetPayload<{
   include: typeof specialistListIncludeShape;
@@ -92,82 +69,65 @@ export type OrganizationListRow = Prisma.OrganizationGetPayload<{
   include: typeof organizationListIncludeShape;
 }>;
 
-/** Активные записи: слот считается занятым до отмены / завершения. */
-const ACTIVE_BOOKING_STATUSES: Array<
-  'pending' | 'confirmed' | 'in_progress'
-> = ['pending', 'confirmed', 'in_progress'];
+/** Активные записи: интервал брони занимает слоты до отмены / завершения. */
+const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
+  ['pending', 'confirmed', 'in_progress'];
 
 @Injectable()
 export class DirectoryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Ключи `день(VN)|HH:mm` по активным бронированиям в окне витрины (как у слотов).
+   * Брони, пересекающиеся с окном витрины слотов (сегодня/завтра, как у вычисляемых слотов).
    */
-  async findOccupiedBookingKeysBySpecialistIds(
+  findActiveBookingsForListingOccupancy(
     specialistIds: string[],
     now: Date,
-  ): Promise<Map<string, Set<string>>> {
-    const result = new Map<string, Set<string>>();
-    for (const id of specialistIds) {
-      result.set(id, new Set());
-    }
+  ): Promise<{ specialistId: string; startsAt: Date; endsAt: Date }[]> {
     if (specialistIds.length === 0) {
-      return result;
+      return Promise.resolve([]);
     }
     const windowStart = new Date(now.getTime() - 60 * 60 * 1000);
     const windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-
-    const rows = await this.prisma.booking.findMany({
+    return this.prisma.booking.findMany({
       where: {
         specialistId: { in: specialistIds },
         deletedAt: null,
         status: { in: ACTIVE_BOOKING_STATUSES },
-        startsAt: { gte: windowStart, lte: windowEnd },
+        startsAt: { lt: windowEnd },
+        endsAt: { gt: windowStart },
       },
-      select: { specialistId: true, startsAt: true },
+      select: { specialistId: true, startsAt: true, endsAt: true },
     });
-
-    for (const r of rows) {
-      const set = result.get(r.specialistId);
-      if (!set) {
-        continue;
-      }
-      set.add(formatOccupiedSlotKey(r.startsAt));
-    }
-    return result;
   }
 
-  findAllSpecialists(now: Date): Promise<SpecialistListRow[]> {
+  findAllSpecialists(): Promise<SpecialistListRow[]> {
     return this.prisma.specialist.findMany({
       where: { deletedAt: null, listedInDirectory: true },
-      include: specialistListInclude(now),
+      include: specialistListInclude(),
       orderBy: { user: { name: 'asc' } },
     });
   }
 
-  findAllOrganizations(now: Date): Promise<OrganizationListRow[]> {
+  findAllOrganizations(): Promise<OrganizationListRow[]> {
     return this.prisma.organization.findMany({
       where: { deletedAt: null },
-      include: organizationListInclude(now),
+      include: organizationListInclude(),
       orderBy: { name: 'asc' },
     });
   }
 
-  findOrganizationById(
-    id: string,
-    now: Date,
-  ): Promise<OrganizationListRow | null> {
+  findOrganizationById(id: string): Promise<OrganizationListRow | null> {
     return this.prisma.organization.findFirst({
       where: { id, deletedAt: null },
-      include: organizationListInclude(now),
+      include: organizationListInclude(),
     });
   }
 
-  findSpecialistById(id: string, now: Date): Promise<SpecialistListRow | null> {
+  findSpecialistById(id: string): Promise<SpecialistListRow | null> {
     return this.prisma.specialist.findFirst({
       where: { id, deletedAt: null },
-      include: specialistListInclude(now),
+      include: specialistListInclude(),
     });
   }
 }

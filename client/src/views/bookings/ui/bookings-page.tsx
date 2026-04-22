@@ -12,6 +12,7 @@ import {
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { homeUser } from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
+import { confirmAction, notify } from "@/shared/lib/notifications";
 import {
   bookingsCancel,
   bookingsList,
@@ -35,6 +36,7 @@ const BOOKING_CANCEL_EXIT_MS = 360;
 type ApiBooking = {
   id: string;
   status: string;
+  specialistId: string;
   specialistName: string;
   specialistImageUrl?: string | null;
   serviceName: string;
@@ -129,6 +131,16 @@ export function BookingsPage() {
       if (!accessToken || cancelLock.current) {
         return;
       }
+      const confirmed = await confirmAction({
+        title: t("cancelConfirmTitle"),
+        description: t("cancelConfirmDescription"),
+        confirmLabel: t("cancelConfirmActionLabel"),
+        cancelLabel: t("cancelConfirmDismissLabel"),
+        destructive: true,
+      });
+      if (!confirmed) {
+        return;
+      }
       cancelLock.current = true;
       setCancellingId(bookingId);
       setCancelError(null);
@@ -141,6 +153,7 @@ export function BookingsPage() {
           setCancelError(t("cancelError"));
           return;
         }
+        notify.success(t("cancelSuccess"));
         setExitingBookingId(bookingId);
         if (exitRefreshTimeoutRef.current != null) {
           clearTimeout(exitRefreshTimeoutRef.current);
@@ -218,6 +231,7 @@ export function BookingsPage() {
         id: row.id,
         status: mapApiStatusToListCard(row.status),
         pendingTime,
+        specialistProfileHref: `/specialists/${row.specialistId}`,
         providerName: row.specialistName,
         serviceLine,
         dateLabel,
@@ -388,6 +402,7 @@ export function BookingsPage() {
                       key={row.id}
                       status={row.status}
                       pendingTime={row.pendingTime}
+                      specialistProfileHref={row.specialistProfileHref}
                       providerName={row.providerName}
                       serviceLine={row.serviceLine}
                       dateLabel={row.dateLabel}

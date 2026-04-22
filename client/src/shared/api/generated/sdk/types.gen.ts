@@ -801,6 +801,7 @@ export type BookingsListResponses = {
         bookings: Array<{
             id: string;
             status: string;
+            specialistId: string;
             specialistName: string;
             specialistImageUrl?: string | null;
             serviceName: string;

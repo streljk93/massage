@@ -64,7 +64,8 @@ export class BookingsController {
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
   async create(
     @Req() req: AuthedRequest,
-    @Body(new ZodValidationPipe(createBookingBodySchema)) body: CreateBookingBody,
+    @Body(new ZodValidationPipe(createBookingBodySchema))
+    body: CreateBookingBody,
     @RequestLocale() locale: ApiLocale,
   ) {
     return this.bookingsService.createBooking(req.user.id, body, locale);
@@ -75,7 +76,8 @@ export class BookingsController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Мои бронирования',
-    description: 'Список записей текущего пользователя (клиента), новые сверху.',
+    description:
+      'Список записей текущего пользователя (клиента), новые сверху.',
   })
   @ApiOkResponse({ schema: bookingsListResponseSchema })
   @ApiUnauthorizedResponse({ description: 'Нет access token' })

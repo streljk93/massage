@@ -8,7 +8,6 @@ import {
 } from "@/shared/api";
 import {
   OrganizationProfilePage,
-  getOrganizationProfile,
   organizationProfileFromApiDetail,
 } from "@/views/organization-profile";
 
@@ -21,26 +20,25 @@ export default async function Page({ params }: Props) {
   const locale = (await getLocale()) as AppLocale;
   const sdk = createServerSdkClient();
 
-  if (sdk) {
-    const res = await organizationsGetById({
-      client: sdk,
-      path: { id },
-      query: { locale },
-      fetch: serverSdkFetchNoStore,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK types mark `path` as `never` for `/organizations/{id}`; runtime substitutes `{id}`.
-    } as any);
-    if (!res.error && res.data) {
-      return (
-        <OrganizationProfilePage
-          profile={organizationProfileFromApiDetail(res.data)}
-        />
-      );
-    }
-  }
-
-  const fallback = getOrganizationProfile(id);
-  if (!fallback) {
+  if (!sdk) {
     notFound();
   }
-  return <OrganizationProfilePage profile={fallback} />;
+
+  const res = await organizationsGetById({
+    client: sdk,
+    path: { id },
+    query: { locale },
+    fetch: serverSdkFetchNoStore,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK types mark `path` as `never` for `/organizations/{id}`; runtime substitutes `{id}`.
+  } as any);
+
+  if (res.error || !res.data) {
+    notFound();
+  }
+
+  return (
+    <OrganizationProfilePage
+      profile={organizationProfileFromApiDetail(res.data)}
+    />
+  );
 }

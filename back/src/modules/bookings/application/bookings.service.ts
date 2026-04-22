@@ -4,6 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { BookingStatus } from '@prisma/client';
+import {
+  BOOKING_START_TOLERANCE_MS,
+  checkListingBookability,
+} from '../../../common/availability/listing-slot-policy';
 import type { ApiLocale } from '../../../common/i18n';
 import { pickLocalizedServiceName } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
@@ -43,7 +47,7 @@ export class BookingsService {
       });
     }
     const now = Date.now();
-    if (startsAt.getTime() < now - 60_000) {
+    if (startsAt.getTime() < now - BOOKING_START_TOLERANCE_MS) {
       throw new BadRequestException({
         code: 'STARTS_AT_IN_PAST',
         message: 'Booking start time must be in the future',
@@ -81,8 +85,7 @@ export class BookingsService {
 
     const priceOpt = service.priceOptions.find(
       (p) =>
-        p.durationMinutes === body.durationMinutes &&
-        isVndCurrency(p.currency),
+        p.durationMinutes === body.durationMinutes && isVndCurrency(p.currency),
     );
     if (!priceOpt) {
       throw new BadRequestException({
@@ -91,26 +94,44 @@ export class BookingsService {
       });
     }
 
-    const endsAt = new Date(
-      startsAt.getTime() + body.durationMinutes * 60_000,
-    );
+    const endsAt = new Date(startsAt.getTime() + body.durationMinutes * 60_000);
 
-    const employment = await this.prisma.specialistOrganizationEmployment.findFirst(
-      {
+    const bookability = checkListingBookability(startsAt, endsAt);
+    if (!bookability.ok) {
+      throw new BadRequestException({
+        code: bookability.code,
+        message:
+          bookability.code === 'NOT_GRID_ALIGNED'
+            ? 'startsAt must align to a 30-minute grid in the listing timezone'
+            : 'Booking must fit within the default workday (08:00–22:00) in the listing timezone',
+      });
+    }
+
+    const overlap = await this.bookingsRepository.findActiveOverlap(
+      body.specialistId,
+      startsAt,
+      endsAt,
+    );
+    if (overlap) {
+      throw new BadRequestException({
+        code: 'SLOT_NOT_AVAILABLE',
+        message: 'This time overlaps an existing active booking',
+      });
+    }
+
+    const employment =
+      await this.prisma.specialistOrganizationEmployment.findFirst({
         where: {
           specialistId: body.specialistId,
           isActive: true,
         },
         orderBy: { startDate: 'desc' },
-      },
-    );
+      });
     const organizationId = employment?.organizationId ?? null;
 
     const serviceNameSnapshot = pickLocalizedServiceName(service, locale);
 
-    const pendingExpiresAt = new Date(
-      now + PENDING_EXPIRES_MINUTES * 60_000,
-    );
+    const pendingExpiresAt = new Date(now + PENDING_EXPIRES_MINUTES * 60_000);
 
     const booking = await this.prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
@@ -137,13 +158,6 @@ export class BookingsService {
           actorUserId: clientUserId,
         },
       });
-      await tx.specialistAvailabilitySlot.updateMany({
-        where: {
-          specialistId: body.specialistId,
-          startsAt,
-        },
-        data: { isBooked: true },
-      });
       return b;
     });
 
@@ -162,6 +176,7 @@ export class BookingsService {
       bookings: rows.map((b) => ({
         id: b.id,
         status: b.status,
+        specialistId: b.specialistId,
         specialistName: b.specialist.user.name,
         specialistImageUrl: b.specialist.imageUrl,
         serviceName: b.serviceNameSnapshot ?? '—',
@@ -188,9 +203,7 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    if (
-      !CLIENT_CANCELLABLE_STATUSES.some((s) => s === booking.status)
-    ) {
+    if (!CLIENT_CANCELLABLE_STATUSES.some((s) => s === booking.status)) {
       throw new BadRequestException({
         code: 'BOOKING_NOT_CANCELLABLE',
         message: 'Booking cannot be canceled in its current state',
@@ -214,13 +227,6 @@ export class BookingsService {
           toStatus: 'canceled_by_client',
           actorUserId: clientUserId,
         },
-      });
-      await tx.specialistAvailabilitySlot.updateMany({
-        where: {
-          specialistId: booking.specialistId,
-          startsAt: booking.startsAt,
-        },
-        data: { isBooked: false },
       });
       return row;
     });
