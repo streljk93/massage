@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Map, Search as SearchIcon, SlidersHorizontal } from "lucide-react";
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
+import type { AppLocale } from "@/app/i18n/routing";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -51,6 +52,8 @@ export function SearchPageClient({
 }: SearchPageClientProps) {
   const tSearch = useTranslations("search");
   const tSlots = useTranslations("slots");
+  const locale = useLocale() as AppLocale;
+  const listingNow = useMemo(() => new Date(), []);
   const searchParams = useSearchParams();
   const router = useRouter();
   const tab = parseSearchTab(searchParams.get("tab"));
@@ -179,7 +182,9 @@ export function SearchPageClient({
                     imageAlt={card.name}
                     profileHref={`/organizations/${o.id}`}
                     slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      locale,
                       maxGroups: 5,
+                      now: listingNow,
                     })}
                   />
                 );
@@ -193,7 +198,9 @@ export function SearchPageClient({
                     imageAlt={card.name}
                     profileHref={`/specialists/${s.id}`}
                     slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      locale,
                       maxGroups: 5,
+                      now: listingNow,
                     })}
                   />
                 );

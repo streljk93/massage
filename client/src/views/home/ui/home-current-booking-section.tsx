@@ -16,6 +16,12 @@ import { bookingsList, createBrowserSdkClient } from "@/shared/api";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { bookingIsNewTab } from "@/views/bookings/lib/booking-api-to-ui";
 import {
+  compareAsc,
+  isAfter,
+  parseISO,
+  subMilliseconds,
+} from "date-fns";
+import {
   vnCalendarYmdString,
   vnTomorrowFromNow,
 } from "@/views/specialist-profile/lib/booking-starts-at";
@@ -44,13 +50,12 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 }
 
 function pickUpcomingBookings(rows: ApiBooking[]): ApiBooking[] {
-  const now = Date.now();
+  const cutoff = subMilliseconds(new Date(), 60_000);
   return rows
     .filter((b) => bookingIsNewTab(b.status))
-    .filter((b) => new Date(b.endsAt).getTime() > now - 60_000)
-    .sort(
-      (a, b) =>
-        new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    .filter((b) => isAfter(parseISO(b.endsAt), cutoff))
+    .sort((a, b) =>
+      compareAsc(parseISO(a.startsAt), parseISO(b.startsAt)),
     );
 }
 
@@ -63,8 +68,8 @@ function apiBookingToCardProps(
   const now = new Date();
   const todayYmd = vnCalendarYmdString(now);
   const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
-  const start = new Date(booking.startsAt);
-  const end = new Date(booking.endsAt);
+  const start = parseISO(booking.startsAt);
+  const end = parseISO(booking.endsAt);
   const startYmd = vnCalendarYmdString(start);
   let dateLabel: string;
   if (startYmd === todayYmd) {

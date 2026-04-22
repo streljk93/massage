@@ -11,7 +11,22 @@
  * Пароль для владельца/сотрудника (демо): `Demo123456!` — bcrypt 12 раундов как в PasswordHasher.
  */
 import bcrypt from "bcrypt";
+import { addDays, parseISO } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { OrganizationMembershipRole } from "@prisma/client";
+
+const VN_LISTING_TZ = "Asia/Ho_Chi_Minh";
+
+function listingSlotFallbackGroupsFromNow(now = new Date()) {
+  const todayKey = formatInTimeZone(now, VN_LISTING_TZ, "yyyy-MM-dd");
+  const midnight = parseISO(`${todayKey}T00:00:00+07:00`);
+  const tomorrowKey = formatInTimeZone(
+    addDays(midnight, 1),
+    VN_LISTING_TZ,
+    "yyyy-MM-dd",
+  );
+  return { todayKey, tomorrowKey };
+}
 
 const SALT_ROUNDS = 12;
 
@@ -42,18 +57,21 @@ function listingServicesLineFromCategories(cats) {
   return cats.map((c) => c.shortName).join(" · ");
 }
 
-/** Fallback JSON для карточек, если в БД нет слотов в окне «сегодня/завтра». */
+/** Fallback JSON для карточек, если в БД нет слотов в окне витрины. */
+const { todayKey: SLOT_DAY0, tomorrowKey: SLOT_DAY1 } =
+  listingSlotFallbackGroupsFromNow();
+
 const LISTING_SLOTS_ORG = [
-  { dayKey: "today", times: ["09:00", "10:00", "11:30"] },
-  { dayKey: "tomorrow", times: ["09:00", "12:00", "15:00"] },
+  { calendarDate: SLOT_DAY0, times: ["09:00", "10:00", "11:30"] },
+  { calendarDate: SLOT_DAY1, times: ["09:00", "12:00", "15:00"] },
 ];
 const LISTING_SLOTS_OWNER = [
-  { dayKey: "today", times: ["09:00", "10:00"] },
-  { dayKey: "tomorrow", times: ["11:00", "16:00"] },
+  { calendarDate: SLOT_DAY0, times: ["09:00", "10:00"] },
+  { calendarDate: SLOT_DAY1, times: ["11:00", "16:00"] },
 ];
 const LISTING_SLOTS_WORKER = [
-  { dayKey: "today", times: ["11:00", "15:00"] },
-  { dayKey: "tomorrow", times: ["09:30", "13:00", "17:00"] },
+  { calendarDate: SLOT_DAY0, times: ["11:00", "15:00"] },
+  { calendarDate: SLOT_DAY1, times: ["09:30", "13:00", "17:00"] },
 ];
 
 /**

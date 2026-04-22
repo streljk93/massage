@@ -46,7 +46,8 @@ export class BookingsRepository {
     return this.prisma.booking.findMany({
       where: { clientUserId, deletedAt: null },
       include: bookingListInclude,
-      orderBy: { startsAt: 'desc' },
+      /** Недавние изменения сверху (истечение pending, отмена и т.д.), не по дате приёма. */
+      orderBy: [{ updatedAt: 'desc' }, { startsAt: 'desc' }],
     });
   }
 

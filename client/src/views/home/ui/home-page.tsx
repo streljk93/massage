@@ -93,6 +93,7 @@ export async function HomePage() {
   const t = await getTranslations();
   const tSlots = await getTranslations("slots");
   const locale = (await getLocale()) as AppLocale;
+  const listingNow = new Date();
 
   const sdkClient = createServerSdkClient();
   let catalog: CatalogGetCategoriesByMajorSlugResponse | null = null;
@@ -267,7 +268,9 @@ export async function HomePage() {
                     imageAlt={card.name}
                     profileHref={`/organizations/${o.id}`}
                     slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      locale,
                       maxGroups: 5,
+                      now: listingNow,
                     })}
                   />
                 );
@@ -299,7 +302,9 @@ export async function HomePage() {
                     imageAlt={card.name}
                     profileHref={`/specialists/${s.id}`}
                     slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      locale,
                       maxGroups: 5,
+                      now: listingNow,
                     })}
                   />
                 );

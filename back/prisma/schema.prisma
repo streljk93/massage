@@ -187,7 +187,7 @@ model Organization {
   listingMetaLine String?
   /// Витрина: вторая строка услуг/форматов для карточки.
   listingServicesLine String?
-  /// JSON: [{ "dayKey": "today" | "tomorrow", "times": ["09:00", ...] }] — превью слотов на карточке.
+  /// JSON: [{ "calendarDate": "yyyy-MM-dd", "times": ["09:00", ...] }] — превью слотов на карточке (дата в Asia/Ho_Chi_Minh).
   listingSlotGroups Json?
 
   /// Денормализованные агрегаты (обновляются при отзывах / фоново).
@@ -293,6 +293,7 @@ model Specialist {
 
   listingMetaLine     String?
   listingServicesLine String?
+  /// JSON: [{ "calendarDate": "yyyy-MM-dd", "times": ["09:00", ...] }] — превью слотов на карточке (дата в Asia/Ho_Chi_Minh).
   listingSlotGroups   Json?
 
   /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.

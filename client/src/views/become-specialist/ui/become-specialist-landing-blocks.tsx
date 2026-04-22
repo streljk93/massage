@@ -8,13 +8,15 @@ import {
   UserPlus,
 } from "lucide-react";
 import Image from "next/image";
+import type { AppLocale } from "@/app/i18n/routing";
 import { Link } from "@/app/i18n/navigation";
 import { Button, Slider } from "@/shared/ui";
 import { cn } from "@/shared/lib";
+import { formatListingSlotStripDayLabel } from "@/shared/lib/datetime/listing-slot-day-label";
 import { becomeSpecialistBannerImage, becomeSpecialistHeroImages } from "../lib/landing-visuals";
 import {
   landingSalonRows,
-  landingSpecialistSlides,
+  landingSpecialistSlidesForNow,
   type LandingSalonRowSeed,
   type LandingSpecialistSlideSeed,
 } from "../lib/landing-partners-seed";
@@ -93,15 +95,21 @@ function WhatYouGetTile({
 function SpecialistSpotlightCard({
   slide,
   t,
+  locale,
+  listingNow,
+  tSlots,
   className,
 }: {
   slide: LandingSpecialistSlideSeed;
   t: Translate;
+  locale: AppLocale;
+  listingNow: Date;
+  tSlots: (key: string) => string;
   className?: string;
 }) {
   const first = slide.slotGroups[0];
   const slotLine = first
-    ? `${first.dayKey === "today" ? t("slotsToday") : t("slotsTomorrow")} · ${first.times.slice(0, 2).join(", ")}`
+    ? `${formatListingSlotStripDayLabel(first.calendarDate, { locale, tSlots, now: listingNow })} · ${first.times.slice(0, 2).join(", ")}`
     : "";
 
   return (
@@ -176,11 +184,17 @@ function SalonRow({ row, t }: { row: LandingSalonRowSeed; t: Translate }) {
 }
 
 export function BecomeSpecialistLandingBody({
+  locale,
+  listingNow,
   t,
+  tSlots,
   mailtoHref,
   contactEmail,
 }: {
+  locale: AppLocale;
+  listingNow: Date;
   t: Translate;
+  tSlots: (key: string) => string;
   mailtoHref: string;
   contactEmail: string;
 }) {
@@ -279,13 +293,16 @@ export function BecomeSpecialistLandingBody({
             trackGapClassName="gap-2"
             trackGapPx={8}
             slideMinWidthClassName="min-w-0 w-[62%] sm:w-[calc((100%-0.5rem)/2)]"
-            slides={landingSpecialistSlides.map((slide) => ({
+            slides={landingSpecialistSlidesForNow().map((slide) => ({
               id: slide.id,
               content: (
                 <div className="flex h-full min-w-0 w-full flex-col pb-0.5 pt-0.5">
                   <SpecialistSpotlightCard
                     slide={slide}
                     t={t}
+                    locale={locale}
+                    listingNow={listingNow}
+                    tSlots={tSlots}
                     className="mx-0 h-full min-w-0 max-w-none w-full flex-1"
                   />
                 </div>

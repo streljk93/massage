@@ -28,6 +28,7 @@ import {
   createBrowserSdkClient,
 } from "@/shared/api";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import { parseISO } from "date-fns";
 import {
   vnCalendarYmdString,
   vnTomorrowFromNow,
@@ -206,8 +207,8 @@ export function BookingsPage() {
     const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
 
     return newRows.map((row) => {
-      const start = new Date(row.startsAt);
-      const end = new Date(row.endsAt);
+      const start = parseISO(row.startsAt);
+      const end = parseISO(row.endsAt);
       const startYmd = vnCalendarYmdString(start);
       let dateLabel: string;
       if (startYmd === todayYmd) {
@@ -257,8 +258,8 @@ export function BookingsPage() {
     const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
 
     return historyRows.map((row) => {
-      const start = new Date(row.startsAt);
-      const end = new Date(row.endsAt);
+      const start = parseISO(row.startsAt);
+      const end = parseISO(row.endsAt);
       const startYmd = vnCalendarYmdString(start);
       let dateLabel: string;
       if (startYmd === todayYmd) {

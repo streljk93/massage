@@ -1,27 +1,9 @@
-/** Как на витрине: слоты в таймзоне Вьетнама. */
-const DISPLAY_TZ = "Asia/Ho_Chi_Minh";
-const VN_OFFSET = "+07:00";
+import { vnWallClockToUtcDate } from "@/shared/lib/datetime/vn-listing-datetime";
 
-function vnYmd(d: Date): { y: number; m: number; d: number } {
-  const s = new Intl.DateTimeFormat("en-CA", {
-    timeZone: DISPLAY_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-  const [y, m, day] = s.split("-").map(Number);
-  return { y, m, d: day };
-}
-
-function addCalendarDaysVn(from: Date, delta: number): Date {
-  const { y, m, d } = vnYmd(from);
-  return new Date(Date.UTC(y, m - 1, d + delta, 12, 0, 0));
-}
-
-/** Следующий календарный день в VN относительно `now` (полдень UTC-якорь). */
-export function vnTomorrowFromNow(now: Date): Date {
-  return addCalendarDaysVn(now, 1);
-}
+export {
+  vnCalendarYmdString,
+  vnTomorrowFromNow,
+} from "@/shared/lib/datetime/vn-listing-datetime";
 
 function parseSlotHm(slot: string): { h: number; m: number } {
   const parts = slot.trim().split(":");
@@ -49,16 +31,5 @@ export function bookingStartsAtIsoUtc(args: {
   const m = parts[1];
   const d = parts[2];
   const { h, m: min } = parseSlotHm(args.slotTime);
-  const local = `${y}-${pad2(m)}-${pad2(d)}T${pad2(h)}:${pad2(min)}:00${VN_OFFSET}`;
-  return new Date(local).toISOString();
-}
-
-/** `YYYY-MM-DD` в календаре Вьетнама для момента времени. */
-export function vnCalendarYmdString(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: DISPLAY_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
+  return vnWallClockToUtcDate(y, m, d, h, min).toISOString();
 }

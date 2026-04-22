@@ -1,9 +1,5 @@
 import type { Prisma } from '@prisma/client';
-import { formatInTimeZone } from 'date-fns-tz';
-import {
-  LISTING_DISPLAY_TZ,
-  listingCalendarDayKeys,
-} from '../../../common/availability/listing-slot-policy';
+import { formatListingCalendarYmd } from '../../../common/datetime/vn-listing-datetime';
 
 export type ListingSlotGroupSeed = {
   /** Календарная дата витрины, yyyy-MM-dd (Asia/Ho_Chi_Minh). */
@@ -33,29 +29,26 @@ export function dropPastListingSlotGroups(
   groups: ListingSlotGroupSeed[],
   now: Date,
 ): ListingSlotGroupSeed[] {
-  const minDate = formatInTimeZone(now, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
+  const minDate = formatListingCalendarYmd(now);
   return groups.filter((g) => g.calendarDate >= minDate);
 }
 
 /**
  * Разбор JSON из `listingSlotGroups` (Prisma).
- * Поддержка: `calendarDate` / `date`, либо устаревшие `dayKey` today|tomorrow относительно `now`.
+ * Поддержка: `calendarDate` или `date` (yyyy-MM-dd).
  */
 export function parseListingSlotGroups(
   raw: Prisma.JsonValue | null | undefined,
-  now: Date,
 ): ListingSlotGroupSeed[] {
   if (raw == null || !Array.isArray(raw)) {
     return [];
   }
-  const { todayKey, tomorrowKey } = listingCalendarDayKeys(now);
   const out: ListingSlotGroupSeed[] = [];
   for (const item of raw) {
     if (!item || typeof item !== 'object') {
       continue;
     }
     const o = item as {
-      dayKey?: unknown;
       calendarDate?: unknown;
       date?: unknown;
       times?: unknown;
@@ -74,10 +67,6 @@ export function parseListingSlotGroups(
       calendarDate = o.calendarDate;
     } else if (typeof o.date === 'string' && ISO_CALENDAR_DATE.test(o.date)) {
       calendarDate = o.date;
-    } else if (o.dayKey === 'today') {
-      calendarDate = todayKey;
-    } else if (o.dayKey === 'tomorrow') {
-      calendarDate = tomorrowKey;
     }
     if (!calendarDate) {
       continue;

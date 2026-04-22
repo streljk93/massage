@@ -1,15 +1,15 @@
 import { addDays } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
 import {
   BOOKING_START_TOLERANCE_MS,
   DEFAULT_WORKDAY,
-  LISTING_DISPLAY_TZ,
   LISTING_SLOT_CALENDAR_DAYS,
   LISTING_SLOT_WINDOW_MS,
-  listingCalendarDayKeys,
   SLOT_GRID_MINUTES,
-  vnWallClockToUtcDate,
 } from '../../../common/availability/listing-slot-policy';
+import {
+  formatListingCalendarYmd,
+  vnWallClockToUtcDate,
+} from '../../../common/datetime/vn-listing-datetime';
 import { formatOccupiedSlotKey } from './occupancy-slot-key';
 
 function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
@@ -18,11 +18,7 @@ function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
   let cursor = startsAt.getTime();
   const endMs = endsAt.getTime();
   while (cursor < endMs) {
-    const dk = formatInTimeZone(
-      new Date(cursor),
-      LISTING_DISPLAY_TZ,
-      'yyyy-MM-dd',
-    );
+    const dk = formatListingCalendarYmd(new Date(cursor));
     if (!seen.has(dk)) {
       seen.add(dk);
       dayKeys.push(dk);
@@ -89,13 +85,13 @@ export function mergeBookingsToOccupiedKeysPerSpecialist(
 
 /** Кандидаты витрины: сетка на каждый из {@link LISTING_SLOT_CALENDAR_DAYS} дней от «сегодня» в DISPLAY_TZ. */
 export function generateCandidateListingSlotInstants(now: Date): Date[] {
-  const { todayKey } = listingCalendarDayKeys(now);
+  const todayKey = formatListingCalendarYmd(now);
   const [ty, tm, td] = todayKey.split('-').map(Number);
   const startMidnight = vnWallClockToUtcDate(ty, tm, td, 0, 0);
   const out: Date[] = [];
   for (let i = 0; i < LISTING_SLOT_CALENDAR_DAYS; i++) {
     const dayStart = addDays(startMidnight, i);
-    const dk = formatInTimeZone(dayStart, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
+    const dk = formatListingCalendarYmd(dayStart);
     out.push(...slotInstantsForWorkday(dk));
   }
   return out;

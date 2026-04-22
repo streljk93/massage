@@ -1,5 +1,6 @@
 "use client";
 
+import { differenceInMilliseconds, isValid, parseISO } from "date-fns";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type PendingCountdownParts = {
@@ -29,10 +30,11 @@ export function usePendingBookingCountdown(
     if (!enabled || !expiresAtIso) {
       return;
     }
-    const deadline = new Date(expiresAtIso).getTime();
-    if (Number.isNaN(deadline)) {
+    const deadlineDate = parseISO(expiresAtIso);
+    if (!isValid(deadlineDate)) {
       return;
     }
+    const deadline = deadlineDate.getTime();
 
     const tryExpire = () => {
       if (Date.now() < deadline || firedRef.current) {
@@ -58,7 +60,11 @@ export function usePendingBookingCountdown(
     return null;
   }
   // eslint-disable-next-line react-hooks/purity -- wall-clock countdown; `pulse` обновляется раз в секунду
-  const ms = new Date(expiresAtIso).getTime() - Date.now();
+  const deadlineDate = parseISO(expiresAtIso);
+  if (!isValid(deadlineDate)) {
+    return null;
+  }
+  const ms = differenceInMilliseconds(deadlineDate, new Date());
   if (Number.isNaN(ms)) {
     return null;
   }

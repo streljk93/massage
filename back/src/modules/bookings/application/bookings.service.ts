@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { addMinutes, parseISO } from 'date-fns';
 import type { BookingStatus } from '@prisma/client';
 import {
   BOOKING_START_TOLERANCE_MS,
@@ -61,7 +62,7 @@ export class BookingsService {
     body: CreateBookingBody,
     locale: ApiLocale,
   ) {
-    const startsAt = new Date(body.startsAt);
+    const startsAt = parseISO(body.startsAt);
     if (Number.isNaN(startsAt.getTime())) {
       throw new BadRequestException({
         code: 'INVALID_STARTS_AT',
@@ -116,7 +117,7 @@ export class BookingsService {
       });
     }
 
-    const endsAt = new Date(startsAt.getTime() + body.durationMinutes * 60_000);
+    const endsAt = addMinutes(startsAt, body.durationMinutes);
 
     const bookability = checkListingBookability(startsAt, endsAt);
     if (!bookability.ok) {
@@ -168,7 +169,7 @@ export class BookingsService {
 
     const serviceNameSnapshot = pickLocalizedServiceName(service, locale);
 
-    const pendingExpiresAt = new Date(now + graceMinutes * 60_000);
+    const pendingExpiresAt = addMinutes(new Date(now), graceMinutes);
 
     const booking = await this.prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({

@@ -20,9 +20,7 @@ type Props = {
 export default async function Page({ params, searchParams }: Props) {
   const { id } = await params;
   const sp = (await searchParams) ?? {};
-  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp, {
-    now: new Date(),
-  });
+  const bookingSlotFromSearch = parseBookingSlotFromNextSearchParams(sp);
   const slotNavKey = bookingSlotFromSearch
     ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}`
     : "none";

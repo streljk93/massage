@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { addMilliseconds, subHours } from 'date-fns';
 import { LISTING_SLOT_WINDOW_MS } from '../../../common/availability/listing-slot-policy';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 
@@ -88,8 +89,8 @@ export class DirectoryRepository {
     if (specialistIds.length === 0) {
       return Promise.resolve([]);
     }
-    const windowStart = new Date(now.getTime() - 60 * 60 * 1000);
-    const windowEnd = new Date(now.getTime() + LISTING_SLOT_WINDOW_MS);
+    const windowStart = subHours(now, 1);
+    const windowEnd = addMilliseconds(now, LISTING_SLOT_WINDOW_MS);
     return this.prisma.booking.findMany({
       where: {
         specialistId: { in: specialistIds },

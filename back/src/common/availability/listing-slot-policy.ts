@@ -1,8 +1,10 @@
-import { addDays } from 'date-fns';
-import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
+import { LISTING_DISPLAY_TZ } from '../datetime/vn-listing-datetime';
 
-/** Таймзона витрины (слоты и брони в каталоге). */
-export const LISTING_DISPLAY_TZ = 'Asia/Ho_Chi_Minh';
+export {
+  LISTING_DISPLAY_TZ,
+  vnWallClockToUtcDate,
+} from '../datetime/vn-listing-datetime';
 
 export const SLOT_GRID_MINUTES = 30;
 
@@ -68,40 +70,4 @@ export function checkListingBookability(
     return { ok: false, code: 'OUTSIDE_WORKDAY' };
   }
   return { ok: true };
-}
-
-/**
- * Календарное «стенное» время витрины (Asia/Ho_Chi_Minh, без DST) → UTC `Date`.
- * Не использовать `new Date(y, m, d, h, min)` — оно привязано к TZ процесса Node.
- */
-export function vnWallClockToUtcDate(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-): Date {
-  const p = (n: number) => String(n).padStart(2, '0');
-  return new Date(
-    `${year}-${p(month)}-${p(day)}T${p(hour)}:${p(minute)}:00+07:00`,
-  );
-}
-
-/**
- * Календарные `yyyy-MM-dd` «сегодня» и «завтра» в витрине (HCMC).
- * Одна формула для сетки слотов, группировки и фильтра занятости.
- */
-export function listingCalendarDayKeys(now: Date): {
-  todayKey: string;
-  tomorrowKey: string;
-} {
-  const todayKey = formatInTimeZone(now, LISTING_DISPLAY_TZ, 'yyyy-MM-dd');
-  const [ty, tm, td] = todayKey.split('-').map(Number);
-  const tomorrowStart = addDays(vnWallClockToUtcDate(ty, tm, td, 0, 0), 1);
-  const tomorrowKey = formatInTimeZone(
-    tomorrowStart,
-    LISTING_DISPLAY_TZ,
-    'yyyy-MM-dd',
-  );
-  return { todayKey, tomorrowKey };
 }

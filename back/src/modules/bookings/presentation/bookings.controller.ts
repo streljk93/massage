@@ -78,7 +78,7 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Мои бронирования',
     description:
-      'Список записей текущего пользователя (клиента), новые сверху. `statusLabel` — подпись статуса на языке query `locale`; если `locale` не передан, используется `User.locale`, иначе en.',
+      'Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.',
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: bookingsListResponseSchema })

@@ -1,5 +1,4 @@
-/** Как на бэкенде: витрина в Asia/Ho_Chi_Minh. */
-const DISPLAY_TZ = "Asia/Ho_Chi_Minh";
+import { LISTING_DISPLAY_TZ, vnWallClockToUtcDate } from "@/shared/lib/datetime/vn-listing-datetime";
 
 export type DirectorySlotGroup = {
   calendarDate: string;
@@ -18,44 +17,9 @@ export type DirectoryCalendarDay = {
   dayOfMonth: number;
 };
 
-function vnWallClockToUtcDate(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-): Date {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return new Date(
-    `${year}-${p(month)}-${p(day)}T${p(hour)}:${p(minute)}:00+07:00`,
-  );
-}
-
-/**
- * «Сегодня» и «завтра» в календаре витрины (как `listingCalendarDayKeys` на бэкенде).
- */
-export function listingCalendarDayKeys(now: Date): {
-  todayKey: string;
-  tomorrowKey: string;
-} {
-  const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: DISPLAY_TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const todayKey = fmt.format(now);
-  const [ty, tm, td] = todayKey.split("-").map(Number);
-  const tomorrowStart = new Date(
-    vnWallClockToUtcDate(ty, tm, td, 0, 0).getTime() + 86_400_000,
-  );
-  const tomorrowKey = fmt.format(tomorrowStart);
-  return { todayKey, tomorrowKey };
-}
-
 function vnCalendarDay(date: Date): DirectoryCalendarDay {
   const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: DISPLAY_TZ,
+    timeZone: LISTING_DISPLAY_TZ,
     weekday: "short",
     day: "numeric",
   });
