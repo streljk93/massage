@@ -18,6 +18,7 @@ import {
   computeFreeSlotStartsForSpecialist,
   mergeBookingsToOccupiedKeysPerSpecialist,
 } from '../domain/workday-free-slots';
+import type { CatalogFilterOptionsResponseDto } from '../dto/catalog-filter-options-response.dto';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
 import type {
   OrganizationDetailResponseDto,
@@ -400,5 +401,53 @@ export class DirectoryService {
       ...base,
       staff,
     };
+  }
+
+  /**
+   * Справочник для модалки фильтра каталога: подкатегории + диапазон VND в базе
+   * для выбранного типа витрины (специалисты / салоны).
+   */
+  async getCatalogFilterOptions(
+    locale: ApiLocale,
+    tab: 'organizations' | 'specialists',
+  ): Promise<CatalogFilterOptionsResponseDto> {
+    const categoryIds =
+      tab === 'specialists'
+        ? await this.directoryRepository.findDistinctServiceCategoryIdsForListingSpecialists()
+        : await this.directoryRepository.findDistinctServiceCategoryIdsForListingOrganizations();
+
+    const rows =
+      await this.directoryRepository.findServiceCategoriesByIds(categoryIds);
+    const tags: DirectoryCategoryTagDto[] = rows
+      .map((cat) => {
+        const t = pickLocalizedServiceCategoryFields(cat, locale);
+        return { slug: t.slug, shortName: t.shortName };
+      })
+      .sort((a, b) =>
+        a.shortName.localeCompare(b.shortName, locale, { sensitivity: 'base' }),
+      );
+
+    const priceRows =
+      tab === 'specialists'
+        ? await this.directoryRepository.aggregateVndPriceBoundsForListingSpecialists()
+        : await this.directoryRepository.aggregateVndPriceBoundsForOrgListingServices();
+
+    const MIN_SPAN = 50_000;
+    let priceRangeVnd: CatalogFilterOptionsResponseDto['priceRangeVnd'] = null;
+    if (
+      priceRows.min != null &&
+      priceRows.max != null &&
+      Number.isFinite(priceRows.min) &&
+      Number.isFinite(priceRows.max)
+    ) {
+      const { min, max } = priceRows;
+      if (min === max) {
+        priceRangeVnd = { min, max: min + MIN_SPAN };
+      } else if (min < max) {
+        priceRangeVnd = { min, max };
+      }
+    }
+
+    return { categories: tags, priceRangeVnd };
   }
 }

@@ -753,6 +753,44 @@ export type OrganizationsGetByIdResponses = {
 
 export type OrganizationsGetByIdResponse = OrganizationsGetByIdResponses[keyof OrganizationsGetByIdResponses];
 
+export type DirectoryGetCatalogFilterOptionsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+        /**
+         * Витрина: салоны (organizations) или мастера (specialists).
+         */
+        tab: 'organizations' | 'specialists';
+    };
+    url: '/directory/catalog-filter-options';
+};
+
+export type DirectoryGetCatalogFilterOptionsErrors = {
+    /**
+     * Неверные tab или locale
+     */
+    400: unknown;
+};
+
+export type DirectoryGetCatalogFilterOptionsResponses = {
+    200: {
+        categories: Array<{
+            slug: string;
+            shortName: string;
+        }>;
+        priceRangeVnd: {
+            min: number;
+            max: number;
+        } | null;
+    };
+};
+
+export type DirectoryGetCatalogFilterOptionsResponse = DirectoryGetCatalogFilterOptionsResponses[keyof DirectoryGetCatalogFilterOptionsResponses];
+
 export type AdvertisingListByPlacementData = {
     body?: never;
     path?: never;
@@ -867,6 +905,10 @@ export type BookingsCreateErrors = {
      * Нет access token
      */
     401: unknown;
+    /**
+     * Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*
+     */
+    429: unknown;
 };
 
 export type BookingsCreateResponses = {

@@ -182,6 +182,26 @@ const organizationStaffMemberSchema = {
   },
 };
 
+export const catalogFilterOptionsResponseSchema = {
+  type: 'object',
+  required: ['categories', 'priceRangeVnd'],
+  properties: {
+    categories: {
+      type: 'array',
+      items: directoryCategoryTagSchema,
+    },
+    priceRangeVnd: {
+      type: 'object',
+      nullable: true,
+      required: ['min', 'max'],
+      properties: {
+        min: { type: 'integer', example: 100_000 },
+        max: { type: 'integer', example: 2_000_000 },
+      },
+    },
+  },
+};
+
 /** Ответ GET /organizations/:id — карточка салона + мастера. */
 export const organizationDetailResponseSchema = {
   type: 'object',

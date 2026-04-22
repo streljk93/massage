@@ -2054,6 +2054,104 @@
         ]
       }
     },
+    "/directory/catalog-filter-options": {
+      "get": {
+        "description": "Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.",
+        "operationId": "Directory_getCatalogFilterOptions",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "tab",
+            "required": true,
+            "in": "query",
+            "description": "Витрина: салоны (organizations) или мастера (specialists).",
+            "schema": {
+              "enum": [
+                "organizations",
+                "specialists"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "categories",
+                    "priceRangeVnd"
+                  ],
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slug",
+                          "shortName"
+                        ],
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "shortName": {
+                            "type": "string",
+                            "example": "Neck"
+                          }
+                        }
+                      }
+                    },
+                    "priceRangeVnd": {
+                      "type": "object",
+                      "nullable": true,
+                      "required": [
+                        "min",
+                        "max"
+                      ],
+                      "properties": {
+                        "min": {
+                          "type": "integer",
+                          "example": 100000
+                        },
+                        "max": {
+                          "type": "integer",
+                          "example": 2000000
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверные tab или locale"
+          }
+        },
+        "summary": "Опции фильтра каталога (поиск / карта)",
+        "tags": [
+          "directory"
+        ]
+      }
+    },
     "/advertisements": {
       "get": {
         "description": "Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.",
@@ -2269,6 +2367,9 @@
           },
           "401": {
             "description": "Нет access token"
+          },
+          "429": {
+            "description": "Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*"
           }
         },
         "security": [

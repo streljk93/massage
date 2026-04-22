@@ -3,6 +3,7 @@ import {
   bookingHistoryCardI18n,
   bookingListCardI18n,
 } from "@/entities/booking";
+import { catalogFiltersDialogI18n } from "@/entities/catalog";
 import { organizationCardI18n } from "@/entities/organizations";
 import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
@@ -60,6 +61,7 @@ const bundles: ColocatedI18nBundle[] = [
   profilePaymentPageI18n,
   profileHelpPageI18n,
   profileTermsPageI18n,
+  catalogFiltersDialogI18n,
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,

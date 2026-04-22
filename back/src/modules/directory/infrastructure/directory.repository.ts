@@ -132,4 +132,98 @@ export class DirectoryRepository {
       include: specialistListInclude(),
     });
   }
+
+  /** Подкатегории, которые есть у мастеров, показываемых в каталоге. */
+  findDistinctServiceCategoryIdsForListingSpecialists(): Promise<string[]> {
+    return this.prisma
+      .$queryRaw<{ serviceCategoryId: string }[]>`
+        SELECT DISTINCT ssc."serviceCategoryId"
+        FROM "SpecialistServiceCategory" ssc
+        INNER JOIN "Specialist" s ON s.id = ssc."specialistId"
+        WHERE s."listedInDirectory" = true
+          AND s."deletedAt" IS NULL
+      `
+      .then((rows) => rows.map((r) => r.serviceCategoryId));
+  }
+
+  /**
+   * Подкатегории, проставленные у неудалённых организаций (витрина салонов).
+   */
+  findDistinctServiceCategoryIdsForListingOrganizations(): Promise<string[]> {
+    return this.prisma
+      .$queryRaw<{ serviceCategoryId: string }[]>`
+        SELECT DISTINCT osc."serviceCategoryId"
+        FROM "OrganizationServiceCategory" osc
+        INNER JOIN "Organization" o ON o.id = osc."organizationId"
+        WHERE o."deletedAt" IS NULL
+      `
+      .then((rows) => rows.map((r) => r.serviceCategoryId));
+  }
+
+  findServiceCategoriesByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.serviceCategory.findMany({
+      where: { id: { in: ids }, deletedAt: null, isActive: true },
+      include: { locales: { orderBy: { locale: 'asc' } } },
+    });
+  }
+
+  /**
+   * Min/max VND по личным услугам мастеров (Service.specialistId), показываемым в каталоге.
+   */
+  async aggregateVndPriceBoundsForListingSpecialists(): Promise<{
+    min: number | null;
+    max: number | null;
+  }> {
+    const a = await this.prisma.servicePriceOption.aggregate({
+      where: {
+        currency: 'VND',
+        service: {
+          deletedAt: null,
+          isActive: true,
+          specialistId: { not: null },
+          specialist: {
+            deletedAt: null,
+            listedInDirectory: true,
+          },
+        },
+      },
+      _min: { priceAmount: true },
+      _max: { priceAmount: true },
+    });
+    return { min: a._min.priceAmount, max: a._max.priceAmount };
+  }
+
+  /**
+   * Min/max VND: услуги в салоне, оказываемые мастером с активной привязкой к этому салону.
+   */
+  async aggregateVndPriceBoundsForOrgListingServices(): Promise<{
+    min: number | null;
+    max: number | null;
+  }> {
+    const rows = await this.prisma.$queryRaw<{ min: number | null; max: number | null }[]>`
+      SELECT
+        (MIN(po."priceAmount"))::int AS "min",
+        (MAX(po."priceAmount"))::int AS "max"
+      FROM "ServicePriceOption" po
+      INNER JOIN "Service" s ON s.id = po."serviceId"
+      INNER JOIN "Organization" o ON o.id = s."organizationId"
+      INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
+      INNER JOIN "SpecialistOrganizationEmployment" e
+        ON e."specialistId" = s."specialistId"
+        AND e."organizationId" = s."organizationId"
+        AND e."isActive" = true
+      WHERE po."currency" = 'VND'
+        AND s."deletedAt" IS NULL
+        AND s."isActive" = true
+        AND s."specialistId" IS NOT NULL
+        AND o."deletedAt" IS NULL
+        AND sp."deletedAt" IS NULL
+        AND sp."listedInDirectory" = true
+    `;
+    const r = rows[0];
+    return { min: r?.min ?? null, max: r?.max ?? null };
+  }
 }

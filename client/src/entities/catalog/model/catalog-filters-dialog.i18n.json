@@ -1,0 +1,46 @@
+{
+  "messages": {
+    "en": {
+      "catalogFilters": {
+        "title": "Filters",
+        "description": "Narrow down search results by category and price.",
+        "price": "Price",
+        "priceNoData": "No prices in this list yet. They appear when specialists add VND rates to their services.",
+        "priceReadOnlyVnd": "{min} – {max}",
+        "priceReadOnlyNote": "Narrowing by price applies in the specialists tab. Here you can filter salons by category.",
+        "category": "Categories",
+        "noCategories": "No categories in this list yet.",
+        "reset": "Reset",
+        "done": "Done"
+      }
+    },
+    "vi": {
+      "catalogFilters": {
+        "title": "Bộ lọc",
+        "description": "Thu hẹp kết quả tìm kiếm theo danh mục và giá.",
+        "price": "Giá",
+        "priceNoData": "Chưa có giá trong danh sách. Giá sẽ hiện khi chuyên viên thêm mức giá VND cho dịch vụ.",
+        "priceReadOnlyVnd": "{min} – {max}",
+        "priceReadOnlyNote": "Lọc theo giá dùng ở tab chuyên viên. Ở đây bạn lọc salon theo danh mục.",
+        "category": "Danh mục",
+        "noCategories": "Chưa có danh mục trong danh sách này.",
+        "reset": "Đặt lại",
+        "done": "Xong"
+      }
+    },
+    "ru": {
+      "catalogFilters": {
+        "title": "Фильтры",
+        "description": "Сузить результаты поиска по категориям и цене.",
+        "price": "Цена",
+        "priceNoData": "В списке пока нет цен. Они появятся, когда у специалистов будут цены в VND на услуги.",
+        "priceReadOnlyVnd": "{min} – {max}",
+        "priceReadOnlyNote": "Сужать по цене можно на вкладке мастеров. Здесь салоны — по категориям.",
+        "category": "Категории",
+        "noCategories": "В этом списке пока нет категорий.",
+        "reset": "Сбросить",
+        "done": "Готово"
+      }
+    }
+  }
+}

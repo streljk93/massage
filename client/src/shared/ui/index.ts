@@ -30,6 +30,10 @@ export {
   type SliderSlide,
 } from "./slider";
 export {
+  PriceRangeSlider,
+  type PriceRangeSliderProps,
+} from "./price-range-slider";
+export {
   EntityCard,
   EntityCardImage,
   EntityCardContent,

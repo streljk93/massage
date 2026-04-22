@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -180,6 +180,13 @@ export const organizationsList = <ThrowOnError extends boolean = false>(options?
 export const organizationsGetById = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsGetByIdResponses, OrganizationsGetByIdErrors, ThrowOnError>({ url: '/organizations/{id}', ...options });
 
 /**
+ * Опции фильтра каталога (поиск / карта)
+ *
+ * Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.
+ */
+export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = false>(options: Options<DirectoryGetCatalogFilterOptionsData, ThrowOnError>) => (options.client ?? client).get<DirectoryGetCatalogFilterOptionsResponses, DirectoryGetCatalogFilterOptionsErrors, ThrowOnError>({ url: '/directory/catalog-filter-options', ...options });
+
+/**
  * Реклама и баннеры по слоту показа
  *
  * Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.
@@ -189,7 +196,7 @@ export const advertisingListByPlacement = <ThrowOnError extends boolean = false>
 /**
  * Мои бронирования
  *
- * Список записей текущего пользователя (клиента), новые сверху. `statusLabel` — подпись статуса на языке query `locale`; если `locale` не передан, используется `User.locale`, иначе en.
+ * Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.
  */
 export const bookingsList = <ThrowOnError extends boolean = false>(options?: Options<BookingsListData, ThrowOnError>) => (options?.client ?? client).get<BookingsListResponses, BookingsListErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
