@@ -2,8 +2,7 @@ import { addDays } from 'date-fns';
 import {
   BOOKING_START_TOLERANCE_MS,
   DEFAULT_WORKDAY,
-  LISTING_SLOT_CALENDAR_DAYS,
-  LISTING_SLOT_WINDOW_MS,
+  listingCardPreviewWindowMs,
   SLOT_GRID_MINUTES,
 } from '../../../common/availability/listing-slot-policy';
 import {
@@ -83,13 +82,20 @@ export function mergeBookingsToOccupiedKeysPerSpecialist(
   return m;
 }
 
-/** Кандидаты витрины: сетка на каждый из {@link LISTING_SLOT_CALENDAR_DAYS} дней от «сегодня» в DISPLAY_TZ. */
-export function generateCandidateListingSlotInstants(now: Date): Date[] {
+/**
+ * Кандидаты превью витрины: сетка на первые `calendarDays` от «сегодня» в DISPLAY_TZ.
+ * Значение дней приходит из конфига (`listingCardPreview.calendarDays`).
+ */
+export function generateCandidateListingSlotInstants(
+  now: Date,
+  calendarDays: number,
+): Date[] {
   const todayKey = formatListingCalendarYmd(now);
   const [ty, tm, td] = todayKey.split('-').map(Number);
   const startMidnight = vnWallClockToUtcDate(ty, tm, td, 0, 0);
   const out: Date[] = [];
-  for (let i = 0; i < LISTING_SLOT_CALENDAR_DAYS; i++) {
+  const days = Math.max(1, Math.min(90, Math.floor(calendarDays)));
+  for (let i = 0; i < days; i++) {
     const dayStart = addDays(startMidnight, i);
     const dk = formatListingCalendarYmd(dayStart);
     out.push(...slotInstantsForWorkday(dk));
@@ -101,11 +107,12 @@ export function generateCandidateListingSlotInstants(now: Date): Date[] {
 export function computeFreeSlotStartsForSpecialist(
   now: Date,
   occupiedKeys: Set<string>,
+  calendarDays: number,
 ): Date[] {
   const windowStart = now.getTime() - BOOKING_START_TOLERANCE_MS;
-  const windowEnd = now.getTime() + LISTING_SLOT_WINDOW_MS;
+  const windowEnd = now.getTime() + listingCardPreviewWindowMs(calendarDays);
   const out: Date[] = [];
-  for (const S of generateCandidateListingSlotInstants(now)) {
+  for (const S of generateCandidateListingSlotInstants(now, calendarDays)) {
     const t = S.getTime();
     if (t < windowStart || t > windowEnd) {
       continue;

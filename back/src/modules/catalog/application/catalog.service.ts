@@ -31,6 +31,7 @@ export class CatalogService {
   async getServiceCategoriesByMajorSlug(
     majorSlug: string,
     locale: ApiLocale,
+    options?: { listedInDirectory?: boolean },
   ): Promise<CatalogCategoriesResponseDto> {
     const row =
       await this.catalogRepository.findServiceCategoriesByMajorSlug(majorSlug);
@@ -42,13 +43,23 @@ export class CatalogService {
       });
     }
 
+    let categories = row.categories;
+    if (options?.listedInDirectory) {
+      const allowed = new Set(
+        await this.catalogRepository.findDirectoryListingServiceCategoryIdsForMajorSlug(
+          majorSlug,
+        ),
+      );
+      categories = row.categories.filter((c) => allowed.has(c.id));
+    }
+
     return {
       majorCategory: {
         id: row.id,
         name: pickLocalizedMajorName(row, locale),
         slug: row.slug,
       },
-      categories: row.categories.map((c) =>
+      categories: categories.map((c) =>
         pickLocalizedServiceCategoryFields(
           c as unknown as CategoryLocaleShape,
           locale,

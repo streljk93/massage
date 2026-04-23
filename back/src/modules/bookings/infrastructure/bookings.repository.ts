@@ -110,4 +110,54 @@ export class BookingsRepository {
       return due.length;
     });
   }
+
+  /**
+   * Активные записи мастера по организации (место приёма) переводятся в `canceled_by_master`
+   * (например при смене текущей организации у специалиста).
+   */
+  async cancelActiveBookingsAtOrganization(
+    tx: Prisma.TransactionClient,
+    args: {
+      specialistId: string;
+      organizationId: string;
+      actorUserId: string | null;
+      cancelReason: string;
+      cancellationComment?: string | null;
+    },
+  ): Promise<number> {
+    const rows = await tx.booking.findMany({
+      where: {
+        specialistId: args.specialistId,
+        organizationId: args.organizationId,
+        deletedAt: null,
+        status: { in: ACTIVE_BOOKING_STATUSES },
+      },
+      select: { id: true, status: true },
+    });
+    const historyReason = [args.cancelReason, args.cancellationComment ?? '']
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(' | ');
+    for (const row of rows) {
+      await tx.booking.update({
+        where: { id: row.id },
+        data: {
+          status: 'canceled_by_master',
+          pendingExpiresAt: null,
+          cancelReason: args.cancelReason,
+          cancellationComment: args.cancellationComment ?? null,
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: row.id,
+          fromStatus: row.status,
+          toStatus: 'canceled_by_master',
+          actorUserId: args.actorUserId,
+          reason: historyReason.length > 0 ? historyReason : null,
+        },
+      });
+    }
+    return rows.length;
+  }
 }

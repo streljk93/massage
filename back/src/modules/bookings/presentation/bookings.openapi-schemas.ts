@@ -54,7 +54,18 @@ export const bookingListItemSchema = {
     startsAt: { type: 'string', format: 'date-time' },
     endsAt: { type: 'string', format: 'date-time' },
     pendingExpiresAt: { type: 'string', format: 'date-time', nullable: true },
-    cancelReason: { type: 'string', nullable: true },
+    cancelReason: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Код причины, канонический англоязычный авто-текст из БД или пояснение; см. доменные константы бронирований.',
+    },
+    cancellationComment: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым.',
+    },
   },
 };
 

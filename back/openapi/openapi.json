@@ -821,6 +821,380 @@
         ]
       }
     },
+    "/users/me/specialist/active-organization": {
+      "patch": {
+        "operationId": "Users_patchSpecialistActiveOrganization",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organizationId"
+                ],
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "activeOrganizationId",
+                    "cancelledBookingsCount"
+                  ],
+                  "properties": {
+                    "activeOrganizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "cancelledBookingsCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Сколько активных записей отменено на прежней организации (canceled_by_master)."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет активного членства в организации"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста или организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/bookings": {
+      "post": {
+        "description": "Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.",
+        "operationId": "Bookings_create",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "specialistId",
+                  "serviceId",
+                  "durationMinutes",
+                  "startsAt"
+                ],
+                "properties": {
+                  "specialistId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "serviceId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "durationMinutes": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "description": "ISO 8601"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status",
+                    "startsAt",
+                    "endsAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending"
+                      ]
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "pendingExpiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело или слот в прошлом"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "429": {
+            "description": "Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать бронирование",
+        "tags": [
+          "bookings"
+        ]
+      },
+      "get": {
+        "description": "Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.",
+        "operationId": "Bookings_list",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bookings"
+                  ],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "status",
+                          "statusLabel",
+                          "specialistId",
+                          "specialistName",
+                          "serviceName",
+                          "amount",
+                          "currency",
+                          "startsAt",
+                          "endsAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "statusLabel": {
+                            "type": "string",
+                            "description": "Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`)."
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistName": {
+                            "type": "string"
+                          },
+                          "specialistImageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "serviceName": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "pendingExpiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "cancelReason": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Код причины, канонический англоязычный авто-текст из БД или пояснение; см. доменные константы бронирований."
+                          },
+                          "cancellationComment": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Мои бронирования",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/cancel": {
+      "post": {
+        "description": "Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.",
+        "operationId": "Bookings_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "canceled_by_client"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нельзя отменить в текущем статусе"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "404": {
+            "description": "Запись не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Отменить бронирование (клиент)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
     "/catalog/major-categories": {
       "get": {
         "description": "Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.",
@@ -1070,6 +1444,15 @@
             }
           },
           {
+            "name": "listedInDirectory",
+            "required": false,
+            "in": "query",
+            "description": "Если true — только подкатегории, которые есть у мастеров витрины или у организаций в этой вертикали.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
             "name": "majorSlug",
             "required": true,
             "in": "path",
@@ -1159,7 +1542,7 @@
             }
           },
           "400": {
-            "description": "Неверный формат majorSlug или locale"
+            "description": "Неверный формат majorSlug, locale или listedInDirectory (ожидается boolean)"
           },
           "404": {
             "description": "",
@@ -1199,9 +1582,72 @@
     },
     "/specialists": {
       "get": {
-        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Сортировка по имени. Подкатегории каталога и строка услуг учитывают `?locale` (en, vi, ru).",
+        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`. Курсор — в том же наборе фильтров.",
         "operationId": "Specialists_list",
         "parameters": [
+          {
+            "name": "priceMaxVnd",
+            "required": false,
+            "in": "query",
+            "description": "Верхняя граница цены (VND).",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "priceMinVnd",
+            "required": false,
+            "in": "query",
+            "description": "Нижняя граница цены (VND) по личной услуге мастера; в паре с priceMaxVnd или отдельно.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "categories",
+            "required": false,
+            "in": "query",
+            "description": "Slug подкатегорий каталога через запятую (мастер должен отмечен хотя бы одну).",
+            "schema": {
+              "example": "neck,foot"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Поиск по имени, био, строкам витрины, адресу активной организации, названиям услуг и категориям.",
+            "schema": {}
+          },
+          {
+            "name": "majorSlug",
+            "required": false,
+            "in": "query",
+            "description": "Slug большой категории (`MajorServiceCategory.slug`), напр. massage — ограничить вертикаль каталога.",
+            "schema": {
+              "example": "massage"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Размер страницы (1–100, по умолчанию 20).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.",
+            "schema": {}
+          },
           {
             "name": "locale",
             "required": false,
@@ -1225,7 +1671,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "specialists"
+                    "specialists",
+                    "cursorPage"
                   ],
                   "properties": {
                     "specialists": {
@@ -1293,12 +1740,14 @@
                           "addressLine": {
                             "type": "string",
                             "nullable": true,
-                            "example": "123 Nguyen Trai, District 1"
+                            "example": "123 Nguyen Trai, District 1",
+                            "description": "Адрес текущей активной организации мастера (мастер сам выбирает место приёма)."
                           },
                           "city": {
                             "type": "string",
                             "nullable": true,
-                            "example": "Ho Chi Minh City"
+                            "example": "Ho Chi Minh City",
+                            "description": "Город активной организации мастера."
                           },
                           "imageUrl": {
                             "type": "string",
@@ -1406,6 +1855,24 @@
                           }
                         }
                       }
+                    },
+                    "cursorPage": {
+                      "type": "object",
+                      "required": [
+                        "nextCursor",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
+                        },
+                        "hasMore": {
+                          "type": "boolean",
+                          "description": "Есть ли ещё элементы после текущей страницы."
+                        }
+                      }
                     }
                   }
                 }
@@ -1413,10 +1880,10 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale"
+            "description": "Неверный формат locale, limit, cursor, majorSlug, categories или цены VND"
           }
         },
-        "summary": "Список всех специалистов",
+        "summary": "Список специалистов (курсорная пагинация)",
         "tags": [
           "specialists"
         ]
@@ -1510,12 +1977,14 @@
                     "addressLine": {
                       "type": "string",
                       "nullable": true,
-                      "example": "123 Nguyen Trai, District 1"
+                      "example": "123 Nguyen Trai, District 1",
+                      "description": "Адрес текущей активной организации мастера (мастер сам выбирает место приёма)."
                     },
                     "city": {
                       "type": "string",
                       "nullable": true,
-                      "example": "Ho Chi Minh City"
+                      "example": "Ho Chi Minh City",
+                      "description": "Город активной организации мастера."
                     },
                     "imageUrl": {
                       "type": "string",
@@ -1641,9 +2110,52 @@
     },
     "/organizations": {
       "get": {
-        "description": "Активные организации (салоны), не удалённые. Название и описание по query `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности.",
+        "description": "Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`. Курсор — в том же наборе фильтров.",
         "operationId": "Organizations_list",
         "parameters": [
+          {
+            "name": "categories",
+            "required": false,
+            "in": "query",
+            "description": "Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).",
+            "schema": {
+              "example": "neck,foot"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.",
+            "schema": {}
+          },
+          {
+            "name": "majorSlug",
+            "required": false,
+            "in": "query",
+            "description": "Slug большой категории (`MajorServiceCategory.slug`), напр. massage.",
+            "schema": {
+              "example": "massage"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Размер страницы (1–100, по умолчанию 20).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.",
+            "schema": {}
+          },
           {
             "name": "locale",
             "required": false,
@@ -1667,7 +2179,8 @@
                 "schema": {
                   "type": "object",
                   "required": [
-                    "organizations"
+                    "organizations",
+                    "cursorPage"
                   ],
                   "properties": {
                     "organizations": {
@@ -1803,6 +2316,24 @@
                           }
                         }
                       }
+                    },
+                    "cursorPage": {
+                      "type": "object",
+                      "required": [
+                        "nextCursor",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
+                        },
+                        "hasMore": {
+                          "type": "boolean",
+                          "description": "Есть ли ещё элементы после текущей страницы."
+                        }
+                      }
                     }
                   }
                 }
@@ -1810,10 +2341,10 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale"
+            "description": "Неверный формат locale, limit, cursor, majorSlug или categories"
           }
         },
-        "summary": "Список всех организаций",
+        "summary": "Список организаций (курсорная пагинация)",
         "tags": [
           "organizations"
         ]
@@ -2281,304 +2812,6 @@
         "summary": "Реклама и баннеры по слоту показа",
         "tags": [
           "advertising"
-        ]
-      }
-    },
-    "/bookings": {
-      "post": {
-        "description": "Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.",
-        "operationId": "Bookings_create",
-        "parameters": [
-          {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
-            "schema": {
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "specialistId",
-                  "serviceId",
-                  "durationMinutes",
-                  "startsAt"
-                ],
-                "properties": {
-                  "specialistId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "serviceId": {
-                    "type": "string",
-                    "format": "uuid"
-                  },
-                  "durationMinutes": {
-                    "type": "integer",
-                    "minimum": 1
-                  },
-                  "startsAt": {
-                    "type": "string",
-                    "description": "ISO 8601"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "id",
-                    "status",
-                    "startsAt",
-                    "endsAt"
-                  ],
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "pending"
-                      ]
-                    },
-                    "startsAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "endsAt": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "pendingExpiresAt": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Невалидное тело или слот в прошлом"
-          },
-          "401": {
-            "description": "Нет access token"
-          },
-          "429": {
-            "description": "Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Создать бронирование",
-        "tags": [
-          "bookings"
-        ]
-      },
-      "get": {
-        "description": "Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.",
-        "operationId": "Bookings_list",
-        "parameters": [
-          {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
-            "schema": {
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "bookings"
-                  ],
-                  "properties": {
-                    "bookings": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "status",
-                          "statusLabel",
-                          "specialistId",
-                          "specialistName",
-                          "serviceName",
-                          "amount",
-                          "currency",
-                          "startsAt",
-                          "endsAt"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "status": {
-                            "type": "string"
-                          },
-                          "statusLabel": {
-                            "type": "string",
-                            "description": "Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`)."
-                          },
-                          "specialistId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "specialistName": {
-                            "type": "string"
-                          },
-                          "specialistImageUrl": {
-                            "type": "string",
-                            "nullable": true,
-                            "format": "uri"
-                          },
-                          "serviceName": {
-                            "type": "string"
-                          },
-                          "amount": {
-                            "type": "integer",
-                            "nullable": true
-                          },
-                          "currency": {
-                            "type": "string"
-                          },
-                          "startsAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "endsAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "pendingExpiresAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "nullable": true
-                          },
-                          "cancelReason": {
-                            "type": "string",
-                            "nullable": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Нет access token"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Мои бронирования",
-        "tags": [
-          "bookings"
-        ]
-      }
-    },
-    "/bookings/{id}/cancel": {
-      "post": {
-        "description": "Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.",
-        "operationId": "Bookings_cancel",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "id",
-                    "status"
-                  ],
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "canceled_by_client"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Нельзя отменить в текущем статусе"
-          },
-          "401": {
-            "description": "Нет access token"
-          },
-          "404": {
-            "description": "Запись не найдена"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Отменить бронирование (клиент)",
-        "tags": [
-          "bookings"
         ]
       }
     }

@@ -16,6 +16,14 @@ export default () => ({
     accessExpiresSec: Number(process.env.JWT_ACCESS_EXPIRES_SEC ?? 900),
     refreshExpiresSec: Number(process.env.JWT_REFRESH_EXPIRES_SEC ?? 604800),
   },
+  /**
+   * Лимит HTTP-запросов на IP (скользящее окно), защита от простого DoS.
+   * Хранилище in-memory; при нескольких инстансах — вынести в Redis (см. @nestjs/throttler).
+   */
+  httpThrottle: {
+    ttlMs: positiveInt(process.env.HTTP_THROTTLE_TTL_MS, 60_000),
+    limit: positiveInt(process.env.HTTP_THROTTLE_LIMIT, 400),
+  },
   /** MinIO / S3-совместимое хранилище файлов */
   storage: {
     endpoint:
@@ -42,6 +50,27 @@ export default () => ({
     maxCreatesPerDay: positiveInt(
       process.env.BOOKING_CLIENT_MAX_CREATES_PER_DAY,
       30,
+    ),
+  },
+  /**
+   * Превью слотов на карточках каталога / главной / поиска.
+   * Меньше `calendarDays` — быстрее ответ (меньше кандидатов слотов на мастера).
+   * Переопределение: `LISTING_CARD_PREVIEW_CALENDAR_DAYS` (сжатие 1–90 в DirectoryService).
+   */
+  listingCardPreview: {
+    calendarDays: positiveInt(
+      process.env.LISTING_CARD_PREVIEW_CALENDAR_DAYS,
+      1,
+    ),
+  },
+  /**
+   * Страница профиля салона / мастера: сколько календарных дней слотов отдавать в API.
+   * Отдельно от {@link listingCardPreview}, чтобы узкое превью на карточках не сужало профиль.
+   */
+  profileSlotPreview: {
+    calendarDays: positiveInt(
+      process.env.PROFILE_SLOT_PREVIEW_CALENDAR_DAYS,
+      14,
     ),
   },
 });

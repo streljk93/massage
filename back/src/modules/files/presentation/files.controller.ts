@@ -9,6 +9,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -40,6 +41,13 @@ const fileInterceptor = FileInterceptor('file', {
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
+/** Жёстче глобального лимита: загрузки/скачивания дороже и чаще используются в злоупотреблениях. */
+@Throttle({
+  default: {
+    ttl: 60_000,
+    limit: 80,
+  },
+})
 @ApiTags('files')
 @Controller('files')
 export class FilesController {
@@ -56,7 +64,8 @@ export class FilesController {
   @ApiOkResponse({ schema: fileUploadResponseSchema })
   @ApiBadRequestResponse({ description: 'Нет файла или неподдерживаемый тип' })
   @ApiServiceUnavailableResponse({
-    description: 'Хранилище не настроено (нет S3_ENDPOINT)',
+    description:
+      'Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)',
   })
   @UseInterceptors(fileInterceptor)
   async uploadPublic(@UploadedFile() file: Express.Multer.File | undefined) {
@@ -77,7 +86,8 @@ export class FilesController {
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   @ApiBadRequestResponse({ description: 'Нет файла или неподдерживаемый тип' })
   @ApiServiceUnavailableResponse({
-    description: 'Хранилище не настроено (нет S3_ENDPOINT)',
+    description:
+      'Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)',
   })
   @UseInterceptors(fileInterceptor)
   async uploadPrivate(@UploadedFile() file: Express.Multer.File | undefined) {

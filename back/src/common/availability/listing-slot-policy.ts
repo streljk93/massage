@@ -21,15 +21,16 @@ export const DEFAULT_WORKDAY = {
  */
 export const BOOKING_START_TOLERANCE_MS = 120_000;
 
-/**
- * Сколько календарных дней витрины вперёд (включая «сегодня»), в Asia/Ho_Chi_Minh.
- * Прошлые дни не показываем; «сегодня» — только слоты не раньше {@link BOOKING_START_TOLERANCE_MS}.
- */
-export const LISTING_SLOT_CALENDAR_DAYS = 60;
+const LISTING_CARD_PREVIEW_TAIL_MS = 26 * 60 * 60 * 1000;
 
-/** Окно для свободных слотов и выборки броней под занятость (горизонт + запас на последний слот дня). */
-export const LISTING_SLOT_WINDOW_MS =
-  LISTING_SLOT_CALENDAR_DAYS * 24 * 60 * 60 * 1000 + 26 * 60 * 60 * 1000;
+/**
+ * Окно превью для занятости и свободных слотов на карточках (горизонт + запас на последний слот дня).
+ * Число дней задаётся в `src/config/configuration.ts` → `listingCardPreview.calendarDays`.
+ */
+export function listingCardPreviewWindowMs(calendarDays: number): number {
+  const days = Math.max(1, Math.min(90, Math.floor(calendarDays)));
+  return days * 24 * 60 * 60 * 1000 + LISTING_CARD_PREVIEW_TAIL_MS;
+}
 
 export function isStartAlignedToListingGrid(startsAt: Date): boolean {
   const z = toZonedTime(startsAt, LISTING_DISPLAY_TZ);

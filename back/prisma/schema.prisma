@@ -205,6 +205,8 @@ model Organization {
   services             Service[]
   bookings             Booking[]
   specialistEmployments SpecialistOrganizationEmployment[]
+  /// Мастера, у которых эта организация выбрана как текущее место приёма.
+  specialistsActiveWorkplace Specialist[] @relation("SpecialistActiveOrganization")
   locales               OrganizationLocale[]
   serviceCategories     OrganizationServiceCategory[]
 
@@ -282,14 +284,9 @@ model Specialist {
   imageUrl      String?
   imageAlt      String?
 
-  /// Точка на карте (WGS84), как у организации.
-  latitude  Float?
-  longitude Float?
-
-  /// Адрес приёма клиентов (кабинет, на дому, точка выезда — текст как ввёл мастер).
-  addressLine String?
-  /// Город / населённый пункт (фильтры, карта).
-  city        String?
+  /// Текущее место приёма (адрес и гео для витрины берутся от этой организации).
+  activeOrganizationId String?
+  activeOrganization   Organization? @relation("SpecialistActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 
   listingMetaLine     String?
   listingServicesLine String?
@@ -309,7 +306,7 @@ model Specialist {
   reviews             SpecialistReview[]
   serviceCategories   SpecialistServiceCategory[]
 
-  @@index([city])
+  @@index([activeOrganizationId])
 }
 
 /// Выбранные подкатегории каталога у специалиста.
@@ -468,7 +465,10 @@ model Booking {
   /// Дедлайн авто-истечения для pending (не подтвердили за N минут).
   pendingExpiresAt DateTime?
 
+  /// Причина отмены/истечения: код (например `pending_confirmation_timeout`) или канонический английский авто-текст.
   cancelReason String?
+  /// Дополнительный комментарий при отмене (например пояснение от мастера); системные отмены часто без текста.
+  cancellationComment String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

@@ -18,6 +18,10 @@ export {
   createServerSdkClient,
   serverSdkFetchNoStore,
 } from "./create-server-sdk-client";
+export {
+  fetchAllOrganizationsPages,
+  fetchAllSpecialistsPages,
+} from "./directory-cursor-fetch-all";
 
 /** Совпадает с `setGlobalPrefix("v1")` на бэкенде. */
 export const API_V1_PREFIX = "/v1" as const;

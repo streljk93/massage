@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -131,67 +131,17 @@ export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * Все большие категории услуг
- *
- * Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.
+ * Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.
  */
-export const catalogGetMajorCategories = <ThrowOnError extends boolean = false>(options?: Options<CatalogGetMajorCategoriesData, ThrowOnError>) => (options?.client ?? client).get<CatalogGetMajorCategoriesResponses, CatalogGetMajorCategoriesErrors, ThrowOnError>({ url: '/catalog/major-categories', ...options });
-
-/**
- * Одна подкатегория по slug внутри большой категории
- *
- * Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
- */
-export const catalogGetCategoryByMajorAndSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoryByMajorAndSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoryByMajorAndSlugResponses, CatalogGetCategoryByMajorAndSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories/{categorySlug}', ...options });
-
-/**
- * Подкатегории услуг по slug большой категории
- *
- * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder. Названия подставляются по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
- */
-export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
-
-/**
- * Список всех специалистов
- *
- * Активные профили специалистов (не удалённые). Имя — из `User.name`. Сортировка по имени. Подкатегории каталога и строка услуг учитывают `?locale` (en, vi, ru).
- */
-export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({ url: '/specialists', ...options });
-
-/**
- * Специалист по id
- *
- * Профиль мастера: те же поля, что в списке специалистов.
- */
-export const specialistsGetById = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsGetByIdResponses, SpecialistsGetByIdErrors, ThrowOnError>({ url: '/specialists/{id}', ...options });
-
-/**
- * Список всех организаций
- *
- * Активные организации (салоны), не удалённые. Название и описание по query `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности.
- */
-export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({ url: '/organizations', ...options });
-
-/**
- * Организация по id
- *
- * Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).
- */
-export const organizationsGetById = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsGetByIdResponses, OrganizationsGetByIdErrors, ThrowOnError>({ url: '/organizations/{id}', ...options });
-
-/**
- * Опции фильтра каталога (поиск / карта)
- *
- * Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.
- */
-export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = false>(options: Options<DirectoryGetCatalogFilterOptionsData, ThrowOnError>) => (options.client ?? client).get<DirectoryGetCatalogFilterOptionsResponses, DirectoryGetCatalogFilterOptionsErrors, ThrowOnError>({ url: '/directory/catalog-filter-options', ...options });
-
-/**
- * Реклама и баннеры по слоту показа
- *
- * Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.
- */
-export const advertisingListByPlacement = <ThrowOnError extends boolean = false>(options: Options<AdvertisingListByPlacementData, ThrowOnError>) => (options.client ?? client).get<AdvertisingListByPlacementResponses, AdvertisingListByPlacementErrors, ThrowOnError>({ url: '/advertisements', ...options });
+export const usersPatchSpecialistActiveOrganization = <ThrowOnError extends boolean = false>(options: Options<UsersPatchSpecialistActiveOrganizationData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchSpecialistActiveOrganizationResponses, UsersPatchSpecialistActiveOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me/specialist/active-organization',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Мои бронирования
@@ -229,3 +179,66 @@ export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Op
     url: '/bookings/{id}/cancel',
     ...options
 });
+
+/**
+ * Все большие категории услуг
+ *
+ * Список активных больших категорий (вертикалей), отсортированных по sortOrder. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем каноническое поле `name` сущности.
+ */
+export const catalogGetMajorCategories = <ThrowOnError extends boolean = false>(options?: Options<CatalogGetMajorCategoriesData, ThrowOnError>) => (options?.client ?? client).get<CatalogGetMajorCategoriesResponses, CatalogGetMajorCategoriesErrors, ThrowOnError>({ url: '/catalog/major-categories', ...options });
+
+/**
+ * Одна подкатегория по slug внутри большой категории
+ *
+ * Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
+ */
+export const catalogGetCategoryByMajorAndSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoryByMajorAndSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoryByMajorAndSlugResponses, CatalogGetCategoryByMajorAndSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories/{categorySlug}', ...options });
+
+/**
+ * Подкатегории услуг по slug большой категории
+ *
+ * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder. Названия подставляются по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
+ */
+export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
+
+/**
+ * Список специалистов (курсорная пагинация)
+ *
+ * Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`. Курсор — в том же наборе фильтров.
+ */
+export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({ url: '/specialists', ...options });
+
+/**
+ * Специалист по id
+ *
+ * Профиль мастера: те же поля, что в списке специалистов.
+ */
+export const specialistsGetById = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsGetByIdResponses, SpecialistsGetByIdErrors, ThrowOnError>({ url: '/specialists/{id}', ...options });
+
+/**
+ * Список организаций (курсорная пагинация)
+ *
+ * Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`. Курсор — в том же наборе фильтров.
+ */
+export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({ url: '/organizations', ...options });
+
+/**
+ * Организация по id
+ *
+ * Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).
+ */
+export const organizationsGetById = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsGetByIdResponses, OrganizationsGetByIdErrors, ThrowOnError>({ url: '/organizations/{id}', ...options });
+
+/**
+ * Опции фильтра каталога (поиск / карта)
+ *
+ * Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.
+ */
+export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = false>(options: Options<DirectoryGetCatalogFilterOptionsData, ThrowOnError>) => (options.client ?? client).get<DirectoryGetCatalogFilterOptionsResponses, DirectoryGetCatalogFilterOptionsErrors, ThrowOnError>({ url: '/directory/catalog-filter-options', ...options });
+
+/**
+ * Реклама и баннеры по слоту показа
+ *
+ * Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.
+ */
+export const advertisingListByPlacement = <ThrowOnError extends boolean = false>(options: Options<AdvertisingListByPlacementData, ThrowOnError>) => (options.client ?? client).get<AdvertisingListByPlacementResponses, AdvertisingListByPlacementErrors, ThrowOnError>({ url: '/advertisements', ...options });

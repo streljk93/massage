@@ -87,6 +87,49 @@ export class CatalogRepository {
   /**
    * Активная подкатегория по slug внутри активной большой категории с тем же slug.
    */
+  /**
+   * Подкатегории вертикали `majorSlug`, которые есть у мастеров витрины или у неудалённых организаций.
+   */
+  async findDirectoryListingServiceCategoryIdsForMajorSlug(
+    majorSlug: string,
+  ): Promise<string[]> {
+    const serviceCategoryUnderMajor: Prisma.ServiceCategoryWhereInput = {
+      deletedAt: null,
+      isActive: true,
+      majorServiceCategory: {
+        slug: majorSlug,
+        deletedAt: null,
+        isActive: true,
+      },
+    };
+
+    const [fromSpecialists, fromOrgs] = await Promise.all([
+      this.prisma.specialistServiceCategory.findMany({
+        where: {
+          specialist: { deletedAt: null, listedInDirectory: true },
+          serviceCategory: serviceCategoryUnderMajor,
+        },
+        select: { serviceCategoryId: true },
+        distinct: ['serviceCategoryId'],
+      }),
+      this.prisma.organizationServiceCategory.findMany({
+        where: {
+          organization: { deletedAt: null },
+          serviceCategory: serviceCategoryUnderMajor,
+        },
+        select: { serviceCategoryId: true },
+        distinct: ['serviceCategoryId'],
+      }),
+    ]);
+
+    return [
+      ...new Set([
+        ...fromSpecialists.map((r) => r.serviceCategoryId),
+        ...fromOrgs.map((r) => r.serviceCategoryId),
+      ]),
+    ];
+  }
+
   async findServiceCategoryByMajorAndCategorySlugs(
     majorSlug: string,
     categorySlug: string,

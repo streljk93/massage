@@ -1,10 +1,18 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  Param,
+  ParseBoolPipe,
+  Query,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -99,20 +107,31 @@ export class CatalogController {
     example: 'massage',
     description: 'Slug большой категории (MajorServiceCategory.slug)',
   })
+  @ApiQuery({
+    name: 'listedInDirectory',
+    required: false,
+    type: Boolean,
+    description:
+      'Если true — только подкатегории, которые есть у мастеров витрины или у организаций в этой вертикали.',
+  })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: catalogCategoriesResponseSchema })
   @ApiNotFoundResponse({ schema: catalogMajorCategoryNotFoundSchema })
   @ApiBadRequestResponse({
-    description: 'Неверный формат majorSlug или locale',
+    description:
+      'Неверный формат majorSlug, locale или listedInDirectory (ожидается boolean)',
   })
   async getCategoriesByMajorSlug(
     @Param(new ZodValidationPipe(majorSlugParamSchema))
     params: MajorSlugParam,
     @RequestLocale() locale: ApiLocale,
+    @Query('listedInDirectory', new DefaultValuePipe(false), ParseBoolPipe)
+    listedInDirectory: boolean,
   ): Promise<CatalogCategoriesResponseDto> {
     return this.catalogService.getServiceCategoriesByMajorSlug(
       params.majorSlug,
       locale,
+      { listedInDirectory },
     );
   }
 }

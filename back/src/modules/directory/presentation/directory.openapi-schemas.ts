@@ -88,8 +88,15 @@ export const specialistListItemSchema = {
       type: 'string',
       nullable: true,
       example: '123 Nguyen Trai, District 1',
+      description:
+        'Адрес текущей активной организации мастера (мастер сам выбирает место приёма).',
     },
-    city: { type: 'string', nullable: true, example: 'Ho Chi Minh City' },
+    city: {
+      type: 'string',
+      nullable: true,
+      example: 'Ho Chi Minh City',
+      description: 'Город активной организации мастера.',
+    },
     imageUrl: { type: 'string', nullable: true, format: 'uri' },
     imageAlt: { type: 'string', nullable: true },
     metaLine: { type: 'string', example: '~ 1 km | ул. Нгуен Тхай Хок' },
@@ -109,14 +116,31 @@ export const specialistListItemSchema = {
   },
 };
 
+const cursorPageMetaSchema = {
+  type: 'object',
+  required: ['nextCursor', 'hasMore'],
+  properties: {
+    nextCursor: {
+      type: 'string',
+      nullable: true,
+      description: 'Передать как `cursor` в следующем запросе, если `hasMore: true`.',
+    },
+    hasMore: {
+      type: 'boolean',
+      description: 'Есть ли ещё элементы после текущей страницы.',
+    },
+  },
+};
+
 export const specialistsListResponseSchema = {
   type: 'object',
-  required: ['specialists'],
+  required: ['specialists', 'cursorPage'],
   properties: {
     specialists: {
       type: 'array',
       items: specialistListItemSchema,
     },
+    cursorPage: cursorPageMetaSchema,
   },
 };
 
@@ -168,12 +192,13 @@ export const organizationListItemSchema = {
 
 export const organizationsListResponseSchema = {
   type: 'object',
-  required: ['organizations'],
+  required: ['organizations', 'cursorPage'],
   properties: {
     organizations: {
       type: 'array',
       items: organizationListItemSchema,
     },
+    cursorPage: cursorPageMetaSchema,
   },
 };
 

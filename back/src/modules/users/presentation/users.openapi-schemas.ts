@@ -27,3 +27,25 @@ export const patchMeRequestSchema = {
     },
   },
 };
+
+export const patchSpecialistActiveOrganizationRequestSchema = {
+  type: 'object',
+  required: ['organizationId'],
+  properties: {
+    organizationId: { type: 'string', format: 'uuid' },
+  },
+};
+
+export const patchSpecialistActiveOrganizationResponseSchema = {
+  type: 'object',
+  required: ['activeOrganizationId', 'cancelledBookingsCount'],
+  properties: {
+    activeOrganizationId: { type: 'string', format: 'uuid' },
+    cancelledBookingsCount: {
+      type: 'integer',
+      minimum: 0,
+      description:
+        'Сколько активных записей отменено на прежней организации (canceled_by_master).',
+    },
+  },
+};

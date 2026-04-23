@@ -1,4 +1,5 @@
 import type { ListingSlotGroupSeed } from '../domain/listing-slot-groups';
+import type { CursorPageMetaDto } from './cursor-page.dto';
 import type { DirectoryCategoryTagDto } from './directory-category-tag.dto';
 
 export type OrganizationListItemDto = {
@@ -26,4 +27,5 @@ export type OrganizationListItemDto = {
 
 export type OrganizationsListResponseDto = {
   organizations: OrganizationListItemDto[];
+  cursorPage: CursorPageMetaDto;
 };

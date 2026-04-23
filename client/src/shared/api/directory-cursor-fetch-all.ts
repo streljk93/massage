@@ -1,0 +1,82 @@
+import type { Client } from "./generated/sdk/client";
+import {
+  organizationsList,
+  specialistsList,
+} from "./generated/sdk";
+import type {
+  OrganizationsListResponse,
+  SpecialistsListResponse,
+} from "./generated/sdk/types.gen";
+import { CATALOG_MAJOR_CATEGORY_SLUG } from "../config/catalog-major-category";
+import { DIRECTORY_CURSOR_FETCH_CHUNK_MAX } from "../config/directory-cursor-pagination";
+import type { AppLocale } from "@/app/i18n/routing";
+
+async function fetchAllPaged<T extends { cursorPage: { hasMore: boolean; nextCursor: string | null } }>(
+  fetchPage: (cursor: string | undefined) => Promise<{ error: unknown; data?: T }>,
+  pickItems: (page: T) => unknown[],
+): Promise<unknown[]> {
+  const items: unknown[] = [];
+  let cursor: string | undefined;
+  for (;;) {
+    const res = await fetchPage(cursor);
+    if (res.error || !res.data) {
+      throw new Error("directory list page failed");
+    }
+    items.push(...pickItems(res.data));
+    if (!res.data.cursorPage.hasMore) {
+      break;
+    }
+    const next = res.data.cursorPage.nextCursor;
+    if (!next) {
+      break;
+    }
+    cursor = next;
+  }
+  return items;
+}
+
+/** Все страницы списка специалистов (для карты / домашней витрины). */
+export async function fetchAllSpecialistsPages(options: {
+  client: Client;
+  locale: AppLocale;
+  fetch?: typeof fetch;
+}): Promise<SpecialistsListResponse["specialists"]> {
+  const rows = await fetchAllPaged<SpecialistsListResponse>(
+    (cursor) =>
+      specialistsList({
+        client: options.client,
+        query: {
+          locale: options.locale,
+          majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+          limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
+          ...(cursor ? { cursor } : {}),
+        },
+        fetch: options.fetch,
+      }),
+    (p) => p.specialists,
+  );
+  return rows as SpecialistsListResponse["specialists"];
+}
+
+/** Все страницы списка организаций. */
+export async function fetchAllOrganizationsPages(options: {
+  client: Client;
+  locale: AppLocale;
+  fetch?: typeof fetch;
+}): Promise<OrganizationsListResponse["organizations"]> {
+  const rows = await fetchAllPaged<OrganizationsListResponse>(
+    (cursor) =>
+      organizationsList({
+        client: options.client,
+        query: {
+          locale: options.locale,
+          majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+          limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
+          ...(cursor ? { cursor } : {}),
+        },
+        fetch: options.fetch,
+      }),
+    (p) => p.organizations,
+  );
+  return rows as OrganizationsListResponse["organizations"];
+}

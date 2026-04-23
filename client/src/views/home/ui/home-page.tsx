@@ -12,9 +12,9 @@ import {
   advertisingListByPlacement,
   catalogGetCategoriesByMajorSlug,
   createServerSdkClient,
-  organizationsList,
+  fetchAllOrganizationsPages,
+  fetchAllSpecialistsPages,
   serverSdkFetchNoStore,
-  specialistsList,
   type CatalogGetCategoriesByMajorSlugResponse,
   type OrganizationsListResponse,
   type SpecialistsListResponse,
@@ -27,6 +27,7 @@ import {
   organizationCardSeedFromApi,
   specialistCardSeedFromApi,
 } from "@/widgets/home/lib/directory-cards-from-api";
+import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
@@ -85,7 +86,6 @@ function PromoSlide({
   );
 }
 
-const HOME_MAJOR_CATEGORY_SLUG = "massage" as const;
 /** Совпадает с `ADV_PLACEMENT_HOME_PROMO` в `back/prisma/seed-advertising.mjs`. */
 const HOME_PROMO_PLACEMENT = "home_promo" as const;
 
@@ -114,8 +114,8 @@ export async function HomePage() {
   if (sdkClient) {
     const { data, error } = await catalogGetCategoriesByMajorSlug({
       client: sdkClient,
-      path: { majorSlug: HOME_MAJOR_CATEGORY_SLUG },
-      query: { locale },
+      path: { majorSlug: CATALOG_MAJOR_CATEGORY_SLUG },
+      query: { locale, listedInDirectory: true },
     });
     if (!error && data) {
       catalog = data;
@@ -137,23 +137,24 @@ export async function HomePage() {
       }));
     }
 
-    const [specRes, orgRes] = await Promise.all([
-      specialistsList({
-        client: sdkClient,
-        query: { locale },
-        fetch: serverSdkFetchNoStore,
-      }),
-      organizationsList({
-        client: sdkClient,
-        query: { locale },
-        fetch: serverSdkFetchNoStore,
-      }),
-    ]);
-    if (!specRes.error && specRes.data) {
-      specialistsFromApi = specRes.data.specialists;
-    }
-    if (!orgRes.error && orgRes.data) {
-      organizationsFromApi = orgRes.data.organizations;
+    try {
+      const [specs, orgs] = await Promise.all([
+        fetchAllSpecialistsPages({
+          client: sdkClient,
+          locale,
+          fetch: serverSdkFetchNoStore,
+        }),
+        fetchAllOrganizationsPages({
+          client: sdkClient,
+          locale,
+          fetch: serverSdkFetchNoStore,
+        }),
+      ]);
+      specialistsFromApi = specs;
+      organizationsFromApi = orgs;
+    } catch {
+      specialistsFromApi = null;
+      organizationsFromApi = null;
     }
   }
 

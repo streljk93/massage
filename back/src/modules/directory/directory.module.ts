@@ -6,7 +6,11 @@ import { OrganizationsController } from './presentation/organizations.controller
 import { SpecialistsController } from './presentation/specialists.controller';
 
 @Module({
-  controllers: [SpecialistsController, OrganizationsController, DirectoryController],
+  controllers: [
+    SpecialistsController,
+    OrganizationsController,
+    DirectoryController,
+  ],
   providers: [DirectoryService, DirectoryRepository],
 })
 export class DirectoryModule {}

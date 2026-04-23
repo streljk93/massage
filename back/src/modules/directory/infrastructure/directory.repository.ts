@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
-import { LISTING_SLOT_WINDOW_MS } from '../../../common/availability/listing-slot-policy';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import {
+  organizationListFiltersWhere,
+  specialistListFiltersWhere,
+  type OrganizationListApiFilters,
+  type SpecialistListApiFilters,
+} from './directory-list-query-filters';
 
 const serviceCategoryWithLocales = {
   include: {
@@ -22,10 +27,21 @@ const directoryServiceInclude = {
   },
 } satisfies Prisma.ServiceFindManyArgs;
 
+const specialistActiveOrganizationInclude = {
+  select: {
+    addressLine: true,
+    city: true,
+    latitude: true,
+    longitude: true,
+    listingMetaLine: true,
+  },
+} as const;
+
 function specialistIncludeForOrgEmployment() {
   return {
     user: { select: { id: true, name: true } },
     services: directoryServiceInclude,
+    activeOrganization: specialistActiveOrganizationInclude,
   } satisfies Prisma.SpecialistInclude;
 }
 
@@ -35,6 +51,7 @@ function specialistListInclude() {
     serviceCategories: serviceCategoryWithLocales,
     /** Услуги каталога с `specialistId` = этот мастер. */
     services: directoryServiceInclude,
+    activeOrganization: specialistActiveOrganizationInclude,
   } satisfies Prisma.SpecialistInclude;
 }
 
@@ -86,12 +103,13 @@ export class DirectoryRepository {
   findActiveBookingsForListingOccupancy(
     specialistIds: string[],
     now: Date,
+    previewWindowMs: number,
   ): Promise<{ specialistId: string; startsAt: Date; endsAt: Date }[]> {
     if (specialistIds.length === 0) {
       return Promise.resolve([]);
     }
     const windowStart = subHours(now, 1);
-    const windowEnd = addMilliseconds(now, LISTING_SLOT_WINDOW_MS);
+    const windowEnd = addMilliseconds(now, previewWindowMs);
     return this.prisma.booking.findMany({
       where: {
         specialistId: { in: specialistIds },
@@ -104,19 +122,68 @@ export class DirectoryRepository {
     });
   }
 
-  findAllSpecialists(): Promise<SpecialistListRow[]> {
+  findSpecialistsPage(args: {
+    take: number;
+    cursor: { userName: string; id: string } | null;
+    filters: SpecialistListApiFilters | null;
+  }): Promise<SpecialistListRow[]> {
+    const andParts: Prisma.SpecialistWhereInput[] = [
+      { deletedAt: null, listedInDirectory: true },
+    ];
+    if (args.cursor != null) {
+      andParts.push({
+        OR: [
+          { user: { name: { gt: args.cursor.userName } } },
+          {
+            AND: [
+              { user: { name: args.cursor.userName } },
+              { id: { gt: args.cursor.id } },
+            ],
+          },
+        ],
+      });
+    }
+    if (args.filters != null) {
+      const fw = specialistListFiltersWhere(args.filters);
+      if (Object.keys(fw).length > 0) {
+        andParts.push(fw);
+      }
+    }
     return this.prisma.specialist.findMany({
-      where: { deletedAt: null, listedInDirectory: true },
+      where: { AND: andParts },
+      take: args.take,
       include: specialistListInclude(),
-      orderBy: { user: { name: 'asc' } },
+      orderBy: [{ user: { name: 'asc' } }, { id: 'asc' }],
     });
   }
 
-  findAllOrganizations(): Promise<OrganizationListRow[]> {
+  findOrganizationsPage(args: {
+    take: number;
+    cursor: { name: string; id: string } | null;
+    filters: OrganizationListApiFilters | null;
+  }): Promise<OrganizationListRow[]> {
+    const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
+    if (args.cursor != null) {
+      andParts.push({
+        OR: [
+          { name: { gt: args.cursor.name } },
+          {
+            AND: [{ name: args.cursor.name }, { id: { gt: args.cursor.id } }],
+          },
+        ],
+      });
+    }
+    if (args.filters != null) {
+      const fw = organizationListFiltersWhere(args.filters);
+      if (Object.keys(fw).length > 0) {
+        andParts.push(fw);
+      }
+    }
     return this.prisma.organization.findMany({
-      where: { deletedAt: null },
+      where: { AND: andParts },
+      take: args.take,
       include: organizationListInclude(),
-      orderBy: { name: 'asc' },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
     });
   }
 
@@ -136,29 +203,25 @@ export class DirectoryRepository {
 
   /** Подкатегории, которые есть у мастеров, показываемых в каталоге. */
   findDistinctServiceCategoryIdsForListingSpecialists(): Promise<string[]> {
-    return this.prisma
-      .$queryRaw<{ serviceCategoryId: string }[]>`
+    return this.prisma.$queryRaw<{ serviceCategoryId: string }[]>`
         SELECT DISTINCT ssc."serviceCategoryId"
         FROM "SpecialistServiceCategory" ssc
         INNER JOIN "Specialist" s ON s.id = ssc."specialistId"
         WHERE s."listedInDirectory" = true
           AND s."deletedAt" IS NULL
-      `
-      .then((rows) => rows.map((r) => r.serviceCategoryId));
+      `.then((rows) => rows.map((r) => r.serviceCategoryId));
   }
 
   /**
    * Подкатегории, проставленные у неудалённых организаций (витрина салонов).
    */
   findDistinctServiceCategoryIdsForListingOrganizations(): Promise<string[]> {
-    return this.prisma
-      .$queryRaw<{ serviceCategoryId: string }[]>`
+    return this.prisma.$queryRaw<{ serviceCategoryId: string }[]>`
         SELECT DISTINCT osc."serviceCategoryId"
         FROM "OrganizationServiceCategory" osc
         INNER JOIN "Organization" o ON o.id = osc."organizationId"
         WHERE o."deletedAt" IS NULL
-      `
-      .then((rows) => rows.map((r) => r.serviceCategoryId));
+      `.then((rows) => rows.map((r) => r.serviceCategoryId));
   }
 
   findServiceCategoriesByIds(ids: string[]) {
@@ -204,7 +267,9 @@ export class DirectoryRepository {
     min: number | null;
     max: number | null;
   }> {
-    const rows = await this.prisma.$queryRaw<{ min: number | null; max: number | null }[]>`
+    const rows = await this.prisma.$queryRaw<
+      { min: number | null; max: number | null }[]
+    >`
       SELECT
         (MIN(po."priceAmount"))::int AS "min",
         (MAX(po."priceAmount"))::int AS "max"

@@ -1,4 +1,5 @@
 import type { ListingSlotGroupSeed } from '../domain/listing-slot-groups';
+import type { CursorPageMetaDto } from './cursor-page.dto';
 import type { DirectoryCategoryTagDto } from './directory-category-tag.dto';
 
 /** Услуги мастера из каталога (`Service` + `ServicePriceOption` по длительности). */
@@ -22,10 +23,10 @@ export type SpecialistListItemDto = {
   /** Как в моке карточки: то же, что `ratingAverage`. */
   rating: number;
   reviewsCount: number;
-  /** WGS84 — для карты / расстояний. */
+  /** WGS84 — для карты / расстояний (от текущей организации мастера, если задана). */
   latitude: number | null;
   longitude: number | null;
-  /** Адрес приёма (как задал мастер). */
+  /** Адрес приёма с точки зрения клиента — у текущей активной организации мастера. */
   addressLine: string | null;
   city: string | null;
   imageUrl: string | null;
@@ -40,4 +41,5 @@ export type SpecialistListItemDto = {
 
 export type SpecialistsListResponseDto = {
   specialists: SpecialistListItemDto[];
+  cursorPage: CursorPageMetaDto;
 };

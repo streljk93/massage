@@ -141,6 +141,7 @@ export class BookingsService {
 
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: body.specialistId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
     });
     if (!specialist) {
       throw new NotFoundException({
@@ -204,15 +205,18 @@ export class BookingsService {
       });
     }
 
-    const employment =
-      await this.prisma.specialistOrganizationEmployment.findFirst({
-        where: {
-          specialistId: body.specialistId,
-          isActive: true,
-        },
-        orderBy: { startDate: 'desc' },
-      });
-    const organizationId = employment?.organizationId ?? null;
+    let organizationId = specialist.activeOrganizationId;
+    if (!organizationId) {
+      const employment =
+        await this.prisma.specialistOrganizationEmployment.findFirst({
+          where: {
+            specialistId: body.specialistId,
+            isActive: true,
+          },
+          orderBy: { startDate: 'desc' },
+        });
+      organizationId = employment?.organizationId ?? null;
+    }
 
     let graceMinutes = DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES;
     if (organizationId) {
@@ -295,6 +299,7 @@ export class BookingsService {
         endsAt: b.endsAt.toISOString(),
         pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
         cancelReason: b.cancelReason,
+        cancellationComment: b.cancellationComment,
       })),
     };
   }

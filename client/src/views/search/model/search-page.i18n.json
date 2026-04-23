@@ -12,7 +12,8 @@
         "ariaSpecialist": "Search specialist",
         "filtersAria": "Filters",
         "mapAria": "Map",
-        "seeAll": "See all"
+        "seeAll": "See all",
+        "listLoadError": "Couldn’t load results. Pull to refresh or try again later."
       }
     },
     "vi": {
@@ -27,7 +28,8 @@
         "ariaSpecialist": "Tìm chuyên viên",
         "filtersAria": "Bộ lọc",
         "mapAria": "Bản đồ",
-        "seeAll": "Xem tất cả"
+        "seeAll": "Xem tất cả",
+        "listLoadError": "Không tải được kết quả. Thử làm mới hoặc thử lại sau."
       }
     },
     "ru": {
@@ -42,7 +44,8 @@
         "ariaSpecialist": "Поиск специалиста",
         "filtersAria": "Фильтры",
         "mapAria": "Карта",
-        "seeAll": "Смотреть все"
+        "seeAll": "Смотреть все",
+        "listLoadError": "Не удалось загрузить список. Обновите страницу или попробуйте позже."
       }
     }
   }

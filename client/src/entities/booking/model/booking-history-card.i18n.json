@@ -3,19 +3,22 @@
     "en": {
       "bookingHistory": {
         "reviewMe": "Review me",
-        "statusUnknown": "Status unavailable"
+        "statusUnknown": "Status unavailable",
+        "systemMasterLeftWorkplace": "The specialist is no longer available at this address. The booking was cancelled automatically."
       }
     },
     "vi": {
       "bookingHistory": {
         "reviewMe": "Đánh giá tôi",
-        "statusUnknown": "Không xác định trạng thái"
+        "statusUnknown": "Không xác định trạng thái",
+        "systemMasterLeftWorkplace": "Chuyên gia không còn làm việc tại địa chỉ này. Lịch hẹn đã được hủy tự động."
       }
     },
     "ru": {
       "bookingHistory": {
         "reviewMe": "Оцените визит",
-        "statusUnknown": "Статус недоступен"
+        "statusUnknown": "Статус недоступен",
+        "systemMasterLeftWorkplace": "Мастер больше не ведёт приём по этому адресу. Запись отменена автоматически."
       }
     }
   }

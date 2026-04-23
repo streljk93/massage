@@ -363,6 +363,173 @@ export type UsersPatchMeResponses = {
 
 export type UsersPatchMeResponse = UsersPatchMeResponses[keyof UsersPatchMeResponses];
 
+export type UsersPatchSpecialistActiveOrganizationData = {
+    body: {
+        organizationId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/active-organization';
+};
+
+export type UsersPatchSpecialistActiveOrganizationErrors = {
+    /**
+     * Нет активного членства в организации
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста или организация не найдена
+     */
+    404: unknown;
+};
+
+export type UsersPatchSpecialistActiveOrganizationResponses = {
+    200: {
+        activeOrganizationId: string;
+        /**
+         * Сколько активных записей отменено на прежней организации (canceled_by_master).
+         */
+        cancelledBookingsCount: number;
+    };
+};
+
+export type UsersPatchSpecialistActiveOrganizationResponse = UsersPatchSpecialistActiveOrganizationResponses[keyof UsersPatchSpecialistActiveOrganizationResponses];
+
+export type BookingsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/bookings';
+};
+
+export type BookingsListErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type BookingsListResponses = {
+    200: {
+        bookings: Array<{
+            id: string;
+            status: string;
+            /**
+             * Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`).
+             */
+            statusLabel: string;
+            specialistId: string;
+            specialistName: string;
+            specialistImageUrl?: string | null;
+            serviceName: string;
+            amount: number | null;
+            currency: string;
+            startsAt: string;
+            endsAt: string;
+            pendingExpiresAt?: string | null;
+            /**
+             * Код причины, канонический англоязычный авто-текст из БД или пояснение; см. доменные константы бронирований.
+             */
+            cancelReason?: string | null;
+            /**
+             * Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым.
+             */
+            cancellationComment?: string | null;
+        }>;
+    };
+};
+
+export type BookingsListResponse = BookingsListResponses[keyof BookingsListResponses];
+
+export type BookingsCreateData = {
+    body: {
+        specialistId: string;
+        serviceId: string;
+        durationMinutes: number;
+        /**
+         * ISO 8601
+         */
+        startsAt: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/bookings';
+};
+
+export type BookingsCreateErrors = {
+    /**
+     * Невалидное тело или слот в прошлом
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*
+     */
+    429: unknown;
+};
+
+export type BookingsCreateResponses = {
+    201: {
+        id: string;
+        status: 'pending';
+        startsAt: string;
+        endsAt: string;
+        pendingExpiresAt?: string | null;
+    };
+};
+
+export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
+
+export type BookingsCancelData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/bookings/{id}/cancel';
+};
+
+export type BookingsCancelErrors = {
+    /**
+     * Нельзя отменить в текущем статусе
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Запись не найдена
+     */
+    404: unknown;
+};
+
+export type BookingsCancelResponses = {
+    200: {
+        id: string;
+        status: 'canceled_by_client';
+    };
+};
+
+export type BookingsCancelResponse = BookingsCancelResponses[keyof BookingsCancelResponses];
+
 export type CatalogGetMajorCategoriesData = {
     body?: never;
     path?: never;
@@ -463,13 +630,17 @@ export type CatalogGetCategoriesByMajorSlugData = {
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
+        /**
+         * Если true — только подкатегории, которые есть у мастеров витрины или у организаций в этой вертикали.
+         */
+        listedInDirectory?: boolean;
     };
     url: '/catalog/major-categories/{majorSlug}/categories';
 };
 
 export type CatalogGetCategoriesByMajorSlugErrors = {
     /**
-     * Неверный формат majorSlug или locale
+     * Неверный формат majorSlug, locale или listedInDirectory (ожидается boolean)
      */
     400: unknown;
     404: {
@@ -506,6 +677,34 @@ export type SpecialistsListData = {
     path?: never;
     query?: {
         /**
+         * Верхняя граница цены (VND).
+         */
+        priceMaxVnd?: number;
+        /**
+         * Нижняя граница цены (VND) по личной услуге мастера; в паре с priceMaxVnd или отдельно.
+         */
+        priceMinVnd?: number;
+        /**
+         * Slug подкатегорий каталога через запятую (мастер должен отмечен хотя бы одну).
+         */
+        categories?: unknown;
+        /**
+         * Поиск по имени, био, строкам витрины, адресу активной организации, названиям услуг и категориям.
+         */
+        q?: unknown;
+        /**
+         * Slug большой категории (`MajorServiceCategory.slug`), напр. massage — ограничить вертикаль каталога.
+         */
+        majorSlug?: unknown;
+        /**
+         * Размер страницы (1–100, по умолчанию 20).
+         */
+        limit?: number;
+        /**
+         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.
+         */
+        cursor?: unknown;
+        /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
@@ -515,7 +714,7 @@ export type SpecialistsListData = {
 
 export type SpecialistsListErrors = {
     /**
-     * Неверный формат locale
+     * Неверный формат locale, limit, cursor, majorSlug, categories или цены VND
      */
     400: unknown;
 };
@@ -533,7 +732,13 @@ export type SpecialistsListResponses = {
             reviewsCount: number;
             latitude: number | null;
             longitude: number | null;
+            /**
+             * Адрес текущей активной организации мастера (мастер сам выбирает место приёма).
+             */
             addressLine?: string | null;
+            /**
+             * Город активной организации мастера.
+             */
             city?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
@@ -561,6 +766,16 @@ export type SpecialistsListResponses = {
                 priceVndByDuration: Array<number>;
             }>;
         }>;
+        cursorPage: {
+            /**
+             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
+             */
+            nextCursor: string | null;
+            /**
+             * Есть ли ещё элементы после текущей страницы.
+             */
+            hasMore: boolean;
+        };
     };
 };
 
@@ -601,7 +816,13 @@ export type SpecialistsGetByIdResponses = {
         reviewsCount: number;
         latitude: number | null;
         longitude: number | null;
+        /**
+         * Адрес текущей активной организации мастера (мастер сам выбирает место приёма).
+         */
         addressLine?: string | null;
+        /**
+         * Город активной организации мастера.
+         */
         city?: string | null;
         imageUrl?: string | null;
         imageAlt?: string | null;
@@ -638,6 +859,26 @@ export type OrganizationsListData = {
     path?: never;
     query?: {
         /**
+         * Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).
+         */
+        categories?: unknown;
+        /**
+         * Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.
+         */
+        q?: unknown;
+        /**
+         * Slug большой категории (`MajorServiceCategory.slug`), напр. massage.
+         */
+        majorSlug?: unknown;
+        /**
+         * Размер страницы (1–100, по умолчанию 20).
+         */
+        limit?: number;
+        /**
+         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.
+         */
+        cursor?: unknown;
+        /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
@@ -647,7 +888,7 @@ export type OrganizationsListData = {
 
 export type OrganizationsListErrors = {
     /**
-     * Неверный формат locale
+     * Неверный формат locale, limit, cursor, majorSlug или categories
      */
     400: unknown;
 };
@@ -684,6 +925,16 @@ export type OrganizationsListResponses = {
                 times: Array<string>;
             }>;
         }>;
+        cursorPage: {
+            /**
+             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
+             */
+            nextCursor: string | null;
+            /**
+             * Есть ли ещё элементы после текущей страницы.
+             */
+            hasMore: boolean;
+        };
     };
 };
 
@@ -843,127 +1094,3 @@ export type AdvertisingListByPlacementResponses = {
 };
 
 export type AdvertisingListByPlacementResponse = AdvertisingListByPlacementResponses[keyof AdvertisingListByPlacementResponses];
-
-export type BookingsListData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
-         */
-        locale?: 'en' | 'vi' | 'ru';
-    };
-    url: '/bookings';
-};
-
-export type BookingsListErrors = {
-    /**
-     * Нет access token
-     */
-    401: unknown;
-};
-
-export type BookingsListResponses = {
-    200: {
-        bookings: Array<{
-            id: string;
-            status: string;
-            /**
-             * Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`).
-             */
-            statusLabel: string;
-            specialistId: string;
-            specialistName: string;
-            specialistImageUrl?: string | null;
-            serviceName: string;
-            amount: number | null;
-            currency: string;
-            startsAt: string;
-            endsAt: string;
-            pendingExpiresAt?: string | null;
-            cancelReason?: string | null;
-        }>;
-    };
-};
-
-export type BookingsListResponse = BookingsListResponses[keyof BookingsListResponses];
-
-export type BookingsCreateData = {
-    body: {
-        specialistId: string;
-        serviceId: string;
-        durationMinutes: number;
-        /**
-         * ISO 8601
-         */
-        startsAt: string;
-    };
-    path?: never;
-    query?: {
-        /**
-         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
-         */
-        locale?: 'en' | 'vi' | 'ru';
-    };
-    url: '/bookings';
-};
-
-export type BookingsCreateErrors = {
-    /**
-     * Невалидное тело или слот в прошлом
-     */
-    400: unknown;
-    /**
-     * Нет access token
-     */
-    401: unknown;
-    /**
-     * Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*
-     */
-    429: unknown;
-};
-
-export type BookingsCreateResponses = {
-    201: {
-        id: string;
-        status: 'pending';
-        startsAt: string;
-        endsAt: string;
-        pendingExpiresAt?: string | null;
-    };
-};
-
-export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
-
-export type BookingsCancelData = {
-    body?: never;
-    path: {
-        id: unknown;
-    };
-    query?: never;
-    url: '/bookings/{id}/cancel';
-};
-
-export type BookingsCancelErrors = {
-    /**
-     * Нельзя отменить в текущем статусе
-     */
-    400: unknown;
-    /**
-     * Нет access token
-     */
-    401: unknown;
-    /**
-     * Запись не найдена
-     */
-    404: unknown;
-};
-
-export type BookingsCancelResponses = {
-    200: {
-        id: string;
-        status: 'canceled_by_client';
-    };
-};
-
-export type BookingsCancelResponse = BookingsCancelResponses[keyof BookingsCancelResponses];

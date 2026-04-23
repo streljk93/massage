@@ -42,13 +42,6 @@ const ORG_SLUG = "demo-salon-seed";
 /** Phú Quốc, Dương Đông — демо на острове (карта / адрес). */
 const ORG_LAT = 10.216_5;
 const ORG_LNG = 103.963_5;
-/** Рядом с салоном. */
-const OWNER_SPEC_LAT = 10.215_2;
-const OWNER_SPEC_LNG = 103.962_8;
-/** Вторая точка в Dương Đông. */
-const WORKER_SPEC_LAT = 10.223_1;
-const WORKER_SPEC_LNG = 103.971_4;
-
 /**
  * Вторая строка карточки из выбранных подкатегорий (канонический shortName в БД = en).
  * @param {{ shortName: string }[]} cats
@@ -217,10 +210,6 @@ export async function seedDemoSpecialists(prisma) {
       userId: ownerUser.id,
       bio: "Владелец демо-салона, массажист.",
       experienceYears: 10,
-      latitude: OWNER_SPEC_LAT,
-      longitude: OWNER_SPEC_LNG,
-      addressLine: "118 Tran Hung Dao, Duong Dong",
-      city: "Phú Quốc",
       imageUrl:
         "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
@@ -231,10 +220,6 @@ export async function seedDemoSpecialists(prisma) {
     update: {
       bio: "Владелец демо-салона, массажист.",
       experienceYears: 10,
-      latitude: OWNER_SPEC_LAT,
-      longitude: OWNER_SPEC_LNG,
-      addressLine: "118 Tran Hung Dao, Duong Dong",
-      city: "Phú Quốc",
       imageUrl:
         "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
@@ -250,10 +235,6 @@ export async function seedDemoSpecialists(prisma) {
       userId: workerUser.id,
       bio: "Мастер салона (сотрудник).",
       experienceYears: 5,
-      latitude: WORKER_SPEC_LAT,
-      longitude: WORKER_SPEC_LNG,
-      addressLine: "45 Le Loi, Duong Dong",
-      city: "Phú Quốc",
       imageUrl:
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
       listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
@@ -264,10 +245,6 @@ export async function seedDemoSpecialists(prisma) {
     update: {
       bio: "Мастер салона (сотрудник).",
       experienceYears: 5,
-      latitude: WORKER_SPEC_LAT,
-      longitude: WORKER_SPEC_LNG,
-      addressLine: "45 Le Loi, Duong Dong",
-      city: "Phú Quốc",
       imageUrl:
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
       listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
@@ -328,6 +305,15 @@ export async function seedDemoSpecialists(prisma) {
     org.id,
     OrganizationMembershipRole.specialist,
   );
+
+  await prisma.specialist.update({
+    where: { id: ownerSpecialist.id },
+    data: { activeOrganizationId: org.id },
+  });
+  await prisma.specialist.update({
+    where: { id: workerSpecialist.id },
+    data: { activeOrganizationId: org.id },
+  });
 
   const massageMajor = await prisma.majorServiceCategory.findUnique({
     where: { slug: "massage" },
@@ -857,18 +843,12 @@ async function topUpOriginalSalon(prisma, ctx) {
       },
     });
 
-    const lat = 10.22 + specIndex * 0.004;
-    const lng = 103.965 + specIndex * 0.003;
     const specialist = await prisma.specialist.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
         bio: "Мастер демо-салона (добавлен сидом).",
         experienceYears: 3 + specIndex,
-        latitude: lat,
-        longitude: lng,
-        addressLine: "Duong Dong",
-        city: "Phú Quốc",
         imageUrl: avatarForSeed(specIndex + 5).replace("w=128", "w=200"),
         listingMetaLine: "~ near center | Phu Quoc",
         listingServicesLine: null,
@@ -878,10 +858,6 @@ async function topUpOriginalSalon(prisma, ctx) {
       update: {
         listedInDirectory: true,
         listingSlotGroups: LISTING_SLOTS_DEFAULT,
-        latitude: lat,
-        longitude: lng,
-        city: "Phú Quốc",
-        addressLine: "Duong Dong",
         listingMetaLine: "Dương Đông · Phú Quốc",
       },
     });
@@ -892,6 +868,11 @@ async function topUpOriginalSalon(prisma, ctx) {
       org.id,
       OrganizationMembershipRole.specialist,
     );
+
+    await prisma.specialist.update({
+      where: { id: specialist.id },
+      data: { activeOrganizationId: org.id },
+    });
 
     const pick = ["relaxing", "back", "neck"]
       .map((s) => ctx.bySlug[s])
@@ -1002,18 +983,12 @@ async function upsertFullSalon(prisma, args) {
     },
   });
 
-  const ownerSpecLat = def.orgLat + 0.002;
-  const ownerSpecLng = def.orgLng + 0.002;
   const ownerSpecialist = await prisma.specialist.upsert({
     where: { userId: ownerUser.id },
     create: {
       userId: ownerUser.id,
       bio: "Владелец салона, ведёт приём.",
       experienceYears: 12,
-      latitude: ownerSpecLat,
-      longitude: ownerSpecLng,
-      addressLine: def.addressLine,
-      city: def.city,
       imageUrl: avatarForSeed(seedOffset + 1).replace("w=128", "w=200"),
       listingMetaLine: def.city,
       listingServicesLine: null,
@@ -1023,10 +998,6 @@ async function upsertFullSalon(prisma, args) {
     update: {
       listedInDirectory: false,
       listingSlotGroups: LISTING_SLOTS_DEFAULT,
-      latitude: ownerSpecLat,
-      longitude: ownerSpecLng,
-      city: def.city,
-      addressLine: def.addressLine,
       listingMetaLine: def.city,
     },
   });
@@ -1090,18 +1061,12 @@ async function upsertFullSalon(prisma, args) {
       },
     });
 
-    const wlat = def.orgLat + w * 0.003;
-    const wlng = def.orgLng - w * 0.002;
     const specialist = await prisma.specialist.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
         bio: `Мастер салона «${def.name}».`,
         experienceYears: 4 + w,
-        latitude: wlat,
-        longitude: wlng,
-        addressLine: def.addressLine,
-        city: def.city,
         imageUrl: avatarForSeed(seedOffset + w + 20).replace("w=128", "w=200"),
         listingMetaLine: def.city,
         listingServicesLine: null,
@@ -1111,10 +1076,6 @@ async function upsertFullSalon(prisma, args) {
       update: {
         listedInDirectory: true,
         listingSlotGroups: LISTING_SLOTS_DEFAULT,
-        latitude: wlat,
-        longitude: wlng,
-        city: def.city,
-        addressLine: def.addressLine,
         listingMetaLine: def.city,
       },
     });
@@ -1155,6 +1116,13 @@ async function upsertFullSalon(prisma, args) {
   });
 
   const allSpecs = [ownerSpecialist, ...workerSpecs];
+  for (const spec of allSpecs) {
+    await prisma.specialist.update({
+      where: { id: spec.id },
+      data: { activeOrganizationId: org.id },
+    });
+  }
+
   const categoryRot = ["sports", "relaxing", "neck", "back", "thai"];
 
   for (let i = 0; i < allSpecs.length; i++) {

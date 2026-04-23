@@ -37,6 +37,7 @@ import {
   bookingIsNewTab,
   mapApiStatusToListCard,
 } from "../lib/booking-api-to-ui";
+import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
 
 type BookingsTab = "new" | "history";
 
@@ -56,6 +57,7 @@ type ApiBooking = {
   endsAt: string;
   pendingExpiresAt?: string | null;
   cancelReason?: string | null;
+  cancellationComment?: string | null;
   statusLabel: string;
 };
 
@@ -70,6 +72,8 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 
 export function BookingsPage() {
   const t = useTranslations("bookings");
+  const tBookingHistory = useTranslations("bookingHistory");
+  const tBookingList = useTranslations("bookingList");
   const tRoot = useTranslations();
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
@@ -291,6 +295,14 @@ export function BookingsPage() {
             })
           : row.serviceName;
 
+      const systemNote = bookingHistorySystemNote(
+        row.status,
+        row.cancelReason,
+        row.cancellationComment,
+        (key) => tBookingHistory(key),
+        (key) => tBookingList(key),
+      );
+
       return {
         id: row.id,
         providerName: row.specialistName,
@@ -301,9 +313,10 @@ export function BookingsPage() {
         specialistProfileHref: `/specialists/${row.specialistId}`,
         dateTagsMuted: bookingHistoryDateTagsMuted(row.status),
         statusLabel: row.statusLabel,
+        systemNote,
       };
     });
-  }, [format, historyRows, tRoot]);
+  }, [format, historyRows, tBookingHistory, tBookingList, tRoot]);
 
   const headerName =
     session?.user?.name?.trim() ||
@@ -440,6 +453,7 @@ export function BookingsPage() {
                     avatarSrc={row.avatarSrc}
                     specialistProfileHref={row.specialistProfileHref}
                     dateTagsMuted={row.dateTagsMuted}
+                    systemNote={row.systemNote}
                     reviewed={false}
                   />
                 ))

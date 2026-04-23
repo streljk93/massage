@@ -15,5 +15,6 @@ import { BookingsController } from './presentation/bookings.controller';
     BookingStatusLocaleRepository,
     BookingsSchedulerService,
   ],
+  exports: [BookingsRepository],
 })
 export class BookingsModule {}

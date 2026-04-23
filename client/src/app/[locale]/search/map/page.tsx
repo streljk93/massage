@@ -3,9 +3,9 @@ import { getLocale } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
   createServerSdkClient,
-  organizationsList,
+  fetchAllOrganizationsPages,
+  fetchAllSpecialistsPages,
   serverSdkFetchNoStore,
-  specialistsList,
 } from "@/shared/api";
 import { SearchMapPageClient } from "@/views/search";
 
@@ -15,23 +15,24 @@ export default async function Page() {
   let initialOrganizations = null;
   let initialSpecialists = null;
   if (sdkClient) {
-    const [orgRes, specRes] = await Promise.all([
-      organizationsList({
-        client: sdkClient,
-        query: { locale },
-        fetch: serverSdkFetchNoStore,
-      }),
-      specialistsList({
-        client: sdkClient,
-        query: { locale },
-        fetch: serverSdkFetchNoStore,
-      }),
-    ]);
-    if (!orgRes.error && orgRes.data) {
-      initialOrganizations = orgRes.data.organizations;
-    }
-    if (!specRes.error && specRes.data) {
-      initialSpecialists = specRes.data.specialists;
+    try {
+      const [orgs, specs] = await Promise.all([
+        fetchAllOrganizationsPages({
+          client: sdkClient,
+          locale,
+          fetch: serverSdkFetchNoStore,
+        }),
+        fetchAllSpecialistsPages({
+          client: sdkClient,
+          locale,
+          fetch: serverSdkFetchNoStore,
+        }),
+      ]);
+      initialOrganizations = orgs;
+      initialSpecialists = specs;
+    } catch {
+      initialOrganizations = null;
+      initialSpecialists = null;
     }
   }
 

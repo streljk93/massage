@@ -32,6 +32,11 @@ import {
   searchTabQueryValue,
   type SearchTab,
 } from "../lib/search-tab";
+import {
+  applySearchUrlPatch,
+  buildSearchQueryString,
+  parseSearchUrlFilters,
+} from "../lib/search-url-filters";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -252,9 +257,20 @@ export function SearchMapPageClient({
 
   const onTabChange = useCallback(
     (id: SearchTab) => {
-      router.replace(`/search/map?tab=${searchTabQueryValue(id)}`);
+      const current = parseSearchUrlFilters(
+        new URLSearchParams(searchParams.toString()),
+      );
+      const next = applySearchUrlPatch(current, {
+        tab: id,
+        orgCategorySlugs: [],
+        specCategorySlugs: [],
+        priceMinVnd: null,
+        priceMaxVnd: null,
+      });
+      const qs = buildSearchQueryString(next);
+      router.replace(qs ? `/search/map?${qs}` : "/search/map");
     },
-    [router],
+    [router, searchParams],
   );
 
   return (
