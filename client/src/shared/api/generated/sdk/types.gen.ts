@@ -4,6 +4,46 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}/v1` | (string & {});
 };
 
+/**
+ * Новый статус брони (доменный `BookingStatus`)
+ */
+export type DevBookingStatusValue = 'pending' | 'expired' | 'reject_by_master' | 'reject_by_client' | 'confirmed' | 'canceled_by_master' | 'canceled_by_client' | 'no_show_by_client' | 'no_show_by_master' | 'in_progress' | 'done';
+
+export type SetTestBookingStatusSwaggerDto = {
+    /**
+     * Идентификатор брони (`Booking.id`)
+     */
+    bookingId: string;
+    /**
+     * Новый статус брони (доменный `BookingStatus`)
+     */
+    status: DevBookingStatusValue;
+    /**
+     * Текст в `BookingStatusHistory.reason`
+     */
+    reason?: string;
+    /**
+     * Для отменоподобных статусов — `Booking.cancelReason`
+     */
+    cancelReason?: string;
+    /**
+     * Для отмен — `Booking.cancellationComment`
+     */
+    cancellationComment?: string;
+};
+
+export type SetTestBookingStatusResponseSwaggerDto = {
+    id: string;
+    /**
+     * Статус после смены
+     */
+    status: string;
+    /**
+     * Статус до смены
+     */
+    previousStatus: string;
+};
+
 export type HealthGetHealthData = {
     body?: never;
     path?: never;
@@ -407,11 +447,19 @@ export type BookingsListData = {
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
         locale?: 'en' | 'vi' | 'ru';
+        /**
+         * Фильтр по кодам статуса в БД (несколько раз или `status[]=`). Клиенты со скобками — поддерживаются. Без параметра — все записи клиента.
+         */
+        status?: Array<'pending' | 'expired' | 'reject_by_master' | 'reject_by_client' | 'confirmed' | 'canceled_by_master' | 'canceled_by_client' | 'no_show_by_client' | 'no_show_by_master' | 'in_progress' | 'done'>;
     };
     url: '/bookings';
 };
 
 export type BookingsListErrors = {
+    /**
+     * Невалидный query (в т.ч. неизвестный status)
+     */
+    400: unknown;
     /**
      * Нет access token
      */
@@ -422,7 +470,10 @@ export type BookingsListResponses = {
     200: {
         bookings: Array<{
             id: string;
-            status: string;
+            /**
+             * Код статуса (`BookingStatus` в БД).
+             */
+            status: 'pending' | 'expired' | 'reject_by_master' | 'reject_by_client' | 'confirmed' | 'canceled_by_master' | 'canceled_by_client' | 'no_show_by_client' | 'no_show_by_master' | 'in_progress' | 'done';
             /**
              * Человекочитаемый статус на выбранной локали (см. `BookingStatusLocale`).
              */
@@ -498,7 +549,16 @@ export type BookingsCreateResponses = {
 export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
 
 export type BookingsCancelData = {
-    body?: never;
+    body: {
+        /**
+         * Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`.
+         */
+        cancelReason?: 'client_schedule_changed' | 'client_found_alternative' | 'client_health_personal' | 'client_price_or_service' | 'client_other';
+        /**
+         * Для `pending` не передаётся. Иначе опционально, кроме случая `cancelReason` = `client_other`.
+         */
+        cancellationComment?: string;
+    };
     path: {
         id: unknown;
     };
@@ -508,7 +568,7 @@ export type BookingsCancelData = {
 
 export type BookingsCancelErrors = {
     /**
-     * Нельзя отменить в текущем статусе
+     * Нельзя отменить в текущем статусе или невалидное тело
      */
     400: unknown;
     /**
@@ -524,7 +584,10 @@ export type BookingsCancelErrors = {
 export type BookingsCancelResponses = {
     200: {
         id: string;
-        status: 'canceled_by_client';
+        /**
+         * `reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`.
+         */
+        status: 'canceled_by_client' | 'reject_by_client';
     };
 };
 
@@ -1098,3 +1161,23 @@ export type AdvertisingListByPlacementResponses = {
 };
 
 export type AdvertisingListByPlacementResponse = AdvertisingListByPlacementResponses[keyof AdvertisingListByPlacementResponses];
+
+export type DevBookingsSetStatusData = {
+    body: SetTestBookingStatusSwaggerDto;
+    path?: never;
+    query?: never;
+    url: '/dev/bookings/set-status';
+};
+
+export type DevBookingsSetStatusErrors = {
+    /**
+     * Ручка выключена или бронь с таким id не найдена
+     */
+    404: unknown;
+};
+
+export type DevBookingsSetStatusResponses = {
+    200: SetTestBookingStatusResponseSwaggerDto;
+};
+
+export type DevBookingsSetStatusResponse = DevBookingsSetStatusResponses[keyof DevBookingsSetStatusResponses];

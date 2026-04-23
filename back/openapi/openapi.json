@@ -1008,7 +1008,7 @@
         ]
       },
       "get": {
-        "description": "Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.",
+        "description": "Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`. Опционально фильтр по статусам: повтор `?status=confirmed&status=in_progress` или скобочная форма `?status[]=confirmed&status[]=in_progress` (в Express она приходит как ключ `status[]`).",
         "operationId": "Bookings_list",
         "parameters": [
           {
@@ -1023,6 +1023,31 @@
                 "ru"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Фильтр по кодам статуса в БД (несколько раз или `status[]=`). Клиенты со скобками — поддерживаются. Без параметра — все записи клиента.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "expired",
+                  "reject_by_master",
+                  "reject_by_client",
+                  "confirmed",
+                  "canceled_by_master",
+                  "canceled_by_client",
+                  "no_show_by_client",
+                  "no_show_by_master",
+                  "in_progress",
+                  "done"
+                ]
+              }
             }
           }
         ],
@@ -1059,7 +1084,21 @@
                             "format": "uuid"
                           },
                           "status": {
-                            "type": "string"
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "expired",
+                              "reject_by_master",
+                              "reject_by_client",
+                              "confirmed",
+                              "canceled_by_master",
+                              "canceled_by_client",
+                              "no_show_by_client",
+                              "no_show_by_master",
+                              "in_progress",
+                              "done"
+                            ],
+                            "description": "Код статуса (`BookingStatus` в БД)."
                           },
                           "statusLabel": {
                             "type": "string",
@@ -1118,6 +1157,9 @@
               }
             }
           },
+          "400": {
+            "description": "Невалидный query (в т.ч. неизвестный status)"
+          },
           "401": {
             "description": "Нет access token"
           }
@@ -1135,7 +1177,7 @@
     },
     "/bookings/{id}/cancel": {
       "post": {
-        "description": "Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.",
+        "description": "Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.",
         "operationId": "Bookings_cancel",
         "parameters": [
           {
@@ -1147,6 +1189,34 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "cancelReason": {
+                    "type": "string",
+                    "enum": [
+                      "client_schedule_changed",
+                      "client_found_alternative",
+                      "client_health_personal",
+                      "client_price_or_service",
+                      "client_other"
+                    ],
+                    "description": "Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`."
+                  },
+                  "cancellationComment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Для `pending` не передаётся. Иначе опционально, кроме случая `cancelReason` = `client_other`."
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -1166,8 +1236,10 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "canceled_by_client"
-                      ]
+                        "canceled_by_client",
+                        "reject_by_client"
+                      ],
+                      "description": "`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`."
                     }
                   }
                 }
@@ -1175,7 +1247,7 @@
             }
           },
           "400": {
-            "description": "Нельзя отменить в текущем статусе"
+            "description": "Нельзя отменить в текущем статусе или невалидное тело"
           },
           "401": {
             "description": "Нет access token"
@@ -2822,6 +2894,150 @@
           "advertising"
         ]
       }
+    },
+    "/dev/bookings/set-status": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`; переходы не валидируются. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — по одному на статус.",
+        "operationId": "DevBookings_setStatus",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetTestBookingStatusSwaggerDto"
+              },
+              "examples": {
+                "pending": {
+                  "summary": "pending",
+                  "description": "Клиент записался; ждёт подтверждения специалиста или организации",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "pending",
+                    "reason": "dev: установить pending"
+                  }
+                },
+                "expired": {
+                  "summary": "expired",
+                  "description": "Истекло окно подтверждения — автоотмена слота",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "expired",
+                    "reason": "dev: установить expired",
+                    "cancelReason": "pending_confirmation_timeout"
+                  }
+                },
+                "reject_by_master": {
+                  "summary": "reject_by_master",
+                  "description": "Отклонил мастер или уполномоченное лицо организации",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "reject_by_master",
+                    "reason": "dev: установить reject_by_master",
+                    "cancelReason": "dev_reject"
+                  }
+                },
+                "reject_by_client": {
+                  "summary": "reject_by_client",
+                  "description": "Клиент отменил запись",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "reject_by_client",
+                    "reason": "dev: установить reject_by_client",
+                    "cancelReason": "dev_reject"
+                  }
+                },
+                "confirmed": {
+                  "summary": "confirmed",
+                  "description": "Запись подтверждена",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "confirmed",
+                    "reason": "dev: установить confirmed"
+                  }
+                },
+                "canceled_by_master": {
+                  "summary": "canceled_by_master",
+                  "description": "После подтверждения: отмена мастером/организацией (с причиной)",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "canceled_by_master",
+                    "reason": "dev: установить canceled_by_master",
+                    "cancelReason": "dev_reason",
+                    "cancellationComment": "dev: комментарий отмены"
+                  }
+                },
+                "canceled_by_client": {
+                  "summary": "canceled_by_client",
+                  "description": "После подтверждения: отмена клиентом (с причиной)",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "canceled_by_client",
+                    "reason": "dev: установить canceled_by_client",
+                    "cancelReason": "dev_reason",
+                    "cancellationComment": "dev: комментарий отмены"
+                  }
+                },
+                "no_show_by_client": {
+                  "summary": "no_show_by_client",
+                  "description": "Клиент не пришёл (таймаут ожидания или отмена в окне визита)",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "no_show_by_client",
+                    "reason": "dev: установить no_show_by_client"
+                  }
+                },
+                "no_show_by_master": {
+                  "summary": "no_show_by_master",
+                  "description": "Мастер отменил в окне ожидания визита",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "no_show_by_master",
+                    "reason": "dev: установить no_show_by_master"
+                  }
+                },
+                "in_progress": {
+                  "summary": "in_progress",
+                  "description": "Услуга выполняется",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "in_progress",
+                    "reason": "dev: установить in_progress"
+                  }
+                },
+                "done": {
+                  "summary": "done",
+                  "description": "Услуга завершена; возможен отзыв",
+                  "value": {
+                    "bookingId": "22222222-2222-4222-8222-222222222222",
+                    "status": "done",
+                    "reason": "dev: установить done"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetTestBookingStatusResponseSwaggerDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ручка выключена или бронь с таким id не найдена"
+          }
+        },
+        "summary": "[Dev] Принудительно сменить статус брони по booking id",
+        "tags": [
+          "dev"
+        ]
+      }
     }
   },
   "info": {
@@ -2845,6 +3061,99 @@
         "type": "http"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "DevBookingStatusValue": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "expired",
+          "reject_by_master",
+          "reject_by_client",
+          "confirmed",
+          "canceled_by_master",
+          "canceled_by_client",
+          "no_show_by_client",
+          "no_show_by_master",
+          "in_progress",
+          "done"
+        ],
+        "description": "Новый статус брони (доменный `BookingStatus`)",
+        "x-enum-descriptions": [
+          "Клиент записался; ждёт подтверждения специалиста или организации",
+          "Истекло окно подтверждения — автоотмена слота",
+          "Отклонил мастер или уполномоченное лицо организации",
+          "Клиент отменил запись",
+          "Запись подтверждена",
+          "После подтверждения: отмена мастером/организацией (с причиной)",
+          "После подтверждения: отмена клиентом (с причиной)",
+          "Клиент не пришёл (таймаут ожидания или отмена в окне визита)",
+          "Мастер отменил в окне ожидания визита",
+          "Услуга выполняется",
+          "Услуга завершена; возможен отзыв"
+        ]
+      },
+      "SetTestBookingStatusSwaggerDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Идентификатор брони (`Booking.id`)",
+            "example": "22222222-2222-4222-8222-222222222222"
+          },
+          "status": {
+            "description": "Новый статус брони (доменный `BookingStatus`)",
+            "example": "confirmed",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DevBookingStatusValue"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Текст в `BookingStatusHistory.reason`",
+            "example": "dev: проверка UI"
+          },
+          "cancelReason": {
+            "type": "string",
+            "description": "Для отменоподобных статусов — `Booking.cancelReason`",
+            "example": "specialist_unavailable"
+          },
+          "cancellationComment": {
+            "type": "string",
+            "description": "Для отмен — `Booking.cancellationComment`"
+          }
+        },
+        "required": [
+          "bookingId",
+          "status"
+        ]
+      },
+      "SetTestBookingStatusResponseSwaggerDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "Статус после смены",
+            "example": "confirmed"
+          },
+          "previousStatus": {
+            "type": "string",
+            "description": "Статус до смены",
+            "example": "pending"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "previousStatus"
+        ]
+      }
+    }
   }
 }

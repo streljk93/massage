@@ -71,17 +71,16 @@ function parseOptionalNonNegInt(raw?: string): number | null {
   return n;
 }
 
-export function parseOptionalVndPriceRange(minRaw?: string, maxRaw?: string): {
+export function parseOptionalVndPriceRange(
+  minRaw?: string,
+  maxRaw?: string,
+): {
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
 } {
   const priceMinVnd = parseOptionalNonNegInt(minRaw);
   const priceMaxVnd = parseOptionalNonNegInt(maxRaw);
-  if (
-    priceMinVnd != null &&
-    priceMaxVnd != null &&
-    priceMinVnd > priceMaxVnd
-  ) {
+  if (priceMinVnd != null && priceMaxVnd != null && priceMinVnd > priceMaxVnd) {
     return { priceMinVnd: priceMaxVnd, priceMaxVnd: priceMinVnd };
   }
   return { priceMinVnd, priceMaxVnd };

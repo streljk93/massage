@@ -1,8 +1,14 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/shared/ui/button";
 import { cn, listExitRowClassNames } from "@/shared/lib";
+import { notify } from "@/shared/lib/notifications";
+import {
+  buildBookingIcsDocument,
+  shareOrDownloadIcs,
+} from "../lib/booking-calendar-ics";
 import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown";
 import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from "../model/booking-cancel-reasons";
 import { BookingShowcaseCard } from "./booking-showcase-card";
@@ -39,6 +45,11 @@ export type BookingListCardProps = {
   isExiting?: boolean;
   /** Ссылка на профиль специалиста (например `/specialists/{id}`). */
   specialistProfileHref?: string;
+  /** Id сущности `Booking` (показ под кнопками, напр. для dev / поддержки). */
+  bookingEntityId?: string;
+  /** ISO начала/конца слота — для «Напомнить» → системный календарь (.ics / share). */
+  calendarStartsAtIso?: string;
+  calendarEndsAtIso?: string;
   className?: string;
 };
 
@@ -57,9 +68,13 @@ export function BookingListCard({
   cancelPending,
   isExiting,
   specialistProfileHref,
+  bookingEntityId,
+  calendarStartsAtIso,
+  calendarEndsAtIso,
   className,
 }: BookingListCardProps) {
   const t = useTranslations("bookingList");
+  const [remindBusy, setRemindBusy] = useState(false);
   const countdown = usePendingBookingCountdown(
     pendingExpiresAt,
     status === "pending",
@@ -107,6 +122,54 @@ export function BookingListCard({
     cn("bg-transparent p-0", className),
   );
 
+  const canAddToCalendar =
+    status === "confirmed" &&
+    calendarStartsAtIso != null &&
+    calendarStartsAtIso !== "" &&
+    calendarEndsAtIso != null &&
+    calendarEndsAtIso !== "" &&
+    bookingEntityId != null &&
+    bookingEntityId !== "";
+
+  const handleAddToCalendar = useCallback(async () => {
+    if (
+      !canAddToCalendar ||
+      calendarStartsAtIso == null ||
+      calendarEndsAtIso == null ||
+      bookingEntityId == null
+    ) {
+      return;
+    }
+    setRemindBusy(true);
+    try {
+      const ics = buildBookingIcsDocument({
+        uid: `${bookingEntityId}@services-booking`,
+        startsAtIso: calendarStartsAtIso,
+        endsAtIso: calendarEndsAtIso,
+        summary: `${serviceLine} — ${providerName}`,
+      });
+      const result = await shareOrDownloadIcs(
+        ics,
+        `booking-${bookingEntityId.slice(0, 8)}.ics`,
+      );
+      if (result === "share" || result === "download") {
+        notify.success(t("addToCalendarSuccess"));
+      }
+    } catch {
+      notify.error(t("addToCalendarFailed"));
+    } finally {
+      setRemindBusy(false);
+    }
+  }, [
+    bookingEntityId,
+    calendarEndsAtIso,
+    calendarStartsAtIso,
+    canAddToCalendar,
+    providerName,
+    serviceLine,
+    t,
+  ]);
+
   const actions =
     status === "pending" ? (
       <Button
@@ -121,7 +184,15 @@ export function BookingListCard({
       </Button>
     ) : status === "confirmed" ? (
       <>
-        <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+        <Button
+          type="button"
+          variant="ghost"
+          className={actionOutlineButtonClass}
+          onClick={() => void handleAddToCalendar()}
+          disabled={!canAddToCalendar || remindBusy}
+          aria-busy={remindBusy}
+          aria-label={t("remindMeAria")}
+        >
           {t("remindMe")}
         </Button>
         <Button
@@ -141,6 +212,22 @@ export function BookingListCard({
       </Button>
     ) : null;
 
+  const showActionsBlock = actions != null || Boolean(bookingEntityId);
+  const actionsWithMeta = showActionsBlock ? (
+    <>
+      {actions}
+      {bookingEntityId ? (
+        <p
+          className="w-full break-all px-0.5 pt-1 text-center text-[0.65rem] leading-snug text-muted-foreground"
+          title={bookingEntityId}
+        >
+          <span className="font-medium text-muted-foreground/85">id: </span>
+          <span className="font-mono tabular-nums">{bookingEntityId}</span>
+        </p>
+      ) : null}
+    </>
+  ) : null;
+
   return (
     <div className={exit.outer}>
       <div className={exit.inner}>
@@ -158,7 +245,7 @@ export function BookingListCard({
             })}
             statusFooter={statusFooter}
             dateTagsMuted={muted}
-            actions={actions}
+            actions={actionsWithMeta}
           />
         </article>
       </div>

@@ -1,5 +1,6 @@
 /**
  * Статусы бронирования — синхронно с `BookingStatus` в Prisma и бизнес-правилами.
+ * Канонический порядок и полнота: `back/src/modules/bookings/domain/booking-status-all-ordered.ts`.
  * @see back/prisma/schema.prisma
  * @see .cursor/rules/business-logic.mdc
  */

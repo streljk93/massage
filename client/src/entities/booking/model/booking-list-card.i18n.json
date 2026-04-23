@@ -12,6 +12,9 @@
         "statusRejected": "Rejected by master",
         "cancel": "Cancel",
         "remindMe": "Remind me",
+        "remindMeAria": "Add this appointment to your calendar",
+        "addToCalendarSuccess": "Calendar file ready — open it to add the event",
+        "addToCalendarFailed": "Could not create calendar file. Try again.",
         "findOther": "Find other",
         "openSpecialistProfile": "Open profile: {name}"
       }
@@ -28,6 +31,9 @@
         "statusRejected": "Bị từ chối",
         "cancel": "Hủy",
         "remindMe": "Nhắc tôi",
+        "remindMeAria": "Thêm lịch hẹn vào lịch của bạn",
+        "addToCalendarSuccess": "Đã tạo file lịch — mở để thêm sự kiện",
+        "addToCalendarFailed": "Không tạo được file lịch. Thử lại.",
         "findOther": "Tìm khác",
         "openSpecialistProfile": "Mở hồ sơ: {name}"
       }
@@ -44,6 +50,9 @@
         "statusRejected": "Отклонено мастером",
         "cancel": "Отменить",
         "remindMe": "Напомнить",
+        "remindMeAria": "Добавить запись в календарь",
+        "addToCalendarSuccess": "Файл календаря готов — откройте его, чтобы добавить событие",
+        "addToCalendarFailed": "Не удалось создать файл календаря. Попробуйте снова.",
         "findOther": "Найти другое",
         "openSpecialistProfile": "Открыть профиль: {name}"
       }

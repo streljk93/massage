@@ -21,12 +21,13 @@ import {
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { homeUser } from "@/widgets/home/lib/mock-data";
 import { cn, motion } from "@/shared/lib";
-import { confirmAction, notify } from "@/shared/lib/notifications";
+import { notify } from "@/shared/lib/notifications";
 import {
   bookingsCancel,
   bookingsList,
   createBrowserSdkClient,
 } from "@/shared/api";
+import type { BookingsCancelData } from "@/shared/api/generated/sdk/types.gen";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { parseISO } from "date-fns";
 import {
@@ -38,6 +39,8 @@ import {
   mapApiStatusToListCard,
 } from "../lib/booking-api-to-ui";
 import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
+import { BookingCancelDialog } from "./booking-cancel-dialog";
+import { BookingPendingCancelDialog } from "./booking-pending-cancel-dialog";
 
 type BookingsTab = "new" | "history";
 
@@ -84,6 +87,12 @@ export function BookingsPage() {
   const [rows, setRows] = useState<ApiBooking[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelDialogBookingId, setCancelDialogBookingId] = useState<
+    string | null
+  >(null);
+  const [pendingCancelBookingId, setPendingCancelBookingId] = useState<
+    string | null
+  >(null);
   const [exitingBookingId, setExitingBookingId] = useState<string | null>(null);
   const cancelLock = useRef(false);
   const exitRefreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -149,19 +158,61 @@ export function BookingsPage() {
     };
   }, []);
 
-  const handleCancel = useCallback(
-    async (bookingId: string) => {
-      if (!accessToken || cancelLock.current) {
+  const runAfterCancelSuccess = useCallback(
+    (bookingId: string) => {
+      notify.success(t("cancelSuccess"));
+      setExitingBookingId(bookingId);
+      if (exitRefreshTimeoutRef.current != null) {
+        clearTimeout(exitRefreshTimeoutRef.current);
+      }
+      exitRefreshTimeoutRef.current = setTimeout(() => {
+        exitRefreshTimeoutRef.current = null;
+        void (async () => {
+          try {
+            await refreshBookings();
+          } finally {
+            setExitingBookingId(null);
+          }
+        })();
+      }, BOOKING_CANCEL_EXIT_MS);
+    },
+    [refreshBookings, t],
+  );
+
+  const executePendingCancel = useCallback(async () => {
+    const bookingId = pendingCancelBookingId;
+    if (bookingId == null || !accessToken || cancelLock.current) {
+      return;
+    }
+    cancelLock.current = true;
+    setCancellingId(bookingId);
+    try {
+      const res = await bookingsCancel({
+        client: createBrowserSdkClient(accessToken, { locale }),
+        path: { id: bookingId },
+        body: {},
+      });
+      if (res.error || !res.data) {
+        notify.error(t("cancelError"));
         return;
       }
-      const confirmed = await confirmAction({
-        title: t("cancelConfirmTitle"),
-        description: t("cancelConfirmDescription"),
-        confirmLabel: t("cancelConfirmActionLabel"),
-        cancelLabel: t("cancelConfirmDismissLabel"),
-        destructive: true,
-      });
-      if (!confirmed) {
+      setPendingCancelBookingId(null);
+      runAfterCancelSuccess(bookingId);
+    } finally {
+      cancelLock.current = false;
+      setCancellingId(null);
+    }
+  }, [
+    accessToken,
+    locale,
+    pendingCancelBookingId,
+    runAfterCancelSuccess,
+    t,
+  ]);
+
+  const submitCancelBooking = useCallback(
+    async (bookingId: string, body: BookingsCancelData["body"]) => {
+      if (!accessToken || cancelLock.current) {
         return;
       }
       cancelLock.current = true;
@@ -170,31 +221,20 @@ export function BookingsPage() {
         const res = await bookingsCancel({
           client: createBrowserSdkClient(accessToken, { locale }),
           path: { id: bookingId },
+          body,
         });
         if (res.error || !res.data) {
+          notify.error(t("cancelError"));
           return;
         }
-        notify.success(t("cancelSuccess"));
-        setExitingBookingId(bookingId);
-        if (exitRefreshTimeoutRef.current != null) {
-          clearTimeout(exitRefreshTimeoutRef.current);
-        }
-        exitRefreshTimeoutRef.current = setTimeout(() => {
-          exitRefreshTimeoutRef.current = null;
-          void (async () => {
-            try {
-              await refreshBookings();
-            } finally {
-              setExitingBookingId(null);
-            }
-          })();
-        }, BOOKING_CANCEL_EXIT_MS);
+        setCancelDialogBookingId(null);
+        runAfterCancelSuccess(bookingId);
       } finally {
         cancelLock.current = false;
         setCancellingId(null);
       }
     },
-    [accessToken, locale, refreshBookings, t],
+    [accessToken, locale, runAfterCancelSuccess, t],
   );
 
   const newRows = useMemo(
@@ -244,8 +284,12 @@ export function BookingsPage() {
             })
           : row.serviceName;
 
+      const isActiveSlot =
+        row.status === "confirmed" || row.status === "in_progress";
+
       return {
         id: row.id,
+        apiStatus: row.status,
         status: mapApiStatusToListCard(row.status),
         pendingExpiresAt: row.pendingExpiresAt,
         specialistProfileHref: `/specialists/${row.specialistId}`,
@@ -254,6 +298,8 @@ export function BookingsPage() {
         dateLabel,
         timeRange,
         avatarSrc: specialistAvatarSrc(row.specialistImageUrl),
+        calendarStartsAtIso: isActiveSlot ? row.startsAt : undefined,
+        calendarEndsAtIso: isActiveSlot ? row.endsAt : undefined,
       };
     });
   }, [format, newRows, tRoot]);
@@ -420,6 +466,7 @@ export function BookingsPage() {
                   listCards.map((row) => (
                     <BookingListCard
                       key={row.id}
+                      bookingEntityId={row.id}
                       status={row.status}
                       pendingExpiresAt={row.pendingExpiresAt}
                       onPendingConfirmationExpired={() =>
@@ -431,7 +478,13 @@ export function BookingsPage() {
                       dateLabel={row.dateLabel}
                       timeRange={row.timeRange}
                       avatarSrc={row.avatarSrc}
-                      onCancel={() => void handleCancel(row.id)}
+                      calendarStartsAtIso={row.calendarStartsAtIso}
+                      calendarEndsAtIso={row.calendarEndsAtIso}
+                      onCancel={() =>
+                        row.apiStatus === "pending"
+                          ? setPendingCancelBookingId(row.id)
+                          : setCancelDialogBookingId(row.id)
+                      }
                       cancelPending={cancellingId === row.id}
                       isExiting={exitingBookingId === row.id}
                     />
@@ -464,6 +517,38 @@ export function BookingsPage() {
 
         <HomeBottomNav activeId="bookings" />
       </div>
+
+      <BookingPendingCancelDialog
+        key={pendingCancelBookingId ?? "pending-closed"}
+        open={pendingCancelBookingId != null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setPendingCancelBookingId(null);
+          }
+        }}
+        busy={
+          pendingCancelBookingId != null &&
+          cancellingId === pendingCancelBookingId
+        }
+        onConfirm={() => void executePendingCancel()}
+      />
+
+      <BookingCancelDialog
+        key={cancelDialogBookingId ?? "closed"}
+        open={cancelDialogBookingId != null}
+        onOpenChange={(next) => {
+          if (!next) {
+            setCancelDialogBookingId(null);
+          }
+        }}
+        onConfirm={async (body) => {
+          const id = cancelDialogBookingId;
+          if (id == null) {
+            return;
+          }
+          await submitCancelBooking(id, body);
+        }}
+      />
     </div>
   );
 }

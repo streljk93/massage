@@ -1,0 +1,61 @@
+{
+  "messages": {
+    "en": {
+      "bookingCancel": {
+        "title": "Cancel this booking?",
+        "reasonLabel": "Reason",
+        "commentLabel": "Details",
+        "commentPlaceholder": "Short explanation…",
+        "commentRequiredHint": "Required when you choose “Other”.",
+        "submit": "Cancel booking",
+        "dismiss": "Not now",
+        "validationOther": "Add a short note for “Other”.",
+        "reasons": {
+          "client_schedule_changed": "My plans changed",
+          "client_found_alternative": "I booked elsewhere / another time",
+          "client_health_personal": "Health or personal reasons",
+          "client_price_or_service": "Price, service, or expectations",
+          "client_other": "Other"
+        }
+      }
+    },
+    "vi": {
+      "bookingCancel": {
+        "title": "Hủy lịch này?",
+        "reasonLabel": "Lý do",
+        "commentLabel": "Chi tiết",
+        "commentPlaceholder": "Giải thích ngắn…",
+        "commentRequiredHint": "Bắt buộc khi chọn “Khác”.",
+        "submit": "Hủy lịch",
+        "dismiss": "Để sau",
+        "validationOther": "Vui lòng ghi chú ngắn cho “Khác”.",
+        "reasons": {
+          "client_schedule_changed": "Kế hoạch của tôi thay đổi",
+          "client_found_alternative": "Tôi đặt chỗ khác / thời gian khác",
+          "client_health_personal": "Lý do sức khỏe hoặc cá nhân",
+          "client_price_or_service": "Giá, dịch vụ hoặc kỳ vọng",
+          "client_other": "Khác"
+        }
+      }
+    },
+    "ru": {
+      "bookingCancel": {
+        "title": "Отменить запись?",
+        "reasonLabel": "Причина",
+        "commentLabel": "Комментарий",
+        "commentPlaceholder": "Кратко опишите…",
+        "commentRequiredHint": "Обязательно, если выбран пункт «Другое».",
+        "submit": "Отменить запись",
+        "dismiss": "Не отменять",
+        "validationOther": "Добавьте короткий комментарий для «Другое».",
+        "reasons": {
+          "client_schedule_changed": "Изменились планы",
+          "client_found_alternative": "Записался в другое место / на другое время",
+          "client_health_personal": "Здоровье или личные обстоятельства",
+          "client_price_or_service": "Цена, услуга или ожидания",
+          "client_other": "Другое"
+        }
+      }
+    }
+  }
+}

@@ -123,7 +123,8 @@ const cursorPageMetaSchema = {
     nextCursor: {
       type: 'string',
       nullable: true,
-      description: 'Передать как `cursor` в следующем запросе, если `hasMore: true`.',
+      description:
+        'Передать как `cursor` в следующем запросе, если `hasMore: true`.',
     },
     hasMore: {
       type: 'boolean',

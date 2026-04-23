@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { BOOKING_STATUS_SWAGGER_ENUM_DESCRIPTIONS } from '../modules/bookings/domain/booking-status-all-ordered';
 
 export function createOpenApiDocument(app: INestApplication) {
   const config = new DocumentBuilder()
@@ -15,7 +16,7 @@ export function createOpenApiDocument(app: INestApplication) {
     )
     .build();
 
-  return SwaggerModule.createDocument(app, config, {
+  const document = SwaggerModule.createDocument(app, config, {
     /**
      * Иначе пути в спецификации уже содержат `/v1` (из `setGlobalPrefix`), а `addServer('/v1')`
      * даёт второй префикс — в Swagger UI получается `/v1/v1/...`.
@@ -26,6 +27,21 @@ export function createOpenApiDocument(app: INestApplication) {
       return `${short}_${methodKey}`;
     },
   });
+
+  const devStatusSchema = document.components?.schemas
+    ?.DevBookingStatusValue as Record<string, unknown> | undefined;
+  if (
+    devStatusSchema &&
+    Array.isArray(devStatusSchema.enum) &&
+    devStatusSchema.enum.length ===
+      BOOKING_STATUS_SWAGGER_ENUM_DESCRIPTIONS.length
+  ) {
+    devStatusSchema['x-enum-descriptions'] = [
+      ...BOOKING_STATUS_SWAGGER_ENUM_DESCRIPTIONS,
+    ];
+  }
+
+  return document;
 }
 
 export function mountSwaggerUi(

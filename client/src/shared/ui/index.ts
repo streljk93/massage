@@ -1,4 +1,16 @@
 export { Button, type ButtonProps, type ButtonTone } from "./button";
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "./shadcn/select";
 export { Separator } from "./shadcn/separator";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";

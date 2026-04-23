@@ -1,5 +1,10 @@
 /** JSON Schema для Swagger — бронирования клиента. */
 
+import { BOOKING_CLIENT_CANCEL_REASON_CODES } from '../domain/booking-client-cancel-reasons';
+import { BOOKING_STATUS_ALL_ORDERED } from '../domain/booking-status-all-ordered';
+
+const bookingStatusEnum = [...BOOKING_STATUS_ALL_ORDERED];
+
 export const createBookingRequestSchema = {
   type: 'object',
   required: ['specialistId', 'serviceId', 'durationMinutes', 'startsAt'],
@@ -39,7 +44,11 @@ export const bookingListItemSchema = {
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    status: { type: 'string' },
+    status: {
+      type: 'string',
+      enum: bookingStatusEnum,
+      description: 'Код статуса (`BookingStatus` в БД).',
+    },
     statusLabel: {
       type: 'string',
       description:
@@ -69,6 +78,26 @@ export const bookingListItemSchema = {
   },
 };
 
+const clientCancelReasonEnum = [...BOOKING_CLIENT_CANCEL_REASON_CODES];
+
+export const cancelBookingRequestSchema = {
+  type: 'object',
+  properties: {
+    cancelReason: {
+      type: 'string',
+      enum: clientCancelReasonEnum,
+      description:
+        'Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`.',
+    },
+    cancellationComment: {
+      type: 'string',
+      maxLength: 2000,
+      description:
+        'Для `pending` не передаётся. Иначе опционально, кроме случая `cancelReason` = `client_other`.',
+    },
+  },
+};
+
 export const bookingsListResponseSchema = {
   type: 'object',
   required: ['bookings'],
@@ -85,6 +114,11 @@ export const cancelBookingResponseSchema = {
   required: ['id', 'status'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    status: { type: 'string', enum: ['canceled_by_client'] },
+    status: {
+      type: 'string',
+      enum: ['canceled_by_client', 'reject_by_client'],
+      description:
+        '`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`.',
+    },
   },
 };

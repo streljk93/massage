@@ -73,4 +73,14 @@ export default () => ({
       14,
     ),
   },
+  /**
+   * Dev-only HTTP-ручки (напр. `POST /v1/dev/bookings/set-status` и будущие под `/v1/dev/*`).
+   * В `production` всегда выключено. В dev/staging: по умолчанию включено;
+   * отключить все такие ручки: `DISABLE_DEV_TEST_ROUTES=true`.
+   */
+  devTestRoutes: {
+    enabled:
+      nodeEnv !== 'production' &&
+      process.env.DISABLE_DEV_TEST_ROUTES !== 'true',
+  },
 });

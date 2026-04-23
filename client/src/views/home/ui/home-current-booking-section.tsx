@@ -14,7 +14,6 @@ import { Slider } from "@/shared/ui/slider";
 import { cn, motion } from "@/shared/lib";
 import { bookingsList, createBrowserSdkClient } from "@/shared/api";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
-import { bookingIsNewTab } from "@/views/bookings/lib/booking-api-to-ui";
 import {
   compareAsc,
   isAfter,
@@ -25,6 +24,9 @@ import {
   vnCalendarYmdString,
   vnTomorrowFromNow,
 } from "@/views/specialist-profile/lib/booking-starts-at";
+
+/** Виджет на главной: предстоящие визиты в этих статусах (запрос к API — список `status`). */
+const HOME_UPCOMING_BOOKING_STATUSES = ["confirmed", "in_progress"] as const;
 
 type ApiBooking = {
   id: string;
@@ -52,7 +54,6 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 function pickUpcomingBookings(rows: ApiBooking[]): ApiBooking[] {
   const cutoff = subMilliseconds(new Date(), 60_000);
   return rows
-    .filter((b) => bookingIsNewTab(b.status))
     .filter((b) => isAfter(parseISO(b.endsAt), cutoff))
     .sort((a, b) =>
       compareAsc(parseISO(a.startsAt), parseISO(b.startsAt)),
@@ -115,8 +116,8 @@ const linkCardClass = cn(
 );
 
 /**
- * «Ваши записи» на главной: только при JWT и если есть предстоящие активные брони.
- * Несколько записей — карусель {@link Slider}.
+ * «Ваши записи» на главной: только при JWT и если есть предстоящие брони
+ * в статусах `confirmed` и `in_progress`. Несколько записей — карусель {@link Slider}.
  */
 export function HomeCurrentBookingSection() {
   const t = useTranslations("home");
@@ -136,7 +137,7 @@ export function HomeCurrentBookingSection() {
     }
     const res = await bookingsList({
       client: createBrowserSdkClient(accessToken, { locale }),
-      query: { locale },
+      query: { locale, status: [...HOME_UPCOMING_BOOKING_STATUSES] },
     });
     if (res.error || !res.data) {
       setBookings(null);
@@ -159,7 +160,7 @@ export function HomeCurrentBookingSection() {
     (async () => {
       const res = await bookingsList({
         client: createBrowserSdkClient(accessToken, { locale }),
-        query: { locale },
+        query: { locale, status: [...HOME_UPCOMING_BOOKING_STATUSES] },
       });
       if (cancelled) {
         return;

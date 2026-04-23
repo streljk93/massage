@@ -19,6 +19,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -33,12 +34,22 @@ import {
 } from '../../../common/i18n';
 import { JwtAccessGuard, type AuthenticatedUser } from '../../../common/guards';
 import { BookingsService } from '../application/bookings.service';
+import { BOOKING_STATUS_ALL_ORDERED } from '../domain/booking-status-all-ordered';
+import {
+  bookingsListQuerySchema,
+  type BookingsListQuery,
+} from '../dto/bookings-list-query.schema';
+import {
+  cancelBookingBodySchema,
+  type CancelBookingBody,
+} from '../dto/cancel-booking-body.schema';
 import {
   createBookingBodySchema,
   type CreateBookingBody,
 } from '../dto/create-booking-body.schema';
 import {
   bookingsListResponseSchema,
+  cancelBookingRequestSchema,
   cancelBookingResponseSchema,
   createBookingRequestSchema,
   createBookingResponseSchema,
@@ -83,16 +94,35 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Мои бронирования',
     description:
-      'Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.',
+      'Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`. Опционально фильтр по статусам: повтор `?status=confirmed&status=in_progress` или скобочная форма `?status[]=confirmed&status[]=in_progress` (в Express она приходит как ключ `status[]`).',
+  })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    isArray: true,
+    enum: BOOKING_STATUS_ALL_ORDERED,
+    description:
+      'Фильтр по кодам статуса в БД (несколько раз или `status[]=`). Клиенты со скобками — поддерживаются. Без параметра — все записи клиента.',
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: bookingsListResponseSchema })
+  @ApiBadRequestResponse({
+    description: 'Невалидный query (в т.ч. неизвестный status)',
+  })
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
   async list(
     @Req() req: AuthedRequest,
     @OptionalRequestLocale() locale: ApiLocale | undefined,
   ) {
-    return this.bookingsService.listMine(req.user.id, locale);
+    /**
+     * Не вешаем Zod на `@Query(pipe)`: в Nest значение в pipe для query может
+     * приходить не как полный `req.query`, из‑за чего теряются повторяющиеся
+     * `status` и фильтр в БД не применяется.
+     */
+    const query = new ZodValidationPipe(bookingsListQuerySchema).transform(
+      req.query,
+    ) as BookingsListQuery;
+    return this.bookingsService.listMine(req.user.id, locale, query.status);
   }
 
   @Post(':id/cancel')
@@ -102,19 +132,22 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Отменить бронирование (клиент)',
     description:
-      'Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.',
+      'Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: cancelBookingRequestSchema })
   @ApiOkResponse({ schema: cancelBookingResponseSchema })
   @ApiBadRequestResponse({
-    description: 'Нельзя отменить в текущем статусе',
+    description: 'Нельзя отменить в текущем статусе или невалидное тело',
   })
   @ApiNotFoundResponse({ description: 'Запись не найдена' })
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
   async cancel(
     @Req() req: AuthedRequest,
     @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(cancelBookingBodySchema))
+    body: CancelBookingBody,
   ) {
-    return this.bookingsService.cancelByClient(req.user.id, id);
+    return this.bookingsService.cancelByClient(req.user.id, id, body);
   }
 }

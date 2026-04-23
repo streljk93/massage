@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -146,7 +146,7 @@ export const usersPatchSpecialistActiveOrganization = <ThrowOnError extends bool
 /**
  * Мои бронирования
  *
- * Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`.
+ * Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`. Опционально фильтр по статусам: повтор `?status=confirmed&status=in_progress` или скобочная форма `?status[]=confirmed&status[]=in_progress` (в Express она приходит как ключ `status[]`).
  */
 export const bookingsList = <ThrowOnError extends boolean = false>(options?: Options<BookingsListData, ThrowOnError>) => (options?.client ?? client).get<BookingsListResponses, BookingsListErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -172,12 +172,16 @@ export const bookingsCreate = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Отменить бронирование (клиент)
  *
- * Доступно для статусов `pending`, `confirmed`, `in_progress`. Слот снова становится свободным.
+ * Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.
  */
 export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Options<BookingsCancelData, ThrowOnError>) => (options.client ?? client).post<BookingsCancelResponses, BookingsCancelErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/bookings/{id}/cancel',
-    ...options
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -242,3 +246,17 @@ export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = 
  * Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.
  */
 export const advertisingListByPlacement = <ThrowOnError extends boolean = false>(options: Options<AdvertisingListByPlacementData, ThrowOnError>) => (options.client ?? client).get<AdvertisingListByPlacementResponses, AdvertisingListByPlacementErrors, ThrowOnError>({ url: '/advertisements', ...options });
+
+/**
+ * [Dev] Принудительно сменить статус брони по booking id
+ *
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`; переходы не валидируются. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — по одному на статус.
+ */
+export const devBookingsSetStatus = <ThrowOnError extends boolean = false>(options: Options<DevBookingsSetStatusData, ThrowOnError>) => (options.client ?? client).post<DevBookingsSetStatusResponses, DevBookingsSetStatusErrors, ThrowOnError>({
+    url: '/dev/bookings/set-status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});

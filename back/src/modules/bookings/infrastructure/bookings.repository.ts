@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from '../domain/booking-cancel-reason';
 
@@ -65,9 +65,18 @@ export class BookingsRepository {
     });
   }
 
-  findManyForClient(clientUserId: string): Promise<BookingListRow[]> {
+  findManyForClient(
+    clientUserId: string,
+    statuses?: BookingStatus[],
+  ): Promise<BookingListRow[]> {
     return this.prisma.booking.findMany({
-      where: { clientUserId, deletedAt: null },
+      where: {
+        clientUserId,
+        deletedAt: null,
+        ...(statuses !== undefined && statuses.length > 0
+          ? { status: { in: statuses } }
+          : {}),
+      },
       include: bookingListInclude,
       /** Недавние изменения сверху (истечение pending, отмена и т.д.), не по дате приёма. */
       orderBy: [{ updatedAt: 'desc' }, { startsAt: 'desc' }],

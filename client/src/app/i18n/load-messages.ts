@@ -11,7 +11,7 @@ import { comingSoonI18n } from "@/features/coming-soon";
 import { apiErrorToastI18n, metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { authLoginPageI18n, authRegisterPageI18n } from "@/views/auth";
-import { bookingsPageI18n } from "@/views/bookings";
+import { bookingCancelDialogI18n, bookingsPageI18n } from "@/views/bookings";
 import { becomeSpecialistPageI18n } from "@/views/become-specialist";
 import { homePageI18n } from "@/views/home";
 import {
@@ -52,6 +52,7 @@ const bundles: ColocatedI18nBundle[] = [
   bookingCardI18n,
   bookingListCardI18n,
   bookingHistoryCardI18n,
+  bookingCancelDialogI18n,
   bookingsPageI18n,
   profilePageI18n,
   profileSubpageShellI18n,

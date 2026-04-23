@@ -20,6 +20,7 @@ import {
   pickLocalizedServiceName,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
@@ -274,13 +275,17 @@ export class BookingsService {
     };
   }
 
-  async listMine(clientUserId: string, localeFromQuery: ApiLocale | undefined) {
+  async listMine(
+    clientUserId: string,
+    localeFromQuery: ApiLocale | undefined,
+    statuses?: BookingStatus[],
+  ) {
     const locale = await this.resolveBookingsListLocale(
       clientUserId,
       localeFromQuery,
     );
     const [rows, localeRows] = await Promise.all([
-      this.bookingsRepository.findManyForClient(clientUserId),
+      this.bookingsRepository.findManyForClient(clientUserId, statuses),
       this.bookingStatusLocaleRepository.findAll(),
     ]);
     const labelMap = buildBookingStatusLabelMap(localeRows);
@@ -309,7 +314,11 @@ export class BookingsService {
     return this.bookingsRepository.expirePendingPastDeadline(new Date());
   }
 
-  async cancelByClient(clientUserId: string, bookingId: string) {
+  async cancelByClient(
+    clientUserId: string,
+    bookingId: string,
+    body: CancelBookingBody,
+  ) {
     const booking = await this.prisma.booking.findFirst({
       where: {
         id: bookingId,
@@ -331,21 +340,58 @@ export class BookingsService {
     }
 
     const fromStatus = booking.status;
+    const isPending = booking.status === 'pending';
+    const toStatus = isPending ? 'reject_by_client' : 'canceled_by_client';
+
+    let cancelReasonDb: string | null = null;
+    let cancellationCommentDb: string | null = null;
+    let historyReason: string | null = null;
+
+    if (isPending) {
+      cancelReasonDb = null;
+      cancellationCommentDb = null;
+      historyReason = null;
+    } else {
+      if (body.cancelReason == null) {
+        throw new BadRequestException({
+          code: 'BOOKING_CANCEL_REASON_REQUIRED',
+          message:
+            'cancelReason is required when canceling a confirmed or in-progress booking',
+        });
+      }
+      const commentTrimmed = body.cancellationComment?.trim() ?? '';
+      if (body.cancelReason === 'client_other' && commentTrimmed.length < 1) {
+        throw new BadRequestException({
+          code: 'BOOKING_CANCEL_COMMENT_REQUIRED',
+          message:
+            'cancellationComment is required when cancelReason is client_other',
+        });
+      }
+      cancelReasonDb = body.cancelReason;
+      cancellationCommentDb = commentTrimmed.length > 0 ? commentTrimmed : null;
+      historyReason = [body.cancelReason, cancellationCommentDb ?? '']
+        .filter((s) => s.length > 0)
+        .join(' | ');
+      historyReason = historyReason.length > 0 ? historyReason : null;
+    }
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.booking.update({
         where: { id: bookingId },
         data: {
-          status: 'canceled_by_client',
+          status: toStatus,
           pendingExpiresAt: null,
+          cancelReason: cancelReasonDb,
+          cancellationComment: cancellationCommentDb,
         },
       });
       await tx.bookingStatusHistory.create({
         data: {
           bookingId,
           fromStatus,
-          toStatus: 'canceled_by_client',
+          toStatus,
           actorUserId: clientUserId,
+          reason: historyReason,
         },
       });
       return row;
