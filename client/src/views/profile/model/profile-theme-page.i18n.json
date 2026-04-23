@@ -1,0 +1,31 @@
+{
+  "messages": {
+    "en": {
+      "profileTheme": {
+        "title": "Appearance",
+        "hint": "Choose how the app looks on this device. System follows your device settings.",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "vi": {
+      "profileTheme": {
+        "title": "Giao diện",
+        "hint": "Chọn giao diện ứng dụng trên thiết bị này. Hệ thống theo cài đặt thiết bị.",
+        "system": "Theo hệ thống",
+        "light": "Sáng",
+        "dark": "Tối"
+      }
+    },
+    "ru": {
+      "profileTheme": {
+        "title": "Оформление",
+        "hint": "Как выглядит приложение на этом устройстве. «Как в системе» — как в настройках устройства.",
+        "system": "Как в системе",
+        "light": "Светлая",
+        "dark": "Тёмная"
+      }
+    }
+  }
+}

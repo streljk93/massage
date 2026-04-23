@@ -5,6 +5,7 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 import { notFound } from "next/navigation";
 import { AppProviders } from "@/app/providers";
 import "@/app/styles/globals.css";
+import { themePreferenceInlineScript } from "@/shared/lib/theme-preference";
 import type { AppLocale } from "@/app/i18n/routing";
 import { routing } from "@/app/i18n/routing";
 
@@ -71,6 +72,14 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${manrope.variable} ${openSans.variable} h-full font-sans antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script
+          // Тема до первой отрисовки; ключ совпадает с `theme-preference.ts`.
+          dangerouslySetInnerHTML={{
+            __html: themePreferenceInlineScript(),
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider messages={messages}>
           <AppProviders>{children}</AppProviders>

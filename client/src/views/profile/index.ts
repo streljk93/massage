@@ -7,6 +7,7 @@ export { default as profileLocationPageI18n } from "./model/profile-location-pag
 export { default as profilePaymentPageI18n } from "./model/profile-payment-page.i18n.json";
 export { default as profileSubpageShellI18n } from "./model/profile-subpage-shell.i18n.json";
 export { default as profileTermsPageI18n } from "./model/profile-terms-page.i18n.json";
+export { default as profileThemePageI18n } from "./model/profile-theme-page.i18n.json";
 export { ProfileEditPage } from "./ui/profile-edit-page";
 export { ProfileLanguagePage } from "./ui/profile-language-page";
 export { ProfileLocationPage } from "./ui/profile-location-page";
@@ -16,3 +17,4 @@ export { ProfilePage } from "./ui/profile-page";
 export { ProfilePaymentPage } from "./ui/profile-payment-page";
 export { ProfileSubpageShell } from "./ui/profile-subpage-shell";
 export { ProfileTermsPage } from "./ui/profile-terms-page";
+export { ProfileThemePage } from "./ui/profile-theme-page";

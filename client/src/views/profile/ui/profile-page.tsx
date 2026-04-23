@@ -10,6 +10,7 @@ import {
   HelpCircle,
   LogOut,
   MapPin,
+  Palette,
   UserPen,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
@@ -54,6 +55,13 @@ export function ProfilePage() {
       icon: Globe,
       variant: "default" as const,
       href: "/profile/language" as const,
+    },
+    {
+      id: "theme" as const,
+      labelKey: "theme" as const,
+      icon: Palette,
+      variant: "default" as const,
+      href: "/profile/theme" as const,
     },
     {
       id: "location" as const,

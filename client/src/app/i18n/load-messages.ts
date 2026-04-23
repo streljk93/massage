@@ -24,6 +24,7 @@ import {
   profilePaymentPageI18n,
   profileSubpageShellI18n,
   profileTermsPageI18n,
+  profileThemePageI18n,
 } from "@/views/profile";
 import { organizationProfilePageI18n } from "@/views/organization-profile";
 import { specialistProfilePageI18n } from "@/views/specialist-profile";
@@ -61,6 +62,7 @@ const bundles: ColocatedI18nBundle[] = [
   profilePaymentPageI18n,
   profileHelpPageI18n,
   profileTermsPageI18n,
+  profileThemePageI18n,
   catalogFiltersDialogI18n,
   searchPageI18n,
   searchMapPageI18n,

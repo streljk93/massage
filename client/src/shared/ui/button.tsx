@@ -34,7 +34,7 @@ export function Button({
       className={cn(
         variant === "secondary" &&
           tone === "light" &&
-          "border-0 bg-surface-light hover:bg-surface-muted",
+          "border-0 bg-surface-light text-foreground hover:bg-surface-muted hover:text-foreground",
         variant === "secondary" &&
           tone === "muted" &&
           "border-0 bg-muted hover:bg-muted/80",

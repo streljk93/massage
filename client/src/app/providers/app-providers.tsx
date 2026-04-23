@@ -8,6 +8,7 @@ import { ComingSoonDialogHost } from "@/features/coming-soon";
 import { createAppQueryClient } from "@/shared/lib/notifications";
 import { ConfirmActionHost } from "@/shared/ui/confirm-action-host";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
+import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
 
 const NotificationToaster = dynamic(
   () =>
@@ -27,11 +28,13 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <SessionProvider refetchInterval={300}>
       <QueryClientProvider client={queryClient}>
+        <ThemePreferenceProvider>
         <NotificationToaster />
         <ConfirmActionHost />
         <PortraitOrientationLock />
         <ComingSoonDialogHost />
         {children}
+        </ThemePreferenceProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
