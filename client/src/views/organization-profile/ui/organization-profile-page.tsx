@@ -762,17 +762,17 @@ export function OrganizationProfilePage({
                     <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                       {t("selectSlot")}
                     </h2>
-                    <div className="flex flex-wrap gap-2">
-                      {daySlots.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {t("noSlots")}
-                        </p>
-                      ) : filteredDaySlots.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {t("noSlotsForDuration")}
-                        </p>
-                      ) : (
-                        filteredDaySlots.map((time) => {
+                    {daySlots.length === 0 ? (
+                      <p className="px-1 text-sm text-muted-foreground">
+                        {t("noSlots")}
+                      </p>
+                    ) : filteredDaySlots.length === 0 ? (
+                      <p className="px-1 text-sm text-muted-foreground">
+                        {t("noSlotsForDuration")}
+                      </p>
+                    ) : (
+                      <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {filteredDaySlots.map((time) => {
                           const selected = time === effectiveSlot;
                           return (
                             <button
@@ -781,7 +781,7 @@ export function OrganizationProfilePage({
                               onClick={() => setSlot(time)}
                               className={cn(
                                 motion.interactivePressStrong,
-                                "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
+                                "h-10 shrink-0 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
                                 selected
                                   ? "border-primary/45 bg-primary/12 text-primary"
                                   : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
@@ -790,9 +790,9 @@ export function OrganizationProfilePage({
                               {time}
                             </button>
                           );
-                        })
-                      )}
-                    </div>
+                        })}
+                      </div>
+                    )}
                   </section>
                 </>
               ) : null}

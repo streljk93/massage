@@ -35,6 +35,50 @@ async function fetchAllPaged<T extends { cursorPage: { hasMore: boolean; nextCur
   return items;
 }
 
+/** Первая страница списка специалистов с заданным `limit` (без обхода курсора). */
+export async function fetchSpecialistsListLimited(options: {
+  client: Client;
+  locale: AppLocale;
+  limit: number;
+  fetch?: typeof fetch;
+}): Promise<SpecialistsListResponse["specialists"]> {
+  const res = await specialistsList({
+    client: options.client,
+    query: {
+      locale: options.locale,
+      majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+      limit: options.limit,
+    },
+    fetch: options.fetch,
+  });
+  if (res.error || !res.data) {
+    throw new Error("specialists list failed");
+  }
+  return res.data.specialists;
+}
+
+/** Первая страница списка организаций с заданным `limit`. */
+export async function fetchOrganizationsListLimited(options: {
+  client: Client;
+  locale: AppLocale;
+  limit: number;
+  fetch?: typeof fetch;
+}): Promise<OrganizationsListResponse["organizations"]> {
+  const res = await organizationsList({
+    client: options.client,
+    query: {
+      locale: options.locale,
+      majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+      limit: options.limit,
+    },
+    fetch: options.fetch,
+  });
+  if (res.error || !res.data) {
+    throw new Error("organizations list failed");
+  }
+  return res.data.organizations;
+}
+
 /** Все страницы списка специалистов (для карты / домашней витрины). */
 export async function fetchAllSpecialistsPages(options: {
   client: Client;

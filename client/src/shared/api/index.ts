@@ -21,6 +21,8 @@ export {
 export {
   fetchAllOrganizationsPages,
   fetchAllSpecialistsPages,
+  fetchOrganizationsListLimited,
+  fetchSpecialistsListLimited,
 } from "./directory-cursor-fetch-all";
 
 /** Совпадает с `setGlobalPrefix("v1")` на бэкенде. */

@@ -12,8 +12,8 @@ import {
   advertisingListByPlacement,
   catalogGetCategoriesByMajorSlug,
   createServerSdkClient,
-  fetchAllOrganizationsPages,
-  fetchAllSpecialistsPages,
+  fetchOrganizationsListLimited,
+  fetchSpecialistsListLimited,
   serverSdkFetchNoStore,
   type CatalogGetCategoriesByMajorSlugResponse,
   type OrganizationsListResponse,
@@ -32,6 +32,7 @@ import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
+import { searchTabQueryValue } from "@/views/search/lib/search-tab";
 
 function isAbsoluteHttpUrl(href: string): boolean {
   return /^https?:\/\//i.test(href);
@@ -89,6 +90,9 @@ function PromoSlide({
 /** Совпадает с `ADV_PLACEMENT_HOME_PROMO` в `back/prisma/seed-advertising.mjs`. */
 const HOME_PROMO_PLACEMENT = "home_promo" as const;
 
+/** Сколько карточек запрашивать у API для блоков «топ» на главной. */
+const HOME_DIRECTORY_HIGHLIGHT_LIMIT = 3;
+
 export async function HomePage() {
   const t = await getTranslations();
   const tSlots = await getTranslations("slots");
@@ -139,14 +143,16 @@ export async function HomePage() {
 
     try {
       const [specs, orgs] = await Promise.all([
-        fetchAllSpecialistsPages({
+        fetchSpecialistsListLimited({
           client: sdkClient,
           locale,
+          limit: HOME_DIRECTORY_HIGHLIGHT_LIMIT,
           fetch: serverSdkFetchNoStore,
         }),
-        fetchAllOrganizationsPages({
+        fetchOrganizationsListLimited({
           client: sdkClient,
           locale,
+          limit: HOME_DIRECTORY_HIGHLIGHT_LIMIT,
           fetch: serverSdkFetchNoStore,
         }),
       ]);
@@ -281,8 +287,13 @@ export async function HomePage() {
               variant="secondary"
               tone="light"
               className="h-11 w-full rounded-full font-medium"
+              asChild
             >
-              {t("home.seeAll")}
+              <Link
+                href={`/search?tab=${searchTabQueryValue("organizations")}`}
+              >
+                {t("home.seeAll")}
+              </Link>
             </Button>
           </section>
 
@@ -315,8 +326,13 @@ export async function HomePage() {
               variant="secondary"
               tone="light"
               className="mb-2 h-11 w-full rounded-full font-medium"
+              asChild
             >
-              {t("home.seeAll")}
+              <Link
+                href={`/search?tab=${searchTabQueryValue("specialists")}`}
+              >
+                {t("home.seeAll")}
+              </Link>
             </Button>
           </section>
         </main>
