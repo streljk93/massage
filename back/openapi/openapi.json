@@ -1369,6 +1369,7 @@
                               "required": [
                                 "id",
                                 "name",
+                                "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -1380,6 +1381,11 @@
                                 "name": {
                                   "type": "string",
                                   "example": "Relaxing massage"
+                                },
+                                "categoryShortName": {
+                                  "type": "string",
+                                  "example": "Body massage",
+                                  "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
                                 },
                                 "durationMinutes": {
                                   "type": "array",
@@ -1580,6 +1586,7 @@
                         "required": [
                           "id",
                           "name",
+                          "categoryShortName",
                           "durationMinutes",
                           "priceVndByDuration"
                         ],
@@ -1591,6 +1598,11 @@
                           "name": {
                             "type": "string",
                             "example": "Relaxing massage"
+                          },
+                          "categoryShortName": {
+                            "type": "string",
+                            "example": "Body massage",
+                            "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
                           },
                           "durationMinutes": {
                             "type": "array",
@@ -2004,6 +2016,7 @@
                               "required": [
                                 "id",
                                 "name",
+                                "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -2015,6 +2028,11 @@
                                 "name": {
                                   "type": "string",
                                   "example": "Relaxing massage"
+                                },
+                                "categoryShortName": {
+                                  "type": "string",
+                                  "example": "Body massage",
+                                  "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
                                 },
                                 "durationMinutes": {
                                   "type": "array",

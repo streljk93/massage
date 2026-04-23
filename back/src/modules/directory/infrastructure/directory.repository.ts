@@ -18,6 +18,7 @@ const directoryServiceInclude = {
   include: {
     priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
     locales: true,
+    category: { include: { locales: true } },
   },
 } satisfies Prisma.ServiceFindManyArgs;
 

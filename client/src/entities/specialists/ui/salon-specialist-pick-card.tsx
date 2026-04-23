@@ -125,7 +125,19 @@ export function SalonSpecialistPickCard({
                     className="border-b border-border/30 last:border-b-0"
                   >
                     <td className="max-w-[8rem] px-2 py-1 align-top leading-snug">
-                      {row.name}
+                      {row.categoryShortName ? (
+                        <span className="block text-[0.6rem] leading-snug text-muted-foreground/90">
+                          {row.categoryShortName}
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          "block text-foreground/95",
+                          row.categoryShortName && "mt-0.5",
+                        )}
+                      >
+                        {row.name}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-2 py-1 align-top tabular-nums">
                       {row.durationMinutes.join(" · ")}

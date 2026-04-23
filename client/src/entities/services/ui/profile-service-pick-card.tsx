@@ -40,12 +40,15 @@ export function ProfileServicePickCard({
           : "border-border/60 bg-card hover:border-border",
       )}
     >
+      {service.categoryShortName ? (
+        <p className="mb-2 text-xs text-muted-foreground">{service.categoryShortName}</p>
+      ) : null}
       <button
         type="button"
         className="flex w-full items-start justify-between gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={onSelectService}
       >
-        <p className="text-sm font-semibold leading-snug text-foreground">
+        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground">
           {serviceName}
         </p>
         <div className="flex shrink-0 items-center gap-3">

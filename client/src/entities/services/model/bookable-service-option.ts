@@ -3,6 +3,8 @@ export type BookableServiceOption = {
   id: string;
   /** Локализованное название (из API или мока). */
   title: string;
+  /** Подкатегория каталога (`Service.category` → `shortName` для текущей локали). */
+  categoryShortName: string;
   durationMinutes: readonly number[];
   /** Длина совпадает с `durationMinutes`: цена в VND за сессию. */
   priceVndByDuration: readonly number[];

@@ -29,10 +29,22 @@ const listingSlotGroupItemSchema = {
 
 const specialistBookableServiceSchema = {
   type: 'object',
-  required: ['id', 'name', 'durationMinutes', 'priceVndByDuration'],
+  required: [
+    'id',
+    'name',
+    'categoryShortName',
+    'durationMinutes',
+    'priceVndByDuration',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     name: { type: 'string', example: 'Relaxing massage' },
+    categoryShortName: {
+      type: 'string',
+      example: 'Body massage',
+      description:
+        'Локализованный shortName подкатегории каталога (`Service.category`).',
+    },
     durationMinutes: {
       type: 'array',
       items: { type: 'integer', example: 60 },

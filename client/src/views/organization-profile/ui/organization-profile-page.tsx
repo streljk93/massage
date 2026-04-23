@@ -57,6 +57,7 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
     (b): BookableServiceOption => ({
       id: b.id,
       title: b.name,
+      categoryShortName: b.categoryShortName,
       durationMinutes: b.durationMinutes,
       priceVndByDuration: b.priceVndByDuration,
     }),

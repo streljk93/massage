@@ -177,8 +177,13 @@ export function BookingsPage() {
         }
         exitRefreshTimeoutRef.current = setTimeout(() => {
           exitRefreshTimeoutRef.current = null;
-          void refreshBookings();
-          setExitingBookingId(null);
+          void (async () => {
+            try {
+              await refreshBookings();
+            } finally {
+              setExitingBookingId(null);
+            }
+          })();
         }, BOOKING_CANCEL_EXIT_MS);
       } finally {
         cancelLock.current = false;

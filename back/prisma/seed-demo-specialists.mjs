@@ -1,14 +1,12 @@
 /**
- * Два демо-специалиста и один салон (организация):
- * — владелец: User.ownerOrganizations + Specialist + активное employment;
- * — сотрудник: тот же салон через employment, роль specialist (не владелец по ownerUserId).
+ * Демо-мастера и организации: базовая пара владелец+сотрудник в `demo-salon-seed`, затем
+ * доведение этого салона до ≥5 специалистов и ещё 5 салонов (`demo-salon-seed-2` … `6`):
+ * у каждого салона владелец (owner) и всего ≥5 мастеров.
  *
- * Дополнительно: гео (Organization + Specialist; у User в схеме нет lat/lng — только phone/avatar),
- * выбранные категории (M2M), отзывы и денормализованный рейтинг,
- * listedInDirectory: владелец скрыт из каталога мастеров, сотрудник — в каталоге.
- *
- * Идемпотентно: фиксированные email и slug организации.
- * Пароль для владельца/сотрудника (демо): `Demo123456!` — bcrypt 12 раундов как в PasswordHasher.
+ * Гео (Phú Quốc + карта), категории, отзывы/рейтинги (`applyDemoDirectoryReviewPack`),
+ * listedInDirectory (владелец в каталоге мастеров — скрыт, сотрудники — да).
+ * Клиенты-авторы отзывов: нейтральные имена, email `demo.client.*@example.com` (без бренда салона).
+ * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
 import bcrypt from "bcrypt";
 import { addDays, parseISO } from "date-fns";
@@ -34,8 +32,11 @@ const DEMO_PASSWORD = "Demo123456!";
 
 const OWNER_EMAIL = "demo.salon.owner@example.com";
 const WORKER_EMAIL = "demo.salon.worker@example.com";
-const CLIENT_REVIEW_EMAIL = "demo.client.reviews@example.com";
-const CLIENT_REVIEW_EMAIL_2 = "demo.client.reviews2@example.com";
+/** «Клиенты» для отзывов: нейтральные имена, без привязки к бренду салонов. */
+const CLIENT_REVIEW_EMAIL = "demo.client.mai@example.com";
+const CLIENT_REVIEW_EMAIL_2 = "demo.client.duc@example.com";
+const CLIENT_REVIEW_EMAIL_3 = "demo.client.hoang@example.com";
+const CLIENT_REVIEW_EMAIL_4 = "demo.client.phuong@example.com";
 const ORG_SLUG = "demo-salon-seed";
 
 /** Phú Quốc, Dương Đông — демо на острове (карта / адрес). */
@@ -73,6 +74,24 @@ const LISTING_SLOTS_WORKER = [
   { calendarDate: SLOT_DAY0, times: ["11:00", "15:00"] },
   { calendarDate: SLOT_DAY1, times: ["09:30", "13:00", "17:00"] },
 ];
+
+/** Слоты витрины для доп. мастеров/салонов (те же даты, что и у организации). */
+const LISTING_SLOTS_DEFAULT = LISTING_SLOTS_ORG;
+
+const AVATAR_POOL = [
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=128&h=128&fit=crop",
+  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&fit=crop",
+];
+
+function avatarForSeed(i) {
+  return AVATAR_POOL[i % AVATAR_POOL.length];
+}
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
@@ -124,15 +143,15 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL },
     create: {
       email: CLIENT_REVIEW_EMAIL,
-      name: "Demo Guest",
+      name: "Mai Lê",
       passwordHash: null,
-      locale: "en",
+      locale: "vi",
       phone: "+84901112233",
       avatarUrl:
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
     },
     update: {
-      name: "Demo Guest",
+      name: "Mai Lê",
       phone: "+84901112233",
       avatarUrl:
         "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
@@ -143,7 +162,7 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL_2 },
     create: {
       email: CLIENT_REVIEW_EMAIL_2,
-      name: "Demo Visitor",
+      name: "Đức Phạm",
       passwordHash: null,
       locale: "vi",
       phone: "+84904445566",
@@ -151,10 +170,44 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
     },
     update: {
-      name: "Demo Visitor",
+      name: "Đức Phạm",
       phone: "+84904445566",
       avatarUrl:
         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
+    },
+  });
+
+  const clientReviewer3 = await prisma.user.upsert({
+    where: { email: CLIENT_REVIEW_EMAIL_3 },
+    create: {
+      email: CLIENT_REVIEW_EMAIL_3,
+      name: "Hoàng Văn Nam",
+      passwordHash: null,
+      locale: "vi",
+      phone: "+84905557788",
+      avatarUrl: avatarForSeed(2),
+    },
+    update: {
+      name: "Hoàng Văn Nam",
+      phone: "+84905557788",
+      avatarUrl: avatarForSeed(2),
+    },
+  });
+
+  const clientReviewer4 = await prisma.user.upsert({
+    where: { email: CLIENT_REVIEW_EMAIL_4 },
+    create: {
+      email: CLIENT_REVIEW_EMAIL_4,
+      name: "Lê Phương Anh",
+      passwordHash: null,
+      locale: "en",
+      phone: "+84906668899",
+      avatarUrl: avatarForSeed(3),
+    },
+    update: {
+      name: "Lê Phương Anh",
+      phone: "+84906668899",
+      avatarUrl: avatarForSeed(3),
     },
   });
 
@@ -289,6 +342,8 @@ export async function seedDemoSpecialists(prisma) {
     "sports",
     "relaxing",
     "feet-reflexology",
+    "body",
+    "thai",
   ];
   const categories = await prisma.serviceCategory.findMany({
     where: {
@@ -473,84 +528,75 @@ export async function seedDemoSpecialists(prisma) {
     });
   }
 
-  const seedReviewAuthorIds = [clientReviewer.id, clientReviewer2.id];
-  await prisma.organizationReview.deleteMany({
-    where: {
-      organizationId: org.id,
-      authorUserId: { in: seedReviewAuthorIds },
+  /** Отзывы и агрегаты рейтинга — единым пакетом в конце сида, см. `applyDemoDirectoryReviewPack`. */
+  await topUpOriginalSalon(prisma, { passwordHash, bySlug, orgSlug: ORG_SLUG });
+
+  const extraSalonDefs = [
+    {
+      slug: "demo-salon-seed-2",
+      name: "Салон «Морской бриз»",
+      description: "Сид: филиал у пляжа, команда из 5 мастеров.",
+      city: "Phú Quốc",
+      addressLine: "12 Vo Thi Sau, Duong Dong",
+      orgLat: 10.228,
+      orgLng: 103.958,
     },
-  });
-  await prisma.specialistReview.deleteMany({
-    where: {
-      specialistId: { in: [ownerSpecialist.id, workerSpecialist.id] },
-      authorUserId: { in: seedReviewAuthorIds },
+    {
+      slug: "demo-salon-seed-3",
+      name: "Студия «Лотос»",
+      description: "Сид: расслабляющий и тайский массаж.",
+      city: "Phú Quốc",
+      addressLine: "88 30/4, Duong Dong",
+      orgLat: 10.205,
+      orgLng: 103.975,
     },
-  });
+    {
+      slug: "demo-salon-seed-4",
+      name: "Центр «Ан Минь»",
+      description: "Сид: спорт и реабилитация.",
+      city: "Phú Quốc",
+      addressLine: "5 Tran Hung Dao, An Thoi",
+      orgLat: 10.125,
+      orgLng: 104.018,
+    },
+    {
+      slug: "demo-salon-seed-5",
+      name: "Спа «Золотой песок»",
+      description: "Сид: SPA и уход.",
+      city: "Phú Quốc",
+      addressLine: "200 Nguyen Trung Truc, Duong Dong",
+      orgLat: 10.22,
+      orgLng: 103.968,
+    },
+    {
+      slug: "demo-salon-seed-6",
+      name: "Массаж «Bạch Đằng»",
+      description: "Сид: кабинет у набережной, Phú Quốc.",
+      city: "Phú Quốc",
+      addressLine: "78 Bach Dang, Duong Dong",
+      orgLat: 10.213,
+      orgLng: 103.97,
+    },
+  ];
+  for (let i = 0; i < extraSalonDefs.length; i++) {
+    await upsertFullSalon(prisma, {
+      passwordHash,
+      bySlug,
+      def: extraSalonDefs[i],
+      seedOffset: (i + 1) * 100,
+    });
+  }
 
-  await prisma.organizationReview.createMany({
-    data: [
-      {
-        organizationId: org.id,
-        authorUserId: clientReviewer.id,
-        rating: 5,
-        comment: "Great demo salon, clean and professional.",
-      },
-      {
-        organizationId: org.id,
-        authorUserId: clientReviewer.id,
-        rating: 4,
-        comment: "Nice atmosphere.",
-      },
-      {
-        organizationId: org.id,
-        authorUserId: clientReviewer2.id,
-        rating: 5,
-        comment: "Staff is friendly, easy booking.",
-      },
-      {
-        organizationId: org.id,
-        authorUserId: clientReviewer2.id,
-        rating: 4,
-        comment: "Good value on Phu Quoc.",
-      },
-    ],
-  });
-
-  await prisma.specialistReview.createMany({
-    data: [
-      {
-        specialistId: ownerSpecialist.id,
-        authorUserId: clientReviewer.id,
-        rating: 5,
-        comment: "Excellent therapist.",
-      },
-      {
-        specialistId: ownerSpecialist.id,
-        authorUserId: clientReviewer2.id,
-        rating: 4,
-        comment: "Strong hands, will return.",
-      },
-      {
-        specialistId: workerSpecialist.id,
-        authorUserId: clientReviewer.id,
-        rating: 5,
-        comment: "Very relaxing session.",
-      },
-      {
-        specialistId: workerSpecialist.id,
-        authorUserId: clientReviewer2.id,
-        rating: 5,
-        comment: "Calm energy, great foot work.",
-      },
-    ],
-  });
-
-  await syncOrganizationRating(prisma, org.id);
-  await syncSpecialistRating(prisma, ownerSpecialist.id);
-  await syncSpecialistRating(prisma, workerSpecialist.id);
+  await applyDemoDirectoryReviewPack(prisma, [
+    clientReviewer,
+    clientReviewer2,
+    clientReviewer3,
+    clientReviewer4,
+  ]);
 
   console.log(
-    `[seed] Демо-специалисты: «${org.slug}» (${org.id}); ` +
+    `[seed] Демо: «${org.slug}» + доводка до ≥5 мастеров; салоны ` +
+      `demo-salon-seed-2 … 6. ` +
       `${OWNER_EMAIL} → ${OrganizationMembershipRole.owner}; ` +
       `${WORKER_EMAIL} → ${OrganizationMembershipRole.specialist}. ` +
       `Пароль: ${DEMO_PASSWORD}`,
@@ -595,6 +641,101 @@ async function syncSpecialistRating(prisma, specialistId) {
   });
 }
 
+const DEMO_ORG_REVIEW_COMMENTS = [
+  "Clean and calm space, easy to book online.",
+  "Warm welcome, the session felt unhurried.",
+  "Convenient location, will visit again.",
+  "Professional setup from start to finish.",
+];
+
+const DEMO_SPEC_REVIEW_COMMENTS = [
+  "Skilled and punctual — great work on tension.",
+  "Clear communication, I felt very comfortable.",
+  "Attentive technique, noticeable relief after one visit.",
+  "Calm energy and strong hands, highly recommend.",
+  "Thorough and professional—exactly what I needed.",
+  "Respectful, on time, and very skilled.",
+  "I left relaxed; booking again next week.",
+  "Listened to my limits and adapted well.",
+];
+
+/**
+ * Все демо-организации `demo-salon-seed*`: 2 отзыва на место + по 2 на каждого мастера, затем
+ * пересчёт `ratingAverage` / `reviewsCount`. Клиенты — только `authorUsers` (фикс. аккаунты).
+ *
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {{ id: string }[]} authorUsers
+ */
+async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
+  if (authorUsers.length === 0) {
+    return;
+  }
+  const orgs = await prisma.organization.findMany({
+    where: { slug: { startsWith: "demo-salon-seed" } },
+    select: { id: true },
+  });
+  const orgIds = orgs.map((o) => o.id);
+  if (orgIds.length === 0) {
+    return;
+  }
+
+  const emps = await prisma.specialistOrganizationEmployment.findMany({
+    where: { organizationId: { in: orgIds }, isActive: true },
+    select: { specialistId: true },
+  });
+  const specialistIds = [...new Set(emps.map((e) => e.specialistId))];
+  const authorIds = authorUsers.map((u) => u.id);
+
+  await prisma.organizationReview.deleteMany({
+    where: { organizationId: { in: orgIds }, authorUserId: { in: authorIds } },
+  });
+  await prisma.specialistReview.deleteMany({
+    where: { specialistId: { in: specialistIds }, authorUserId: { in: authorIds } },
+  });
+
+  for (let oi = 0; oi < orgs.length; oi++) {
+    const org = orgs[oi];
+    for (let r = 0; r < 2; r++) {
+      const author = authorUsers[(oi + r) % authorUsers.length];
+      const rating = 4 + (r % 2);
+      const comment = DEMO_ORG_REVIEW_COMMENTS[(oi * 2 + r) % DEMO_ORG_REVIEW_COMMENTS.length];
+      await prisma.organizationReview.create({
+        data: {
+          organizationId: org.id,
+          authorUserId: author.id,
+          rating,
+          comment,
+        },
+      });
+    }
+  }
+
+  for (let si = 0; si < specialistIds.length; si++) {
+    const specialistId = specialistIds[si];
+    for (let r = 0; r < 2; r++) {
+      const author = authorUsers[(si + r) % authorUsers.length];
+      const rating = 4 + (r % 2);
+      const comment =
+        DEMO_SPEC_REVIEW_COMMENTS[(si * 2 + r) % DEMO_SPEC_REVIEW_COMMENTS.length];
+      await prisma.specialistReview.create({
+        data: {
+          specialistId,
+          authorUserId: author.id,
+          rating,
+          comment,
+        },
+      });
+    }
+  }
+
+  for (const id of orgIds) {
+    await syncOrganizationRating(prisma, id);
+  }
+  for (const id of specialistIds) {
+    await syncSpecialistRating(prisma, id);
+  }
+}
+
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
  * @param {string} specialistId
@@ -629,4 +770,456 @@ async function ensureEmployment(prisma, specialistId, organizationId, role) {
       isActive: true,
     },
   });
+}
+
+/**
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} organizationId
+ * @param {Record<string, import('@prisma/client').ServiceCategory>} bySlug
+ */
+async function getOrgCategoryRows(prisma, organizationId, bySlug) {
+  const links = await prisma.organizationServiceCategory.findMany({
+    where: { organizationId },
+    include: { serviceCategory: true },
+  });
+  if (links.length > 0) {
+    return links.map((l) => l.serviceCategory);
+  }
+  const slugs = ["neck", "back", "sports", "relaxing", "feet-reflexology"];
+  const rows = slugs.map((s) => bySlug[s]).filter(Boolean);
+  for (const c of rows) {
+    await prisma.organizationServiceCategory.upsert({
+      where: {
+        organizationId_serviceCategoryId: {
+          organizationId,
+          serviceCategoryId: c.id,
+        },
+      },
+      create: { organizationId, serviceCategoryId: c.id },
+      update: {},
+    });
+  }
+  return rows;
+}
+
+/**
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {{
+ *   passwordHash: string;
+ *   bySlug: Record<string, import('@prisma/client').ServiceCategory>;
+ *   orgSlug: string;
+ * }} ctx
+ */
+async function topUpOriginalSalon(prisma, ctx) {
+  const org = await prisma.organization.findUnique({
+    where: { slug: ctx.orgSlug },
+  });
+  if (!org) {
+    console.warn(
+      `[seed] Организация «${ctx.orgSlug}» не найдена — пропуск доводки мастеров`,
+    );
+    return;
+  }
+
+  const employments = await prisma.specialistOrganizationEmployment.findMany({
+    where: { organizationId: org.id, isActive: true },
+    select: { specialistId: true },
+  });
+  const need = Math.max(0, 5 - employments.length);
+  if (need === 0) {
+    return;
+  }
+
+  const topUpEmails = [
+    "demo.salon.worker2@example.com",
+    "demo.salon.worker3@example.com",
+    "demo.salon.worker4@example.com",
+  ].slice(0, need);
+
+  const orgCategoryRows = await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
+  let specIndex = employments.length;
+
+  for (const email of topUpEmails) {
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: {
+        email,
+        name: `Демо мастер ${specIndex + 1}`,
+        passwordHash: ctx.passwordHash,
+        locale: "ru",
+        phone: `+8490123${String(8000 + specIndex).slice(-4)}`,
+        avatarUrl: avatarForSeed(specIndex + 3),
+      },
+      update: {
+        name: `Демо мастер ${specIndex + 1}`,
+        passwordHash: ctx.passwordHash,
+        avatarUrl: avatarForSeed(specIndex + 3),
+      },
+    });
+
+    const lat = 10.22 + specIndex * 0.004;
+    const lng = 103.965 + specIndex * 0.003;
+    const specialist = await prisma.specialist.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        bio: "Мастер демо-салона (добавлен сидом).",
+        experienceYears: 3 + specIndex,
+        latitude: lat,
+        longitude: lng,
+        addressLine: "Duong Dong",
+        city: "Phú Quốc",
+        imageUrl: avatarForSeed(specIndex + 5).replace("w=128", "w=200"),
+        listingMetaLine: "~ near center | Phu Quoc",
+        listingServicesLine: null,
+        listingSlotGroups: LISTING_SLOTS_DEFAULT,
+        listedInDirectory: true,
+      },
+      update: {
+        listedInDirectory: true,
+        listingSlotGroups: LISTING_SLOTS_DEFAULT,
+        latitude: lat,
+        longitude: lng,
+        city: "Phú Quốc",
+        addressLine: "Duong Dong",
+        listingMetaLine: "Dương Đông · Phú Quốc",
+      },
+    });
+
+    await ensureEmployment(
+      prisma,
+      specialist.id,
+      org.id,
+      OrganizationMembershipRole.specialist,
+    );
+
+    const pick = ["relaxing", "back", "neck"]
+      .map((s) => ctx.bySlug[s])
+      .filter(Boolean);
+    await prisma.specialistServiceCategory.deleteMany({
+      where: { specialistId: specialist.id },
+    });
+    for (const c of pick) {
+      await prisma.specialistServiceCategory.create({
+        data: { specialistId: specialist.id, serviceCategoryId: c.id },
+      });
+    }
+    await prisma.specialist.update({
+      where: { id: specialist.id },
+      data: {
+        listingServicesLine: listingServicesLineFromCategories(pick),
+      },
+    });
+
+    const cat = ctx.bySlug.relaxing ?? ctx.bySlug.back;
+    if (cat) {
+      const slug = `demo-seed-topup-w${specIndex}-relax`;
+      await prisma.service.deleteMany({
+        where: { organizationId: org.id, slug },
+      });
+      await prisma.service.create({
+        data: {
+          organizationId: org.id,
+          categoryId: cat.id,
+          specialistId: specialist.id,
+          name: "Relaxing massage",
+          slug,
+          sortOrder: specIndex,
+          isActive: true,
+          locales: {
+            create: ["en", "vi", "ru"].map((locale) => ({
+              locale,
+              name:
+                locale === "vi"
+                  ? "Massage thư giãn"
+                  : locale === "ru"
+                    ? "Расслабляющий массаж"
+                    : "Relaxing massage",
+            })),
+          },
+          priceOptions: {
+            create: [
+              [60, 380_000],
+              [90, 520_000],
+            ].map(([durationMinutes, priceAmount]) => ({
+              durationMinutes,
+              priceAmount,
+              currency: "VND",
+            })),
+          },
+        },
+      });
+    }
+
+    specIndex += 1;
+  }
+
+  await prisma.organization.update({
+    where: { id: org.id },
+    data: {
+      listingServicesLine:
+        listingServicesLineFromCategories(orgCategoryRows) ?? org.listingServicesLine,
+    },
+  });
+  await syncOrganizationRating(prisma, org.id);
+}
+
+/**
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {{
+ *   passwordHash: string;
+ *   bySlug: Record<string, import('@prisma/client').ServiceCategory>;
+ *   def: {
+ *     slug: string;
+ *     name: string;
+ *     description: string;
+ *     city: string;
+ *     addressLine: string;
+ *     orgLat: number;
+ *     orgLng: number;
+ *   };
+ *   seedOffset: number;
+ * }} args
+ */
+async function upsertFullSalon(prisma, args) {
+  const { passwordHash, bySlug, def, seedOffset } = args;
+  const ownerEmail = `demo.${def.slug}.owner@example.com`;
+
+  const ownerUser = await prisma.user.upsert({
+    where: { email: ownerEmail },
+    create: {
+      email: ownerEmail,
+      name: `Владелец «${def.name}»`,
+      passwordHash,
+      locale: "ru",
+      phone: `+8490100${String(seedOffset).padStart(4, "0")}`,
+      avatarUrl: avatarForSeed(seedOffset),
+    },
+    update: {
+      name: `Владелец «${def.name}»`,
+      passwordHash,
+      avatarUrl: avatarForSeed(seedOffset),
+    },
+  });
+
+  const ownerSpecLat = def.orgLat + 0.002;
+  const ownerSpecLng = def.orgLng + 0.002;
+  const ownerSpecialist = await prisma.specialist.upsert({
+    where: { userId: ownerUser.id },
+    create: {
+      userId: ownerUser.id,
+      bio: "Владелец салона, ведёт приём.",
+      experienceYears: 12,
+      latitude: ownerSpecLat,
+      longitude: ownerSpecLng,
+      addressLine: def.addressLine,
+      city: def.city,
+      imageUrl: avatarForSeed(seedOffset + 1).replace("w=128", "w=200"),
+      listingMetaLine: def.city,
+      listingServicesLine: null,
+      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+      listedInDirectory: false,
+    },
+    update: {
+      listedInDirectory: false,
+      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+      latitude: ownerSpecLat,
+      longitude: ownerSpecLng,
+      city: def.city,
+      addressLine: def.addressLine,
+      listingMetaLine: def.city,
+    },
+  });
+
+  const org = await prisma.organization.upsert({
+    where: { slug: def.slug },
+    create: {
+      name: def.name,
+      slug: def.slug,
+      ownerUserId: ownerUser.id,
+      description: def.description,
+      city: def.city,
+      addressLine: def.addressLine,
+      phone: `+8428382${String(2000 + seedOffset).slice(-4)}`,
+      email: `hello@${def.slug}.example.com`,
+      yearsInBusiness: 5,
+      latitude: def.orgLat,
+      longitude: def.orgLng,
+      imageUrl:
+        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
+      listingMetaLine: `~ ${def.city}`,
+      listingServicesLine: null,
+      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+    },
+    update: {
+      name: def.name,
+      ownerUserId: ownerUser.id,
+      description: def.description,
+      city: def.city,
+      addressLine: def.addressLine,
+      latitude: def.orgLat,
+      longitude: def.orgLng,
+      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+    },
+  });
+
+  await ensureEmployment(
+    prisma,
+    ownerSpecialist.id,
+    org.id,
+    OrganizationMembershipRole.owner,
+  );
+
+  const workerSpecs = [];
+  for (let w = 1; w <= 4; w++) {
+    const email = `demo.${def.slug}.worker${w}@example.com`;
+    const user = await prisma.user.upsert({
+      where: { email },
+      create: {
+        email,
+        name: `Мастер ${w} · ${def.name}`,
+        passwordHash,
+        locale: "vi",
+        phone: `+8490200${String(seedOffset + w).padStart(4, "0")}`,
+        avatarUrl: avatarForSeed(seedOffset + w + 10),
+      },
+      update: {
+        name: `Мастер ${w} · ${def.name}`,
+        passwordHash,
+        avatarUrl: avatarForSeed(seedOffset + w + 10),
+      },
+    });
+
+    const wlat = def.orgLat + w * 0.003;
+    const wlng = def.orgLng - w * 0.002;
+    const specialist = await prisma.specialist.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        bio: `Мастер салона «${def.name}».`,
+        experienceYears: 4 + w,
+        latitude: wlat,
+        longitude: wlng,
+        addressLine: def.addressLine,
+        city: def.city,
+        imageUrl: avatarForSeed(seedOffset + w + 20).replace("w=128", "w=200"),
+        listingMetaLine: def.city,
+        listingServicesLine: null,
+        listingSlotGroups: LISTING_SLOTS_DEFAULT,
+        listedInDirectory: true,
+      },
+      update: {
+        listedInDirectory: true,
+        listingSlotGroups: LISTING_SLOTS_DEFAULT,
+        latitude: wlat,
+        longitude: wlng,
+        city: def.city,
+        addressLine: def.addressLine,
+        listingMetaLine: def.city,
+      },
+    });
+    workerSpecs.push(specialist);
+
+    await ensureEmployment(
+      prisma,
+      specialist.id,
+      org.id,
+      OrganizationMembershipRole.specialist,
+    );
+  }
+
+  const orgCategorySlugs = [
+    "neck",
+    "back",
+    "sports",
+    "relaxing",
+    "feet-reflexology",
+  ];
+  await prisma.organizationServiceCategory.deleteMany({
+    where: { organizationId: org.id },
+  });
+  const orgCategoryRows = orgCategorySlugs
+    .map((s) => bySlug[s])
+    .filter(Boolean);
+  for (const c of orgCategoryRows) {
+    await prisma.organizationServiceCategory.create({
+      data: { organizationId: org.id, serviceCategoryId: c.id },
+    });
+  }
+
+  await prisma.organization.update({
+    where: { id: org.id },
+    data: {
+      listingServicesLine: listingServicesLineFromCategories(orgCategoryRows),
+    },
+  });
+
+  const allSpecs = [ownerSpecialist, ...workerSpecs];
+  const categoryRot = ["sports", "relaxing", "neck", "back", "thai"];
+
+  for (let i = 0; i < allSpecs.length; i++) {
+    const spec = allSpecs[i];
+    const slugsPick = [
+      categoryRot[i % categoryRot.length],
+      categoryRot[(i + 1) % categoryRot.length],
+    ]
+      .map((s) => bySlug[s])
+      .filter(Boolean);
+    await prisma.specialistServiceCategory.deleteMany({
+      where: { specialistId: spec.id },
+    });
+    for (const c of slugsPick) {
+      await prisma.specialistServiceCategory.create({
+        data: { specialistId: spec.id, serviceCategoryId: c.id },
+      });
+    }
+    await prisma.specialist.update({
+      where: { id: spec.id },
+      data: {
+        listingServicesLine: listingServicesLineFromCategories(slugsPick),
+      },
+    });
+
+    const primaryCat = slugsPick[0];
+    if (!primaryCat) continue;
+    const svcSlug = `seed-${def.slug}-spec-${i}-main`;
+    await prisma.service.deleteMany({
+      where: { organizationId: org.id, slug: svcSlug },
+    });
+    await prisma.service.create({
+      data: {
+        organizationId: org.id,
+        categoryId: primaryCat.id,
+        specialistId: spec.id,
+        name: `Service ${i + 1}`,
+        slug: svcSlug,
+        sortOrder: i,
+        isActive: true,
+        locales: {
+          create: ["en", "vi", "ru"].map((locale) => ({
+            locale,
+            name:
+              locale === "vi"
+                ? `Dịch vụ ${i + 1}`
+                : locale === "ru"
+                  ? `Услуга ${i + 1}`
+                  : `Service ${i + 1}`,
+          })),
+        },
+        priceOptions: {
+          create: [
+            [60, 400_000 + i * 10_000],
+            [90, 540_000 + i * 10_000],
+            [120, 680_000 + i * 10_000],
+          ].map(([durationMinutes, priceAmount]) => ({
+            durationMinutes,
+            priceAmount,
+            currency: "VND",
+          })),
+        },
+      },
+    });
+  }
+
+  await syncOrganizationRating(prisma, org.id);
 }

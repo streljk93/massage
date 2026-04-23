@@ -553,6 +553,10 @@ export type SpecialistsListResponses = {
             bookableServices: Array<{
                 id: string;
                 name: string;
+                /**
+                 * Локализованный shortName подкатегории каталога (`Service.category`).
+                 */
+                categoryShortName: string;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
@@ -617,6 +621,10 @@ export type SpecialistsGetByIdResponses = {
         bookableServices: Array<{
             id: string;
             name: string;
+            /**
+             * Локализованный shortName подкатегории каталога (`Service.category`).
+             */
+            categoryShortName: string;
             durationMinutes: Array<number>;
             priceVndByDuration: Array<number>;
         }>;
@@ -744,6 +752,10 @@ export type OrganizationsGetByIdResponses = {
             bookableServices: Array<{
                 id: string;
                 name: string;
+                /**
+                 * Локализованный shortName подкатегории каталога (`Service.category`).
+                 */
+                categoryShortName: string;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;

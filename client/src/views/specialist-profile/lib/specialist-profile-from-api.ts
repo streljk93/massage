@@ -14,6 +14,7 @@ function bookableServicesFromApi(
   return list.map((s) => ({
     id: s.id,
     title: s.name,
+    categoryShortName: s.categoryShortName,
     durationMinutes: s.durationMinutes as readonly number[],
     priceVndByDuration: s.priceVndByDuration as readonly number[],
   }));

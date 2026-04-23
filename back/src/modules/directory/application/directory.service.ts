@@ -126,9 +126,13 @@ function mapServiceRowsToBookable(
       continue;
     }
     const name = pickLocalizedServiceName(svc, locale);
+    const categoryShortName = svc.category
+      ? pickLocalizedServiceCategoryFields(svc.category, locale).shortName
+      : '';
     out.push({
       id: svc.id,
       name,
+      categoryShortName,
       durationMinutes: vndOpts.map((p) => p.durationMinutes),
       priceVndByDuration: vndOpts.map((p) => p.priceAmount),
     });
