@@ -115,7 +115,7 @@
             "description": "Нет файла или неподдерживаемый тип"
           },
           "503": {
-            "description": "Хранилище не настроено (нет S3_ENDPOINT)"
+            "description": "Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)"
           }
         },
         "summary": "Загрузить публичный файл",
@@ -205,7 +205,7 @@
             "description": "Нет или невалидный access token"
           },
           "503": {
-            "description": "Хранилище не настроено (нет S3_ENDPOINT)"
+            "description": "Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)"
           }
         },
         "security": [
@@ -2515,7 +2515,8 @@
                           "name",
                           "rating",
                           "metaLine",
-                          "bookableServices"
+                          "bookableServices",
+                          "occupiedListingSlotKeys"
                         ],
                         "properties": {
                           "id": {
@@ -2581,6 +2582,13 @@
                                 }
                               }
                             }
+                          },
+                          "occupiedListingSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)"
                           }
                         }
                       }

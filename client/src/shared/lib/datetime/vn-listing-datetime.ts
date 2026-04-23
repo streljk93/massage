@@ -29,6 +29,11 @@ export function formatListingClockHm(date: Date): string {
   return formatInTimeZone(date, LISTING_DISPLAY_TZ, FMT_HM);
 }
 
+/** Ключ `yyyy-MM-dd|HH:mm` для сопоставления с занятостью витрины (как на бэкенде). */
+export function formatListingOccupiedSlotKey(startsAt: Date): string {
+  return `${formatListingCalendarYmd(startsAt)}|${formatListingClockHm(startsAt)}`;
+}
+
 /** Полдень по стенным часам витрины для `calendarDate` (yyyy-MM-dd) — якорь для подписей. */
 export function vnNoonUtcForCalendarYmd(calendarDate: string): Date {
   const [y, mo, d] = calendarDate.split("-").map(Number);

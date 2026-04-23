@@ -17,4 +17,8 @@ export type SalonSpecialistPick = {
   metaLine: string;
   /** Пустой массив, если в каталоге нет услуг с ценой. */
   bookableServices: StaffBookableServiceRow[];
+  /**
+   * Ключи занятых слотов витрины `yyyy-MM-dd|HH:mm` (GET /organizations/:id → staff).
+   */
+  occupiedListingSlotKeys: readonly string[];
 };

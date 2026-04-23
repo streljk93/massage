@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Building2,
@@ -22,7 +22,10 @@ import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import type { BookableServiceOption } from "@/entities/services";
 import { SalonSpecialistPickCard } from "@/entities/specialists";
-import type { SalonSpecialistPick } from "@/entities/specialists";
+import type {
+  SalonSpecialistPick,
+  StaffBookableServiceRow,
+} from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
@@ -34,6 +37,10 @@ import {
 import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
+import {
+  expandIntervalToListingOccupiedSlotKeys,
+  specialistOccupiedOverlapsProposed,
+} from "@/shared/lib/listing-booking-interval-slot-keys";
 import { bookingStartsAtIsoUtc } from "@/views/specialist-profile/lib/booking-starts-at";
 import { filterSlotTimesForDuration } from "@/views/specialist-profile/lib/filter-slots-for-duration";
 import type { OrganizationProfileData } from "../model/organization-profile-data";
@@ -62,6 +69,39 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
       priceVndByDuration: b.priceVndByDuration,
     }),
   );
+}
+
+/**
+ * Одна «логическая» услуга в салоне: имя + категория (без цен/минут — они у мастеров различаются).
+ * По полному совпадению цен/длительностей других мастеров в списке не было бы.
+ */
+function serviceMenuKeyFromOption(s: BookableServiceOption): string {
+  return `${s.title.trim()}\x1e${s.categoryShortName.trim()}`;
+}
+
+function serviceMenuKeyFromStaff(b: StaffBookableServiceRow): string {
+  return `${b.name.trim()}\x1e${b.categoryShortName.trim()}`;
+}
+
+function findStaffRowForMenuAnchor(
+  pick: SalonSpecialistPick,
+  anchor: BookableServiceOption,
+  preferredMinutes: number | undefined,
+): StaffBookableServiceRow | undefined {
+  const key = serviceMenuKeyFromOption(anchor);
+  const candidates = pick.bookableServices.filter(
+    (b) => serviceMenuKeyFromStaff(b) === key,
+  );
+  if (candidates.length === 0) {
+    return undefined;
+  }
+  if (
+    preferredMinutes !== undefined &&
+    candidates.some((b) => b.durationMinutes.includes(preferredMinutes))
+  ) {
+    return candidates.find((b) => b.durationMinutes.includes(preferredMinutes));
+  }
+  return candidates[0];
 }
 
 export type OrganizationProfilePageProps = {
@@ -150,35 +190,14 @@ export function OrganizationProfilePage({
     [selectedPick],
   );
 
-  const onSelectSpecialist = useCallback(
-    (specialistId: string) => {
-      setSelectedSalonSpecialistId(specialistId);
-      setDayIndex(0);
-      setSlot("");
-      const pick = profile.specialists.find(
-        (p) => p.specialistId === specialistId,
-      );
-      const opts = pickToBookableOptions(pick);
-      setServiceId(opts[0]?.id ?? "");
-      setDurationByService(() => {
-        const init: Record<string, number> = {};
-        for (const s of opts) {
-          init[s.id] = s.durationMinutes[0];
-        }
-        return init;
-      });
-    },
-    [profile.specialists],
+  const selectedService = useMemo(
+    () => bookableServiceOptions.find((s) => s.id === serviceId),
+    [bookableServiceOptions, serviceId],
   );
 
   const daySlots = useMemo(
     () => profile.timeSlotsByDay[dayIndex] ?? [],
     [profile.timeSlotsByDay, dayIndex],
-  );
-
-  const selectedService = useMemo(
-    () => bookableServiceOptions.find((s) => s.id === serviceId),
-    [bookableServiceOptions, serviceId],
   );
 
   const selectedBookingMinutes = useMemo(() => {
@@ -206,6 +225,143 @@ export function OrganizationProfilePage({
     }
     return filteredDaySlots[0] ?? "";
   }, [filteredDaySlots, slot]);
+
+  /** Ячейки сетки 30 мин, пересекающиеся с выбранным интервалом записи. */
+  const proposedBookingSlotKeys = useMemo(() => {
+    if (selectedBookingMinutes === undefined || !effectiveSlot.trim()) {
+      return null;
+    }
+    const calendarDate = profile.slotCalendarDates[dayIndex];
+    if (!calendarDate) {
+      return null;
+    }
+    const startsAtIso = bookingStartsAtIsoUtc({
+      calendarDate,
+      slotTime: effectiveSlot.trim(),
+    });
+    const start = new Date(startsAtIso);
+    const end = new Date(start.getTime() + selectedBookingMinutes * 60_000);
+    return expandIntervalToListingOccupiedSlotKeys(start, end);
+  }, [
+    dayIndex,
+    effectiveSlot,
+    profile.slotCalendarDates,
+    selectedBookingMinutes,
+  ]);
+
+  /** Та же услуга по меню (все такие карточки показываем; занятость — через disabled). */
+  const specialistsForSelectedService = useMemo(() => {
+    if (!selectedService) {
+      return profile.specialists;
+    }
+    const menuKey = serviceMenuKeyFromOption(selectedService);
+    return profile.specialists.filter((p) =>
+      p.bookableServices.some((b) => serviceMenuKeyFromStaff(b) === menuKey),
+    );
+  }, [profile.specialists, selectedService]);
+
+  /** Свободны на выбранный интервал (для автопереключения и кнопки записи). */
+  const selectableSpecialistsAtSlot = useMemo(() => {
+    if (!proposedBookingSlotKeys || proposedBookingSlotKeys.size === 0) {
+      return specialistsForSelectedService;
+    }
+    return specialistsForSelectedService.filter(
+      (p) =>
+        !specialistOccupiedOverlapsProposed(
+          p.occupiedListingSlotKeys,
+          proposedBookingSlotKeys,
+        ),
+    );
+  }, [specialistsForSelectedService, proposedBookingSlotKeys]);
+
+  const applySpecialistRemapService = useCallback(
+    (
+      specialistId: string,
+      anchorOption: BookableServiceOption | undefined,
+      preferredMinutes: number | undefined,
+    ) => {
+      setSelectedSalonSpecialistId(specialistId);
+      const pick = profile.specialists.find(
+        (p) => p.specialistId === specialistId,
+      );
+      if (!pick) {
+        return;
+      }
+
+      const initDurationsForPick = (p: SalonSpecialistPick) => {
+        const m: Record<string, number> = {};
+        for (const s of pickToBookableOptions(p)) {
+          m[s.id] = s.durationMinutes[0];
+        }
+        return m;
+      };
+
+      if (anchorOption) {
+        const row = findStaffRowForMenuAnchor(
+          pick,
+          anchorOption,
+          preferredMinutes,
+        );
+        if (row) {
+          const m = initDurationsForPick(pick);
+          const want =
+            preferredMinutes !== undefined &&
+            row.durationMinutes.includes(preferredMinutes)
+              ? preferredMinutes
+              : row.durationMinutes[0];
+          m[row.id] = want;
+          setServiceId(row.id);
+          setDurationByService(m);
+          return;
+        }
+      }
+
+      const opts = pickToBookableOptions(pick);
+      setServiceId(opts[0]?.id ?? "");
+      setDurationByService(initDurationsForPick(pick));
+    },
+    [profile.specialists],
+  );
+
+  const onSelectSpecialist = useCallback(
+    (specialistId: string) => {
+      applySpecialistRemapService(
+        specialistId,
+        selectedService,
+        selectedBookingMinutes,
+      );
+    },
+    [
+      applySpecialistRemapService,
+      selectedService,
+      selectedBookingMinutes,
+    ],
+  );
+
+  useEffect(() => {
+    if (!selectedService || selectableSpecialistsAtSlot.length === 0) {
+      return;
+    }
+    const ok = selectableSpecialistsAtSlot.some(
+      (p) => p.specialistId === selectedSalonSpecialistId,
+    );
+    if (!ok) {
+      const nextId = selectableSpecialistsAtSlot[0].specialistId;
+      queueMicrotask(() => {
+        applySpecialistRemapService(
+          nextId,
+          selectedService,
+          selectedBookingMinutes,
+        );
+      });
+    }
+  }, [
+    applySpecialistRemapService,
+    selectableSpecialistsAtSlot,
+    selectedBookingMinutes,
+    selectedSalonSpecialistId,
+    selectedService,
+  ]);
 
   const bookingPriceVnd =
     selectedService && selectedBookingMinutes !== undefined
@@ -291,6 +447,11 @@ export function OrganizationProfilePage({
   const bookingDisabled =
     bookingPending ||
     profile.specialists.length === 0 ||
+    specialistsForSelectedService.length === 0 ||
+    selectableSpecialistsAtSlot.length === 0 ||
+    !selectableSpecialistsAtSlot.some(
+      (p) => p.specialistId === selectedSalonSpecialistId,
+    ) ||
     !selectedSalonSpecialistId ||
     bookableServiceOptions.length === 0 ||
     selectedBookingMinutes === undefined ||
@@ -500,35 +661,6 @@ export function OrganizationProfilePage({
                 </div>
               </section>
 
-              {profile.specialists.length > 0 ? (
-                <section className="space-y-2.5">
-                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                    {t("selectSpecialist")}
-                  </h2>
-                  <div className="flex flex-col gap-3">
-                    {profile.specialists.map((pick, index) => (
-                      <SalonSpecialistPickCard
-                        key={`${pick.specialistId}-${index}`}
-                        pick={pick}
-                        selected={
-                          pick.specialistId === selectedSalonSpecialistId
-                        }
-                        selectLabel={t("specialistSelectCta")}
-                        selectedLabel={t("specialistSelectedCta")}
-                        profileHref={`/specialists/${pick.specialistId}`}
-                        openProfileAriaLabel={t("specialistOpenProfileAria", {
-                          name: pick.name,
-                        })}
-                        showBookableServices={false}
-                        onSelect={() =>
-                          onSelectSpecialist(pick.specialistId)
-                        }
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
               {showBookingFlow && bookableServiceOptions.length > 0 ? (
                 <section className="space-y-2.5">
                   <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
@@ -663,6 +795,46 @@ export function OrganizationProfilePage({
                     </div>
                   </section>
                 </>
+              ) : null}
+
+              {specialistsForSelectedService.length > 0 ? (
+                <section className="space-y-2.5">
+                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                    {t("selectSpecialist")}
+                  </h2>
+                  <div className="flex flex-col gap-3">
+                    {specialistsForSelectedService.map((pick, index) => {
+                      const scheduleBusy =
+                        proposedBookingSlotKeys !== null &&
+                        proposedBookingSlotKeys.size > 0 &&
+                        specialistOccupiedOverlapsProposed(
+                          pick.occupiedListingSlotKeys,
+                          proposedBookingSlotKeys,
+                        );
+                      return (
+                        <SalonSpecialistPickCard
+                          key={`${pick.specialistId}-${index}`}
+                          pick={pick}
+                          selected={
+                            pick.specialistId === selectedSalonSpecialistId
+                          }
+                          scheduleDisabled={scheduleBusy}
+                          scheduleDisabledLabel={t("specialistBusyThisSlot")}
+                          selectLabel={t("specialistSelectCta")}
+                          selectedLabel={t("specialistSelectedCta")}
+                          profileHref={`/specialists/${pick.specialistId}`}
+                          openProfileAriaLabel={t("specialistOpenProfileAria", {
+                            name: pick.name,
+                          })}
+                          showBookableServices={false}
+                          onSelect={() =>
+                            onSelectSpecialist(pick.specialistId)
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
               ) : null}
             </div>
           </div>

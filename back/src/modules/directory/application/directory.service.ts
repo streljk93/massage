@@ -16,7 +16,10 @@ import {
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
 import { buildListingSlotGroupsFromSlotStarts } from '../domain/build-card-slot-groups';
-import { filterSlotGroupsByOccupiedKeys } from '../domain/filter-slot-groups-by-occupied';
+import {
+  filterOrgSlotGroupsByOccupiedKeys,
+  filterSlotGroupsByOccupiedKeys,
+} from '../domain/filter-slot-groups-by-occupied';
 import {
   dropPastListingSlotGroups,
   parseListingSlotGroups,
@@ -84,8 +87,7 @@ function organizationListFiltersOrNull(
   categorySlugs: string[],
 ): OrganizationListApiFilters | null {
   const hasMajor = majorCategorySlug != null && majorCategorySlug !== '';
-  const has =
-    hasMajor || (q != null && q !== '') || categorySlugs.length > 0;
+  const has = hasMajor || (q != null && q !== '') || categorySlugs.length > 0;
   if (!has) {
     return null;
   }
@@ -143,22 +145,6 @@ function mergeOrganizationFreeSlotStarts(
     }
   }
   return deduped;
-}
-
-function unionOccupiedKeysForOrganization(
-  o: OrganizationListRow,
-  occupiedMap: Map<string, Set<string>>,
-): Set<string> {
-  const union = new Set<string>();
-  for (const e of o.specialistEmployments) {
-    if (!e.specialist.listedInDirectory) {
-      continue;
-    }
-    for (const k of occupiedMap.get(e.specialist.id) ?? []) {
-      union.add(k);
-    }
-  }
-  return union;
 }
 
 function resolveSlotGroups(
@@ -281,11 +267,24 @@ function mapOrganizationRowToListItem(
   );
   const fromJson = parseListingSlotGroups(o.listingSlotGroups);
   const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
-  const unionKeys = unionOccupiedKeysForOrganization(o, occupiedMap);
-  const slotGroups = dropPastListingSlotGroups(
-    filterSlotGroupsByOccupiedKeys(slotGroupsRaw, unionKeys),
-    now,
-  );
+  const listedSpecialistIds = o.specialistEmployments
+    .filter((e) => e.specialist.listedInDirectory)
+    .map((e) => e.specialist.id);
+  /**
+   * Слоты из доступности уже собраны как union свободных стартов по мастерам
+   * (`mergeOrganizationFreeSlotStarts` + `computeFreeSlotStartsForSpecialist` с их бронями).
+   * Повторная фильтрация по union занятых давала ложное скрытие слота при брони одного мастера.
+   * Fallback JSON: оставляем время, если не занято хотя бы у одного мастера.
+   */
+  const slotGroupsBeforePast =
+    fromDb.length > 0
+      ? slotGroupsRaw
+      : filterOrgSlotGroupsByOccupiedKeys(
+          slotGroupsRaw,
+          listedSpecialistIds,
+          occupiedMap,
+        );
+  const slotGroups = dropPastListingSlotGroups(slotGroupsBeforePast, now);
 
   const categoriesLine = joinLocalizedCategoryShortNames(
     o.serviceCategories,
@@ -325,6 +324,7 @@ function mapSpecialistToStaffMember(
   locale: ApiLocale,
   /** Строка локации салона (карточка сотрудника привязана к этой организации). */
   organizationMetaLine: string,
+  occupiedKeys: Set<string>,
 ): OrganizationStaffMemberDto {
   const metaLine =
     organizationMetaLine.trim() ||
@@ -339,6 +339,7 @@ function mapSpecialistToStaffMember(
     metaLine,
     imageUrl: s.imageUrl,
     bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
+    occupiedListingSlotKeys: [...occupiedKeys].sort(),
   };
 }
 
@@ -354,7 +355,10 @@ export class DirectoryService {
     const raw = this.config.get<number>('listingCardPreview.calendarDays');
     const fallback = 1;
     const n = raw ?? fallback;
-    return Math.max(1, Math.min(90, Math.floor(Number.isFinite(n) ? n : fallback)));
+    return Math.max(
+      1,
+      Math.min(90, Math.floor(Number.isFinite(n) ? n : fallback)),
+    );
   }
 
   /** Дни превью на GET организации / специалиста (полный профиль). */
@@ -362,7 +366,10 @@ export class DirectoryService {
     const raw = this.config.get<number>('profileSlotPreview.calendarDays');
     const fallback = 14;
     const n = raw ?? fallback;
-    return Math.max(1, Math.min(90, Math.floor(Number.isFinite(n) ? n : fallback)));
+    return Math.max(
+      1,
+      Math.min(90, Math.floor(Number.isFinite(n) ? n : fallback)),
+    );
   }
 
   private async buildOccupiedAndFreeSlotMaps(
@@ -578,7 +585,12 @@ export class DirectoryService {
     const staff: OrganizationStaffMemberDto[] = row.specialistEmployments
       .filter((e) => e.isActive && e.specialist.listedInDirectory)
       .map((e) =>
-        mapSpecialistToStaffMember(e.specialist, locale, base.metaLine),
+        mapSpecialistToStaffMember(
+          e.specialist,
+          locale,
+          base.metaLine,
+          occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
+        ),
       );
     return {
       ...base,

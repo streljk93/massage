@@ -54,7 +54,9 @@ export function SearchMapResultCard({
             </span>
           </div>
         </div>
-        <p className="truncate text-xs text-muted-foreground">{metaLine}</p>
+        <p className="truncate text-xs text-foreground/75">
+          {metaLine}
+        </p>
       </div>
     </article>
   );

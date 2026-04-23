@@ -204,7 +204,15 @@ export const organizationsListResponseSchema = {
 
 const organizationStaffMemberSchema = {
   type: 'object',
-  required: ['id', 'userId', 'name', 'rating', 'metaLine', 'bookableServices'],
+  required: [
+    'id',
+    'userId',
+    'name',
+    'rating',
+    'metaLine',
+    'bookableServices',
+    'occupiedListingSlotKeys',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     userId: { type: 'string', format: 'uuid' },
@@ -215,6 +223,12 @@ const organizationStaffMemberSchema = {
     bookableServices: {
       type: 'array',
       items: specialistBookableServiceSchema,
+    },
+    occupiedListingSlotKeys: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)',
     },
   },
 };

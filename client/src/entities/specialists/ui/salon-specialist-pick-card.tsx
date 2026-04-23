@@ -12,6 +12,12 @@ export type SalonSpecialistPickCardProps = {
   selectLabel: string;
   /** Текст кнопки при выбранном специалисте (например «Выбран»). */
   selectedLabel: string;
+  /**
+   * Нельзя выбрать на текущий слот (например занятость); кнопка неактивна,
+   * вместо CTA показывается `scheduleDisabledLabel`.
+   */
+  scheduleDisabled?: boolean;
+  scheduleDisabledLabel?: string;
   onSelect: () => void;
   /** Ссылка на профиль специалиста; при наличии клик по карточке (не по кнопке) ведёт туда. */
   profileHref?: string;
@@ -31,6 +37,8 @@ export function SalonSpecialistPickCard({
   selected,
   selectLabel,
   selectedLabel,
+  scheduleDisabled = false,
+  scheduleDisabledLabel,
   onSelect,
   profileHref,
   openProfileAriaLabel,
@@ -41,6 +49,7 @@ export function SalonSpecialistPickCard({
 }: SalonSpecialistPickCardProps) {
   const router = useRouter();
   const cardNavigable = Boolean(profileHref);
+  const showSelected = selected && !scheduleDisabled;
 
   const goToProfile = () => {
     if (profileHref) {
@@ -50,7 +59,7 @@ export function SalonSpecialistPickCard({
 
   return (
     <div
-      data-selected={selected}
+      data-selected={showSelected}
       tabIndex={cardNavigable ? 0 : undefined}
       aria-label={cardNavigable ? openProfileAriaLabel : undefined}
       onClick={cardNavigable ? goToProfile : undefined}
@@ -66,9 +75,10 @@ export function SalonSpecialistPickCard({
       }
       className={cn(
         "flex min-h-[7.5rem] w-full min-w-0 overflow-hidden rounded-2xl border-2 bg-transparent shadow-none transition-colors",
-        selected
+        showSelected
           ? "border-primary/55 bg-primary/[0.06]"
           : "border-transparent",
+        scheduleDisabled && "bg-muted/30",
         cardNavigable &&
           "cursor-pointer outline-none hover:bg-muted/20 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
         className,
@@ -148,25 +158,40 @@ export function SalonSpecialistPickCard({
             </table>
           </div>
         ) : null}
-        <div className="mt-auto w-full pt-1.5">
+        <div
+          className="mt-auto w-full pt-1.5"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
           <Button
             type="button"
             variant="secondary"
             tone="light"
-            aria-pressed={selected}
+            aria-pressed={showSelected}
+            aria-disabled={scheduleDisabled}
+            aria-label={
+              scheduleDisabled ? scheduleDisabledLabel : undefined
+            }
             className={cn(
               motion.interactivePressStrong,
               "h-9 w-full rounded-2xl border px-4 text-sm shadow-none pointer-events-auto transition-colors",
-              selected
+              showSelected
                 ? "border-primary/40 bg-primary/12 font-semibold text-primary hover:bg-primary/16"
                 : "border-transparent bg-muted/40 font-medium text-foreground hover:bg-muted/55",
+              scheduleDisabled && "cursor-default",
             )}
             onClick={(e) => {
               e.stopPropagation();
-              onSelect();
+              if (!scheduleDisabled) {
+                onSelect();
+              }
             }}
           >
-            {selected ? selectedLabel : selectLabel}
+            {scheduleDisabled
+              ? (scheduleDisabledLabel ?? selectLabel)
+              : showSelected
+                ? selectedLabel
+                : selectLabel}
           </Button>
         </div>
       </div>

@@ -28,6 +28,7 @@ export function organizationProfileFromApiDetail(
       durationMinutes: b.durationMinutes as readonly number[],
       priceVndByDuration: b.priceVndByDuration as readonly number[],
     })),
+    occupiedListingSlotKeys: s.occupiedListingSlotKeys ?? [],
   }));
 
   const { calendarDays, timeSlotsByDay, slotCalendarDates } =

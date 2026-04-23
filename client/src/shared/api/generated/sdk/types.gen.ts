@@ -35,7 +35,7 @@ export type FilesUploadPublicErrors = {
      */
     400: unknown;
     /**
-     * Хранилище не настроено (нет S3_ENDPOINT)
+     * Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)
      */
     503: unknown;
 };
@@ -78,7 +78,7 @@ export type FilesUploadPrivateErrors = {
      */
     401: unknown;
     /**
-     * Хранилище не настроено (нет S3_ENDPOINT)
+     * Хранилище не настроено, MinIO/S3 недоступен или перегружен (503)
      */
     503: unknown;
 };
@@ -1010,6 +1010,10 @@ export type OrganizationsGetByIdResponses = {
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
+            /**
+             * Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)
+             */
+            occupiedListingSlotKeys: Array<string>;
         }>;
     };
 };

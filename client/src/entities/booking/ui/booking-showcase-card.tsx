@@ -16,7 +16,7 @@ export type BookingShowcaseCardProps = {
   timeRange: string;
   avatarSrc?: string | null;
   className?: string;
-  /** `dark` — как на главной (`neutral-800`); `light` — белая карточка для страницы записей. */
+  /** `dark` — как на главной (`neutral-800`); `light` — карточка списка записей (`bg-card`, обе темы). */
   variant?: BookingShowcaseVariant;
   /** Если задано — строка мастера ведёт в профиль. */
   specialistProfileHref?: string;
@@ -30,7 +30,7 @@ export type BookingShowcaseCardProps = {
 };
 
 /**
- * Карточка брони: тёмный вариант (главная) или светлый (страница записей).
+ * Карточка брони: тёмный вариант (главная) или вариант списка (история / новые — токены темы).
  */
 export function BookingShowcaseCard({
   specialistName,
@@ -103,7 +103,7 @@ export function BookingShowcaseCard({
         "rounded-2xl p-3",
         isDark
           ? "bg-neutral-800 text-white"
-          : "border border-border/60 bg-white text-foreground",
+          : "border border-border/60 bg-card text-card-foreground",
         className,
       )}
     >
