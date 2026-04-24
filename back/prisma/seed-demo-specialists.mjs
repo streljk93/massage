@@ -9,24 +9,22 @@
  * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
 import bcrypt from "bcrypt";
-import { addDays, parseISO } from "date-fns";
-import { formatInTimeZone } from "date-fns-tz";
 import { OrganizationMembershipRole } from "@prisma/client";
 
-const VN_LISTING_TZ = "Asia/Ho_Chi_Minh";
-
-function listingSlotFallbackGroupsFromNow(now = new Date()) {
-  const todayKey = formatInTimeZone(now, VN_LISTING_TZ, "yyyy-MM-dd");
-  const midnight = parseISO(`${todayKey}T00:00:00+07:00`);
-  const tomorrowKey = formatInTimeZone(
-    addDays(midnight, 1),
-    VN_LISTING_TZ,
-    "yyyy-MM-dd",
-  );
-  return { todayKey, tomorrowKey };
-}
-
 const SALT_ROUNDS = 12;
+
+/**
+ * График витрины (минуты с полуночи, VN) — у каждого демо-салона разный, как в жизни:
+ * кто-то с 8:00, кто-то с 9/10, закрытие 21/22/23.
+ */
+const LISTING_WORKDAY_PRESETS = [
+  { start: 8 * 60, end: 22 * 60 },
+  { start: 9 * 60, end: 21 * 60 },
+  { start: 10 * 60, end: 23 * 60 },
+  { start: 8 * 60, end: 21 * 60 },
+  { start: 9 * 60, end: 23 * 60 },
+  { start: 10 * 60, end: 22 * 60 },
+];
 
 const DEMO_PASSWORD = "Demo123456!";
 
@@ -50,26 +48,6 @@ function listingServicesLineFromCategories(cats) {
   if (!cats.length) return null;
   return cats.map((c) => c.shortName).join(" · ");
 }
-
-/** Fallback JSON для карточек, если в БД нет слотов в окне витрины. */
-const { todayKey: SLOT_DAY0, tomorrowKey: SLOT_DAY1 } =
-  listingSlotFallbackGroupsFromNow();
-
-const LISTING_SLOTS_ORG = [
-  { calendarDate: SLOT_DAY0, times: ["09:00", "10:00", "11:30"] },
-  { calendarDate: SLOT_DAY1, times: ["09:00", "12:00", "15:00"] },
-];
-const LISTING_SLOTS_OWNER = [
-  { calendarDate: SLOT_DAY0, times: ["09:00", "10:00"] },
-  { calendarDate: SLOT_DAY1, times: ["11:00", "16:00"] },
-];
-const LISTING_SLOTS_WORKER = [
-  { calendarDate: SLOT_DAY0, times: ["11:00", "15:00"] },
-  { calendarDate: SLOT_DAY1, times: ["09:30", "13:00", "17:00"] },
-];
-
-/** Слоты витрины для доп. мастеров/салонов (те же даты, что и у организации). */
-const LISTING_SLOTS_DEFAULT = LISTING_SLOTS_ORG;
 
 const AVATAR_POOL = [
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
@@ -214,7 +192,6 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_OWNER,
       listedInDirectory: false,
     },
     update: {
@@ -224,7 +201,6 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_OWNER,
       listedInDirectory: false,
     },
   });
@@ -239,7 +215,6 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
       listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_WORKER,
       listedInDirectory: true,
     },
     update: {
@@ -249,7 +224,6 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
       listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_WORKER,
       listedInDirectory: true,
     },
   });
@@ -272,7 +246,8 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_ORG,
+      listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
+      listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
     },
     update: {
       name: "Демо-салон «Массаж»",
@@ -289,7 +264,8 @@ export async function seedDemoSpecialists(prisma) {
         "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
       listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_ORG,
+      listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
+      listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
     },
   });
 
@@ -570,6 +546,7 @@ export async function seedDemoSpecialists(prisma) {
       bySlug,
       def: extraSalonDefs[i],
       seedOffset: (i + 1) * 100,
+      workday: LISTING_WORKDAY_PRESETS[i + 1],
     });
   }
 
@@ -861,13 +838,11 @@ async function topUpOriginalSalon(prisma, ctx) {
         imageUrl: avatarForSeed(specIndex + 5).replace("w=128", "w=200"),
         listingMetaLine: "~ near center | Phu Quoc",
         listingServicesLine: null,
-        listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listedInDirectory: true,
         autoConfirmBookings: isDemoAutoConfirm,
       },
       update: {
         listedInDirectory: true,
-        listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listingMetaLine: "Dương Đông · Phú Quốc",
         autoConfirmBookings: isDemoAutoConfirm,
       },
@@ -971,10 +946,11 @@ async function topUpOriginalSalon(prisma, ctx) {
  *     orgLng: number;
  *   };
  *   seedOffset: number;
+ *   workday: { start: number; end: number };
  * }} args
  */
 async function upsertFullSalon(prisma, args) {
-  const { passwordHash, bySlug, def, seedOffset } = args;
+  const { passwordHash, bySlug, def, seedOffset, workday } = args;
   const ownerEmail = `demo.${def.slug}.owner@example.com`;
 
   const ownerUser = await prisma.user.upsert({
@@ -1003,12 +979,10 @@ async function upsertFullSalon(prisma, args) {
       imageUrl: avatarForSeed(seedOffset + 1).replace("w=128", "w=200"),
       listingMetaLine: def.city,
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_DEFAULT,
       listedInDirectory: false,
     },
     update: {
       listedInDirectory: false,
-      listingSlotGroups: LISTING_SLOTS_DEFAULT,
       listingMetaLine: def.city,
     },
   });
@@ -1031,7 +1005,8 @@ async function upsertFullSalon(prisma, args) {
         "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
       listingMetaLine: `~ ${def.city}`,
       listingServicesLine: null,
-      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+      listingWorkdayStartMinute: workday.start,
+      listingWorkdayEndMinute: workday.end,
     },
     update: {
       name: def.name,
@@ -1041,7 +1016,8 @@ async function upsertFullSalon(prisma, args) {
       addressLine: def.addressLine,
       latitude: def.orgLat,
       longitude: def.orgLng,
-      listingSlotGroups: LISTING_SLOTS_DEFAULT,
+      listingWorkdayStartMinute: workday.start,
+      listingWorkdayEndMinute: workday.end,
     },
   });
 
@@ -1081,12 +1057,10 @@ async function upsertFullSalon(prisma, args) {
         imageUrl: avatarForSeed(seedOffset + w + 20).replace("w=128", "w=200"),
         listingMetaLine: def.city,
         listingServicesLine: null,
-        listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listedInDirectory: true,
       },
       update: {
         listedInDirectory: true,
-        listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listingMetaLine: def.city,
       },
     });

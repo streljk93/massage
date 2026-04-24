@@ -34,6 +34,8 @@ const specialistActiveOrganizationInclude = {
     latitude: true,
     longitude: true,
     listingMetaLine: true,
+    listingWorkdayStartMinute: true,
+    listingWorkdayEndMinute: true,
   },
 } as const;
 

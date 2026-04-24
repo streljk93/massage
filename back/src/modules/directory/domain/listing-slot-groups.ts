@@ -1,4 +1,3 @@
-import type { Prisma } from '@prisma/client';
 import { formatListingCalendarYmd } from '../../../common/datetime/vn-listing-datetime';
 
 export type ListingSlotGroupSeed = {
@@ -6,8 +5,6 @@ export type ListingSlotGroupSeed = {
   calendarDate: string;
   times: string[];
 };
-
-const ISO_CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -31,49 +28,4 @@ export function dropPastListingSlotGroups(
 ): ListingSlotGroupSeed[] {
   const minDate = formatListingCalendarYmd(now);
   return groups.filter((g) => g.calendarDate >= minDate);
-}
-
-/**
- * Разбор JSON из `listingSlotGroups` (Prisma).
- * Поддержка: `calendarDate` или `date` (yyyy-MM-dd).
- */
-export function parseListingSlotGroups(
-  raw: Prisma.JsonValue | null | undefined,
-): ListingSlotGroupSeed[] {
-  if (raw == null || !Array.isArray(raw)) {
-    return [];
-  }
-  const out: ListingSlotGroupSeed[] = [];
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') {
-      continue;
-    }
-    const o = item as {
-      calendarDate?: unknown;
-      date?: unknown;
-      times?: unknown;
-    };
-    const times = o.times;
-    if (!Array.isArray(times)) {
-      continue;
-    }
-    const filteredTimes = times.filter(
-      (t): t is string => typeof t === 'string',
-    );
-
-    let calendarDate: string | null = null;
-    if (
-      typeof o.calendarDate === 'string' &&
-      ISO_CALENDAR_DATE.test(o.calendarDate)
-    ) {
-      calendarDate = o.calendarDate;
-    } else if (typeof o.date === 'string' && ISO_CALENDAR_DATE.test(o.date)) {
-      calendarDate = o.date;
-    }
-    if (!calendarDate) {
-      continue;
-    }
-    out.push({ calendarDate, times: filteredTimes });
-  }
-  return out;
 }

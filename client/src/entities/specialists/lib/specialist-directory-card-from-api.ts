@@ -2,6 +2,11 @@ import type {
   SpecialistsGetByIdResponse,
   SpecialistsListResponse,
 } from "@/shared/api";
+import {
+  freeDirectorySlotGroupSeedsFromSpecialistOccupied,
+  UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+} from "@/shared/lib/directory-free-slot-groups-from-occupied";
+import { normalizeClientListingWorkday } from "@/shared/lib/directory-listing-workday";
 import type { DirectorySlotGroupSeed } from "@/shared/lib/directory-slot-group-seed";
 import { resolveDirectoryImageSrc } from "@/shared/lib/directory-card-image";
 
@@ -26,7 +31,13 @@ export type SpecialistCardSeedFromApi = {
 
 export function specialistCardSeedFromApi(
   s: SpecialistDirectoryCardSource,
+  now: Date = new Date(),
 ): SpecialistCardSeedFromApi {
+  const occupied = (s.slotGroups ?? []) as DirectorySlotGroupSeed[];
+  const workday = normalizeClientListingWorkday(
+    s.listingWorkdayStartMinute,
+    s.listingWorkdayEndMinute,
+  );
   return {
     id: s.id,
     name: s.name,
@@ -34,7 +45,12 @@ export function specialistCardSeedFromApi(
     rating: s.rating,
     metaLine: s.metaLine,
     servicesLine: s.servicesLine,
-    slotGroups: (s.slotGroups ?? []) as DirectorySlotGroupSeed[],
+    slotGroups: freeDirectorySlotGroupSeedsFromSpecialistOccupied(
+      occupied,
+      now,
+      UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+      workday,
+    ),
     lat: s.latitude ?? 0,
     lng: s.longitude ?? 0,
     categories: s.categories ?? [],

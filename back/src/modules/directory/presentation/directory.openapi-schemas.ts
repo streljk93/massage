@@ -23,6 +23,29 @@ const listingSlotGroupItemSchema = {
     times: {
       type: 'array',
       items: { type: 'string', example: '09:00' },
+      description:
+        'У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).',
+    },
+  },
+};
+
+const listingWorkdayMinutesSchema = {
+  type: 'integer',
+  minimum: 0,
+  description:
+    'Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).',
+};
+
+const specialistOccupiedSlotKeysEntrySchema = {
+  type: 'object',
+  required: ['specialistId', 'keys'],
+  properties: {
+    specialistId: { type: 'string', format: 'uuid' },
+    keys: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.',
     },
   },
 };
@@ -74,6 +97,8 @@ export const specialistListItemSchema = {
     'slotGroups',
     'bookableServices',
     'autoConfirmBookings',
+    'listingWorkdayStartMinute',
+    'listingWorkdayEndMinute',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -116,6 +141,8 @@ export const specialistListItemSchema = {
     slotGroups: {
       type: 'array',
       items: listingSlotGroupItemSchema,
+      description:
+        'Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты.',
     },
     bookableServices: {
       type: 'array',
@@ -125,6 +152,14 @@ export const specialistListItemSchema = {
       type: 'boolean',
       description:
         'Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.',
+    },
+    listingWorkdayStartMinute: {
+      ...listingWorkdayMinutesSchema,
+      example: 480,
+    },
+    listingWorkdayEndMinute: {
+      ...listingWorkdayMinutesSchema,
+      example: 1320,
     },
   },
 };
@@ -174,6 +209,9 @@ export const organizationListItemSchema = {
     'servicesLine',
     'categories',
     'slotGroups',
+    'specialistOccupiedSlotKeys',
+    'listingWorkdayStartMinute',
+    'listingWorkdayEndMinute',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -200,6 +238,19 @@ export const organizationListItemSchema = {
     slotGroups: {
       type: 'array',
       items: listingSlotGroupItemSchema,
+      description: 'Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.',
+    },
+    specialistOccupiedSlotKeys: {
+      type: 'array',
+      items: specialistOccupiedSlotKeysEntrySchema,
+    },
+    listingWorkdayStartMinute: {
+      ...listingWorkdayMinutesSchema,
+      example: 480,
+    },
+    listingWorkdayEndMinute: {
+      ...listingWorkdayMinutesSchema,
+      example: 1320,
     },
   },
 };

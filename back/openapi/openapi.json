@@ -2074,7 +2074,9 @@
                           "categories",
                           "slotGroups",
                           "bookableServices",
-                          "autoConfirmBookings"
+                          "autoConfirmBookings",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
                         ],
                         "properties": {
                           "id": {
@@ -2193,10 +2195,12 @@
                                   "items": {
                                     "type": "string",
                                     "example": "09:00"
-                                  }
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
                                 }
                               }
-                            }
+                            },
+                            "description": "Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты."
                           },
                           "bookableServices": {
                             "type": "array",
@@ -2243,6 +2247,18 @@
                           "autoConfirmBookings": {
                             "type": "boolean",
                             "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
                           }
                         }
                       }
@@ -2322,7 +2338,9 @@
                     "categories",
                     "slotGroups",
                     "bookableServices",
-                    "autoConfirmBookings"
+                    "autoConfirmBookings",
+                    "listingWorkdayStartMinute",
+                    "listingWorkdayEndMinute"
                   ],
                   "properties": {
                     "id": {
@@ -2441,10 +2459,12 @@
                             "items": {
                               "type": "string",
                               "example": "09:00"
-                            }
+                            },
+                            "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
                           }
                         }
-                      }
+                      },
+                      "description": "Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты."
                     },
                     "bookableServices": {
                       "type": "array",
@@ -2491,6 +2511,18 @@
                     "autoConfirmBookings": {
                       "type": "boolean",
                       "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
+                    },
+                    "listingWorkdayStartMinute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                      "example": 480
+                    },
+                    "listingWorkdayEndMinute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                      "example": 1320
                     }
                   }
                 }
@@ -2602,7 +2634,10 @@
                           "metaLine",
                           "servicesLine",
                           "categories",
-                          "slotGroups"
+                          "slotGroups",
+                          "specialistOccupiedSlotKeys",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
                         ],
                         "properties": {
                           "id": {
@@ -2711,10 +2746,47 @@
                                   "items": {
                                     "type": "string",
                                     "example": "09:00"
-                                  }
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                }
+                              }
+                            },
+                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                          },
+                          "specialistOccupiedSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "specialistId",
+                                "keys"
+                              ],
+                              "properties": {
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "keys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
                                 }
                               }
                             }
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
                           }
                         }
                       }
@@ -2793,6 +2865,9 @@
                     "servicesLine",
                     "categories",
                     "slotGroups",
+                    "specialistOccupiedSlotKeys",
+                    "listingWorkdayStartMinute",
+                    "listingWorkdayEndMinute",
                     "staff",
                     "clientsCount"
                   ],
@@ -2903,10 +2978,47 @@
                             "items": {
                               "type": "string",
                               "example": "09:00"
-                            }
+                            },
+                            "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                          }
+                        }
+                      },
+                      "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                    },
+                    "specialistOccupiedSlotKeys": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "specialistId",
+                          "keys"
+                        ],
+                        "properties": {
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "keys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
                           }
                         }
                       }
+                    },
+                    "listingWorkdayStartMinute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                      "example": 480
+                    },
+                    "listingWorkdayEndMinute": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                      "example": 1320
                     },
                     "staff": {
                       "type": "array",
@@ -3664,7 +3776,10 @@
                           "metaLine",
                           "servicesLine",
                           "categories",
-                          "slotGroups"
+                          "slotGroups",
+                          "specialistOccupiedSlotKeys",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
                         ],
                         "properties": {
                           "id": {
@@ -3773,10 +3888,47 @@
                                   "items": {
                                     "type": "string",
                                     "example": "09:00"
-                                  }
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                }
+                              }
+                            },
+                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                          },
+                          "specialistOccupiedSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "specialistId",
+                                "keys"
+                              ],
+                              "properties": {
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "keys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
                                 }
                               }
                             }
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
                           }
                         }
                       }
@@ -3850,7 +4002,9 @@
                           "categories",
                           "slotGroups",
                           "bookableServices",
-                          "autoConfirmBookings"
+                          "autoConfirmBookings",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
                         ],
                         "properties": {
                           "id": {
@@ -3969,10 +4123,12 @@
                                   "items": {
                                     "type": "string",
                                     "example": "09:00"
-                                  }
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
                                 }
                               }
-                            }
+                            },
+                            "description": "Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты."
                           },
                           "bookableServices": {
                             "type": "array",
@@ -4019,6 +4175,18 @@
                           "autoConfirmBookings": {
                             "type": "boolean",
                             "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
                           }
                         }
                       }

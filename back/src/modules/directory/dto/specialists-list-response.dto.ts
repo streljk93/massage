@@ -40,6 +40,10 @@ export type SpecialistListItemDto = {
   servicesLine: string;
   /** Выбранные подкатегории каталога (`?locale` влияет на `shortName`). */
   categories: DirectoryCategoryTagDto[];
+  /**
+   * **Занятые** слоты (не свободные). Группировка по `calendarDate`, в `times` — HH:mm.
+   * На клиенте: свободные = сетка превью витрины минус эти времена.
+   */
   slotGroups: ListingSlotGroupSeed[];
   bookableServices: SpecialistBookableServiceDto[];
   /**
@@ -47,6 +51,12 @@ export type SpecialistListItemDto = {
    * Настраивается на стороне мастера (сид / будущий экран настроек).
    */
   autoConfirmBookings: boolean;
+  /**
+   * График приёма витрины с активного салона (те же смыслы, что у организации);
+   * без места приёма — 8:00–22:00.
+   */
+  listingWorkdayStartMinute: number;
+  listingWorkdayEndMinute: number;
 };
 
 export type SpecialistsListResponseDto = {

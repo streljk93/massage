@@ -225,8 +225,10 @@ model Organization {
   listingMetaLine String?
   /// Витрина: вторая строка услуг/форматов для карточки.
   listingServicesLine String?
-  /// JSON: [{ "calendarDate": "yyyy-MM-dd", "times": ["09:00", ...] }] — превью слотов на карточке (дата в Asia/Ho_Chi_Minh).
-  listingSlotGroups Json?
+  /// Минуты с полуночи (Asia/Ho_Chi_Minh) — начало приёма; сетка 30 мин (например 480=8:00, 540=9:00, 600=10:00).
+  listingWorkdayStartMinute Int @default(480)
+  /// Окончание приёма (например 1260=21:00, 1320=22:00, 1380=23:00; последний старт = end − 30 мин).
+  listingWorkdayEndMinute   Int @default(1320)
 
   /// Денормализованные агрегаты (обновляются при отзывах / фоново).
   ratingAverage Float @default(0)
@@ -328,8 +330,6 @@ model Specialist {
 
   listingMetaLine     String?
   listingServicesLine String?
-  /// JSON: [{ "calendarDate": "yyyy-MM-dd", "times": ["09:00", ...] }] — превью слотов на карточке (дата в Asia/Ho_Chi_Minh).
-  listingSlotGroups   Json?
 
   /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.
   listedInDirectory Boolean @default(true)

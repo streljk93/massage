@@ -2,6 +2,11 @@ import type {
   OrganizationsGetByIdResponse,
   OrganizationsListResponse,
 } from "@/shared/api";
+import {
+  freeDirectorySlotGroupSeedsForOrganization,
+  UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+} from "@/shared/lib/directory-free-slot-groups-from-occupied";
+import { normalizeClientListingWorkday } from "@/shared/lib/directory-listing-workday";
 import type { DirectorySlotGroupSeed } from "@/shared/lib/directory-slot-group-seed";
 import { resolveDirectoryImageSrc } from "@/shared/lib/directory-card-image";
 
@@ -26,7 +31,16 @@ export type OrganizationCardSeedFromApi = {
 
 export function organizationCardSeedFromApi(
   o: OrganizationDirectoryCardSource,
+  now: Date = new Date(),
 ): OrganizationCardSeedFromApi {
+  const per = (o.specialistOccupiedSlotKeys ?? []).map((e) => ({
+    specialistId: e.specialistId,
+    keys: e.keys ?? [],
+  }));
+  const workday = normalizeClientListingWorkday(
+    o.listingWorkdayStartMinute,
+    o.listingWorkdayEndMinute,
+  );
   return {
     id: o.id,
     name: o.name,
@@ -36,7 +50,12 @@ export function organizationCardSeedFromApi(
     rating: o.rating,
     metaLine: o.metaLine,
     servicesLine: o.servicesLine,
-    slotGroups: (o.slotGroups ?? []) as DirectorySlotGroupSeed[],
+    slotGroups: freeDirectorySlotGroupSeedsForOrganization(
+      per,
+      now,
+      UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+      workday,
+    ),
     categories: o.categories ?? [],
     addressLine: o.addressLine ?? null,
     city: o.city ?? null,

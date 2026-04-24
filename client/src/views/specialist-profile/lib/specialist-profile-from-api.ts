@@ -1,5 +1,10 @@
 import type { BookableServiceOption } from "@/entities/services";
 import type { SpecialistsGetByIdResponse } from "@/shared/api";
+import {
+  freeDirectorySlotGroupSeedsFromSpecialistOccupied,
+  UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+} from "@/shared/lib/directory-free-slot-groups-from-occupied";
+import { normalizeClientListingWorkday } from "@/shared/lib/directory-listing-workday";
 import { availabilityFromDirectorySlotGroups } from "@/shared/lib/directory-slot-calendar";
 import { specialistCardSeedFromApi } from "@/entities/specialists";
 import type {
@@ -23,11 +28,23 @@ function bookableServicesFromApi(
 export function specialistProfileFromApiDetail(
   detail: SpecialistsGetByIdResponse,
 ): SpecialistProfileData {
+  const now = new Date();
   const card = specialistCardSeedFromApi(
     detail as Parameters<typeof specialistCardSeedFromApi>[0],
+    now,
+  );
+  const workday = normalizeClientListingWorkday(
+    detail.listingWorkdayStartMinute,
+    detail.listingWorkdayEndMinute,
+  );
+  const freeGroups = freeDirectorySlotGroupSeedsFromSpecialistOccupied(
+    detail.slotGroups ?? [],
+    now,
+    UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+    workday,
   );
   const { calendarDays, timeSlotsByDay, slotCalendarDates } =
-    availabilityFromDirectorySlotGroups(detail.slotGroups);
+    availabilityFromDirectorySlotGroups(freeGroups);
 
   return {
     id: detail.id,

@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
 import { listingCardPreviewWindowMs } from '../../../common/availability/listing-slot-policy';
 import {
   decodeOrganizationListCursor,
@@ -15,27 +16,18 @@ import {
   type CategoryLocaleShape,
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
-import { buildListingSlotGroupsFromSlotStarts } from '../domain/build-card-slot-groups';
-import {
-  filterOrgSlotGroupsByOccupiedKeys,
-  filterSlotGroupsByOccupiedKeys,
-} from '../domain/filter-slot-groups-by-occupied';
-import {
-  dropPastListingSlotGroups,
-  parseListingSlotGroups,
-  type ListingSlotGroupSeed,
-} from '../domain/listing-slot-groups';
-import {
-  computeFreeSlotStartsForSpecialist,
-  mergeBookingsToOccupiedKeysPerSpecialist,
-} from '../domain/workday-free-slots';
+import { buildListingSlotGroupsFromOccupiedKeys } from '../domain/build-occupied-listing-slot-groups';
+import { mergeBookingsToOccupiedKeysPerSpecialist } from '../domain/workday-free-slots';
 import type { CatalogFilterOptionsResponseDto } from '../dto/catalog-filter-options-response.dto';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
 import type {
   OrganizationDetailResponseDto,
   OrganizationStaffMemberDto,
 } from '../dto/organization-detail-response.dto';
-import type { OrganizationListItemDto } from '../dto/organizations-list-response.dto';
+import type {
+  OrganizationListItemDto,
+  SpecialistOccupiedSlotKeysEntryDto,
+} from '../dto/organizations-list-response.dto';
 import type { OrganizationsListResponseDto } from '../dto/organizations-list-response.dto';
 import type {
   SpecialistBookableServiceDto,
@@ -123,37 +115,6 @@ function mapDirectoryCategoryTags(
   });
 }
 
-function mergeOrganizationFreeSlotStarts(
-  org: OrganizationListRow,
-  freeBySpec: Map<string, Date[]>,
-): Date[] {
-  const starts: Date[] = [];
-  for (const e of org.specialistEmployments) {
-    if (!e.specialist.listedInDirectory) {
-      continue;
-    }
-    starts.push(...(freeBySpec.get(e.specialist.id) ?? []));
-  }
-  starts.sort((a, b) => a.getTime() - b.getTime());
-  const seen = new Set<number>();
-  const deduped: Date[] = [];
-  for (const s of starts) {
-    const t = s.getTime();
-    if (!seen.has(t)) {
-      seen.add(t);
-      deduped.push(s);
-    }
-  }
-  return deduped;
-}
-
-function resolveSlotGroups(
-  fromAvailability: ListingSlotGroupSeed[],
-  jsonFallback: ListingSlotGroupSeed[],
-): ListingSlotGroupSeed[] {
-  return fromAvailability.length > 0 ? fromAvailability : jsonFallback;
-}
-
 type DirectoryServiceRow = SpecialistListRow['services'][number];
 
 function isVndPriceOption(p: { currency: string }): boolean {
@@ -199,16 +160,9 @@ function mapSpecialistRowToListItem(
   locale: ApiLocale,
   now: Date,
   occupiedKeys: Set<string>,
-  freeSlotStarts: Date[],
   doneClientsCount: number,
 ): SpecialistListItemDto {
-  const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts);
-  const fromJson = parseListingSlotGroups(s.listingSlotGroups);
-  const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
-  const slotGroups = dropPastListingSlotGroups(
-    filterSlotGroupsByOccupiedKeys(slotGroupsRaw, occupiedKeys),
-    now,
-  );
+  const slotGroups = buildListingSlotGroupsFromOccupiedKeys(occupiedKeys, now);
 
   const loc = s.activeOrganization;
   const addressLine = loc?.addressLine ?? null;
@@ -229,6 +183,10 @@ function mapSpecialistRowToListItem(
   // `listingServicesLine` — денормализация (часто en из сида); для витрины важнее
   // локализованная склейка по M2M `serviceCategories`, если она есть.
   const servicesLine = categoriesLine || s.listingServicesLine?.trim() || '';
+  const listingWd = normalizeDirectoryListingWorkdayBounds(
+    loc?.listingWorkdayStartMinute,
+    loc?.listingWorkdayEndMinute,
+  );
   return {
     id: s.id,
     userId: s.userId,
@@ -251,43 +209,31 @@ function mapSpecialistRowToListItem(
     slotGroups,
     bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
     autoConfirmBookings: s.autoConfirmBookings,
+    listingWorkdayStartMinute: listingWd.startMinute,
+    listingWorkdayEndMinute: listingWd.endMinute,
   };
 }
 
 function mapOrganizationRowToListItem(
   o: OrganizationListRow,
   locale: ApiLocale,
-  now: Date,
+  _now: Date,
   occupiedMap: Map<string, Set<string>>,
-  freeBySpec: Map<string, Date[]>,
 ): OrganizationListItemDto {
   const localized = pickLocalizedOrganizationListItem(
     o as unknown as OrganizationLocaleListShape,
     locale,
   );
-  const fromDb = buildListingSlotGroupsFromSlotStarts(
-    mergeOrganizationFreeSlotStarts(o, freeBySpec),
-  );
-  const fromJson = parseListingSlotGroups(o.listingSlotGroups);
-  const slotGroupsRaw = resolveSlotGroups(fromDb, fromJson);
-  const listedSpecialistIds = o.specialistEmployments
-    .filter((e) => e.specialist.listedInDirectory)
-    .map((e) => e.specialist.id);
-  /**
-   * Слоты из доступности уже собраны как union свободных стартов по мастерам
-   * (`mergeOrganizationFreeSlotStarts` + `computeFreeSlotStartsForSpecialist` с их бронями).
-   * Повторная фильтрация по union занятых давала ложное скрытие слота при брони одного мастера.
-   * Fallback JSON: оставляем время, если не занято хотя бы у одного мастера.
-   */
-  const slotGroupsBeforePast =
-    fromDb.length > 0
-      ? slotGroupsRaw
-      : filterOrgSlotGroupsByOccupiedKeys(
-          slotGroupsRaw,
-          listedSpecialistIds,
-          occupiedMap,
-        );
-  const slotGroups = dropPastListingSlotGroups(slotGroupsBeforePast, now);
+  const specialistOccupiedSlotKeys: SpecialistOccupiedSlotKeysEntryDto[] =
+    o.specialistEmployments
+      .filter((e) => e.specialist.listedInDirectory)
+      .map((e) => e.specialist.id)
+      .map((specialistId) => ({
+        specialistId,
+        keys: [...(occupiedMap.get(specialistId) ?? new Set())].sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      }));
 
   const categoriesLine = joinLocalizedCategoryShortNames(
     o.serviceCategories,
@@ -299,6 +245,10 @@ function mapOrganizationRowToListItem(
     o.listingServicesLine?.trim() ||
     localized.description?.trim() ||
     '';
+  const orgWd = normalizeDirectoryListingWorkdayBounds(
+    o.listingWorkdayStartMinute,
+    o.listingWorkdayEndMinute,
+  );
   return {
     id: localized.id,
     slug: o.slug,
@@ -318,7 +268,10 @@ function mapOrganizationRowToListItem(
     metaLine,
     servicesLine,
     categories: mapDirectoryCategoryTags(o.serviceCategories, locale),
-    slotGroups,
+    slotGroups: [],
+    specialistOccupiedSlotKeys,
+    listingWorkdayStartMinute: orgWd.startMinute,
+    listingWorkdayEndMinute: orgWd.endMinute,
   };
 }
 
@@ -376,9 +329,8 @@ export class DirectoryService {
   }
 
   /**
-   * Одно окно для расчёта свободных слотов в списках и на профиле.
-   * Иначе карточка (узкое `listingCardPreview`) и страница (`profileSlotPreview`) расходятся,
-   * а deep link `?slotDay=&slotTime=` с витрины не находит время в сетке профиля.
+   * Единый горизонт дней для занятости в каталоге (сетка + ключи, которые отдаёт API).
+   * Синхронизировано с клиентом: {@link getUnifiedDirectorySlotPreviewCalendarDays}.
    */
   private getUnifiedDirectorySlotPreviewCalendarDays(): number {
     return Math.max(
@@ -387,14 +339,11 @@ export class DirectoryService {
     );
   }
 
-  private async buildOccupiedAndFreeSlotMaps(
+  private async buildOccupiedBySpecialistMap(
     specialistIds: string[],
     now: Date,
     calendarDays: number,
-  ): Promise<{
-    occupiedBySpecialist: Map<string, Set<string>>;
-    freeBySpecialist: Map<string, Date[]>;
-  }> {
+  ): Promise<Map<string, Set<string>>> {
     const previewWindowMs = listingCardPreviewWindowMs(calendarDays);
     const bookingRows =
       await this.directoryRepository.findActiveBookingsForListingOccupancy(
@@ -402,20 +351,7 @@ export class DirectoryService {
         now,
         previewWindowMs,
       );
-    const occupiedBySpecialist =
-      mergeBookingsToOccupiedKeysPerSpecialist(bookingRows);
-    const freeBySpecialist = new Map<string, Date[]>();
-    for (const id of specialistIds) {
-      freeBySpecialist.set(
-        id,
-        computeFreeSlotStartsForSpecialist(
-          now,
-          occupiedBySpecialist.get(id) ?? new Set(),
-          calendarDays,
-        ),
-      );
-    }
-    return { occupiedBySpecialist, freeBySpecialist };
+    return mergeBookingsToOccupiedKeysPerSpecialist(bookingRows);
   }
 
   async listSpecialists(
@@ -456,12 +392,11 @@ export class DirectoryService {
     });
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        slice.map((s) => s.id),
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      slice.map((s) => s.id),
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const last = slice[slice.length - 1];
     const nextCursor =
       hasMore && last
@@ -478,7 +413,6 @@ export class DirectoryService {
           locale,
           now,
           occupiedBySpecialist.get(s.id) ?? new Set(),
-          freeBySpecialist.get(s.id) ?? [],
           doneClientsBySpec.get(s.id) ?? 0,
         ),
       ),
@@ -528,24 +462,17 @@ export class DirectoryService {
         }
       }
     }
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        [...specialistIds],
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      [...specialistIds],
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const last = slice[slice.length - 1];
     const nextCursor =
       hasMore && last ? encodeOrganizationListCursor(last.name, last.id) : null;
     return {
       organizations: slice.map((o) =>
-        mapOrganizationRowToListItem(
-          o,
-          locale,
-          now,
-          occupiedBySpecialist,
-          freeBySpecialist,
-        ),
+        mapOrganizationRowToListItem(o, locale, now, occupiedBySpecialist),
       ),
       cursorPage: { nextCursor, hasMore },
     };
@@ -560,12 +487,11 @@ export class DirectoryService {
     if (!row) {
       return null;
     }
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        [id],
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      [id],
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const doneBySpec =
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
         [id],
@@ -575,7 +501,6 @@ export class DirectoryService {
       locale,
       now,
       occupiedBySpecialist.get(id) ?? new Set(),
-      freeBySpecialist.get(id) ?? [],
       doneBySpec.get(id) ?? 0,
     );
   }
@@ -592,18 +517,16 @@ export class DirectoryService {
     const specialistIds = row.specialistEmployments
       .filter((e) => e.isActive && e.specialist.listedInDirectory)
       .map((e) => e.specialist.id);
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        specialistIds,
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      specialistIds,
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const base = mapOrganizationRowToListItem(
       row,
       locale,
       now,
       occupiedBySpecialist,
-      freeBySpecialist,
     );
     // Только мастера, доступные для записи (как в каталоге). Владелец «без приёма»
     // (listedInDirectory: false) остаётся в employment, но не показывается в блоке сотрудников.
@@ -659,12 +582,11 @@ export class DirectoryService {
         }
       }
     }
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        [...specialistIds],
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      [...specialistIds],
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const out: OrganizationListItemDto[] = [];
     for (const id of ids) {
       const o = byId.get(id);
@@ -672,13 +594,7 @@ export class DirectoryService {
         continue;
       }
       out.push(
-        mapOrganizationRowToListItem(
-          o,
-          locale,
-          now,
-          occupiedBySpecialist,
-          freeBySpecialist,
-        ),
+        mapOrganizationRowToListItem(o, locale, now, occupiedBySpecialist),
       );
     }
     return out;
@@ -702,12 +618,11 @@ export class DirectoryService {
       rows.map((r): [string, SpecialistListRow] => [r.id, r]),
     );
     const now = new Date();
-    const { occupiedBySpecialist, freeBySpecialist } =
-      await this.buildOccupiedAndFreeSlotMaps(
-        ids,
-        now,
-        this.getUnifiedDirectorySlotPreviewCalendarDays(),
-      );
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      ids,
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
     const doneBySpec =
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
         ids,
@@ -724,7 +639,6 @@ export class DirectoryService {
           locale,
           now,
           occupiedBySpecialist.get(id) ?? new Set(),
-          freeBySpecialist.get(id) ?? [],
           doneBySpec.get(id) ?? 0,
         ),
       );

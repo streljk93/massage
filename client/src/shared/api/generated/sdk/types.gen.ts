@@ -974,11 +974,17 @@ export type SpecialistsListResponses = {
                 slug: string;
                 shortName: string;
             }>;
+            /**
+             * Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты.
+             */
             slotGroups: Array<{
                 /**
                  * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
                  */
                 calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
                 times: Array<string>;
             }>;
             bookableServices: Array<{
@@ -995,6 +1001,14 @@ export type SpecialistsListResponses = {
              * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
              */
             autoConfirmBookings: boolean;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
         }>;
         cursorPage: {
             /**
@@ -1066,11 +1080,17 @@ export type SpecialistsGetByIdResponses = {
             slug: string;
             shortName: string;
         }>;
+        /**
+         * Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты.
+         */
         slotGroups: Array<{
             /**
              * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
              */
             calendarDate: string;
+            /**
+             * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+             */
             times: Array<string>;
         }>;
         bookableServices: Array<{
@@ -1087,6 +1107,14 @@ export type SpecialistsGetByIdResponses = {
          * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
          */
         autoConfirmBookings: boolean;
+        /**
+         * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+         */
+        listingWorkdayStartMinute: number;
+        /**
+         * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+         */
+        listingWorkdayEndMinute: number;
     };
 };
 
@@ -1155,13 +1183,34 @@ export type OrganizationsListResponses = {
                 slug: string;
                 shortName: string;
             }>;
+            /**
+             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             */
             slotGroups: Array<{
                 /**
                  * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
                  */
                 calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
                 times: Array<string>;
             }>;
+            specialistOccupiedSlotKeys: Array<{
+                specialistId: string;
+                /**
+                 * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
+                 */
+                keys: Array<string>;
+            }>;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
         }>;
         cursorPage: {
             /**
@@ -1224,13 +1273,34 @@ export type OrganizationsGetByIdResponses = {
             slug: string;
             shortName: string;
         }>;
+        /**
+         * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+         */
         slotGroups: Array<{
             /**
              * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
              */
             calendarDate: string;
+            /**
+             * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+             */
             times: Array<string>;
         }>;
+        specialistOccupiedSlotKeys: Array<{
+            specialistId: string;
+            /**
+             * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
+             */
+            keys: Array<string>;
+        }>;
+        /**
+         * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+         */
+        listingWorkdayStartMinute: number;
+        /**
+         * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+         */
+        listingWorkdayEndMinute: number;
         staff: Array<{
             id: string;
             userId: string;
@@ -1511,13 +1581,34 @@ export type FavoritesListOrganizationsListingResponses = {
                 slug: string;
                 shortName: string;
             }>;
+            /**
+             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             */
             slotGroups: Array<{
                 /**
                  * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
                  */
                 calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
                 times: Array<string>;
             }>;
+            specialistOccupiedSlotKeys: Array<{
+                specialistId: string;
+                /**
+                 * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
+                 */
+                keys: Array<string>;
+            }>;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
         }>;
     };
 };
@@ -1576,11 +1667,17 @@ export type FavoritesListSpecialistsListingResponses = {
                 slug: string;
                 shortName: string;
             }>;
+            /**
+             * Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты.
+             */
             slotGroups: Array<{
                 /**
                  * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
                  */
                 calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
                 times: Array<string>;
             }>;
             bookableServices: Array<{
@@ -1597,6 +1694,14 @@ export type FavoritesListSpecialistsListingResponses = {
              * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
              */
             autoConfirmBookings: boolean;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
         }>;
     };
 };
