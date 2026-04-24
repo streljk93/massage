@@ -20,4 +20,8 @@ export type OrganizationStaffMemberDto = {
 
 export type OrganizationDetailResponseDto = OrganizationListItemDto & {
   staff: OrganizationStaffMemberDto[];
+  /**
+   * Уникальные пользователи с хотя бы одной бронью в статусе `done` у этого салона.
+   */
+  clientsCount: number;
 };

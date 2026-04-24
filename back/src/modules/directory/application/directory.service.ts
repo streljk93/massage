@@ -200,6 +200,7 @@ function mapSpecialistRowToListItem(
   now: Date,
   occupiedKeys: Set<string>,
   freeSlotStarts: Date[],
+  doneClientsCount: number,
 ): SpecialistListItemDto {
   const fromDb = buildListingSlotGroupsFromSlotStarts(freeSlotStarts);
   const fromJson = parseListingSlotGroups(s.listingSlotGroups);
@@ -234,6 +235,7 @@ function mapSpecialistRowToListItem(
     name: s.user.name,
     bio: s.bio,
     experienceYears: s.experienceYears,
+    doneClientsCount,
     ratingAverage: s.ratingAverage,
     rating: s.ratingAverage,
     reviewsCount: s.reviewsCount,
@@ -465,6 +467,10 @@ export class DirectoryService {
       hasMore && last
         ? encodeSpecialistListCursor(last.user.name, last.id)
         : null;
+    const doneClientsBySpec =
+      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
+        slice.map((s) => s.id),
+      );
     return {
       specialists: slice.map((s) =>
         mapSpecialistRowToListItem(
@@ -473,6 +479,7 @@ export class DirectoryService {
           now,
           occupiedBySpecialist.get(s.id) ?? new Set(),
           freeBySpecialist.get(s.id) ?? [],
+          doneClientsBySpec.get(s.id) ?? 0,
         ),
       ),
       cursorPage: { nextCursor, hasMore },
@@ -559,12 +566,17 @@ export class DirectoryService {
         now,
         this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
+    const doneBySpec =
+      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
+        [id],
+      );
     return mapSpecialistRowToListItem(
       row,
       locale,
       now,
       occupiedBySpecialist.get(id) ?? new Set(),
       freeBySpecialist.get(id) ?? [],
+      doneBySpec.get(id) ?? 0,
     );
   }
 
@@ -605,9 +617,14 @@ export class DirectoryService {
           occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
         ),
       );
+    const clientsCount =
+      await this.directoryRepository.countDistinctDoneClientsForOrganization(
+        id,
+      );
     return {
       ...base,
       staff,
+      clientsCount,
     };
   }
 
@@ -691,6 +708,10 @@ export class DirectoryService {
         now,
         this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
+    const doneBySpec =
+      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
+        ids,
+      );
     const out: SpecialistListItemDto[] = [];
     for (const id of ids) {
       const s = byId.get(id);
@@ -704,6 +725,7 @@ export class DirectoryService {
           now,
           occupiedBySpecialist.get(id) ?? new Set(),
           freeBySpecialist.get(id) ?? [],
+          doneBySpec.get(id) ?? 0,
         ),
       );
     }

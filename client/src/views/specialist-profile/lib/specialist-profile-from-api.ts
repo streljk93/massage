@@ -39,7 +39,7 @@ export function specialistProfileFromApiDetail(
     lng: card.lng,
     servicesLine: detail.servicesLine ?? "",
     experienceYears: detail.experienceYears ?? 0,
-    clientsLabel: "—",
+    doneClientsCount: detail.doneClientsCount,
     reviewsCount: detail.reviewsCount,
     calendarDays: calendarDays as SpecialistCalendarDay[],
     timeSlotsByDay,

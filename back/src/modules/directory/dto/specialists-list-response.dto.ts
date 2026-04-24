@@ -19,6 +19,11 @@ export type SpecialistListItemDto = {
   name: string;
   bio: string | null;
   experienceYears: number | null;
+  /**
+   * Уникальные клиенты, у которых есть хотя бы одна неснятая бронь к этому мастеру
+   * в статусе `done`.
+   */
+  doneClientsCount: number;
   ratingAverage: number;
   /** Как в моке карточки: то же, что `ratingAverage`. */
   rating: number;

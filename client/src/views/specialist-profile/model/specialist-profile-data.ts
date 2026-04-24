@@ -16,7 +16,8 @@ export type SpecialistProfileData = {
   /** Склейка услуг/форматов с витрины (как на карточке в поиске). */
   servicesLine: string;
   experienceYears: number;
-  clientsLabel: string;
+  /** Уникальные клиенты с бронью в статусе `done` (см. API `doneClientsCount`). */
+  doneClientsCount: number;
   reviewsCount: number;
   calendarDays: SpecialistCalendarDay[];
   /** Свободные слоты по дням (индекс совпадает с `calendarDays`). */

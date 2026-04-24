@@ -2066,6 +2066,7 @@
                           "ratingAverage",
                           "rating",
                           "reviewsCount",
+                          "doneClientsCount",
                           "latitude",
                           "longitude",
                           "metaLine",
@@ -2095,6 +2096,11 @@
                           "experienceYears": {
                             "type": "integer",
                             "nullable": true
+                          },
+                          "doneClientsCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру."
                           },
                           "ratingAverage": {
                             "type": "number",
@@ -2308,6 +2314,7 @@
                     "ratingAverage",
                     "rating",
                     "reviewsCount",
+                    "doneClientsCount",
                     "latitude",
                     "longitude",
                     "metaLine",
@@ -2337,6 +2344,11 @@
                     "experienceYears": {
                       "type": "integer",
                       "nullable": true
+                    },
+                    "doneClientsCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру."
                     },
                     "ratingAverage": {
                       "type": "number",
@@ -2781,7 +2793,8 @@
                     "servicesLine",
                     "categories",
                     "slotGroups",
-                    "staff"
+                    "staff",
+                    "clientsCount"
                   ],
                   "properties": {
                     "id": {
@@ -2982,6 +2995,11 @@
                           }
                         }
                       }
+                    },
+                    "clientsCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне."
                     }
                   }
                 }
@@ -3824,6 +3842,7 @@
                           "ratingAverage",
                           "rating",
                           "reviewsCount",
+                          "doneClientsCount",
                           "latitude",
                           "longitude",
                           "metaLine",
@@ -3853,6 +3872,11 @@
                           "experienceYears": {
                             "type": "integer",
                             "nullable": true
+                          },
+                          "doneClientsCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру."
                           },
                           "ratingAverage": {
                             "type": "number",

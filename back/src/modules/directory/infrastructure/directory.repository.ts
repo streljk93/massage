@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { BookingStatus, Prisma } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import {
@@ -319,5 +319,47 @@ export class DirectoryRepository {
     `;
     const r = rows[0];
     return { min: r?.min ?? null, max: r?.max ?? null };
+  }
+
+  /**
+   * Уникальные клиенты, у которых есть хотя бы одна `done` бронь в этом салоне.
+   */
+  countDistinctDoneClientsForOrganization(organizationId: string): Promise<number> {
+    return this.prisma.user.count({
+      where: {
+        clientBookings: {
+          some: {
+            organizationId,
+            deletedAt: null,
+            status: BookingStatus.done,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Уникальные клиенты по `done` брони на мастеров (для витрины/профиля).
+   */
+  async countDistinctDoneClientsBySpecialistIds(
+    specialistIds: string[],
+  ): Promise<Map<string, number>> {
+    if (specialistIds.length === 0) {
+      return new Map();
+    }
+    const pairs = await this.prisma.booking.findMany({
+      where: {
+        specialistId: { in: specialistIds },
+        status: BookingStatus.done,
+        deletedAt: null,
+      },
+      distinct: ['specialistId', 'clientUserId'],
+      select: { specialistId: true, clientUserId: true },
+    });
+    const out = new Map<string, number>();
+    for (const p of pairs) {
+      out.set(p.specialistId, (out.get(p.specialistId) ?? 0) + 1);
+    }
+    return out;
   }
 }

@@ -949,6 +949,10 @@ export type SpecialistsListResponses = {
             name: string;
             bio?: string | null;
             experienceYears?: number | null;
+            /**
+             * Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру.
+             */
+            doneClientsCount: number;
             ratingAverage: number;
             rating: number;
             reviewsCount: number;
@@ -1037,6 +1041,10 @@ export type SpecialistsGetByIdResponses = {
         name: string;
         bio?: string | null;
         experienceYears?: number | null;
+        /**
+         * Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру.
+         */
+        doneClientsCount: number;
         ratingAverage: number;
         rating: number;
         reviewsCount: number;
@@ -1245,6 +1253,10 @@ export type OrganizationsGetByIdResponses = {
              */
             occupiedListingSlotKeys: Array<string>;
         }>;
+        /**
+         * Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне.
+         */
+        clientsCount: number;
     };
 };
 
@@ -1539,6 +1551,10 @@ export type FavoritesListSpecialistsListingResponses = {
             name: string;
             bio?: string | null;
             experienceYears?: number | null;
+            /**
+             * Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру.
+             */
+            doneClientsCount: number;
             ratingAverage: number;
             rating: number;
             reviewsCount: number;

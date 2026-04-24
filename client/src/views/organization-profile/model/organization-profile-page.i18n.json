@@ -11,7 +11,7 @@
         "stats": {
           "yearsValue": "{years} years",
           "yearsLabel": "In business",
-          "specialistsLabel": "Specialists",
+          "clientsLabel": "Clients",
           "reviewsLabel": "Reviews"
         },
         "mapTitle": "Location on map",
@@ -61,7 +61,7 @@
         "stats": {
           "yearsValue": "{years} năm",
           "yearsLabel": "Hoạt động",
-          "specialistsLabel": "Chuyên gia",
+          "clientsLabel": "Khách hàng",
           "reviewsLabel": "Đánh giá"
         },
         "mapTitle": "Vị trí trên bản đồ",
@@ -111,7 +111,7 @@
         "stats": {
           "yearsValue": "{years} лет",
           "yearsLabel": "На рынке",
-          "specialistsLabel": "Специалисты",
+          "clientsLabel": "Клиенты",
           "reviewsLabel": "Отзывы"
         },
         "mapTitle": "Расположение на карте",

@@ -14,7 +14,6 @@ import {
   Heart,
   Info,
   LocateFixed,
-  MessageCircle,
   MessageSquare,
   Phone,
   Star,
@@ -625,7 +624,8 @@ export function OrganizationProfilePage({
                     >
                       <Phone className="size-[1.15rem]" aria-hidden />
                     </Button>
-                    <Button
+                    {/* TODO: чат — вернуть, когда будет готов */}
+                    {/* <Button
                       type="button"
                       variant="secondary"
                       tone="light"
@@ -633,7 +633,7 @@ export function OrganizationProfilePage({
                       aria-label={t("messageAria")}
                     >
                       <MessageCircle className="size-[1.15rem]" aria-hidden />
-                    </Button>
+                    </Button> */}
                     <Button
                       type="button"
                       variant="secondary"
@@ -704,10 +704,10 @@ export function OrganizationProfilePage({
                   <Users className="size-[0.9rem]" aria-hidden />
                 </span>
                 <p className="text-[0.8125rem] font-semibold leading-tight tabular-nums text-foreground">
-                  {format.number(profile.specialistsCount)}
+                  {format.number(profile.clientsCount)}
                 </p>
                 <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
-                  {t("stats.specialistsLabel")}
+                  {t("stats.clientsLabel")}
                 </p>
               </div>
               <div className="flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1">

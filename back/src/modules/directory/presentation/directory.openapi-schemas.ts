@@ -65,6 +65,7 @@ export const specialistListItemSchema = {
     'ratingAverage',
     'rating',
     'reviewsCount',
+    'doneClientsCount',
     'latitude',
     'longitude',
     'metaLine',
@@ -80,6 +81,12 @@ export const specialistListItemSchema = {
     name: { type: 'string', example: 'Иван' },
     bio: { type: 'string', nullable: true },
     experienceYears: { type: 'integer', nullable: true },
+    doneClientsCount: {
+      type: 'integer',
+      minimum: 0,
+      description:
+        'Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру.',
+    },
     ratingAverage: { type: 'number', example: 4.8 },
     rating: { type: 'number', example: 4.8 },
     reviewsCount: { type: 'integer', example: 12 },
@@ -263,12 +270,18 @@ export const catalogFilterOptionsResponseSchema = {
 /** Ответ GET /organizations/:id — карточка салона + мастера. */
 export const organizationDetailResponseSchema = {
   type: 'object',
-  required: [...organizationListItemSchema.required, 'staff'],
+  required: [...organizationListItemSchema.required, 'staff', 'clientsCount'],
   properties: {
     ...organizationListItemSchema.properties,
     staff: {
       type: 'array',
       items: organizationStaffMemberSchema,
+    },
+    clientsCount: {
+      type: 'integer',
+      minimum: 0,
+      description:
+        'Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне.',
     },
   },
 };

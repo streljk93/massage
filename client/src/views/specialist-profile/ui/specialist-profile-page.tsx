@@ -8,7 +8,6 @@ import {
   Heart,
   Info,
   LocateFixed,
-  MessageCircle,
   MessageSquare,
   Phone,
   Users,
@@ -420,7 +419,8 @@ export function SpecialistProfilePage({
                 >
                   <Phone className="size-[1.15rem] text-foreground" aria-hidden />
                 </Button>
-                <Button
+                {/* TODO: чат — вернуть, когда будет готов */}
+                {/* <Button
                   type="button"
                   variant="secondary"
                   tone="light"
@@ -431,7 +431,7 @@ export function SpecialistProfilePage({
                     className="size-[1.15rem] text-foreground"
                     aria-hidden
                   />
-                </Button>
+                </Button> */}
                 <Button
                   type="button"
                   variant="secondary"
@@ -475,7 +475,7 @@ export function SpecialistProfilePage({
                   <Users className="size-[0.9rem]" aria-hidden />
                 </span>
                 <p className="text-[0.8125rem] font-semibold leading-tight tabular-nums text-foreground">
-                  {profile.clientsLabel}
+                  {format.number(profile.doneClientsCount)}
                 </p>
                 <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
                   {t("stats.clientsLabel")}

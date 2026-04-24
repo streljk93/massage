@@ -45,7 +45,7 @@ export function organizationProfileFromApiDetail(
     reviewsCount: detail.reviewsCount,
     addressLine,
     yearsInBusiness: detail.yearsInBusiness ?? 0,
-    specialistsCount: specialists.length,
+    clientsCount: detail.clientsCount,
     calendarDays,
     timeSlotsByDay,
     slotCalendarDates,

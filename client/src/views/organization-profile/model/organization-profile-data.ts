@@ -12,7 +12,8 @@ export type OrganizationProfileData = {
   reviewsCount: number;
   addressLine: string;
   yearsInBusiness: number;
-  specialistsCount: number;
+  /** Уникальные клиенты с бронью в `done` (см. API `clientsCount`). */
+  clientsCount: number;
   calendarDays: DirectoryCalendarDay[];
   timeSlotsByDay: string[][];
   slotCalendarDates: string[];
