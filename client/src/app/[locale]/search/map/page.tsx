@@ -7,10 +7,27 @@ import {
   fetchAllSpecialistsPages,
   serverSdkFetchNoStore,
 } from "@/shared/api";
+import { parseSearchUrlFiltersFromRecord } from "@/views/search/lib/search-url-filters";
 import { SearchMapPageClient } from "@/views/search";
 
-export default async function Page() {
+type PageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function Page({ searchParams }: PageProps) {
   const locale = (await getLocale()) as AppLocale;
+  const sp = (await searchParams) ?? {};
+  const f = parseSearchUrlFiltersFromRecord(sp);
+  const hasRadius =
+    f.radiusM != null && f.radiusLat != null && f.radiusLng != null;
+  const radius =
+    hasRadius ?
+      {
+        radiusM: f.radiusM as number,
+        radiusLat: f.radiusLat as number,
+        radiusLng: f.radiusLng as number,
+      }
+    : null;
   const sdkClient = createServerSdkClient();
   let initialOrganizations = null;
   let initialSpecialists = null;
@@ -21,11 +38,13 @@ export default async function Page() {
           client: sdkClient,
           locale,
           fetch: serverSdkFetchNoStore,
+          radius,
         }),
         fetchAllSpecialistsPages({
           client: sdkClient,
           locale,
           fetch: serverSdkFetchNoStore,
+          radius,
         }),
       ]);
       initialOrganizations = orgs;

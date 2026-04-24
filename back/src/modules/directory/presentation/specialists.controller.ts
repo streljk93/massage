@@ -25,6 +25,7 @@ import {
   parseOptionalMajorCategorySlug,
   parseOptionalVndPriceRange,
 } from '../../../common/pagination/directory-list-search-query.parse';
+import { parseDirectoryListRadiusFromQuery } from '../../../common/pagination/parse-directory-list-radius.query';
 import {
   DIRECTORY_LIST_DEFAULT_LIMIT,
   DIRECTORY_LIST_MAX_LIMIT,
@@ -47,7 +48,7 @@ export class SpecialistsController {
   @ApiOperation({
     summary: 'Список специалистов (курсорная пагинация)',
     description:
-      'Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`. Курсор — в том же наборе фильтров.',
+      'Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.',
   })
   @ApiLocaleQueryDocs()
   @ApiQuery({
@@ -95,10 +96,26 @@ export class SpecialistsController {
     description: 'Верхняя граница цены (VND).',
     schema: { type: 'integer', minimum: 0 },
   })
+  @ApiQuery({
+    name: 'radiusM',
+    required: false,
+    description: 'Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), гео по активной организации.',
+    schema: { type: 'integer', minimum: 50, maximum: 500_000 },
+  })
+  @ApiQuery({
+    name: 'radiusLat',
+    required: false,
+    description: 'Широта центра круга (вместе с `radiusM`, `radiusLng`).',
+  })
+  @ApiQuery({
+    name: 'radiusLng',
+    required: false,
+    description: 'Долгота центра круга (вместе с `radiusM`, `radiusLat`).',
+  })
   @ApiOkResponse({ schema: specialistsListResponseSchema })
   @ApiBadRequestResponse({
     description:
-      'Неверный формат locale, limit, cursor, majorSlug, categories или цены VND',
+      'Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса',
   })
   async list(
     @RequestLocale() locale: ApiLocale,
@@ -109,10 +126,18 @@ export class SpecialistsController {
     @Query('categories') categoriesRaw?: string,
     @Query('priceMinVnd') priceMinVndRaw?: string,
     @Query('priceMaxVnd') priceMaxVndRaw?: string,
+    @Query('radiusM') radiusMRaw?: string,
+    @Query('radiusLat') radiusLatRaw?: string,
+    @Query('radiusLng') radiusLngRaw?: string,
   ): Promise<SpecialistsListResponseDto> {
     const { priceMinVnd, priceMaxVnd } = parseOptionalVndPriceRange(
       priceMinVndRaw,
       priceMaxVndRaw,
+    );
+    const radius = parseDirectoryListRadiusFromQuery(
+      radiusMRaw,
+      radiusLatRaw,
+      radiusLngRaw,
     );
     return this.directoryService.listSpecialists(locale, {
       cursor: cursor ?? null,
@@ -122,6 +147,14 @@ export class SpecialistsController {
       categorySlugs: parseListCategorySlugsCsv(categoriesRaw),
       priceMinVnd,
       priceMaxVnd,
+      radius:
+        radius == null
+          ? null
+          : {
+              centerLat: radius.centerLat,
+              centerLng: radius.centerLng,
+              radiusM: radius.radiusM,
+            },
     });
   }
 

@@ -15,7 +15,9 @@
         "seeAll": "See all",
         "listLoadError": "Couldn’t load results. Pull to refresh or try again later.",
         "noSlotMatch": "No one matches the selected time. Try another day or time.",
-        "slotFilterClientNote": "Filter applies to the loaded list; scroll down to load more and refine."
+        "slotFilterClientNote": "Filter applies to the loaded list; scroll down to load more and refine.",
+        "noSpecialistsForFilters": "No specialists match your current filters. Try changing or clearing them.",
+        "noSalonsForFilters": "No salons match your current filters. Try changing or clearing them."
       }
     },
     "vi": {
@@ -33,7 +35,9 @@
         "seeAll": "Xem tất cả",
         "listLoadError": "Không tải được kết quả. Thử làm mới hoặc thử lại sau.",
         "noSlotMatch": "Chưa có mục nào trùng thời gian. Thử ngày/giờ khác.",
-        "slotFilterClientNote": "Bộ lọc áp dụng theo trang đã tải; kéo xuống để tải thêm."
+        "slotFilterClientNote": "Bộ lọc áp dụng theo trang đã tải; kéo xuống để tải thêm.",
+        "noSpecialistsForFilters": "Không có chuyên viên nào khớp bộ lọc hiện tại. Hãy đổi bộ lọc hoặc xóa bộ lọc.",
+        "noSalonsForFilters": "Không có salon nào khớp bộ lọc hiện tại. Hãy đổi bộ lọc hoặc xóa bộ lọc."
       }
     },
     "ru": {
@@ -51,7 +55,9 @@
         "seeAll": "Смотреть все",
         "listLoadError": "Не удалось загрузить список. Обновите страницу или попробуйте позже.",
         "noSlotMatch": "Никто не подходит под выбранное время. Попробуйте другой день или часы.",
-        "slotFilterClientNote": "Фильтр действует на уже загруженный список — пролистайте, чтобы догрузить варианты."
+        "slotFilterClientNote": "Фильтр действует на уже загруженный список — пролистайте, чтобы догрузить варианты.",
+        "noSpecialistsForFilters": "Нет специалистов, подходящих под текущие фильтры. Измените или сбросьте их.",
+        "noSalonsForFilters": "Нет салонов, подходящих под текущие фильтры. Измените или сбросьте их."
       }
     }
   }

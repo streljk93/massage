@@ -11,6 +11,7 @@ import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-categ
 import { SEARCH_DIRECTORY_CURSOR_PAGE_SIZE } from "@/shared/config/directory-cursor-pagination";
 import {
   searchCategoriesQueryCsv,
+  searchDirectoryRadiusActive,
   searchOrganizationsFiltersEmpty,
   searchSpecialistsFiltersEmpty,
   type SearchOrganizationsListApiFilters,
@@ -32,6 +33,9 @@ function getNextCursorPageParam(last: CursorPagePayload): string | undefined {
 export type SearchOrganizationsListPrefetchSnapshot = {
   q: string;
   categoryCsv: string;
+  radiusM: number | null;
+  radiusLat: number | null;
+  radiusLng: number | null;
 };
 
 export type SearchSpecialistsListPrefetchSnapshot = {
@@ -39,6 +43,9 @@ export type SearchSpecialistsListPrefetchSnapshot = {
   categoryCsv: string;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
+  radiusM: number | null;
+  radiusLat: number | null;
+  radiusLng: number | null;
 };
 
 function organizationsInitialPageMatchesSnapshot(
@@ -51,7 +58,11 @@ function organizationsInitialPageMatchesSnapshot(
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
   return (
-    qTrim === snapshot.q.trim() && categoryCsv === snapshot.categoryCsv
+    qTrim === snapshot.q.trim() &&
+    categoryCsv === snapshot.categoryCsv &&
+    filters.radiusM === snapshot.radiusM &&
+    filters.radiusLat === snapshot.radiusLat &&
+    filters.radiusLng === snapshot.radiusLng
   );
 }
 
@@ -66,6 +77,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
   const filtersEmpty = searchOrganizationsFiltersEmpty(filters);
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
+  const radiusQ = searchDirectoryRadiusActive(filters);
   const useInitialPage =
     initialPage != null &&
     (filtersEmpty ||
@@ -78,6 +90,9 @@ export function useSearchOrganizationsCursorInfiniteQuery(
       CATALOG_MAJOR_CATEGORY_SLUG,
       qTrim,
       categoryCsv,
+      radiusQ ? (filters.radiusM ?? "x") : "noR",
+      radiusQ ? (filters.radiusLat ?? "x") : "noR",
+      radiusQ ? (filters.radiusLng ?? "x") : "noR",
     ] as const,
     initialData:
       useInitialPage ?
@@ -98,6 +113,13 @@ export function useSearchOrganizationsCursorInfiniteQuery(
           ...(pageParam ? { cursor: String(pageParam) } : {}),
           ...(qTrim ? { q: qTrim } : {}),
           ...(categoryCsv ? { categories: categoryCsv } : {}),
+          ...(radiusQ ?
+            {
+              radiusM: filters.radiusM as number,
+              radiusLat: filters.radiusLat as number,
+              radiusLng: filters.radiusLng as number,
+            }
+          : {}),
         },
       });
       if (res.error || !res.data) {
@@ -123,7 +145,10 @@ function specialistsInitialPageMatchesSnapshot(
     qTrim === snapshot.q.trim() &&
     categoryCsv === snapshot.categoryCsv &&
     priceMinVnd === snapshot.priceMinVnd &&
-    priceMaxVnd === snapshot.priceMaxVnd
+    priceMaxVnd === snapshot.priceMaxVnd &&
+    filters.radiusM === snapshot.radiusM &&
+    filters.radiusLat === snapshot.radiusLat &&
+    filters.radiusLng === snapshot.radiusLng
   );
 }
 
@@ -139,6 +164,7 @@ export function useSearchSpecialistsCursorInfiniteQuery(
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
   const { priceMinVnd, priceMaxVnd } = filters;
+  const radiusQ = searchDirectoryRadiusActive(filters);
   const useInitialPage =
     initialPage != null &&
     (filtersEmpty ||
@@ -153,6 +179,9 @@ export function useSearchSpecialistsCursorInfiniteQuery(
       categoryCsv,
       priceMinVnd ?? "none",
       priceMaxVnd ?? "none",
+      radiusQ ? (filters.radiusM ?? "x") : "noR",
+      radiusQ ? (filters.radiusLat ?? "x") : "noR",
+      radiusQ ? (filters.radiusLng ?? "x") : "noR",
     ] as const,
     initialData:
       useInitialPage ?
@@ -175,6 +204,13 @@ export function useSearchSpecialistsCursorInfiniteQuery(
           ...(categoryCsv ? { categories: categoryCsv } : {}),
           ...(priceMinVnd != null ? { priceMinVnd } : {}),
           ...(priceMaxVnd != null ? { priceMaxVnd } : {}),
+          ...(radiusQ ?
+            {
+              radiusM: filters.radiusM as number,
+              radiusLat: filters.radiusLat as number,
+              radiusLng: filters.radiusLng as number,
+            }
+          : {}),
         },
       });
       if (res.error || !res.data) {

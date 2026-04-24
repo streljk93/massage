@@ -40,6 +40,7 @@ import type {
 } from '../infrastructure/directory-list-query-filters';
 import {
   DirectoryRepository,
+  type DirectoryListRadiusFilter,
   type OrganizationListRow,
   type SpecialistListRow,
 } from '../infrastructure/directory.repository';
@@ -364,6 +365,7 @@ export class DirectoryService {
       categorySlugs: string[];
       priceMinVnd: number | null;
       priceMaxVnd: number | null;
+      radius: DirectoryListRadiusFilter | null;
     },
   ): Promise<SpecialistsListResponseDto> {
     const now = new Date();
@@ -389,6 +391,7 @@ export class DirectoryService {
       take: limit + 1,
       cursor: decoded,
       filters,
+      radius: options.radius,
     });
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
@@ -428,6 +431,7 @@ export class DirectoryService {
       majorCategorySlug: string | null;
       q: string | null;
       categorySlugs: string[];
+      radius: DirectoryListRadiusFilter | null;
     },
   ): Promise<OrganizationsListResponseDto> {
     const now = new Date();
@@ -451,6 +455,7 @@ export class DirectoryService {
       take: limit + 1,
       cursor: decoded,
       filters,
+      radius: options.radius,
     });
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;

@@ -258,7 +258,7 @@ export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = f
 /**
  * Список специалистов (курсорная пагинация)
  *
- * Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`. Курсор — в том же наборе фильтров.
+ * Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.
  */
 export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({ url: '/specialists', ...options });
 
@@ -272,7 +272,7 @@ export const specialistsGetById = <ThrowOnError extends boolean = false>(options
 /**
  * Список организаций (курсорная пагинация)
  *
- * Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`. Курсор — в том же наборе фильтров.
+ * Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`, `radiusM`+`radiusLat`+`radiusLng` (круг на Земле, метры). Курсор — в том же наборе фильтров.
  */
 export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({ url: '/organizations', ...options });
 

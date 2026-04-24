@@ -899,6 +899,18 @@ export type SpecialistsListData = {
     path?: never;
     query?: {
         /**
+         * Долгота центра круга (вместе с `radiusM`, `radiusLat`).
+         */
+        radiusLng?: unknown;
+        /**
+         * Широта центра круга (вместе с `radiusM`, `radiusLng`).
+         */
+        radiusLat?: unknown;
+        /**
+         * Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), гео по активной организации.
+         */
+        radiusM?: number;
+        /**
          * Верхняя граница цены (VND).
          */
         priceMaxVnd?: number;
@@ -936,7 +948,7 @@ export type SpecialistsListData = {
 
 export type SpecialistsListErrors = {
     /**
-     * Неверный формат locale, limit, cursor, majorSlug, categories или цены VND
+     * Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса
      */
     400: unknown;
 };
@@ -1125,6 +1137,18 @@ export type OrganizationsListData = {
     path?: never;
     query?: {
         /**
+         * Долгота центра круга (вместе с `radiusM`, `radiusLat`).
+         */
+        radiusLng?: unknown;
+        /**
+         * Широта центра круга (вместе с `radiusM`, `radiusLng`).
+         */
+        radiusLat?: unknown;
+        /**
+         * Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.
+         */
+        radiusM?: number;
+        /**
          * Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).
          */
         categories?: unknown;
@@ -1154,7 +1178,7 @@ export type OrganizationsListData = {
 
 export type OrganizationsListErrors = {
     /**
-     * Неверный формат locale, limit, cursor, majorSlug или categories
+     * Неверный формат locale, limit, cursor, majorSlug, categories или радиуса
      */
     400: unknown;
 };

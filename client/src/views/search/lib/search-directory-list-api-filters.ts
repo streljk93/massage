@@ -2,6 +2,10 @@
 export type SearchOrganizationsListApiFilters = {
   q: string;
   categorySlugs: string[];
+  /** Согласовано с `search-url-filters`: все три вместе, иначе null. */
+  radiusM: number | null;
+  radiusLat: number | null;
+  radiusLng: number | null;
 };
 
 /** Параметры для GET /specialists + диапазон VND по личным услугам. */
@@ -11,10 +15,24 @@ export type SearchSpecialistsListApiFilters =
     priceMaxVnd: number | null;
   };
 
+export function searchDirectoryRadiusActive(f: {
+  radiusM: number | null;
+  radiusLat: number | null;
+  radiusLng: number | null;
+}): boolean {
+  return (
+    f.radiusM != null && f.radiusLat != null && f.radiusLng != null
+  );
+}
+
 export function searchOrganizationsFiltersEmpty(
   f: SearchOrganizationsListApiFilters,
 ): boolean {
-  return !f.q.trim() && f.categorySlugs.length === 0;
+  return (
+    !f.q.trim() &&
+    f.categorySlugs.length === 0 &&
+    !searchDirectoryRadiusActive(f)
+  );
 }
 
 export function searchSpecialistsFiltersEmpty(

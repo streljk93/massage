@@ -57,10 +57,7 @@ import {
   parseSearchUrlFilters,
   type SearchUrlFilters,
 } from "../lib/search-url-filters";
-import {
-  dedupeDirectoryListItemsByLatLng,
-  isDirectoryItemWithinRadiusMeters,
-} from "../lib/directory-list-item-geo";
+import { dedupeDirectoryListItemsByLatLng } from "../lib/directory-list-item-geo";
 import {
   buildSearchSlotDayOptions,
   buildSearchSlotTimeOptions,
@@ -235,8 +232,18 @@ export function SearchPageClient({
     return {
       q: urlFilters.q,
       categorySlugs: urlFilters.orgCategorySlugs,
+      radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
+      radiusLat: hasRadiusFilter ? urlFilters.radiusLat : null,
+      radiusLng: hasRadiusFilter ? urlFilters.radiusLng : null,
     };
-  }, [urlFilters.q, urlFilters.orgCategorySlugs]);
+  }, [
+    urlFilters.q,
+    urlFilters.orgCategorySlugs,
+    hasRadiusFilter,
+    urlFilters.radiusM,
+    urlFilters.radiusLat,
+    urlFilters.radiusLng,
+  ]);
 
   const specApiFilters = useMemo((): SearchSpecialistsListApiFilters => {
     return {
@@ -244,12 +251,19 @@ export function SearchPageClient({
       categorySlugs: urlFilters.specCategorySlugs,
       priceMinVnd: urlFilters.priceMinVnd,
       priceMaxVnd: urlFilters.priceMaxVnd,
+      radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
+      radiusLat: hasRadiusFilter ? urlFilters.radiusLat : null,
+      radiusLng: hasRadiusFilter ? urlFilters.radiusLng : null,
     };
   }, [
     urlFilters.q,
     urlFilters.specCategorySlugs,
     urlFilters.priceMinVnd,
     urlFilters.priceMaxVnd,
+    hasRadiusFilter,
+    urlFilters.radiusM,
+    urlFilters.radiusLat,
+    urlFilters.radiusLng,
   ]);
 
   const organizationsInfinite = useSearchOrganizationsCursorInfiniteQuery(
@@ -302,12 +316,6 @@ export function SearchPageClient({
       );
     }
     if (hasRadiusFilter) {
-      const cLat = urlFilters.radiusLat as number;
-      const cLng = urlFilters.radiusLng as number;
-      const rM = urlFilters.radiusM as number;
-      out = out.filter((o) =>
-        isDirectoryItemWithinRadiusMeters(o, cLat, cLng, rM),
-      );
       out = dedupeDirectoryListItemsByLatLng(out);
     }
     return out;
@@ -317,9 +325,6 @@ export function SearchPageClient({
     urlFilters.slotTime,
     listingNow,
     hasRadiusFilter,
-    urlFilters.radiusM,
-    urlFilters.radiusLat,
-    urlFilters.radiusLng,
   ]);
 
   const displaySpecialists = useMemo(() => {
@@ -332,12 +337,6 @@ export function SearchPageClient({
       );
     }
     if (hasRadiusFilter) {
-      const cLat = urlFilters.radiusLat as number;
-      const cLng = urlFilters.radiusLng as number;
-      const rM = urlFilters.radiusM as number;
-      out = out.filter((s) =>
-        isDirectoryItemWithinRadiusMeters(s, cLat, cLng, rM),
-      );
       out = dedupeDirectoryListItemsByLatLng(out);
     }
     return out;
@@ -347,9 +346,6 @@ export function SearchPageClient({
     urlFilters.slotTime,
     listingNow,
     hasRadiusFilter,
-    urlFilters.radiusM,
-    urlFilters.radiusLat,
-    urlFilters.radiusLng,
   ]);
 
   const orgSentinelRef = useCursorPaginationSentinel({
@@ -627,10 +623,19 @@ export function SearchPageClient({
     tab === "organizations" && organizationsInfinite.isFetchingNextPage;
   const specNextPageLoading =
     tab === "specialists" && specialistsInfinite.isFetchingNextPage;
-  const showNextPageSkeleton = useDelayedLoadingIndicator(
-    orgNextPageLoading || specNextPageLoading,
-    200,
-  );
+  /** Без задержки: сразу под списком при подгрузке страницы (сеть/сервер), иначе микро-лагу без UI. */
+  const showNextPageSkeleton =
+    orgNextPageLoading || specNextPageLoading;
+
+  /** Пусто по фильтрам: с сервера 0, или с сервера есть строки, но радиус (клиент) всё отсёк; слот + пусто — отдельный блок noSlotMatch. */
+  const showSalonsEmptyFilterMessage =
+    !orgListLoading &&
+    organizations.length === 0 &&
+    (hasActiveFilters || urlFilters.q.trim() !== "");
+  const showSpecialistsEmptyFilterMessage =
+    !specListLoading &&
+    specialists.length === 0 &&
+    (hasActiveFilters || urlFilters.q.trim() !== "");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface-background">
@@ -761,6 +766,11 @@ export function SearchPageClient({
             : <div className="min-h-80 w-full shrink-0" aria-hidden />
           : tab === "organizations" ?
             <>
+              {showSalonsEmptyFilterMessage ?
+                <div className="rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
+                  <p>{tSearch("noSalonsForFilters")}</p>
+                </div>
+              : null}
               {hasActiveSlotFilter &&
               !orgListLoading &&
               organizations.length > 0 &&
@@ -800,6 +810,11 @@ export function SearchPageClient({
               />
             </>
           : <>
+              {showSpecialistsEmptyFilterMessage ?
+                <div className="rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
+                  <p>{tSearch("noSpecialistsForFilters")}</p>
+                </div>
+              : null}
               {hasActiveSlotFilter &&
               !specListLoading &&
               specialists.length > 0 &&

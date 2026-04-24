@@ -21,6 +21,10 @@ export default async function Page({ searchParams }: PageProps) {
   const locale = (await getLocale()) as AppLocale;
   const sp = (await searchParams) ?? {};
   const f = parseSearchUrlFiltersFromRecord(sp);
+  const hasRadius =
+    f.radiusM != null &&
+    f.radiusLat != null &&
+    f.radiusLng != null;
   const orgCategoriesCsv = searchCategoriesQueryCsv(f.orgCategorySlugs);
   const specCategoriesCsv = searchCategoriesQueryCsv(f.specCategorySlugs);
 
@@ -37,6 +41,13 @@ export default async function Page({ searchParams }: PageProps) {
           limit: SEARCH_DIRECTORY_CURSOR_PAGE_SIZE,
           ...(f.q.trim() ? { q: f.q.trim() } : {}),
           ...(orgCategoriesCsv ? { categories: orgCategoriesCsv } : {}),
+          ...(hasRadius ?
+            {
+              radiusM: f.radiusM as number,
+              radiusLat: f.radiusLat as number,
+              radiusLng: f.radiusLng as number,
+            }
+          : {}),
         },
         fetch: serverSdkFetchNoStore,
       }),
@@ -50,6 +61,13 @@ export default async function Page({ searchParams }: PageProps) {
           ...(specCategoriesCsv ? { categories: specCategoriesCsv } : {}),
           ...(f.priceMinVnd != null ? { priceMinVnd: f.priceMinVnd } : {}),
           ...(f.priceMaxVnd != null ? { priceMaxVnd: f.priceMaxVnd } : {}),
+          ...(hasRadius ?
+            {
+              radiusM: f.radiusM as number,
+              radiusLat: f.radiusLat as number,
+              radiusLng: f.radiusLng as number,
+            }
+          : {}),
         },
         fetch: serverSdkFetchNoStore,
       }),
@@ -65,12 +83,18 @@ export default async function Page({ searchParams }: PageProps) {
   const initialOrgListPrefetch = {
     q: f.q.trim(),
     categoryCsv: orgCategoriesCsv,
+    radiusM: hasRadius ? f.radiusM : null,
+    radiusLat: hasRadius ? f.radiusLat : null,
+    radiusLng: hasRadius ? f.radiusLng : null,
   };
   const initialSpecListPrefetch = {
     q: f.q.trim(),
     categoryCsv: specCategoriesCsv,
     priceMinVnd: f.priceMinVnd,
     priceMaxVnd: f.priceMaxVnd,
+    radiusM: hasRadius ? f.radiusM : null,
+    radiusLat: hasRadius ? f.radiusLat : null,
+    radiusLng: hasRadius ? f.radiusLng : null,
   };
 
   return (

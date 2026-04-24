@@ -3,6 +3,10 @@ import { BookingStatus, Prisma } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import {
+  findOrganizationIdsWithinRadiusMeters,
+  findSpecialistIdsWithinRadiusMeters,
+} from './directory-geo-radius-ids';
+import {
   organizationListFiltersWhere,
   specialistListFiltersWhere,
   type OrganizationListApiFilters,
@@ -99,6 +103,12 @@ export const specialistListIncludeShape = specialistListPayloadArgs.include;
 
 export const organizationListIncludeShape = organizationListPayloadArgs.include;
 
+export type DirectoryListRadiusFilter = {
+  centerLat: number;
+  centerLng: number;
+  radiusM: number;
+};
+
 /** Активные записи: интервал брони занимает слоты до отмены / завершения. */
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
   ['pending', 'confirmed', 'in_progress'];
@@ -132,14 +142,27 @@ export class DirectoryRepository {
     });
   }
 
-  findSpecialistsPage(args: {
+  async findSpecialistsPage(args: {
     take: number;
     cursor: { userName: string; id: string } | null;
     filters: SpecialistListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
   }): Promise<SpecialistListRow[]> {
     const andParts: Prisma.SpecialistWhereInput[] = [
       { deletedAt: null, listedInDirectory: true },
     ];
+    if (args.radius != null) {
+      const inRadius = await findSpecialistIdsWithinRadiusMeters(
+        this.prisma,
+        args.radius.centerLat,
+        args.radius.centerLng,
+        args.radius.radiusM,
+      );
+      if (inRadius.length === 0) {
+        return [];
+      }
+      andParts.push({ id: { in: inRadius } });
+    }
     if (args.cursor != null) {
       andParts.push({
         OR: [
@@ -159,7 +182,7 @@ export class DirectoryRepository {
         andParts.push(fw);
       }
     }
-    return this.prisma.specialist.findMany({
+    return await this.prisma.specialist.findMany({
       where: { AND: andParts },
       take: args.take,
       include: specialistListInclude(),
@@ -167,12 +190,25 @@ export class DirectoryRepository {
     });
   }
 
-  findOrganizationsPage(args: {
+  async findOrganizationsPage(args: {
     take: number;
     cursor: { name: string; id: string } | null;
     filters: OrganizationListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
   }): Promise<OrganizationListRow[]> {
     const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
+    if (args.radius != null) {
+      const inRadius = await findOrganizationIdsWithinRadiusMeters(
+        this.prisma,
+        args.radius.centerLat,
+        args.radius.centerLng,
+        args.radius.radiusM,
+      );
+      if (inRadius.length === 0) {
+        return [];
+      }
+      andParts.push({ id: { in: inRadius } });
+    }
     if (args.cursor != null) {
       andParts.push({
         OR: [
@@ -189,7 +225,7 @@ export class DirectoryRepository {
         andParts.push(fw);
       }
     }
-    return this.prisma.organization.findMany({
+    return await this.prisma.organization.findMany({
       where: { AND: andParts },
       take: args.take,
       include: organizationListInclude(),

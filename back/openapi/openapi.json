@@ -1962,9 +1962,34 @@
     },
     "/specialists": {
       "get": {
-        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`. Курсор — в том же наборе фильтров.",
+        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.",
         "operationId": "Specialists_list",
         "parameters": [
+          {
+            "name": "radiusLng",
+            "required": false,
+            "in": "query",
+            "description": "Долгота центра круга (вместе с `radiusM`, `radiusLat`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusLat",
+            "required": false,
+            "in": "query",
+            "description": "Широта центра круга (вместе с `radiusM`, `radiusLng`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusM",
+            "required": false,
+            "in": "query",
+            "description": "Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), гео по активной организации.",
+            "schema": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 500000
+            }
+          },
           {
             "name": "priceMaxVnd",
             "required": false,
@@ -2287,7 +2312,7 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale, limit, cursor, majorSlug, categories или цены VND"
+            "description": "Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса"
           }
         },
         "summary": "Список специалистов (курсорная пагинация)",
@@ -2544,9 +2569,34 @@
     },
     "/organizations": {
       "get": {
-        "description": "Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`. Курсор — в том же наборе фильтров.",
+        "description": "Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`, `radiusM`+`radiusLat`+`radiusLng` (круг на Земле, метры). Курсор — в том же наборе фильтров.",
         "operationId": "Organizations_list",
         "parameters": [
+          {
+            "name": "radiusLng",
+            "required": false,
+            "in": "query",
+            "description": "Долгота центра круга (вместе с `radiusM`, `radiusLat`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusLat",
+            "required": false,
+            "in": "query",
+            "description": "Широта центра круга (вместе с `radiusM`, `radiusLng`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusM",
+            "required": false,
+            "in": "query",
+            "description": "Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.",
+            "schema": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 500000
+            }
+          },
           {
             "name": "categories",
             "required": false,
@@ -2815,7 +2865,7 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale, limit, cursor, majorSlug или categories"
+            "description": "Неверный формат locale, limit, cursor, majorSlug, categories или радиуса"
           }
         },
         "summary": "Список организаций (курсорная пагинация)",

@@ -11,6 +11,12 @@ import { CATALOG_MAJOR_CATEGORY_SLUG } from "../config/catalog-major-category";
 import { DIRECTORY_CURSOR_FETCH_CHUNK_MAX } from "../config/directory-cursor-pagination";
 import type { AppLocale } from "@/app/i18n/routing";
 
+export type DirectoryCursorFetchRadius = {
+  radiusM: number;
+  radiusLat: number;
+  radiusLng: number;
+};
+
 async function fetchAllPaged<T extends { cursorPage: { hasMore: boolean; nextCursor: string | null } }>(
   fetchPage: (cursor: string | undefined) => Promise<{ error: unknown; data?: T }>,
   pickItems: (page: T) => unknown[],
@@ -84,7 +90,10 @@ export async function fetchAllSpecialistsPages(options: {
   client: Client;
   locale: AppLocale;
   fetch?: typeof fetch;
+  /** Если задан, совпадает с фильтром радиуса в поиске (гео на бэке). */
+  radius?: DirectoryCursorFetchRadius | null;
 }): Promise<SpecialistsListResponse["specialists"]> {
+  const r = options.radius;
   const rows = await fetchAllPaged<SpecialistsListResponse>(
     (cursor) =>
       specialistsList({
@@ -94,6 +103,9 @@ export async function fetchAllSpecialistsPages(options: {
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
           ...(cursor ? { cursor } : {}),
+          ...(r != null ?
+            { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
+          : {}),
         },
         fetch: options.fetch,
       }),
@@ -107,7 +119,10 @@ export async function fetchAllOrganizationsPages(options: {
   client: Client;
   locale: AppLocale;
   fetch?: typeof fetch;
+  /** Если задан, совпадает с фильтром радиуса в поиске (гео на бэке). */
+  radius?: DirectoryCursorFetchRadius | null;
 }): Promise<OrganizationsListResponse["organizations"]> {
+  const r = options.radius;
   const rows = await fetchAllPaged<OrganizationsListResponse>(
     (cursor) =>
       organizationsList({
@@ -117,6 +132,9 @@ export async function fetchAllOrganizationsPages(options: {
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
           ...(cursor ? { cursor } : {}),
+          ...(r != null ?
+            { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
+          : {}),
         },
         fetch: options.fetch,
       }),

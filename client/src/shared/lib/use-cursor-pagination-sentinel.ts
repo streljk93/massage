@@ -38,13 +38,18 @@ export function useCursorPaginationSentinel({
         // остаётся в зоне видимости; после fetch снова срабатывает сразу → цепочка
         // fetch + мерцание нижнего лоадера. Ограничиваем частоту подгрузок.
         const now = Date.now();
-        if (now - lastNextFetchAtRef.current < 450) {
+        if (now - lastNextFetchAtRef.current < 300) {
           return;
         }
         lastNextFetchAtRef.current = now;
         void fetchRef.current();
       },
-      { root: null, rootMargin: "280px 0px 0px 0px", threshold: 0 },
+      {
+        root: null,
+        // top, right, bottom, left — снизу зона видимости «ниже» вьюпорта, подгрузка раньше скролла
+        rootMargin: "0px 0px 1200px 0px",
+        threshold: 0,
+      },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
