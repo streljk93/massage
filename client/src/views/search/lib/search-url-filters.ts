@@ -12,6 +12,16 @@ export type SearchUrlFilters = {
   specCategorySlugs: string[];
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
+  /** `yyyy-MM-dd` в календаре витрины; в паре с `slotTime` — фильтр по свободному слоту. */
+  slotDay: string | null;
+  /** `HH:mm`; в паре с `slotDay` — показывать только с совпадением в сетке. */
+  slotTime: string | null;
+  /**
+   * Поиск по радиусу от точки (метры, WGS-84). Все три поля задаются вместе; иначе сбрасываются.
+   */
+  radiusM: number | null;
+  radiusLat: number | null;
+  radiusLng: number | null;
 };
 
 function firstParamValue(
@@ -54,6 +64,37 @@ function parsePrice(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const RADIUS_M_MIN = 50;
+const RADIUS_M_MAX = 500_000;
+
+function parseRadiusTriplet(
+  mRaw: string,
+  latRaw: string,
+  lngRaw: string,
+): { radiusM: number; radiusLat: number; radiusLng: number } | null {
+  const radiusM = Number.parseInt(mRaw.trim(), 10);
+  const radiusLat = Number.parseFloat(latRaw.trim());
+  const radiusLng = Number.parseFloat(lngRaw.trim());
+  if (
+    !Number.isFinite(radiusM) ||
+    !Number.isFinite(radiusLat) ||
+    !Number.isFinite(radiusLng)
+  ) {
+    return null;
+  }
+  if (
+    radiusM < RADIUS_M_MIN ||
+    radiusM > RADIUS_M_MAX ||
+    radiusLat < -90 ||
+    radiusLat > 90 ||
+    radiusLng < -180 ||
+    radiusLng > 180
+  ) {
+    return null;
+  }
+  return { radiusM, radiusLat, radiusLng };
+}
+
 export function parseSearchUrlFiltersFromRecord(
   sp: Record<string, string | string[] | undefined>,
 ): SearchUrlFilters {
@@ -66,6 +107,11 @@ export function parseSearchUrlFiltersFromRecord(
     "category",
     "priceMin",
     "priceMax",
+    "slotDay",
+    "slotTime",
+    "radiusM",
+    "radiusLat",
+    "radiusLng",
   ] as const;
   for (const key of keys) {
     const v = firstParamValue(sp, key);
@@ -101,6 +147,23 @@ export function parseSearchUrlFilters(
     priceMinVnd = priceMaxVnd;
     priceMaxVnd = t;
   }
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const HM = /^\d{1,2}:\d{2}$/;
+  const rawDay = getParam(searchParams, "slotDay").trim();
+  const rawTime = getParam(searchParams, "slotTime").trim();
+  let slotDay: string | null = ISO_DATE.test(rawDay) ? rawDay : null;
+  let slotTime: string | null = HM.test(rawTime) ? rawTime : null;
+  if (slotDay == null || slotTime == null) {
+    slotDay = null;
+    slotTime = null;
+  }
+  const rawRM = getParam(searchParams, "radiusM");
+  const rawRLat = getParam(searchParams, "radiusLat");
+  const rawRLng = getParam(searchParams, "radiusLng");
+  const radiusPack =
+    rawRM.trim() && rawRLat.trim() && rawRLng.trim() ?
+      parseRadiusTriplet(rawRM, rawRLat, rawRLng)
+    : null;
   return {
     tab,
     q,
@@ -108,6 +171,11 @@ export function parseSearchUrlFilters(
     specCategorySlugs,
     priceMinVnd,
     priceMaxVnd,
+    slotDay,
+    slotTime,
+    radiusM: radiusPack?.radiusM ?? null,
+    radiusLat: radiusPack?.radiusLat ?? null,
+    radiusLng: radiusPack?.radiusLng ?? null,
   };
 }
 
@@ -124,11 +192,26 @@ export function applySearchUrlPatch(
       patch.priceMinVnd !== undefined ? patch.priceMinVnd : current.priceMinVnd,
     priceMaxVnd:
       patch.priceMaxVnd !== undefined ? patch.priceMaxVnd : current.priceMaxVnd,
+    slotDay: patch.slotDay !== undefined ? patch.slotDay : current.slotDay,
+    slotTime: patch.slotTime !== undefined ? patch.slotTime : current.slotTime,
+    radiusM: patch.radiusM !== undefined ? patch.radiusM : current.radiusM,
+    radiusLat:
+      patch.radiusLat !== undefined ? patch.radiusLat : current.radiusLat,
+    radiusLng:
+      patch.radiusLng !== undefined ? patch.radiusLng : current.radiusLng,
   };
 }
 
+export type BuildSearchQueryStringOptions = {
+  /** Вернуться на /search с открытой панелью фильтров (однократно; клиент снимет параметр). */
+  filtersOneShot?: boolean;
+};
+
 /** Строка query без ведущего `?`; не включает legacy `category`. */
-export function buildSearchQueryString(f: SearchUrlFilters): string {
+export function buildSearchQueryString(
+  f: SearchUrlFilters,
+  options?: BuildSearchQueryStringOptions,
+): string {
   const sp = new URLSearchParams();
   sp.set("tab", searchTabQueryValue(f.tab));
   const qTrim = f.q.trim();
@@ -149,5 +232,33 @@ export function buildSearchQueryString(f: SearchUrlFilters): string {
   if (f.priceMaxVnd != null) {
     sp.set("priceMax", String(f.priceMaxVnd));
   }
+  if (f.slotDay != null && f.slotTime != null) {
+    sp.set("slotDay", f.slotDay);
+    sp.set("slotTime", f.slotTime);
+  }
+  if (f.radiusM != null && f.radiusLat != null && f.radiusLng != null) {
+    sp.set("radiusM", String(f.radiusM));
+    sp.set("radiusLat", String(f.radiusLat));
+    sp.set("radiusLng", String(f.radiusLng));
+  }
+  if (options?.filtersOneShot) {
+    sp.set("filters", "1");
+  }
+  return sp.toString();
+}
+
+/**
+ * Ссылка на `/search/map` с теми же фильтрами, что и список. Опция `pickRadius` — выбор радиуса на карте.
+ */
+export function buildSearchMapQueryString(
+  f: SearchUrlFilters,
+  options?: { pickRadius?: boolean },
+): string {
+  const base = buildSearchQueryString(f);
+  if (!options?.pickRadius) {
+    return base;
+  }
+  const sp = new URLSearchParams(base);
+  sp.set("pickRadius", "1");
   return sp.toString();
 }

@@ -106,7 +106,12 @@ export function ProfileFavoritesPage() {
         .map((p) => p.targetId);
       const rows = await Promise.all(
         orgIds.map(async (id) => {
-          const res = await organizationsGetById({ client, path: { id } });
+          const res = await organizationsGetById({
+            client,
+            path: { id },
+            query: { locale },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK types mark `path` as `never` for `/organizations/{id}`; runtime substitutes `{id}`.
+          } as any);
           if (res.error || !res.data) {
             return null;
           }
@@ -131,7 +136,12 @@ export function ProfileFavoritesPage() {
         .map((p) => p.targetId);
       const rows = await Promise.all(
         specIds.map(async (id) => {
-          const res = await specialistsGetById({ client, path: { id } });
+          const res = await specialistsGetById({
+            client,
+            path: { id },
+            query: { locale },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK: path id for `/specialists/{id}`.
+          } as any);
           if (res.error || !res.data) {
             return null;
           }

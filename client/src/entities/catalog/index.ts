@@ -8,4 +8,5 @@ export {
   CatalogFiltersDialog,
   type CatalogFilterCategoryOption,
   type CatalogFiltersPriceConfig,
+  type CatalogSlotTimeFilterValue,
 } from "./ui/catalog-filters-dialog";

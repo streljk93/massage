@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { Range, Root, Thumb, Track } from "@radix-ui/react-slider";
 import { LocateFixed, X } from "lucide-react";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import {
@@ -16,6 +17,7 @@ import type {
   SpecialistsListResponse,
 } from "@/shared/api";
 import { HomeBottomNav } from "@/widgets/home";
+import { Button } from "@/shared/ui/button";
 import {
   SearchMapResultCard,
   useUserGeolocation,
@@ -26,17 +28,27 @@ import {
   searchMapSpecialistsFromApi,
 } from "@/widgets/home/lib/search-map-list-from-api";
 import { cn, motion } from "@/shared/lib";
+import { distanceMeters } from "@/shared/lib/geo/distance-meters";
 import {
   parseSearchTab,
   SEARCH_TABS,
-  searchTabQueryValue,
   type SearchTab,
 } from "@/shared/lib/search-tab";
 import {
   applySearchUrlPatch,
+  buildSearchMapQueryString,
   buildSearchQueryString,
   parseSearchUrlFilters,
+  type SearchUrlFilters,
 } from "../lib/search-url-filters";
+import {
+  directoryOrganizationHasFreeSlotAt,
+  directorySpecialistHasFreeSlotAt,
+} from "@/shared/lib/directory-matches-free-slot";
+import {
+  radiusLogStepFromMeters,
+  radiusMetersFromLogStep,
+} from "@/widgets/search-map/lib/radius-meters-log-slider";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -54,25 +66,72 @@ const SearchResultsLeafletMap = dynamic(
 const cardGlass =
   "border border-white/25 bg-card/75 backdrop-blur-md supports-[backdrop-filter]:bg-card/55";
 
+const PHU_QUOC: [number, number] = [10.223, 103.968];
+
 function SearchMapInteractiveLayer({
   tab,
   onTabChange,
   organizationItems,
   specialistItems,
+  urlFilters,
+  mapMode,
+  onRadiusApply,
 }: {
   tab: SearchTab;
   onTabChange: (id: SearchTab) => void;
   organizationItems: SearchMapListItem[];
   specialistItems: SearchMapListItem[];
+  urlFilters: SearchUrlFilters;
+  mapMode: "default" | "radiusPick";
+  onRadiusApply?: (p: {
+    center: [number, number];
+    radiusM: number;
+  }) => void;
 }) {
   const tSearch = useTranslations("search");
   const tMap = useTranslations("searchMap");
+  const format = useFormatter();
+  const isRadiusPick = mapMode === "radiusPick";
   const list =
     tab === "organizations" ? organizationItems : specialistItems;
   const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const initialRadiusM = useMemo(() => {
+    if (
+      urlFilters.radiusM != null &&
+      urlFilters.radiusLat != null &&
+      urlFilters.radiusLng != null
+    ) {
+      return urlFilters.radiusM;
+    }
+    return 2000;
+  }, [urlFilters.radiusM, urlFilters.radiusLat, urlFilters.radiusLng]);
+  const [radiusMeters, setRadiusMeters] = useState(initialRadiusM);
+  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const radiusState = useMemo(
+    () =>
+      mapCenter == null ? null
+      : { center: mapCenter, radiusM: radiusMeters },
+    [mapCenter, radiusMeters],
+  );
   const sliderRef = useRef<SliderHandle>(null);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
   const { userPosition, requestFromUserGesture } = useUserGeolocation();
+
+  const closeHref = useMemo(() => {
+    const qs = buildSearchQueryString(urlFilters);
+    return qs ? `/search?${qs}` : "/search";
+  }, [urlFilters]);
+
+  const radiusMapCenter = useMemo((): [number, number] => {
+    if (
+      urlFilters.radiusM != null &&
+      urlFilters.radiusLat != null &&
+      urlFilters.radiusLng != null
+    ) {
+      return [urlFilters.radiusLat, urlFilters.radiusLng];
+    }
+    return PHU_QUOC;
+  }, [urlFilters.radiusLat, urlFilters.radiusLng, urlFilters.radiusM]);
 
   const onMapFlyReady = useCallback(
     (flyTo: (p: [number, number]) => void) => {
@@ -81,18 +140,33 @@ function SearchMapInteractiveLayer({
     [],
   );
 
-  const mapItems = useMemo(
-    () =>
-      list.map((item) => ({
+  const mapItems = useMemo(() => {
+    if (!isRadiusPick) {
+      return list.map((item) => ({
         id: item.id,
         lat: item.lat,
         lng: item.lng,
         imageSrc: item.imageSrc,
         name: item.name,
         rating: item.rating,
-      })),
-    [list],
-  );
+      }));
+    }
+    const center = mapCenter ?? radiusMapCenter;
+    return list.map((item) => {
+      const within =
+        distanceMeters(item.lat, item.lng, center[0], center[1]) <=
+        radiusMeters;
+      return {
+        id: item.id,
+        lat: item.lat,
+        lng: item.lng,
+        imageSrc: item.imageSrc,
+        name: item.name,
+        rating: item.rating,
+        dimmed: !within,
+      };
+    });
+  }, [isRadiusPick, list, mapCenter, radiusMapCenter, radiusMeters]);
 
   const onMarkerSelect = useCallback((index: number) => {
     setActiveCardIndex(index);
@@ -126,6 +200,23 @@ function SearchMapInteractiveLayer({
     [list, tab],
   );
 
+  const radiusReadout = useMemo(() => {
+    const m = radiusMeters;
+    if (m >= 1000) {
+      return tMap("radiusKilometers", {
+        km: format.number(m / 1000, { maximumFractionDigits: 1 }),
+      });
+    }
+    return tMap("radiusMeters", { meters: format.number(m, { maximumFractionDigits: 0 }) });
+  }, [format, radiusMeters, tMap]);
+
+  const onRadiusMapGeometry = useCallback(
+    (p: { center: [number, number]; radiusM: number }) => {
+      setMapCenter(p.center);
+    },
+    [],
+  );
+
   return (
     <div className="relative h-full min-h-0 w-full flex-1 overflow-hidden">
       <div className="absolute inset-0 z-0 [&_.leaflet-control-container]:z-[25]">
@@ -133,11 +224,47 @@ function SearchMapInteractiveLayer({
           userPosition={userPosition}
           onMapFlyReady={onMapFlyReady}
           items={mapItems}
-          selectedIndex={activeCardIndex}
-          onMarkerSelect={onMarkerSelect}
+          selectedIndex={isRadiusPick ? 0 : activeCardIndex}
+          onMarkerSelect={isRadiusPick ? () => {} : onMarkerSelect}
           userLocationAriaLabel={tMap("userLocationAria")}
+          radiusPickerMode={isRadiusPick}
+          radiusMapCenter={radiusMapCenter}
+          radiusMapInitialZoom={14}
+          radiusPickerMeters={isRadiusPick ? radiusMeters : 2000}
+          onRadiusSelectionChange={isRadiusPick ? onRadiusMapGeometry : undefined}
         />
       </div>
+
+      {isRadiusPick ?
+        <div className="pointer-events-none absolute right-2 top-24 bottom-40 z-50 flex w-11 items-center justify-center pr-0.5 sm:right-3">
+          <div className="pointer-events-auto flex h-[min(48vh,280px)] flex-col items-center justify-center rounded-2xl border border-white/25 bg-card/55 py-2 pl-1 pr-0.5 shadow-sm backdrop-blur-sm supports-[backdrop-filter]:bg-card/40">
+            <Root
+              orientation="vertical"
+              className="relative flex h-full w-9 min-h-0 touch-none select-none items-center"
+              min={0}
+              max={1000}
+              step={1}
+              value={[radiusLogStepFromMeters(radiusMeters)]}
+              onValueChange={([s]) => {
+                setRadiusMeters(radiusMetersFromLogStep(s ?? 0));
+              }}
+              aria-label={tMap("radiusSliderAria")}
+            >
+              <Track className="relative h-full w-2 grow overflow-hidden rounded-full bg-zinc-200/80">
+                <Range className="absolute w-full rounded-full bg-primary/85" />
+              </Track>
+              <Thumb
+                className={cn(
+                  "block size-4 cursor-grab rounded-full border border-border/40 bg-white shadow-md",
+                  "shadow-black/10 transition-transform hover:ring-2 hover:ring-primary/25",
+                  "focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:outline-none",
+                  "active:cursor-grabbing",
+                )}
+              />
+            </Root>
+          </div>
+        </div>
+      : null}
 
       {/* Табы и закрытие — как на /search: внутри max-w-lg + px-4 */}
       <div className="pointer-events-none absolute inset-x-0 top-0 z-40 pt-3">
@@ -174,7 +301,7 @@ function SearchMapInteractiveLayer({
             </div>
           </div>
           <Link
-            href={`/search?tab=${searchTabQueryValue(tab)}`}
+            href={closeHref}
             aria-label={tMap("closeAria")}
             className={cn(
               motion.interactivePressStrong,
@@ -209,7 +336,21 @@ function SearchMapInteractiveLayer({
           </button>
         </div>
         <div className="pointer-events-auto">
-          {list.length > 0 ?
+          {isRadiusPick ?
+            <Button
+              type="button"
+              className="h-11 w-full rounded-full text-base font-medium"
+              disabled={mapCenter == null}
+              onClick={() => {
+                if (radiusState == null || onRadiusApply == null) {
+                  return;
+                }
+                onRadiusApply(radiusState);
+              }}
+            >
+              {`${tMap("applyRadius")} ${radiusReadout}`}
+            </Button>
+          : list.length > 0 ?
             <Slider
               ref={sliderRef}
               slides={slides}
@@ -244,31 +385,75 @@ export function SearchMapPageClient({
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const pickRadius = searchParams.get("pickRadius") === "1";
   const tab = parseSearchTab(searchParams.get("tab"));
+  const urlFilters = useMemo(
+    () => parseSearchUrlFilters(new URLSearchParams(searchParams.toString())),
+    [searchParams],
+  );
+  const mapSlotNow = useMemo(() => new Date(), []);
 
-  const organizationItems = useMemo(
-    () => searchMapOrganizationsFromApi(initialOrganizations ?? undefined),
-    [initialOrganizations],
-  );
-  const specialistItems = useMemo(
-    () => searchMapSpecialistsFromApi(initialSpecialists ?? undefined),
-    [initialSpecialists],
-  );
+  const organizationItems = useMemo(() => {
+    let list = initialOrganizations ?? [];
+    const d = urlFilters.slotDay;
+    const tm = urlFilters.slotTime;
+    if (d && tm) {
+      list = list.filter((o) =>
+        directoryOrganizationHasFreeSlotAt(o, d, tm, mapSlotNow),
+      );
+    }
+    return searchMapOrganizationsFromApi(list);
+  }, [initialOrganizations, urlFilters.slotDay, urlFilters.slotTime, mapSlotNow]);
+
+  const specialistItems = useMemo(() => {
+    let list = initialSpecialists ?? [];
+    const d = urlFilters.slotDay;
+    const tm = urlFilters.slotTime;
+    if (d && tm) {
+      list = list.filter((s) =>
+        directorySpecialistHasFreeSlotAt(s, d, tm, mapSlotNow),
+      );
+    }
+    return searchMapSpecialistsFromApi(list);
+  }, [initialSpecialists, urlFilters.slotDay, urlFilters.slotTime, mapSlotNow]);
 
   const onTabChange = useCallback(
     (id: SearchTab) => {
       const current = parseSearchUrlFilters(
         new URLSearchParams(searchParams.toString()),
       );
+      const next =
+        id === "organizations" ?
+          applySearchUrlPatch(current, {
+            tab: id,
+            priceMinVnd: null,
+            priceMaxVnd: null,
+          })
+        : applySearchUrlPatch(current, { tab: id });
+      const qs = pickRadius ?
+        buildSearchMapQueryString(next, { pickRadius: true })
+      : buildSearchQueryString(next);
+      if (qs) {
+        router.replace(`/search/map?${qs}`);
+      } else {
+        router.replace(pickRadius ? "/search/map?pickRadius=1" : "/search/map");
+      }
+    },
+    [pickRadius, router, searchParams],
+  );
+
+  const onRadiusApply = useCallback(
+    (p: { center: [number, number]; radiusM: number }) => {
+      const current = parseSearchUrlFilters(
+        new URLSearchParams(searchParams.toString()),
+      );
       const next = applySearchUrlPatch(current, {
-        tab: id,
-        orgCategorySlugs: [],
-        specCategorySlugs: [],
-        priceMinVnd: null,
-        priceMaxVnd: null,
+        radiusM: p.radiusM,
+        radiusLat: p.center[0],
+        radiusLng: p.center[1],
       });
-      const qs = buildSearchQueryString(next);
-      router.replace(qs ? `/search/map?${qs}` : "/search/map");
+      const qs = buildSearchQueryString(next, { filtersOneShot: true });
+      router.push(qs ? `/search?${qs}` : "/search");
     },
     [router, searchParams],
   );
@@ -277,9 +462,12 @@ export function SearchMapPageClient({
     <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-surface-background">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SearchMapInteractiveLayer
-          key={tab}
+          key={pickRadius ? `radius-${tab}` : tab}
           tab={tab}
           onTabChange={onTabChange}
+          urlFilters={urlFilters}
+          mapMode={pickRadius ? "radiusPick" : "default"}
+          onRadiusApply={pickRadius ? onRadiusApply : undefined}
           organizationItems={organizationItems}
           specialistItems={specialistItems}
         />

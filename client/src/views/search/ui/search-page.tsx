@@ -8,6 +8,11 @@ import {
   useRef,
   useState,
 } from "react";
+import { vnNoonUtcForCalendarYmd } from "@/shared/lib/datetime/vn-listing-datetime";
+import {
+  directoryOrganizationHasFreeSlotAt,
+  directorySpecialistHasFreeSlotAt,
+} from "@/shared/lib/directory-matches-free-slot";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
@@ -27,6 +32,7 @@ import {
   type SpecialistsListResponse,
 } from "@/shared/api";
 import { useCursorPaginationSentinel } from "@/shared/lib/use-cursor-pagination-sentinel";
+import { useDelayedLoadingIndicator } from "@/shared/lib/use-delayed-loading-indicator";
 import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
 import { organizationCardSeedFromApi } from "@/entities/organizations";
 import { specialistCardSeedFromApi } from "@/entities/specialists";
@@ -46,14 +52,24 @@ import type {
 import { SEARCH_TABS } from "@/shared/lib/search-tab";
 import {
   applySearchUrlPatch,
+  buildSearchMapQueryString,
   buildSearchQueryString,
   parseSearchUrlFilters,
   type SearchUrlFilters,
 } from "../lib/search-url-filters";
 import {
+  dedupeDirectoryListItemsByLatLng,
+  isDirectoryItemWithinRadiusMeters,
+} from "../lib/directory-list-item-geo";
+import {
+  buildSearchSlotDayOptions,
+  buildSearchSlotTimeOptions,
+} from "../lib/search-slot-time-options";
+import {
   CatalogFiltersDialog,
   priceSliderStep,
   specialistListPriceBounds,
+  type CatalogSlotTimeFilterValue,
 } from "@/entities/catalog";
 
 /** Запись цены в URL (и запрос списка) не чаще этого интервала при движении слайдера. */
@@ -90,6 +106,22 @@ export function SearchPageClient({
   );
   const tab = urlFilters.tab;
 
+  const hasRadiusFilter =
+    urlFilters.radiusM != null &&
+    urlFilters.radiusLat != null &&
+    urlFilters.radiusLng != null;
+
+  const [slotPick, setSlotPick] = useState<CatalogSlotTimeFilterValue>({
+    day: "",
+    time: "",
+  });
+  useLayoutEffect(() => {
+    setSlotPick({
+      day: urlFilters.slotDay ?? "",
+      time: urlFilters.slotTime ?? "",
+    });
+  }, [urlFilters.slotDay, urlFilters.slotTime]);
+
   const replaceUrlFilters = useCallback(
     (next: SearchUrlFilters) => {
       const qs = buildSearchQueryString(next);
@@ -97,6 +129,18 @@ export function SearchPageClient({
     },
     [router, pathname],
   );
+
+  useLayoutEffect(() => {
+    if (searchParams.get("filters") !== "1") {
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- открыть фильтры по `filters=1` при возврате с карты; сразу убираем параметр из URL
+    setFiltersOpen(true);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("filters");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [searchParams, pathname, router]);
 
   const urlFiltersRef = useRef(urlFilters);
 
@@ -149,6 +193,26 @@ export function SearchPageClient({
       replaceUrlFilters(next);
     },
     [replaceUrlFilters],
+  );
+
+  const onSlotTimeFilterChange = useCallback(
+    (next: CatalogSlotTimeFilterValue) => {
+      setSlotPick(next);
+      const base = urlFiltersRef.current;
+      if (next.day && next.time) {
+        commitUrlFilters(
+          applySearchUrlPatch(base, {
+            slotDay: next.day,
+            slotTime: next.time,
+          }),
+        );
+      } else {
+        commitUrlFilters(
+          applySearchUrlPatch(base, { slotDay: null, slotTime: null }),
+        );
+      }
+    },
+    [commitUrlFilters],
   );
 
   const filterPriceByTab = useMemo(
@@ -214,6 +278,79 @@ export function SearchPageClient({
       specialistsInfinite.data?.pages.flatMap((p) => p.specialists) ?? [],
     [specialistsInfinite.data],
   );
+
+  const slotTimeOptionsStatic = useMemo(() => buildSearchSlotTimeOptions(), []);
+  const slotDayOptions = useMemo(
+    () =>
+      buildSearchSlotDayOptions(listingNow, (calendarDate) =>
+        format.dateTime(vnNoonUtcForCalendarYmd(calendarDate), {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        }),
+      ),
+    [listingNow, format],
+  );
+
+  const displayOrganizations = useMemo(() => {
+    const d = urlFilters.slotDay;
+    const tm = urlFilters.slotTime;
+    let out = organizations;
+    if (d && tm) {
+      out = out.filter((o) =>
+        directoryOrganizationHasFreeSlotAt(o, d, tm, listingNow),
+      );
+    }
+    if (hasRadiusFilter) {
+      const cLat = urlFilters.radiusLat as number;
+      const cLng = urlFilters.radiusLng as number;
+      const rM = urlFilters.radiusM as number;
+      out = out.filter((o) =>
+        isDirectoryItemWithinRadiusMeters(o, cLat, cLng, rM),
+      );
+      out = dedupeDirectoryListItemsByLatLng(out);
+    }
+    return out;
+  }, [
+    organizations,
+    urlFilters.slotDay,
+    urlFilters.slotTime,
+    listingNow,
+    hasRadiusFilter,
+    urlFilters.radiusM,
+    urlFilters.radiusLat,
+    urlFilters.radiusLng,
+  ]);
+
+  const displaySpecialists = useMemo(() => {
+    const d = urlFilters.slotDay;
+    const tm = urlFilters.slotTime;
+    let out = specialists;
+    if (d && tm) {
+      out = out.filter((s) =>
+        directorySpecialistHasFreeSlotAt(s, d, tm, listingNow),
+      );
+    }
+    if (hasRadiusFilter) {
+      const cLat = urlFilters.radiusLat as number;
+      const cLng = urlFilters.radiusLng as number;
+      const rM = urlFilters.radiusM as number;
+      out = out.filter((s) =>
+        isDirectoryItemWithinRadiusMeters(s, cLat, cLng, rM),
+      );
+      out = dedupeDirectoryListItemsByLatLng(out);
+    }
+    return out;
+  }, [
+    specialists,
+    urlFilters.slotDay,
+    urlFilters.slotTime,
+    listingNow,
+    hasRadiusFilter,
+    urlFilters.radiusM,
+    urlFilters.radiusLat,
+    urlFilters.radiusLng,
+  ]);
 
   const orgSentinelRef = useCursorPaginationSentinel({
     enabled: tab === "organizations",
@@ -388,13 +525,30 @@ export function SearchPageClient({
     (filterPriceByTab.specialists.min > specialistPriceExtent.min ||
       filterPriceByTab.specialists.max < specialistPriceExtent.max);
 
+  const hasActiveSlotFilter =
+    urlFilters.slotDay != null && urlFilters.slotTime != null;
+
   const hasActiveFilters =
-    filterCategorySlugs.length > 0 || hasActivePriceFilter;
+    filterCategorySlugs.length > 0 ||
+    hasActivePriceFilter ||
+    hasActiveSlotFilter ||
+    hasRadiusFilter;
 
   const mapHref = useMemo(() => {
-    const qs = buildSearchQueryString(urlFilters);
+    const qs = buildSearchMapQueryString(urlFilters);
     return qs ? `/search/map?${qs}` : "/search/map";
   }, [urlFilters]);
+
+  const radiusFilterDetailLabel = useMemo(() => {
+    if (!hasRadiusFilter) {
+      return undefined;
+    }
+    const m = urlFilters.radiusM as number;
+    if (m >= 1000) {
+      return `${format.number(m / 1000, { maximumFractionDigits: 1 })} km`;
+    }
+    return `${format.number(m, { maximumFractionDigits: 0 })} m`;
+  }, [format, hasRadiusFilter, urlFilters.radiusM]);
 
   function toggleFilterCategory(slug: string) {
     const base = urlFiltersRef.current;
@@ -415,29 +569,68 @@ export function SearchPageClient({
 
   function resetAllFilters() {
     const base = urlFiltersRef.current;
+    setSlotPick({ day: "", time: "" });
     if (tab === "organizations") {
-      commitUrlFilters(applySearchUrlPatch(base, { orgCategorySlugs: [] }));
+      commitUrlFilters(
+        applySearchUrlPatch(base, {
+          orgCategorySlugs: [],
+          slotDay: null,
+          slotTime: null,
+          radiusM: null,
+          radiusLat: null,
+          radiusLng: null,
+        }),
+      );
     } else {
       commitUrlFilters(
         applySearchUrlPatch(base, {
           specCategorySlugs: [],
           priceMinVnd: null,
           priceMaxVnd: null,
+          slotDay: null,
+          slotTime: null,
+          radiusM: null,
+          radiusLat: null,
+          radiusLng: null,
         }),
       );
     }
   }
 
+  /**
+   * Только «первичная» загрузка (нет данных в кэше RQ + идёт fetch).
+   * Не `isPending && !data`: при refetch/фокуре окна нет бесконечного скелетона из‑за `!data`.
+   * В v5: `isLoading` ≈ `isPending && isFetching`.
+   */
   const orgListLoading =
     tab === "organizations" &&
     organizationsInfinite.isPending &&
-    !organizationsInfinite.data;
+    organizationsInfinite.isFetching;
   const specListLoading =
     tab === "specialists" &&
     specialistsInfinite.isPending &&
-    !specialistsInfinite.data;
+    specialistsInfinite.isFetching;
   const orgListError = tab === "organizations" && organizationsInfinite.isError;
   const specListError = tab === "specialists" && specialistsInfinite.isError;
+
+  const rawListLoading = orgListLoading || specListLoading;
+  const hasServerListData =
+    (tab === "organizations" && organizations.length > 0) ||
+    (tab === "specialists" && specialists.length > 0);
+  /** Первичная загрузка без данных: плейсхолдер → по задержке скелетон (без пустой ленты между ними). */
+  const showListSkeleton = useDelayedLoadingIndicator(
+    rawListLoading && !hasServerListData,
+    220,
+  );
+
+  const orgNextPageLoading =
+    tab === "organizations" && organizationsInfinite.isFetchingNextPage;
+  const specNextPageLoading =
+    tab === "specialists" && specialistsInfinite.isFetchingNextPage;
+  const showNextPageSkeleton = useDelayedLoadingIndicator(
+    orgNextPageLoading || specNextPageLoading,
+    200,
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-surface-background">
@@ -469,15 +662,18 @@ export function SearchPageClient({
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 onClick={() => {
-                  commitUrlFilters(
-                    applySearchUrlPatch(urlFiltersRef.current, {
-                      tab: id,
-                      orgCategorySlugs: [],
-                      specCategorySlugs: [],
-                      priceMinVnd: null,
-                      priceMaxVnd: null,
-                    }),
-                  );
+                  const base = urlFiltersRef.current;
+                  if (id === "organizations") {
+                    commitUrlFilters(
+                      applySearchUrlPatch(base, {
+                        tab: id,
+                        priceMinVnd: null,
+                        priceMaxVnd: null,
+                      }),
+                    );
+                  } else {
+                    commitUrlFilters(applySearchUrlPatch(base, { tab: id }));
+                  }
                 }}
               >
                 {tSearch(labelKey)}
@@ -559,11 +755,24 @@ export function SearchPageClient({
             <p className="text-center text-sm text-destructive" role="alert">
               {tSearch("listLoadError")}
             </p>
-          : orgListLoading || specListLoading ?
-            <CursorPaginationDirectoryListSkeleton count={6} />
+          : rawListLoading && !hasServerListData ?
+            showListSkeleton ?
+              <CursorPaginationDirectoryListSkeleton count={6} />
+            : <div className="min-h-80 w-full shrink-0" aria-hidden />
           : tab === "organizations" ?
             <>
-              {organizations.map((o) => {
+              {hasActiveSlotFilter &&
+              !orgListLoading &&
+              organizations.length > 0 &&
+              displayOrganizations.length === 0 ?
+                <div className="space-y-2 rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
+                  <p>{tSearch("noSlotMatch")}</p>
+                  <p className="text-xs leading-relaxed">
+                    {tSearch("slotFilterClientNote")}
+                  </p>
+                </div>
+              : null}
+              {displayOrganizations.map((o) => {
                 const card = organizationCardSeedFromApi(o);
                 return (
                   <OrganizationCard
@@ -579,8 +788,10 @@ export function SearchPageClient({
                   />
                 );
               })}
-              {organizationsInfinite.isFetchingNextPage ?
-                <CursorPaginationDirectoryListSkeleton count={6} />
+              {showNextPageSkeleton ?
+                <CursorPaginationDirectoryListSkeleton
+                  count={displayOrganizations.length > 0 ? 2 : 6}
+                />
               : null}
               <div
                 ref={orgSentinelRef}
@@ -589,7 +800,18 @@ export function SearchPageClient({
               />
             </>
           : <>
-              {specialists.map((s) => {
+              {hasActiveSlotFilter &&
+              !specListLoading &&
+              specialists.length > 0 &&
+              displaySpecialists.length === 0 ?
+                <div className="space-y-2 rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
+                  <p>{tSearch("noSlotMatch")}</p>
+                  <p className="text-xs leading-relaxed">
+                    {tSearch("slotFilterClientNote")}
+                  </p>
+                </div>
+              : null}
+              {displaySpecialists.map((s) => {
                 const card = specialistCardSeedFromApi(s);
                 return (
                   <SpecialistCard
@@ -605,8 +827,10 @@ export function SearchPageClient({
                   />
                 );
               })}
-              {specialistsInfinite.isFetchingNextPage ?
-                <CursorPaginationDirectoryListSkeleton count={6} />
+              {showNextPageSkeleton ?
+                <CursorPaginationDirectoryListSkeleton
+                  count={displaySpecialists.length > 0 ? 2 : 6}
+                />
               : null}
               <div
                 ref={specSentinelRef}
@@ -656,6 +880,12 @@ export function SearchPageClient({
         onResetFilters={resetAllFilters}
         categoryOptions={categoryOptions}
         priceFilter={priceFilterForDialog}
+        slotTimeFilter={{
+          value: slotPick,
+          onChange: onSlotTimeFilterChange,
+          dayOptions: slotDayOptions,
+          timeOptions: slotTimeOptionsStatic,
+        }}
         readOnlyVndLine={readOnlyOrgVndLine}
         showReadOnlyVndNote={readOnlyOrgVndLine != null}
         showPriceDataUnavailable={
@@ -665,6 +895,18 @@ export function SearchPageClient({
           !hasPriceInListData &&
           specialists.length > 0
         }
+        radiusMapFilter={{
+          isActive: hasRadiusFilter,
+          activeDetailLabel: radiusFilterDetailLabel,
+          onSelectOnMap: () => {
+            setFiltersOpen(false);
+            const base = urlFiltersRef.current;
+            const qs = buildSearchMapQueryString(base, { pickRadius: true });
+            router.push(
+              qs ? `/search/map?${qs}` : "/search/map?pickRadius=1",
+            );
+          },
+        }}
       />
     </div>
   );

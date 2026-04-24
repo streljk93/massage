@@ -10,6 +10,7 @@ import {
   type MutableRefObject,
 } from "react";
 import {
+  Circle,
   CircleMarker,
   MapContainer,
   Marker,
@@ -29,6 +30,8 @@ export type SearchMapMarkerItem = {
   imageSrc: string;
   name: string;
   rating: number;
+  /** Вне зоны радиуса: меньше непрозрачность, но маркер остаётся на карте. */
+  dimmed?: boolean;
 };
 
 type SearchResultsLeafletMapProps = {
@@ -50,11 +53,112 @@ type SearchResultsLeafletMapProps = {
    */
   interactionGate?: boolean;
   interactionGateHint?: string;
+  /**
+   * Круг `L.circle` в метрах; радиус задаётся с родителя (ползунок), центр — центр карты.
+   */
+  radiusPickerMode?: boolean;
+  /** Стартовый центр (например из URL) и зум, если радиус-режим. */
+  radiusMapCenter?: [number, number];
+  radiusMapInitialZoom?: number;
+  /** Радиус зоны в метрах (значение ползунка). */
+  radiusPickerMeters?: number;
+  onRadiusSelectionChange?: (state: {
+    center: [number, number];
+    radiusM: number;
+  }) => void;
 };
 
 const PHU_QUOC_CENTER: [number, number] = [10.223, 103.968];
 
 const SCROLL_HINT_AUTO_HIDE_MS = 2000;
+
+function MapRadiusMetersOverlay({
+  mapCenter: initialCenter,
+  initialZoom,
+  radiusM,
+  onChange,
+}: {
+  mapCenter: [number, number];
+  initialZoom: number;
+  radiusM: number;
+  onChange: (p: { center: [number, number]; radiusM: number }) => void;
+}) {
+  const map = useMap();
+  const onChangeRef = useRef(onChange);
+  const radiusMRef = useRef(radiusM);
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  useLayoutEffect(() => {
+    radiusMRef.current = radiusM;
+  }, [radiusM]);
+  const [center, setCenter] = useState<[number, number] | null>(null);
+  const didInitRef = useRef(false);
+
+  /** Сразу при панорамировании и зуме — круг следует без ожидания `moveend`. */
+  const syncCenterFromMap = useCallback(() => {
+    const c = map.getCenter();
+    setCenter([c.lat, c.lng]);
+  }, [map]);
+
+  const commitToParent = useCallback(() => {
+    const c = map.getCenter();
+    const cc: [number, number] = [c.lat, c.lng];
+    setCenter(cc);
+    onChangeRef.current({ center: cc, radiusM: radiusMRef.current });
+  }, [map]);
+
+  const emitInitial = useCallback(() => {
+    commitToParent();
+  }, [commitToParent]);
+
+  useMapEvents({
+    move: syncCenterFromMap,
+    zoom: syncCenterFromMap,
+    moveend: commitToParent,
+  });
+
+  useEffect(() => {
+    map.whenReady(() => {
+      if (didInitRef.current) {
+        return;
+      }
+      didInitRef.current = true;
+      const ll = L.latLng(initialCenter[0], initialCenter[1]);
+      map.setView(ll, initialZoom, { animate: false });
+      map.invalidateSize();
+      requestAnimationFrame(() => {
+        emitInitial();
+      });
+    });
+  }, [map, initialCenter, initialZoom, emitInitial]);
+
+  const c = center ?? initialCenter;
+  return (
+    <>
+      <Circle
+        center={c}
+        radius={radiusM}
+        pathOptions={{
+          color: "#2563eb",
+          fillColor: "#2563eb",
+          fillOpacity: 0.12,
+          weight: 2,
+        }}
+      />
+      <CircleMarker
+        center={c}
+        radius={7}
+        pathOptions={{
+          color: "#ffffff",
+          fillColor: "#2563eb",
+          fillOpacity: 1,
+          weight: 3,
+        }}
+      />
+    </>
+  );
+}
 
 function escapeAttr(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -64,6 +168,7 @@ function createPinIcon(
   selected: boolean,
   imageSrc: string,
   rating: number,
+  dimmed = false,
 ) {
   const pad = 5;
   const gap = 6;
@@ -80,9 +185,12 @@ function createPinIcon(
     ? "0 2px 10px rgba(0,0,0,.16),0 0 0 2px #fff,0 0 0 4px var(--primary)"
     : "0 2px 8px rgba(0,0,0,.14)";
   const src = escapeAttr(imageSrc);
+  const dimmedStyle = dimmed
+    ? "opacity:0.38;filter:grayscale(0.2)"
+    : "opacity:1";
   return L.divIcon({
     className: "search-map-pin",
-    html: `<div style="display:flex;align-items:center;box-sizing:border-box;gap:${gap}px;width:${totalW}px;height:${totalH}px;padding:${pad}px;background:#fff;border-radius:9999px;box-shadow:${shadow}">
+    html: `<div style="display:flex;align-items:center;box-sizing:border-box;gap:${gap}px;width:${totalW}px;height:${totalH}px;padding:${pad}px;background:#fff;border-radius:9999px;box-shadow:${shadow};${dimmedStyle}">
       <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.12)">
         <img src="${src}" alt="" width="${avatarSize}" height="${avatarSize}" style="display:block;width:100%;height:100%;object-fit:cover"/>
       </div>
@@ -246,6 +354,11 @@ export function SearchResultsLeafletMap({
   onMapFlyReady,
   interactionGate = false,
   interactionGateHint,
+  radiusPickerMode = false,
+  radiusMapCenter = PHU_QUOC_CENTER,
+  radiusMapInitialZoom = 14,
+  radiusPickerMeters = 2000,
+  onRadiusSelectionChange,
 }: SearchResultsLeafletMapProps) {
   /**
    * React 19 + Strict Mode: синхронный mount `MapContainer` + `TileLayer` даёт гонку с
@@ -371,6 +484,9 @@ export function SearchResultsLeafletMap({
   const mapGesturesIsolatePage =
     Boolean(interactionGate && mapFocused);
 
+  const mapCenter = radiusPickerMode ? radiusMapCenter : PHU_QUOC_CENTER;
+  const mapZoom = radiusPickerMode ? radiusMapInitialZoom : 13;
+
   return (
     <div
       ref={wrapRef}
@@ -392,8 +508,8 @@ export function SearchResultsLeafletMap({
       {mapInstanceKey ? (
         <MapContainer
           key={mapInstanceKey}
-          center={PHU_QUOC_CENTER}
-          zoom={13}
+          center={mapCenter}
+          zoom={mapZoom}
           zoomControl={false}
           attributionControl={false}
           style={{ height: "100%", width: "100%", minHeight: 280 }}
@@ -414,16 +530,28 @@ export function SearchResultsLeafletMap({
             onFocus={focusMap}
           />
           <MapStripLeafletBranding />
-          <MapEmptyAndUserSync
-            itemsLength={items.length}
-            userPosition={userPosition}
-          />
-          <MapViewSync
-            items={items}
-            selectedIndex={selectedIndex}
-            userPositionRef={userPositionRef}
-          />
+          {radiusPickerMode ? null : (
+            <MapEmptyAndUserSync
+              itemsLength={items.length}
+              userPosition={userPosition}
+            />
+          )}
+          {radiusPickerMode ? null : (
+            <MapViewSync
+              items={items}
+              selectedIndex={selectedIndex}
+              userPositionRef={userPositionRef}
+            />
+          )}
           <MapRegisterFlyTo onMapFlyReady={onMapFlyReady} />
+          {radiusPickerMode && onRadiusSelectionChange ? (
+            <MapRadiusMetersOverlay
+              mapCenter={radiusMapCenter}
+              initialZoom={radiusMapInitialZoom}
+              radiusM={radiusPickerMeters}
+              onChange={onRadiusSelectionChange}
+            />
+          ) : null}
           {userPosition ? (
             <CircleMarker
               center={userPosition}
@@ -446,13 +574,18 @@ export function SearchResultsLeafletMap({
             <Marker
               key={item.id}
               position={[item.lat, item.lng]}
+              zIndexOffset={item.dimmed ? -400 : 0}
               icon={createPinIcon(
-                index === safeIndex,
+                !radiusPickerMode && index === safeIndex,
                 item.imageSrc,
                 item.rating,
+                Boolean(item.dimmed),
               )}
               eventHandlers={{
                 click: () => {
+                  if (radiusPickerMode) {
+                    return;
+                  }
                   if (interactionGate && !mapFocused) {
                     setMapFocused(true);
                   }

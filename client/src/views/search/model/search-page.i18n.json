@@ -13,7 +13,9 @@
         "filtersAria": "Filters",
         "mapAria": "Map",
         "seeAll": "See all",
-        "listLoadError": "Couldn’t load results. Pull to refresh or try again later."
+        "listLoadError": "Couldn’t load results. Pull to refresh or try again later.",
+        "noSlotMatch": "No one matches the selected time. Try another day or time.",
+        "slotFilterClientNote": "Filter applies to the loaded list; scroll down to load more and refine."
       }
     },
     "vi": {
@@ -29,7 +31,9 @@
         "filtersAria": "Bộ lọc",
         "mapAria": "Bản đồ",
         "seeAll": "Xem tất cả",
-        "listLoadError": "Không tải được kết quả. Thử làm mới hoặc thử lại sau."
+        "listLoadError": "Không tải được kết quả. Thử làm mới hoặc thử lại sau.",
+        "noSlotMatch": "Chưa có mục nào trùng thời gian. Thử ngày/giờ khác.",
+        "slotFilterClientNote": "Bộ lọc áp dụng theo trang đã tải; kéo xuống để tải thêm."
       }
     },
     "ru": {
@@ -45,7 +49,9 @@
         "filtersAria": "Фильтры",
         "mapAria": "Карта",
         "seeAll": "Смотреть все",
-        "listLoadError": "Не удалось загрузить список. Обновите страницу или попробуйте позже."
+        "listLoadError": "Не удалось загрузить список. Обновите страницу или попробуйте позже.",
+        "noSlotMatch": "Никто не подходит под выбранное время. Попробуйте другой день или часы.",
+        "slotFilterClientNote": "Фильтр действует на уже загруженный список — пролистайте, чтобы догрузить варианты."
       }
     }
   }

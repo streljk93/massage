@@ -6,7 +6,11 @@
         "sliderDotsAria": "Results on map",
         "userLocationAria": "Your current location",
         "locateMeLabel": "Where am I",
-        "emptyResults": "No locations with coordinates to show"
+        "emptyResults": "No locations with coordinates to show",
+        "applyRadius": "Apply radius",
+        "radiusSliderAria": "Search radius in meters",
+        "radiusMeters": "{meters} m",
+        "radiusKilometers": "{km} km"
       }
     },
     "vi": {
@@ -15,7 +19,11 @@
         "sliderDotsAria": "Kết quả trên bản đồ",
         "userLocationAria": "Vị trí hiện tại của bạn",
         "locateMeLabel": "Tôi ở đâu",
-        "emptyResults": "Chưa có địa điểm có tọa độ để hiển thị"
+        "emptyResults": "Chưa có địa điểm có tọa độ để hiển thị",
+        "applyRadius": "Áp dụng bán kính",
+        "radiusSliderAria": "Bán kính tìm kiếm (mét)",
+        "radiusMeters": "{meters} m",
+        "radiusKilometers": "{km} km"
       }
     },
     "ru": {
@@ -24,7 +32,11 @@
         "sliderDotsAria": "Результаты на карте",
         "userLocationAria": "Ваше текущее местоположение",
         "locateMeLabel": "Где я",
-        "emptyResults": "Нет точек с координатами для отображения"
+        "emptyResults": "Нет точек с координатами для отображения",
+        "applyRadius": "Применить радиус",
+        "radiusSliderAria": "Радиус поиска в метрах",
+        "radiusMeters": "{meters} м",
+        "radiusKilometers": "{km} км"
       }
     }
   }
