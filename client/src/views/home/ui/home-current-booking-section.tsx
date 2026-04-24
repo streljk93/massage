@@ -14,12 +14,8 @@ import { Slider } from "@/shared/ui/slider";
 import { cn, motion } from "@/shared/lib";
 import { bookingsList, createBrowserSdkClient } from "@/shared/api";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
-import {
-  compareAsc,
-  isAfter,
-  parseISO,
-  subMilliseconds,
-} from "date-fns";
+import { isAfter, parseISO, subMilliseconds } from "date-fns";
+import { compareBookingsNewTabPriority } from "@/views/bookings/lib/booking-api-to-ui";
 import {
   vnCalendarYmdString,
   vnTomorrowFromNow,
@@ -56,7 +52,10 @@ function pickUpcomingBookings(rows: ApiBooking[]): ApiBooking[] {
   return rows
     .filter((b) => isAfter(parseISO(b.endsAt), cutoff))
     .sort((a, b) =>
-      compareAsc(parseISO(a.startsAt), parseISO(b.startsAt)),
+      compareBookingsNewTabPriority(
+        { status: a.status, startsAt: a.startsAt },
+        { status: b.status, startsAt: b.startsAt },
+      ),
     );
 }
 
@@ -104,6 +103,8 @@ function apiBookingToCardProps(
     dateLabel,
     timeRange,
     avatarSrc: specialistAvatarSrc(booking.specialistImageUrl),
+    apiBookingStatus: booking.status,
+    statusLabel: booking.statusLabel,
     pendingConfirmationExpiresAt:
       booking.status === "pending" ? (booking.pendingExpiresAt ?? null) : null,
     onPendingConfirmationExpired: onPendingExpired,
@@ -112,7 +113,7 @@ function apiBookingToCardProps(
 
 const linkCardClass = cn(
   motion.interactive,
-  "block rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+  "block w-full min-w-0 max-w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
 );
 
 /**

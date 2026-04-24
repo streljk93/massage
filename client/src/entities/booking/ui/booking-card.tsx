@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Tag } from "@/shared/ui/tag";
+import { cn } from "@/shared/lib";
 import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown";
 import { BookingShowcaseCard } from "./booking-showcase-card";
 
@@ -11,6 +13,10 @@ export type BookingCardProps = {
   timeRange: string;
   avatarSrc?: string | null;
   className?: string;
+  /** Статус брони с API (главная: `in_progress` — строка статуса и акцент). */
+  apiBookingStatus?: string;
+  /** Подпись статуса с API; для `in_progress` приоритетнее `inProgress` из i18n. */
+  statusLabel?: string;
   /** Если запись в статусе pending — дедлайн подтверждения (ISO). */
   pendingConfirmationExpiresAt?: string | null;
   /** Когда таймер дошёл до нуля — перезагрузить список с главной. */
@@ -24,6 +30,8 @@ export function BookingCard({
   timeRange,
   avatarSrc,
   className,
+  apiBookingStatus,
+  statusLabel,
   pendingConfirmationExpiresAt,
   onPendingConfirmationExpired,
 }: BookingCardProps) {
@@ -33,6 +41,8 @@ export function BookingCard({
     Boolean(pendingConfirmationExpiresAt),
     onPendingConfirmationExpired,
   );
+
+  const isInProgress = apiBookingStatus === "in_progress";
 
   const statusFooter =
     pendingConfirmationExpiresAt != null && pendingConfirmationExpiresAt !== ""
@@ -59,6 +69,24 @@ export function BookingCard({
         )
       : undefined;
 
+  const inProgressLine = isInProgress
+    ? statusLabel != null && statusLabel.trim() !== ""
+      ? statusLabel.trim()
+      : t("inProgress")
+    : null;
+
+  const dateTagsReplacement =
+    inProgressLine != null ? (
+      <Tag
+        variant="inverse"
+        className={cn(
+          "h-[34px] w-full min-w-0 justify-start gap-1.5 truncate text-[0.7rem] font-medium py-0",
+        )}
+      >
+        {inProgressLine}
+      </Tag>
+    ) : undefined;
+
   return (
     <BookingShowcaseCard
       variant="dark"
@@ -69,6 +97,7 @@ export function BookingCard({
       avatarSrc={avatarSrc}
       className={className}
       statusFooter={statusFooter}
+      dateTagsReplacement={dateTagsReplacement}
     />
   );
 }

@@ -10,23 +10,27 @@ import {
   shareOrDownloadIcs,
 } from "../lib/booking-calendar-ics";
 import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown";
-import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from "../model/booking-cancel-reasons";
 import { BookingShowcaseCard } from "./booking-showcase-card";
 
 /** Белая заливка + тонкая обводка (не `variant="secondary"` — там брендовый `--secondary`). */
 const actionOutlineButtonClass =
   "h-11 w-full rounded-xl border border-border bg-card font-medium text-foreground shadow-none hover:bg-muted/45 hover:text-foreground active:bg-muted/55";
 
-export type BookingListStatus = "pending" | "confirmed" | "expired" | "rejected";
+export type BookingListStatus =
+  | "pending"
+  | "confirmed"
+  | "in_progress"
+  | "expired"
+  | "rejected";
 
 export type BookingListCardProps = {
   status: BookingListStatus;
+  /** Локализованная подпись статуса с API (`statusLabel`). */
+  statusLabel: string;
   /** Дедлайн подтверждения (ISO); для `pending` показываем обратный отсчёт. */
   pendingExpiresAt?: string | null;
   /** После авто-истечения pending — обновить список. */
   onPendingConfirmationExpired?: () => void;
-  /** Сырые причины с API (для истёкших из-за таймаута подтверждения). */
-  cancelReason?: string | null;
   providerName: string;
   serviceLine: string;
   dateLabel: string;
@@ -45,7 +49,7 @@ export type BookingListCardProps = {
   isExiting?: boolean;
   /** Ссылка на профиль специалиста (например `/specialists/{id}`). */
   specialistProfileHref?: string;
-  /** Id сущности `Booking` (показ под кнопками, напр. для dev / поддержки). */
+  /** Id сущности `Booking` (календарь .ics). */
   bookingEntityId?: string;
   /** ISO начала/конца слота — кнопка «Добавить в календарь» → .ics / share. */
   calendarStartsAtIso?: string;
@@ -55,9 +59,9 @@ export type BookingListCardProps = {
 
 export function BookingListCard({
   status,
+  statusLabel,
   pendingExpiresAt,
   onPendingConfirmationExpired,
-  cancelReason,
   providerName,
   serviceLine,
   dateLabel,
@@ -84,15 +88,7 @@ export function BookingListCard({
     slotMuted ?? (status === "expired" || status === "rejected");
 
   const statusLine =
-    status === "pending"
-      ? t("statusPendingAwaiting")
-      : status === "confirmed"
-        ? t("statusConfirmed")
-        : status === "expired"
-          ? cancelReason === BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT
-            ? t("statusExpiredNoConfirmation")
-            : t("statusExpired")
-          : t("statusRejected");
+    statusLabel.trim() !== "" ? statusLabel.trim() : "\u2014";
 
   const statusFooter =
     status === "pending" && countdown != null ? (
@@ -206,27 +202,11 @@ export function BookingListCard({
           {t("cancel")}
         </Button>
       </>
-    ) : status === "expired" || status === "rejected" ? (
+    ) : status === "in_progress" ? null : status === "expired" || status === "rejected" ? (
       <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
         {t("findOther")}
       </Button>
     ) : null;
-
-  const showActionsBlock = actions != null || Boolean(bookingEntityId);
-  const actionsWithMeta = showActionsBlock ? (
-    <>
-      {actions}
-      {bookingEntityId ? (
-        <p
-          className="w-full break-all px-0.5 pt-1 text-center text-[0.65rem] leading-snug text-muted-foreground"
-          title={bookingEntityId}
-        >
-          <span className="font-medium text-muted-foreground/85">id: </span>
-          <span className="font-mono tabular-nums">{bookingEntityId}</span>
-        </p>
-      ) : null}
-    </>
-  ) : null;
 
   return (
     <div className={exit.outer}>
@@ -245,8 +225,9 @@ export function BookingListCard({
             })}
             statusFooter={statusFooter}
             statusFooterSuccess={status === "confirmed"}
+            statusFooterInProgress={status === "in_progress"}
             dateTagsMuted={muted}
-            actions={actionsWithMeta}
+            actions={actions}
           />
         </article>
       </div>

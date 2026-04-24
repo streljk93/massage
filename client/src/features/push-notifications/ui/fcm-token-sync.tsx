@@ -4,7 +4,7 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getMessaging, getToken, isSupported, onMessage } from "firebase/messaging";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { getFirebaseWebConfig } from "@/shared/config/firebase-public";
 import {
@@ -76,9 +76,13 @@ async function waitForActiveFcmRegistration(
 export function FcmTokenSync() {
   const tFcm = useTranslations("fcmInApp");
   const tFcmRef = useRef(tFcm);
-  tFcmRef.current = tFcm;
+  useLayoutEffect(() => {
+    tFcmRef.current = tFcm;
+  }, [tFcm]);
 
   const { data: session, status } = useSession();
+  /** Не deps на весь `session` — иначе новый объект на каждом рендере и бесконечный SW/getToken в dev. */
+  const accessToken = session?.accessToken;
   const lastPostedToken = useRef<string | null>(null);
   /** FCM: при открытой вкладке сообщения идут в onMessage, а не в onBackgroundMessage в SW. */
   const offForeground = useRef<(() => void) | null>(null);
@@ -121,7 +125,7 @@ export function FcmTokenSync() {
   }, [showFcmInAppToast]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.accessToken) {
+    if (status !== "authenticated" || accessToken == null || accessToken === "") {
       offForeground.current?.();
       offForeground.current = null;
       return;
@@ -135,6 +139,9 @@ export function FcmTokenSync() {
     let cancelled = false;
 
     const run = async () => {
+      if (cancelled) {
+        return;
+      }
       const app = getOrInitApp();
       if (!app) {
         return;
@@ -162,7 +169,7 @@ export function FcmTokenSync() {
       if (!offForeground.current && !cancelled) {
         offForeground.current = onMessage(messaging, (payload) => {
           if (process.env.NODE_ENV === "development") {
-            // eslint-disable-next-line no-console -- диагностика: пришло ли в foreground до показа панели
+             
             console.debug("[FcmTokenSync] FCM onMessage (foreground)", payload);
           }
           const raw = payload.data as Record<string, string> | undefined;
@@ -178,7 +185,7 @@ export function FcmTokenSync() {
           const body = n?.body || d?.pushBody || d?.body;
           if (title == null && body == null) {
             if (process.env.NODE_ENV === "development") {
-              // eslint-disable-next-line no-console
+               
               console.debug(
                 "[FcmTokenSync] onMessage: no notification and no pushTitle/pushBody in data, skip",
               );
@@ -265,7 +272,7 @@ export function FcmTokenSync() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
             token,
@@ -284,16 +291,44 @@ export function FcmTokenSync() {
       }
     };
 
-    void run().catch((e) => {
-      console.warn("[FcmTokenSync] run failed", e);
-    });
+    const startRun = () => {
+      if (cancelled) {
+        return;
+      }
+      void run().catch((e) => {
+        console.warn("[FcmTokenSync] run failed", e);
+      });
+    };
+
+    /**
+     * В dev Firebase + SW конкурируют с React Fast Refresh / Strict Mode.
+     * Откладываем на idle (с дедлайном), чтобы не забивать CPU в горячую фазу.
+     */
+    let idleHandle: number | undefined;
+    /** DOM `setTimeout` — число; не `NodeJS.Timeout` из типов Node. */
+    let runTimeoutHandle: number | undefined;
+    if (process.env.NODE_ENV === "development") {
+      if (typeof requestIdleCallback !== "undefined") {
+        idleHandle = requestIdleCallback(startRun, { timeout: 5000 });
+      } else {
+        runTimeoutHandle = window.setTimeout(startRun, 750);
+      }
+    } else {
+      startRun();
+    }
 
     return () => {
       cancelled = true;
+      if (idleHandle !== undefined && typeof cancelIdleCallback !== "undefined") {
+        cancelIdleCallback(idleHandle);
+      }
+      if (runTimeoutHandle !== undefined) {
+        window.clearTimeout(runTimeoutHandle);
+      }
       offForeground.current?.();
       offForeground.current = null;
     };
-  }, [session, status]);
+  }, [accessToken, showFcmInAppToast, status]);
 
   return null;
 }

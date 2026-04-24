@@ -37,6 +37,7 @@ import {
 } from "@/views/specialist-profile/lib/booking-starts-at";
 import {
   bookingIsNewTab,
+  compareBookingsNewTabPriority,
   mapApiStatusToListCard,
 } from "../lib/booking-api-to-ui";
 import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
@@ -77,7 +78,6 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 export function BookingsPage() {
   const t = useTranslations("bookings");
   const tBookingHistory = useTranslations("bookingHistory");
-  const tBookingList = useTranslations("bookingList");
   const tRoot = useTranslations();
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
@@ -248,10 +248,10 @@ export function BookingsPage() {
     [accessToken, locale, runAfterCancelSuccess, t],
   );
 
-  const newRows = useMemo(
-    () => (rows ?? []).filter((b) => bookingIsNewTab(b.status)),
-    [rows],
-  );
+  const newRows = useMemo(() => {
+    const filtered = (rows ?? []).filter((b) => bookingIsNewTab(b.status));
+    return [...filtered].sort(compareBookingsNewTabPriority);
+  }, [rows]);
 
   const historyRows = useMemo(
     () => (rows ?? []).filter((b) => !bookingIsNewTab(b.status)),
@@ -302,6 +302,7 @@ export function BookingsPage() {
         id: row.id,
         apiStatus: row.status,
         status: mapApiStatusToListCard(row.status),
+        statusLabel: row.statusLabel,
         pendingExpiresAt: row.pendingExpiresAt,
         specialistProfileHref: `/specialists/${row.specialistId}`,
         providerName: row.specialistName,
@@ -357,11 +358,11 @@ export function BookingsPage() {
         row.cancelReason,
         row.cancellationComment,
         (key) => tBookingHistory(key),
-        (key) => tBookingList(key),
       );
 
       return {
         id: row.id,
+        apiStatus: row.status,
         providerName: row.specialistName,
         serviceLine,
         dateLabel,
@@ -374,7 +375,7 @@ export function BookingsPage() {
         systemNote,
       };
     });
-  }, [format, historyRows, tBookingHistory, tBookingList, tRoot]);
+  }, [format, historyRows, tBookingHistory, tRoot]);
 
   const headerName =
     session?.user?.name?.trim() ||
@@ -480,6 +481,7 @@ export function BookingsPage() {
                       key={row.id}
                       bookingEntityId={row.id}
                       status={row.status}
+                      statusLabel={row.statusLabel}
                       pendingExpiresAt={row.pendingExpiresAt}
                       onPendingConfirmationExpired={() =>
                         void refreshBookingsRef.current()
@@ -520,6 +522,7 @@ export function BookingsPage() {
                     dateTagsMuted={row.dateTagsMuted}
                     statusFooterSuccess={row.statusFooterSuccess}
                     systemNote={row.systemNote}
+                    reviewEligible={row.apiStatus === "done"}
                     reviewed={false}
                   />
                 ))

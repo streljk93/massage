@@ -8,7 +8,8 @@
         "demoFootMassage": "Foot massage",
         "pendingAwaiting": "Awaiting confirmation",
         "pendingTimer": "Time left: {minutes} min {seconds} sec",
-        "pendingTimeCompact": "{minutes} min {seconds} sec"
+        "pendingTimeCompact": "{minutes} min {seconds} sec",
+        "inProgress": "In progress"
       }
     },
     "vi": {
@@ -19,7 +20,8 @@
         "demoFootMassage": "Massage chân",
         "pendingAwaiting": "Đang chờ xác nhận",
         "pendingTimer": "Còn lại: {minutes} phút {seconds} giây",
-        "pendingTimeCompact": "{minutes} phút {seconds} giây"
+        "pendingTimeCompact": "{minutes} phút {seconds} giây",
+        "inProgress": "Đang diễn ra"
       }
     },
     "ru": {
@@ -30,7 +32,8 @@
         "demoFootMassage": "Массаж стоп",
         "pendingAwaiting": "Ожидает подтверждения",
         "pendingTimer": "Осталось: {minutes} мин {seconds} сек",
-        "pendingTimeCompact": "{minutes} мин {seconds} сек"
+        "pendingTimeCompact": "{minutes} мин {seconds} сек",
+        "inProgress": "Выполняется"
       }
     }
   }

@@ -28,9 +28,8 @@ export type SliderProps = {
   /** Дополнительные классы для каждого слайда (по умолчанию на всю ширину скролла). */
   slideClassName?: string;
   /**
-   * Ширина слайда (Tailwind). По умолчанию `min-w-full` — одна карточка на экран.
-   * Для одинаковой ширины всех карточек задавайте **`w-*`** (а не только `min-w-*`), иначе flex может
-   * растянуть слайды по-разному. Пример «peek» + две колонки:
+   * Ширина слайда (Tailwind). По умолчанию `basis-full` + `min-w-0` на треке — ровно одна карточка на
+   * экран без раздувания от длинного текста. Для «peek» / нескольких колонок переопределите, например:
    * `min-w-0 w-[82%] sm:w-[calc((100%-0.75rem)/2)]` при `trackGapClassName="gap-3"` и `trackGapPx={12}`.
    */
   slideMinWidthClassName?: string;
@@ -190,8 +189,8 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
             <div
               key={slide.id}
               className={cn(
-                "flex min-h-0 shrink-0 snap-start flex-col",
-                slideMinWidthClassName ?? "min-w-full",
+                "flex min-h-0 min-w-0 shrink-0 snap-start flex-col",
+                slideMinWidthClassName ?? "basis-full",
                 slideClassName,
               )}
             >

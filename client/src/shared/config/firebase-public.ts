@@ -28,3 +28,16 @@ export function getFirebaseWebConfig(): FirebaseWebConfig | null {
     appId,
   };
 }
+
+/**
+ * Монтировать ли `FcmTokenSync` в корне приложения.
+ * Если false — компонент не рендерится: нет хуков, SW-listener’ов и работы Firebase в клиенте.
+ * Условие: заданы VAPID и полный публичный конфиг Firebase (иначе пуш на клиенте всё равно не поднять).
+ */
+export function isWebPushClientSyncEnabled(): boolean {
+  const vapid = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  if (vapid == null || vapid === "") {
+    return false;
+  }
+  return getFirebaseWebConfig() != null;
+}

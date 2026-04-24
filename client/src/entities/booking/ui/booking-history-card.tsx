@@ -55,6 +55,11 @@ export type BookingHistoryCardProps = {
   statusFooterSuccess?: boolean;
   /** Системное пояснение (например авто-отмена из-за отсутствия подтверждения). */
   systemNote?: string;
+  /**
+   * Показывать блок отзыва / оценки (только завершённый визит `done`).
+   * Для отменённых и прочих статусов не передавать или `false`.
+   */
+  reviewEligible?: boolean;
   /** Есть ли отзыв; если нет — блок «Review me» и пустые звёзды. */
   reviewed: boolean;
   /** 1–5 при `reviewed`. */
@@ -75,6 +80,7 @@ export function BookingHistoryCard({
   dateTagsMuted,
   statusFooterSuccess,
   systemNote,
+  reviewEligible = false,
   reviewed,
   rating = 0,
   reviewExcerpt,
@@ -99,7 +105,7 @@ export function BookingHistoryCard({
       <p className="font-medium text-foreground">{resolvedStatusLabel}</p>
     );
 
-  const actions = (
+  const actions = reviewEligible ? (
     <div className="border-t border-border/50 pt-3">
       {!reviewed ? (
         <div className="space-y-2">
@@ -117,7 +123,7 @@ export function BookingHistoryCard({
         </div>
       )}
     </div>
-  );
+  ) : undefined;
 
   return (
     <BookingShowcaseCard

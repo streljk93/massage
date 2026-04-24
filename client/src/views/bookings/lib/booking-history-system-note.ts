@@ -11,13 +11,14 @@ export function bookingHistorySystemNote(
   status: string,
   cancelReason: string | null | undefined,
   cancellationComment: string | null | undefined,
-  tHistory: (key: "systemMasterLeftWorkplace") => string,
-  tBookingList: (key: "statusExpiredNoConfirmation") => string,
+  tHistory: (
+    key: "systemMasterLeftWorkplace" | "systemExpiredNoConfirmation",
+  ) => string,
 ): string | undefined {
   const comment = cancellationComment?.trim();
   if (status === "expired") {
     if (cancelReason === BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT) {
-      return tBookingList("statusExpiredNoConfirmation");
+      return tHistory("systemExpiredNoConfirmation");
     }
     return cancelReason?.trim() || undefined;
   }

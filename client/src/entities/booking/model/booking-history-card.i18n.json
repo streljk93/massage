@@ -4,6 +4,7 @@
       "bookingHistory": {
         "reviewMe": "Review me",
         "statusUnknown": "Status unavailable",
+        "systemExpiredNoConfirmation": "Canceled: not confirmed in time",
         "systemMasterLeftWorkplace": "The specialist is no longer available at this address. The booking was cancelled automatically."
       }
     },
@@ -11,6 +12,7 @@
       "bookingHistory": {
         "reviewMe": "Đánh giá tôi",
         "statusUnknown": "Không xác định trạng thái",
+        "systemExpiredNoConfirmation": "Đã hủy: không xác nhận kịp",
         "systemMasterLeftWorkplace": "Chuyên gia không còn làm việc tại địa chỉ này. Lịch hẹn đã được hủy tự động."
       }
     },
@@ -18,6 +20,7 @@
       "bookingHistory": {
         "reviewMe": "Оцените визит",
         "statusUnknown": "Статус недоступен",
+        "systemExpiredNoConfirmation": "Отменено: не подтвердили вовремя",
         "systemMasterLeftWorkplace": "Мастер больше не ведёт приём по этому адресу. Запись отменена автоматически."
       }
     }
