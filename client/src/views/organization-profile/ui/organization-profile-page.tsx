@@ -24,6 +24,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
+import { useClientFavorite } from "@/entities/favorites";
 import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import type { BookableServiceOption } from "@/entities/services";
@@ -141,7 +142,11 @@ export function OrganizationProfilePage({
   const [bookingErrorKey, setBookingErrorKey] =
     useState<OrganizationBookingErrorKey | null>(null);
 
-  const [favorite, setFavorite] = useState(false);
+  const {
+    isFavorite,
+    isPending: favoritePending,
+    toggle: toggleFavorite,
+  } = useClientFavorite("organization", profile.id);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
   const { userPosition, requestFromUserGesture } = useUserGeolocation();
   const onMapFlyReady = useCallback(
@@ -633,14 +638,16 @@ export function OrganizationProfilePage({
                       type="button"
                       variant="secondary"
                       tone="light"
+                      disabled={favoritePending}
                       className="size-11 shrink-0 rounded-full border-0 bg-white/75 p-0 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
                       aria-label={t("favoriteAria")}
-                      onClick={() => setFavorite((v) => !v)}
+                      aria-pressed={isFavorite}
+                      onClick={() => toggleFavorite()}
                     >
                       <Heart
                         className={cn(
                           "size-[1.15rem] transition-colors",
-                          favorite
+                          isFavorite
                             ? "fill-rose-500 text-rose-500"
                             : "text-foreground",
                         )}

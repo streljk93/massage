@@ -46,11 +46,11 @@ import type {
   OrganizationListApiFilters,
   SpecialistListApiFilters,
 } from '../infrastructure/directory-list-query-filters';
-import type {
-  OrganizationListRow,
-  SpecialistListRow,
+import {
+  DirectoryRepository,
+  type OrganizationListRow,
+  type SpecialistListRow,
 } from '../infrastructure/directory.repository';
-import { DirectoryRepository } from '../infrastructure/directory.repository';
 
 function specialistListFiltersOrNull(
   locale: ApiLocale,
@@ -609,6 +609,105 @@ export class DirectoryService {
       ...base,
       staff,
     };
+  }
+
+  /**
+   * Элементы списка витрины для избранных салонов (как у GET /organizations, без пагинации).
+   * Порядок — как в избранном (по `createdAt` из `UserFavorite`).
+   */
+  async listListingItemsForFavoriteOrganizations(
+    locale: ApiLocale,
+    organizationIdsInFavoriteOrder: string[],
+  ): Promise<OrganizationListItemDto[]> {
+    const ids = organizationIdsInFavoriteOrder.filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.directoryRepository.findOrganizationsByIds(ids);
+    const byId = new Map<string, OrganizationListRow>(
+      rows.map((r): [string, OrganizationListRow] => [r.id, r]),
+    );
+    const now = new Date();
+    const specialistIds = new Set<string>();
+    for (const id of ids) {
+      const o = byId.get(id);
+      if (!o) {
+        continue;
+      }
+      for (const e of o.specialistEmployments) {
+        if (e.isActive && e.specialist.listedInDirectory) {
+          specialistIds.add(e.specialist.id);
+        }
+      }
+    }
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps(
+        [...specialistIds],
+        now,
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
+      );
+    const out: OrganizationListItemDto[] = [];
+    for (const id of ids) {
+      const o = byId.get(id);
+      if (!o) {
+        continue;
+      }
+      out.push(
+        mapOrganizationRowToListItem(
+          o,
+          locale,
+          now,
+          occupiedBySpecialist,
+          freeBySpecialist,
+        ),
+      );
+    }
+    return out;
+  }
+
+  /**
+   * Элементы списка витрины для избранных мастеров (как у GET /specialists).
+   */
+  async listListingItemsForFavoriteSpecialists(
+    locale: ApiLocale,
+    specialistIdsInFavoriteOrder: string[],
+  ): Promise<SpecialistListItemDto[]> {
+    const ids = specialistIdsInFavoriteOrder.filter(
+      (id): id is string => typeof id === 'string' && id.length > 0,
+    );
+    if (ids.length === 0) {
+      return [];
+    }
+    const rows = await this.directoryRepository.findSpecialistsByIds(ids);
+    const byId = new Map<string, SpecialistListRow>(
+      rows.map((r): [string, SpecialistListRow] => [r.id, r]),
+    );
+    const now = new Date();
+    const { occupiedBySpecialist, freeBySpecialist } =
+      await this.buildOccupiedAndFreeSlotMaps(
+        ids,
+        now,
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
+      );
+    const out: SpecialistListItemDto[] = [];
+    for (const id of ids) {
+      const s = byId.get(id);
+      if (!s) {
+        continue;
+      }
+      out.push(
+        mapSpecialistRowToListItem(
+          s,
+          locale,
+          now,
+          occupiedBySpecialist.get(id) ?? new Set(),
+          freeBySpecialist.get(id) ?? [],
+        ),
+      );
+    }
+    return out;
   }
 
   /**

@@ -1,7 +1,7 @@
 import type { SalonSpecialistPick } from "@/entities/specialists";
 import type { OrganizationsGetByIdResponse } from "@/shared/api";
 import { availabilityFromDirectorySlotGroups } from "@/shared/lib/directory-slot-calendar";
-import { resolveDirectoryImageSrc } from "@/widgets/home/lib/directory-cards-from-api";
+import { resolveDirectoryImageSrc } from "@/entities/organizations";
 import type { OrganizationProfileData } from "../model/organization-profile-data";
 
 export function organizationProfileFromApiDetail(

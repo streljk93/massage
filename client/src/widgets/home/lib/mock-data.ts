@@ -16,8 +16,7 @@ export const currentBooking = {
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=128&h=128&fit=crop",
 };
 
-/** Группы слотов на карточке каталога: `calendarDate` — yyyy-MM-dd (Asia/Ho_Chi_Minh). */
-export type SlotGroupSeed = { calendarDate: string; times: string[] };
+export type { DirectorySlotGroupSeed as SlotGroupSeed } from "@/shared/lib/directory-slot-group-seed";
 
 export const promoSlides = [
   {

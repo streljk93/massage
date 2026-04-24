@@ -19,7 +19,14 @@ export const devTestFcmRequestSchema = {
 
 export const devTestFcmResponseSchema = {
   type: 'object',
-  required: ['ok', 'userId', 'email', 'tokensCount', 'delaySecondsApplied', 'fcm'],
+  required: [
+    'ok',
+    'userId',
+    'email',
+    'tokensCount',
+    'delaySecondsApplied',
+    'fcm',
+  ],
   properties: {
     ok: { type: 'boolean' },
     userId: { type: 'string', format: 'uuid' },

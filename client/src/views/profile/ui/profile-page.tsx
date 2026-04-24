@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Bell,
@@ -7,6 +8,7 @@ import {
   CreditCard,
   FileText,
   Globe,
+  Heart,
   HelpCircle,
   LogOut,
   MapPin,
@@ -16,6 +18,7 @@ import {
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/app/i18n/navigation";
+import { promoteUserCacheToGuestOnLogout } from "@/entities/favorites";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
@@ -26,6 +29,7 @@ const menuIconClass = "size-[1.125rem] shrink-0 text-muted-foreground";
 export function ProfilePage() {
   const t = useTranslations("profile");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: session, status } = useSession();
   const [signOutPending, setSignOutPending] = useState(false);
 
@@ -38,9 +42,14 @@ export function ProfilePage() {
   const accountEmail = session?.user?.email ?? profileUserDemo.email;
 
   const onSignOut = async () => {
+    const uid = session?.user?.id;
     setSignOutPending(true);
     try {
       await signOut({ redirect: false });
+      if (uid) {
+        promoteUserCacheToGuestOnLogout(uid);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["favorites"] });
       router.replace("/");
       router.refresh();
     } finally {
@@ -69,6 +78,13 @@ export function ProfilePage() {
       icon: MapPin,
       variant: "default" as const,
       href: "/profile/location" as const,
+    },
+    {
+      id: "favorites" as const,
+      labelKey: "favorites" as const,
+      icon: Heart,
+      variant: "default" as const,
+      href: "/profile/favorites" as const,
     },
     {
       id: "help" as const,

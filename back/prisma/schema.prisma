@@ -50,6 +50,12 @@ enum OrganizationMembershipRole {
   specialist
 }
 
+/// Цель избранного клиента: салон или мастер (витрина).
+enum FavoriteTargetKind {
+  organization
+  specialist
+}
+
 // --- Core user ---
 
 /// Учётная запись пользователя. Пароль только для email-входа; OAuth — отдельная связка позже.
@@ -82,6 +88,7 @@ model User {
   specialistReviews SpecialistReview[]
   ownedOrganizations Organization[]        @relation("OrganizationOwner")
   fcmTokens            UserFcmToken[]
+  favorites            UserFavorite[]
 }
 
 /// FCM (web) registration token: одно устройство/браузер — одна запись, токен уникален глобально.
@@ -95,6 +102,18 @@ model UserFcmToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
+}
+
+/// Избранные салоны и мастера пользователя-клиента.
+model UserFavorite {
+  userId     String
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetKind FavoriteTargetKind
+  targetId   String
+  createdAt  DateTime            @default(now())
+
+  @@id([userId, targetKind, targetId])
   @@index([userId])
 }
 

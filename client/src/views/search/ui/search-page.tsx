@@ -28,10 +28,8 @@ import {
 } from "@/shared/api";
 import { useCursorPaginationSentinel } from "@/shared/lib/use-cursor-pagination-sentinel";
 import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
-import {
-  organizationCardSeedFromApi,
-  specialistCardSeedFromApi,
-} from "@/widgets/home/lib/directory-cards-from-api";
+import { organizationCardSeedFromApi } from "@/entities/organizations";
+import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { homeUser } from "@/widgets/home/lib/mock-data";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import { cn, motion } from "@/shared/lib";
@@ -45,7 +43,7 @@ import type {
   SearchOrganizationsListApiFilters,
   SearchSpecialistsListApiFilters,
 } from "../lib/search-directory-list-api-filters";
-import { SEARCH_TABS } from "../lib/search-tab";
+import { SEARCH_TABS } from "@/shared/lib/search-tab";
 import {
   applySearchUrlPatch,
   buildSearchQueryString,

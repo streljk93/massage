@@ -622,7 +622,7 @@ export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreat
 export type BookingsCancelData = {
     body: {
         /**
-         * Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`.
+         * Для `pending` не передаётся. Для `confirmed` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`. Отмена из `in_progress` клиентом не поддерживается.
          */
         cancelReason?: 'client_schedule_changed' | 'client_found_alternative' | 'client_health_personal' | 'client_price_or_service' | 'client_other';
         /**
@@ -656,7 +656,7 @@ export type BookingsCancelResponses = {
     200: {
         id: string;
         /**
-         * `reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`.
+         * `reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed`.
          */
         status: 'canceled_by_client' | 'reject_by_client';
     };
@@ -709,6 +709,48 @@ export type SpecialistBookingsConfirmPendingResponses = {
 };
 
 export type SpecialistBookingsConfirmPendingResponse = SpecialistBookingsConfirmPendingResponses[keyof SpecialistBookingsConfirmPendingResponses];
+
+export type SpecialistBookingsStartVisitData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/specialist/bookings/{id}/start-visit';
+};
+
+export type SpecialistBookingsStartVisitErrors = {
+    /**
+     * Не `confirmed`, или слишком рано до `startsAt` (`BOOKING_CANNOT_START_VISIT`, `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`)
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * У JWT нет профиля специалиста
+     */
+    403: unknown;
+    /**
+     * Бронь не найдена или чужая
+     */
+    404: unknown;
+};
+
+export type SpecialistBookingsStartVisitResponses = {
+    200: {
+        id: string;
+        /**
+         * Приём отмечен как идущий.
+         */
+        status: 'in_progress';
+        startsAt: string;
+        endsAt: string;
+    };
+};
+
+export type SpecialistBookingsStartVisitResponse = SpecialistBookingsStartVisitResponses[keyof SpecialistBookingsStartVisitResponses];
 
 export type CatalogGetMajorCategoriesData = {
     body?: never;
@@ -1296,6 +1338,10 @@ export type DevBookingsSetStatusData = {
 
 export type DevBookingsSetStatusErrors = {
     /**
+     * Переход не разрешён (`BOOKING_INVALID_STATUS_TRANSITION`), слишком рано для `in_progress` / no-show (`BOOKING_TOO_EARLY_FOR_IN_PROGRESS`, `BOOKING_TOO_EARLY_FOR_NO_SHOW`), или невалидное тело
+     */
+    400: unknown;
+    /**
      * Ручка выключена или бронь с таким id не найдена
      */
     404: unknown;
@@ -1359,3 +1405,241 @@ export type DevFcmTestTestFcmResponses = {
 };
 
 export type DevFcmTestTestFcmResponse = DevFcmTestTestFcmResponses[keyof DevFcmTestTestFcmResponses];
+
+export type FavoritesListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/favorites';
+};
+
+export type FavoritesListErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesListResponses = {
+    200: {
+        favorites: Array<{
+            targetKind: 'organization' | 'specialist';
+            targetId: string;
+            createdAt: string;
+        }>;
+    };
+};
+
+export type FavoritesListResponse = FavoritesListResponses[keyof FavoritesListResponses];
+
+export type FavoritesAddData = {
+    body: {
+        targetKind: 'organization' | 'specialist';
+        targetId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/favorites';
+};
+
+export type FavoritesAddErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesAddResponses = {
+    /**
+     * Добавлено или уже было в избранном
+     */
+    201: unknown;
+};
+
+export type FavoritesListOrganizationsListingData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/favorites/organizations';
+};
+
+export type FavoritesListOrganizationsListingErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesListOrganizationsListingResponses = {
+    200: {
+        organizations: Array<{
+            id: string;
+            slug: string;
+            name: string;
+            description?: string | null;
+            city?: string | null;
+            addressLine: string | null;
+            phone: string | null;
+            yearsInBusiness: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            slotGroups: Array<{
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
+                times: Array<string>;
+            }>;
+        }>;
+    };
+};
+
+export type FavoritesListOrganizationsListingResponse = FavoritesListOrganizationsListingResponses[keyof FavoritesListOrganizationsListingResponses];
+
+export type FavoritesListSpecialistsListingData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/favorites/specialists';
+};
+
+export type FavoritesListSpecialistsListingErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesListSpecialistsListingResponses = {
+    200: {
+        specialists: Array<{
+            id: string;
+            userId: string;
+            name: string;
+            bio?: string | null;
+            experienceYears?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            latitude: number | null;
+            longitude: number | null;
+            /**
+             * Адрес текущей активной организации мастера (мастер сам выбирает место приёма).
+             */
+            addressLine?: string | null;
+            /**
+             * Город активной организации мастера.
+             */
+            city?: string | null;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            slotGroups: Array<{
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
+                times: Array<string>;
+            }>;
+            bookableServices: Array<{
+                id: string;
+                name: string;
+                /**
+                 * Локализованный shortName подкатегории каталога (`Service.category`).
+                 */
+                categoryShortName: string;
+                durationMinutes: Array<number>;
+                priceVndByDuration: Array<number>;
+            }>;
+            /**
+             * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
+             */
+            autoConfirmBookings: boolean;
+        }>;
+    };
+};
+
+export type FavoritesListSpecialistsListingResponse = FavoritesListSpecialistsListingResponses[keyof FavoritesListSpecialistsListingResponses];
+
+export type FavoritesMergeData = {
+    body: {
+        items: Array<{
+            targetKind: 'organization' | 'specialist';
+            targetId: string;
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/favorites/merge';
+};
+
+export type FavoritesMergeErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesMergeResponses = {
+    200: {
+        favorites: Array<{
+            targetKind: 'organization' | 'specialist';
+            targetId: string;
+            createdAt: string;
+        }>;
+    };
+};
+
+export type FavoritesMergeResponse = FavoritesMergeResponses[keyof FavoritesMergeResponses];
+
+export type FavoritesRemoveData = {
+    body?: never;
+    path: {
+        targetId: unknown;
+        targetKind: 'organization' | 'specialist';
+    };
+    query?: never;
+    url: '/favorites/{targetKind}/{targetId}';
+};
+
+export type FavoritesRemoveErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type FavoritesRemoveResponses = {
+    /**
+     * Удалено или не было в списке
+     */
+    204: void;
+};
+
+export type FavoritesRemoveResponse = FavoritesRemoveResponses[keyof FavoritesRemoveResponses];

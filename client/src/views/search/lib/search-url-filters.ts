@@ -3,7 +3,7 @@ import {
   type SearchTab,
   parseSearchTab,
   searchTabQueryValue,
-} from "./search-tab";
+} from "@/shared/lib/search-tab";
 
 export type SearchUrlFilters = {
   tab: SearchTab;

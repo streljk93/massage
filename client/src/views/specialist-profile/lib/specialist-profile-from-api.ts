@@ -1,7 +1,7 @@
 import type { BookableServiceOption } from "@/entities/services";
 import type { SpecialistsGetByIdResponse } from "@/shared/api";
 import { availabilityFromDirectorySlotGroups } from "@/shared/lib/directory-slot-calendar";
-import { specialistCardSeedFromApi } from "@/widgets/home/lib/directory-cards-from-api";
+import { specialistCardSeedFromApi } from "@/entities/specialists";
 import type {
   SpecialistCalendarDay,
   SpecialistProfileData,

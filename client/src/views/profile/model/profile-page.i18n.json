@@ -17,7 +17,8 @@
         "terms": "Terms & privacy",
         "signOut": "Log out",
         "signIn": "Log in",
-        "loadingAria": "Loading profile"
+        "loadingAria": "Loading profile",
+        "favorites": "Favorites"
       }
     },
     "vi": {
@@ -37,7 +38,8 @@
         "terms": "Điều khoản & quyền riêng tư",
         "signOut": "Đăng xuất",
         "signIn": "Đăng nhập",
-        "loadingAria": "Đang tải hồ sơ"
+        "loadingAria": "Đang tải hồ sơ",
+        "favorites": "Yêu thích"
       }
     },
     "ru": {
@@ -57,7 +59,8 @@
         "terms": "Условия и конфиденциальность",
         "signOut": "Выйти",
         "signIn": "Войти",
-        "loadingAria": "Загрузка профиля"
+        "loadingAria": "Загрузка профиля",
+        "favorites": "Избранное"
       }
     }
   }

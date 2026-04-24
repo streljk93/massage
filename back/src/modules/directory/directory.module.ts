@@ -12,5 +12,6 @@ import { SpecialistsController } from './presentation/specialists.controller';
     DirectoryController,
   ],
   providers: [DirectoryService, DirectoryRepository],
+  exports: [DirectoryService],
 })
 export class DirectoryModule {}

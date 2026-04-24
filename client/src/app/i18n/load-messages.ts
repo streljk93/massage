@@ -17,6 +17,7 @@ import { becomeSpecialistPageI18n } from "@/views/become-specialist";
 import { homePageI18n } from "@/views/home";
 import {
   profileEditPageI18n,
+  profileFavoritesPageI18n,
   profileHelpPageI18n,
   profileLanguagePageI18n,
   profileLocationPageI18n,
@@ -57,6 +58,7 @@ const bundles: ColocatedI18nBundle[] = [
   bookingCancelDialogI18n,
   bookingsPageI18n,
   profilePageI18n,
+  profileFavoritesPageI18n,
   profileSubpageShellI18n,
   profileEditPageI18n,
   profileLanguagePageI18n,

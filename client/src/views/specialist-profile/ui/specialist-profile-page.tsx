@@ -17,6 +17,7 @@ import { useLocale, useFormatter, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
+import { useClientFavorite } from "@/entities/favorites";
 import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
@@ -78,7 +79,11 @@ export function SpecialistProfilePage({
   const [bookingErrorKey, setBookingErrorKey] =
     useState<SpecialistBookingErrorKey | null>(null);
 
-  const [favorite, setFavorite] = useState(false);
+  const {
+    isFavorite,
+    isPending: favoritePending,
+    toggle: toggleFavorite,
+  } = useClientFavorite("specialist", profile.id);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
   const { userPosition, requestFromUserGesture } = useUserGeolocation();
   const onMapFlyReady = useCallback(
@@ -431,14 +436,16 @@ export function SpecialistProfilePage({
                   type="button"
                   variant="secondary"
                   tone="light"
+                  disabled={favoritePending}
                   className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
                   aria-label={t("favoriteAria")}
-                  onClick={() => setFavorite((v) => !v)}
+                  aria-pressed={isFavorite}
+                  onClick={() => toggleFavorite()}
                 >
                   <Heart
                     className={cn(
                       "size-[1.15rem] transition-colors",
-                      favorite
+                      isFavorite
                         ? "fill-rose-500 text-rose-500"
                         : "text-foreground",
                     )}

@@ -9,9 +9,9 @@ const profilePathRegex = new RegExp(
   `^\\/(${routing.locales.join("|")})\\/profile(\\/.*)?$`,
 );
 
-/** Гость может открыть только корень профиля и страницы языка, локации и помощи. */
+/** Гость может открыть корень профиля, избранное (localStorage) и страницы языка, локации и помощи. */
 const profileGuestAllowedRegex = new RegExp(
-  `^\\/(${routing.locales.join("|")})\\/profile(?:\\/(language|location|help))?\\/?$`,
+  `^\\/(${routing.locales.join("|")})\\/profile(?:\\/(language|location|help|favorites))?\\/?$`,
 );
 
 export default auth((req) => {

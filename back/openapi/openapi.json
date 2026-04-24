@@ -3487,6 +3487,684 @@
           "dev"
         ]
       }
+    },
+    "/favorites": {
+      "get": {
+        "operationId": "Favorites_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "favorites"
+                  ],
+                  "properties": {
+                    "favorites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "targetKind",
+                          "targetId",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "targetKind": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "specialist"
+                            ]
+                          },
+                          "targetId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Список избранного текущего пользователя",
+        "tags": [
+          "favorites"
+        ]
+      },
+      "post": {
+        "operationId": "Favorites_add",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "targetKind",
+                  "targetId"
+                ],
+                "properties": {
+                  "targetKind": {
+                    "type": "string",
+                    "enum": [
+                      "organization",
+                      "specialist"
+                    ]
+                  },
+                  "targetId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Добавлено или уже было в избранном"
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Добавить в избранное",
+        "tags": [
+          "favorites"
+        ]
+      }
+    },
+    "/favorites/organizations": {
+      "get": {
+        "operationId": "Favorites_listOrganizationsListing",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizations"
+                  ],
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "addressLine",
+                          "phone",
+                          "yearsInBusiness",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "demo-salon-seed"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "yearsInBusiness": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string"
+                          },
+                          "servicesLine": {
+                            "type": "string"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "calendarDate",
+                                "times"
+                              ],
+                              "properties": {
+                                "calendarDate": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Избранные салоны с полным набором полей карточки витрины (как в поиске)",
+        "tags": [
+          "favorites"
+        ]
+      }
+    },
+    "/favorites/specialists": {
+      "get": {
+        "operationId": "Favorites_listSpecialistsListing",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "specialists"
+                  ],
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "userId",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "latitude",
+                          "longitude",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups",
+                          "bookableServices",
+                          "autoConfirmBookings"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Иван"
+                          },
+                          "bio": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "experienceYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 12
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 10.7769
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 106.7009
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "123 Nguyen Trai, District 1",
+                            "description": "Адрес текущей активной организации мастера (мастер сам выбирает место приёма)."
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Ho Chi Minh City",
+                            "description": "Город активной организации мастера."
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string",
+                            "example": "~ 1 km | ул. Нгуен Тхай Хок"
+                          },
+                          "servicesLine": {
+                            "type": "string",
+                            "example": "Классический массаж, спорт"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "calendarDate",
+                                "times"
+                              ],
+                              "properties": {
+                                "calendarDate": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "bookableServices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "categoryShortName",
+                                "durationMinutes",
+                                "priceVndByDuration"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "example": "Relaxing massage"
+                                },
+                                "categoryShortName": {
+                                  "type": "string",
+                                  "example": "Body massage",
+                                  "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "durationMinutes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 60
+                                  }
+                                },
+                                "priceVndByDuration": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 450000
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "autoConfirmBookings": {
+                            "type": "boolean",
+                            "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Избранные мастера с полным набором полей карточки витрины (как в поиске)",
+        "tags": [
+          "favorites"
+        ]
+      }
+    },
+    "/favorites/merge": {
+      "post": {
+        "description": "Идемпотентно: существующие пары пропускаются. Несуществующие цели отбрасываются.",
+        "operationId": "Favorites_merge",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "maxItems": 500,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "targetKind",
+                        "targetId"
+                      ],
+                      "properties": {
+                        "targetKind": {
+                          "type": "string",
+                          "enum": [
+                            "organization",
+                            "specialist"
+                          ]
+                        },
+                        "targetId": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "favorites"
+                  ],
+                  "properties": {
+                    "favorites": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "targetKind",
+                          "targetId",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "targetKind": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "specialist"
+                            ]
+                          },
+                          "targetId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Добавить несколько избранных (например после гостевого режима)",
+        "tags": [
+          "favorites"
+        ]
+      }
+    },
+    "/favorites/{targetKind}/{targetId}": {
+      "delete": {
+        "operationId": "Favorites_remove",
+        "parameters": [
+          {
+            "name": "targetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "targetKind",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "organization",
+                "specialist"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Удалено или не было в списке"
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Убрать из избранного",
+        "tags": [
+          "favorites"
+        ]
+      }
     }
   },
   "info": {

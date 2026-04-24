@@ -72,22 +72,30 @@ function organizationListInclude() {
 
 /**
  * Образец `include` для `GetPayload`.
- * `ReturnType<typeof specialistListInclude>` в Prisma 7 + ESLint иногда даёт `never` в IDE.
+ * `typeof *IncludeShape` + глубокий nested include в Prisma 7 иногда даёт `error`/`never` в
+ * type-aware ESLint; `Prisma.validator` стабилизирует тип для `GetPayload`.
  */
-export const specialistListIncludeShape = specialistListInclude();
+const specialistListPayloadArgs =
+  Prisma.validator<Prisma.SpecialistDefaultArgs>()({
+    include: specialistListInclude(),
+  });
 
-/**
- * То же для карточки организации (вложенный specialist).
- */
-export const organizationListIncludeShape = organizationListInclude();
+const organizationListPayloadArgs =
+  Prisma.validator<Prisma.OrganizationDefaultArgs>()({
+    include: organizationListInclude(),
+  });
 
 export type SpecialistListRow = Prisma.SpecialistGetPayload<{
-  include: typeof specialistListIncludeShape;
+  include: typeof specialistListPayloadArgs.include;
 }>;
 
 export type OrganizationListRow = Prisma.OrganizationGetPayload<{
-  include: typeof organizationListIncludeShape;
+  include: typeof organizationListPayloadArgs.include;
 }>;
+
+export const specialistListIncludeShape = specialistListPayloadArgs.include;
+
+export const organizationListIncludeShape = organizationListPayloadArgs.include;
 
 /** Активные записи: интервал брони занимает слоты до отмены / завершения. */
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
@@ -194,9 +202,29 @@ export class DirectoryRepository {
     });
   }
 
+  findOrganizationsByIds(ids: string[]): Promise<OrganizationListRow[]> {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.organization.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      include: organizationListInclude(),
+    });
+  }
+
   findSpecialistById(id: string): Promise<SpecialistListRow | null> {
     return this.prisma.specialist.findFirst({
       where: { id, deletedAt: null },
+      include: specialistListInclude(),
+    });
+  }
+
+  findSpecialistsByIds(ids: string[]): Promise<SpecialistListRow[]> {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.specialist.findMany({
+      where: { id: { in: ids }, deletedAt: null },
       include: specialistListInclude(),
     });
   }

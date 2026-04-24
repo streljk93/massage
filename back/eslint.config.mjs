@@ -32,10 +32,14 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
-  /** Prisma-делегаты + `PrismaService`: projectService в ESLint иногда не разворачивает тип клиента. */
+  /**
+   * Prisma-делегаты + `PrismaService`, а также вызовы `DirectoryRepository` с `GetPayload`-строками:
+   * в редакторе type-aware ESLint иногда помечает `await repo.find*ByIds` как `error`, хотя `tsc` чист.
+   */
   {
     files: [
       'src/modules/notifications/infrastructure/user-fcm-token.repository.ts',
+      'src/modules/directory/application/directory.service.ts',
     ],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',

@@ -23,16 +23,14 @@ import {
   HomeBottomNav,
   HomeScreenHeader,
 } from "@/widgets/home";
-import {
-  organizationCardSeedFromApi,
-  specialistCardSeedFromApi,
-} from "@/widgets/home/lib/directory-cards-from-api";
+import { organizationCardSeedFromApi } from "@/entities/organizations";
+import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
-import { searchTabQueryValue } from "@/views/search/lib/search-tab";
+import { searchTabQueryValue } from "@/shared/lib/search-tab";
 
 function isAbsoluteHttpUrl(href: string): boolean {
   return /^https?:\/\//i.test(href);

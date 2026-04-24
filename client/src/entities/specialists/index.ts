@@ -1,4 +1,9 @@
 export { default as specialistCardI18n } from "./model/specialist-card.i18n.json";
+export {
+  specialistCardSeedFromApi,
+  type SpecialistCardSeedFromApi,
+  type SpecialistDirectoryCardSource,
+} from "./lib/specialist-directory-card-from-api";
 export type {
   SalonSpecialistPick,
   StaffBookableServiceRow,

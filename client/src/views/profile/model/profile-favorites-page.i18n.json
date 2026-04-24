@@ -1,0 +1,28 @@
+{
+  "messages": {
+    "en": {
+      "profileFavorites": {
+        "title": "Favorites",
+        "emptyOrganizations": "No favorite salons yet.",
+        "emptySpecialists": "No favorite specialists yet.",
+        "loadError": "Could not load favorites. Try again later."
+      }
+    },
+    "vi": {
+      "profileFavorites": {
+        "title": "Yêu thích",
+        "emptyOrganizations": "Chưa có salon yêu thích.",
+        "emptySpecialists": "Chưa có chuyên gia yêu thích.",
+        "loadError": "Không tải được mục yêu thích. Thử lại sau."
+      }
+    },
+    "ru": {
+      "profileFavorites": {
+        "title": "Избранное",
+        "emptyOrganizations": "Пока нет избранных салонов.",
+        "emptySpecialists": "Пока нет избранных мастеров.",
+        "loadError": "Не удалось загрузить избранное. Попробуйте позже."
+      }
+    }
+  }
+}

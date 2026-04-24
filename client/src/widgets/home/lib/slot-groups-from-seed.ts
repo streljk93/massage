@@ -1,14 +1,14 @@
 import type { AppLocale } from "@/app/i18n/routing";
 import type { AvailabilitySlotGroup } from "@/shared/ui";
 import { formatListingSlotStripDayLabel } from "@/shared/lib/datetime/listing-slot-day-label";
-import type { SlotGroupSeed } from "./mock-data";
+import type { DirectorySlotGroupSeed } from "@/shared/lib/directory-slot-group-seed";
 
 /**
  * Карточки в поиске / главной: подпись дня по календарной дате витрины.
  * `maxGroups` ограничивает полосу на карточке (полный список дней — на профиле).
  */
 export function slotGroupsFromSeed(
-  groups: SlotGroupSeed[] | undefined | null,
+  groups: DirectorySlotGroupSeed[] | undefined | null,
   tSlots: (key: string) => string,
   opts: { locale: AppLocale; maxGroups?: number; now?: Date },
 ): AvailabilitySlotGroup[] {

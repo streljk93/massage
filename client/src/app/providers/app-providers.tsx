@@ -8,6 +8,7 @@ import { ComingSoonDialogHost } from "@/features/coming-soon";
 import { createAppQueryClient } from "@/shared/lib/notifications";
 import { ConfirmActionHost } from "@/shared/ui/confirm-action-host";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
+import { FavoritesSyncOnAuth } from "@/features/favorites-sync";
 import { FcmTokenSync } from "@/features/push-notifications";
 import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
 import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
@@ -31,7 +32,8 @@ export function AppProviders({ children }: AppProvidersProps) {
     <SessionProvider refetchInterval={300}>
       <QueryClientProvider client={queryClient}>
         <ThemePreferenceProvider>
-        {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null}
+        <FavoritesSyncOnAuth />
+        {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
         <NotificationToaster />
         <ConfirmActionHost />
         <PortraitOrientationLock />

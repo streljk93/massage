@@ -31,7 +31,7 @@ import {
   SEARCH_TABS,
   searchTabQueryValue,
   type SearchTab,
-} from "../lib/search-tab";
+} from "@/shared/lib/search-tab";
 import {
   applySearchUrlPatch,
   buildSearchQueryString,

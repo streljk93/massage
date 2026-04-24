@@ -63,17 +63,16 @@ export class DevFcmTestService {
         setTimeout(resolve, delaySec * 1000);
       });
     }
-    const fcm =
-      (await this.push.sendDevTestFcm(user.id, {
-        title: body.title,
-        body: body.text,
-      })) ?? {
-        attempted: 0,
-        successCount: 0,
-        errors: [
-          { message: 'FCM not enabled (unexpected: checked before send)' },
-        ],
-      };
+    const fcm = (await this.push.sendDevTestFcm(user.id, {
+      title: body.title,
+      body: body.text,
+    })) ?? {
+      attempted: 0,
+      successCount: 0,
+      errors: [
+        { message: 'FCM not enabled (unexpected: checked before send)' },
+      ],
+    };
     return {
       ok: true,
       userId: user.id,

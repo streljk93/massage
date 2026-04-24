@@ -2,10 +2,8 @@ import type {
   OrganizationsListResponse,
   SpecialistsListResponse,
 } from "@/shared/api";
-import {
-  organizationCardSeedFromApi,
-  specialistCardSeedFromApi,
-} from "@/widgets/home/lib/directory-cards-from-api";
+import { organizationCardSeedFromApi } from "@/entities/organizations";
+import { specialistCardSeedFromApi } from "@/entities/specialists";
 
 /** Точка и карточка для карты поиска (маркер + слайдер). */
 export type SearchMapListItem = {

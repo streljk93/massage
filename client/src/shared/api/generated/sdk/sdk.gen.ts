@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -200,7 +200,7 @@ export const bookingsCreate = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Отменить бронирование (клиент)
  *
- * Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.
+ * Доступно для `pending` и `confirmed` (матрица допустимых переходов — `booking-status-transitions`). Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. В статусе `in_progress` клиентская отмена не предусмотрена — только завершение приёма (`done`) на стороне мастера/системы. Слот снова свободен.
  */
 export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Options<BookingsCancelData, ThrowOnError>) => (options.client ?? client).post<BookingsCancelResponses, BookingsCancelErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -220,6 +220,17 @@ export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Op
 export const specialistBookingsConfirmPending = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsConfirmPendingData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsConfirmPendingResponses, SpecialistBookingsConfirmPendingErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/specialist/bookings/{id}/confirm',
+    ...options
+});
+
+/**
+ * Начать приём (in_progress)
+ *
+ * Переводит `confirmed` → `in_progress` для брони этого мастера. Допустимо не раньше времени начала слота `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`, как при создании брони). Пишет историю, отправляет push клиенту.
+ */
+export const specialistBookingsStartVisit = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsStartVisitData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsStartVisitResponses, SpecialistBookingsStartVisitErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialist/bookings/{id}/start-visit',
     ...options
 });
 
@@ -289,7 +300,7 @@ export const advertisingListByPlacement = <ThrowOnError extends boolean = false>
 /**
  * [Dev] Принудительно сменить статус брони по booking id
  *
- * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`; переходы не валидируются. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — по одному на статус.
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /specialist/bookings/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).
  */
 export const devBookingsSetStatus = <ThrowOnError extends boolean = false>(options: Options<DevBookingsSetStatusData, ThrowOnError>) => (options.client ?? client).post<DevBookingsSetStatusResponses, DevBookingsSetStatusErrors, ThrowOnError>({
     url: '/dev/bookings/set-status',
@@ -312,4 +323,68 @@ export const devFcmTestTestFcm = <ThrowOnError extends boolean = false>(options:
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Список избранного текущего пользователя
+ */
+export const favoritesList = <ThrowOnError extends boolean = false>(options?: Options<FavoritesListData, ThrowOnError>) => (options?.client ?? client).get<FavoritesListResponses, FavoritesListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites',
+    ...options
+});
+
+/**
+ * Добавить в избранное
+ */
+export const favoritesAdd = <ThrowOnError extends boolean = false>(options: Options<FavoritesAddData, ThrowOnError>) => (options.client ?? client).post<FavoritesAddResponses, FavoritesAddErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Избранные салоны с полным набором полей карточки витрины (как в поиске)
+ */
+export const favoritesListOrganizationsListing = <ThrowOnError extends boolean = false>(options?: Options<FavoritesListOrganizationsListingData, ThrowOnError>) => (options?.client ?? client).get<FavoritesListOrganizationsListingResponses, FavoritesListOrganizationsListingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites/organizations',
+    ...options
+});
+
+/**
+ * Избранные мастера с полным набором полей карточки витрины (как в поиске)
+ */
+export const favoritesListSpecialistsListing = <ThrowOnError extends boolean = false>(options?: Options<FavoritesListSpecialistsListingData, ThrowOnError>) => (options?.client ?? client).get<FavoritesListSpecialistsListingResponses, FavoritesListSpecialistsListingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites/specialists',
+    ...options
+});
+
+/**
+ * Добавить несколько избранных (например после гостевого режима)
+ *
+ * Идемпотентно: существующие пары пропускаются. Несуществующие цели отбрасываются.
+ */
+export const favoritesMerge = <ThrowOnError extends boolean = false>(options: Options<FavoritesMergeData, ThrowOnError>) => (options.client ?? client).post<FavoritesMergeResponses, FavoritesMergeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites/merge',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Убрать из избранного
+ */
+export const favoritesRemove = <ThrowOnError extends boolean = false>(options: Options<FavoritesRemoveData, ThrowOnError>) => (options.client ?? client).delete<FavoritesRemoveResponses, FavoritesRemoveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/favorites/{targetKind}/{targetId}',
+    ...options
 });
