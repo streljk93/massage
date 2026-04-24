@@ -1,9 +1,10 @@
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 
 import {
+  TOAST_RADIX_INTERNAL_TIMER_MIN_MS,
   useNotificationToastStore,
 } from "../lib/notifications/toast-store";
 import type { NotificationKind } from "../lib/notifications/types";
@@ -51,9 +52,27 @@ const NotificationToastRow = memo(function NotificationToastRow({
     [id, onRequestDismiss],
   );
 
+  const useRadixInternalTimer = duration >= TOAST_RADIX_INTERNAL_TIMER_MIN_MS;
+  const radixDuration = useRadixInternalTimer
+    ? duration
+    : Number.POSITIVE_INFINITY;
+
+  useEffect(() => {
+    if (useRadixInternalTimer) {
+      return;
+    }
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+    const t = window.setTimeout(() => {
+      onRequestDismiss(id);
+    }, duration);
+    return () => window.clearTimeout(t);
+  }, [duration, id, onRequestDismiss, useRadixInternalTimer]);
+
   return (
     <ToastRoot
-      duration={duration}
+      duration={radixDuration}
       type="foreground"
       variant={variant}
       onOpenChange={onOpenChange}
@@ -106,7 +125,7 @@ export function NotificationToaster() {
   return (
     <ToastProvider
       label="Notification"
-      duration={1_500}
+      duration={2_000}
       swipeDirection="down"
     >
       {rows}

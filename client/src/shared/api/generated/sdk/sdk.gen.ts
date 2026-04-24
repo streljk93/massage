@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
+import type { AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -109,6 +109,34 @@ export const authRefresh = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
+ * Удалить FCM token (отписка от push на этом устройстве)
+ */
+export const pushTokensRevoke = <ThrowOnError extends boolean = false>(options: Options<PushTokensRevokeData, ThrowOnError>) => (options.client ?? client).delete<PushTokensRevokeResponses, PushTokensRevokeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me/push-tokens',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Сохранить FCM token (web push)
+ *
+ * Регистрирует токен устройства для текущего пользователя. Повтор с тем же token переназначит userId (другой логин с того же браузера).
+ */
+export const pushTokensRegister = <ThrowOnError extends boolean = false>(options: Options<PushTokensRegisterData, ThrowOnError>) => (options.client ?? client).post<PushTokensRegisterResponses, PushTokensRegisterErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me/push-tokens',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Текущий пользователь (профиль)
  */
 export const usersMe = <ThrowOnError extends boolean = false>(options?: Options<UsersMeData, ThrowOnError>) => (options?.client ?? client).get<UsersMeResponses, UsersMeErrors, ThrowOnError>({
@@ -157,7 +185,7 @@ export const bookingsList = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * Создать бронирование
  *
- * Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.
+ * Создаёт бронь: обычно `pending` (ожидание мастера) с `pendingExpiresAt`, либо сразу `confirmed`, если у мастера включено авто‑подтверждение. Требуется JWT клиента. `startsAt` — ISO 8601.
  */
 export const bookingsCreate = <ThrowOnError extends boolean = false>(options: Options<BookingsCreateData, ThrowOnError>) => (options.client ?? client).post<BookingsCreateResponses, BookingsCreateErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -182,6 +210,17 @@ export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Op
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Подтвердить запись (специалист)
+ *
+ * Переводит `pending` → `confirmed` для брони этого мастера, пишет историю, отправляет push клиенту. JWT — пользователь с профилем `Specialist`.
+ */
+export const specialistBookingsConfirmPending = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsConfirmPendingData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsConfirmPendingResponses, SpecialistBookingsConfirmPendingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialist/bookings/{id}/confirm',
+    ...options
 });
 
 /**
@@ -254,6 +293,20 @@ export const advertisingListByPlacement = <ThrowOnError extends boolean = false>
  */
 export const devBookingsSetStatus = <ThrowOnError extends boolean = false>(options: Options<DevBookingsSetStatusData, ThrowOnError>) => (options.client ?? client).post<DevBookingsSetStatusResponses, DevBookingsSetStatusErrors, ThrowOnError>({
     url: '/dev/bookings/set-status',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * [Dev] Тестовый FCM push по email
+ *
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true` (иначе 404). Ищет пользователя по email, проверяет `UserFcmToken`, шлёт произвольный title + text. Проверка сервисного ключа Firebase и веб-конфига без прод-ролей. **Получатель** — тот **браузер**, в котором этот user однажды залогинился и **зарегистрировал FCM** (`POST push-tokens`); не тот, кто дергает ручку из Swagger с другой сессии. Опционально `delaySeconds` (0–120): **ждать N с**, затем отправить FCM; HTTP «висит» ~N с, чтобы переключить вкладку и поймать пуш в фоне. `fcm.successCount: 1` — FCM принял запрос, панель OS видна в том окне, где залогинен этот user и не запрещены уведомления.
+ */
+export const devFcmTestTestFcm = <ThrowOnError extends boolean = false>(options: Options<DevFcmTestTestFcmData, ThrowOnError>) => (options.client ?? client).post<DevFcmTestTestFcmResponses, DevFcmTestTestFcmErrors, ThrowOnError>({
+    url: '/dev/notifications/test-fcm',
     ...options,
     headers: {
         'Content-Type': 'application/json',

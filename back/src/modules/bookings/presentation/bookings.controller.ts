@@ -68,7 +68,7 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Создать бронирование',
     description:
-      'Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.',
+      'Создаёт бронь: обычно `pending` (ожидание мастера) с `pendingExpiresAt`, либо сразу `confirmed`, если у мастера включено авто‑подтверждение. Требуется JWT клиента. `startsAt` — ISO 8601.',
   })
   @ApiLocaleQueryDocs()
   @ApiBody({ schema: createBookingRequestSchema })

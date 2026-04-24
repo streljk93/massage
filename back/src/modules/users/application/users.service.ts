@@ -19,11 +19,18 @@ export class UsersService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      bookingReminderEnabled: user.bookingReminderEnabled,
+      bookingReminderLeadMinutes: user.bookingReminderLeadMinutes,
     };
   }
 
   async patchMe(userId: string, body: PatchMeBody) {
-    const updated = await this.userRepository.updateProfile(userId, body);
+    const updated = await this.userRepository.updateProfile(userId, {
+      name: body.name,
+      avatarUrl: body.avatarUrl,
+      bookingReminderEnabled: body.bookingReminderEnabled,
+      bookingReminderLeadMinutes: body.bookingReminderLeadMinutes,
+    });
     if (!updated) {
       throw new NotFoundException({
         code: 'USER_NOT_FOUND',
@@ -35,6 +42,8 @@ export class UsersService {
       email: updated.email,
       name: updated.name,
       avatarUrl: updated.avatarUrl,
+      bookingReminderEnabled: updated.bookingReminderEnabled,
+      bookingReminderLeadMinutes: updated.bookingReminderLeadMinutes,
     };
   }
 }

@@ -37,6 +37,11 @@ export type SpecialistListItemDto = {
   categories: DirectoryCategoryTagDto[];
   slotGroups: ListingSlotGroupSeed[];
   bookableServices: SpecialistBookableServiceDto[];
+  /**
+   * Новая запись сразу `confirmed` (без `pending` и таймера); иначе клиент ждёт подтверждения мастера.
+   * Настраивается на стороне мастера (сид / будущий экран настроек).
+   */
+  autoConfirmBookings: boolean;
 };
 
 export type SpecialistsListResponseDto = {

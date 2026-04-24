@@ -329,6 +329,59 @@ export type AuthRefreshResponses = {
 
 export type AuthRefreshResponse = AuthRefreshResponses[keyof AuthRefreshResponses];
 
+export type PushTokensRevokeData = {
+    body: {
+        token: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/push-tokens';
+};
+
+export type PushTokensRevokeErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type PushTokensRevokeResponses = {
+    /**
+     * Токен удалён или не существовал
+     */
+    204: void;
+};
+
+export type PushTokensRevokeResponse = PushTokensRevokeResponses[keyof PushTokensRevokeResponses];
+
+export type PushTokensRegisterData = {
+    body: {
+        /**
+         * FCM registration token (web)
+         */
+        token: string;
+        userAgent?: string | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/push-tokens';
+};
+
+export type PushTokensRegisterErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+};
+
+export type PushTokensRegisterResponses = {
+    200: {
+        ok: boolean;
+    };
+};
+
+export type PushTokensRegisterResponse = PushTokensRegisterResponses[keyof PushTokensRegisterResponses];
+
 export type UsersMeData = {
     body?: never;
     path?: never;
@@ -356,6 +409,11 @@ export type UsersMeResponses = {
          * Путь `/v1/files/public/...` или абсолютный URL
          */
         avatarUrl: string | null;
+        bookingReminderEnabled: boolean;
+        /**
+         * За сколько минут до визита прислать push (только при включённом флаге).
+         */
+        bookingReminderLeadMinutes: 15 | 30 | 60;
     };
 };
 
@@ -368,6 +426,8 @@ export type UsersPatchMeData = {
          * Путь `/v1/files/public/...` или абсолютный http(s) URL; **null** — убрать аватар
          */
         avatarUrl?: string | unknown;
+        bookingReminderEnabled?: boolean;
+        bookingReminderLeadMinutes?: 15 | 30 | 60;
     };
     path?: never;
     query?: never;
@@ -398,6 +458,11 @@ export type UsersPatchMeResponses = {
          * Путь `/v1/files/public/...` или абсолютный URL
          */
         avatarUrl: string | null;
+        bookingReminderEnabled: boolean;
+        /**
+         * За сколько минут до визита прислать push (только при включённом флаге).
+         */
+        bookingReminderLeadMinutes: 15 | 30 | 60;
     };
 };
 
@@ -539,9 +604,15 @@ export type BookingsCreateErrors = {
 export type BookingsCreateResponses = {
     201: {
         id: string;
-        status: 'pending';
+        /**
+         * `confirmed` — если у мастера включено авто‑подтверждение; иначе `pending` с `pendingExpiresAt`.
+         */
+        status: 'pending' | 'confirmed';
         startsAt: string;
         endsAt: string;
+        /**
+         * Дедлайн подтверждения для `pending`; для `confirmed` — `null`.
+         */
         pendingExpiresAt?: string | null;
     };
 };
@@ -592,6 +663,52 @@ export type BookingsCancelResponses = {
 };
 
 export type BookingsCancelResponse = BookingsCancelResponses[keyof BookingsCancelResponses];
+
+export type SpecialistBookingsConfirmPendingData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/specialist/bookings/{id}/confirm';
+};
+
+export type SpecialistBookingsConfirmPendingErrors = {
+    /**
+     * Статус не `pending` (код `BOOKING_NOT_PENDING`)
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * У JWT нет профиля специалиста
+     */
+    403: unknown;
+    /**
+     * Бронь не найдена или чужая
+     */
+    404: unknown;
+};
+
+export type SpecialistBookingsConfirmPendingResponses = {
+    200: {
+        id: string;
+        /**
+         * `confirmed` — если у мастера включено авто‑подтверждение; иначе `pending` с `pendingExpiresAt`.
+         */
+        status: 'pending' | 'confirmed';
+        startsAt: string;
+        endsAt: string;
+        /**
+         * Дедлайн подтверждения для `pending`; для `confirmed` — `null`.
+         */
+        pendingExpiresAt?: string | null;
+    };
+};
+
+export type SpecialistBookingsConfirmPendingResponse = SpecialistBookingsConfirmPendingResponses[keyof SpecialistBookingsConfirmPendingResponses];
 
 export type CatalogGetMajorCategoriesData = {
     body?: never;
@@ -828,6 +945,10 @@ export type SpecialistsListResponses = {
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
+            /**
+             * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
+             */
+            autoConfirmBookings: boolean;
         }>;
         cursorPage: {
             /**
@@ -912,6 +1033,10 @@ export type SpecialistsGetByIdResponses = {
             durationMinutes: Array<number>;
             priceVndByDuration: Array<number>;
         }>;
+        /**
+         * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
+         */
+        autoConfirmBookings: boolean;
     };
 };
 
@@ -1181,3 +1306,56 @@ export type DevBookingsSetStatusResponses = {
 };
 
 export type DevBookingsSetStatusResponse = DevBookingsSetStatusResponses[keyof DevBookingsSetStatusResponses];
+
+export type DevFcmTestTestFcmData = {
+    body: {
+        email: string;
+        title: string;
+        /**
+         * Текст уведомления
+         */
+        text: string;
+        /**
+         * Секунд ждать до FCM; запрос завершится сразу после отправки. Для теста фона/другой вкладки
+         */
+        delaySeconds?: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/dev/notifications/test-fcm';
+};
+
+export type DevFcmTestTestFcmErrors = {
+    /**
+     * Нет FCM токенов у пользователя
+     */
+    400: unknown;
+    /**
+     * Пользователь с email не найден
+     */
+    404: unknown;
+    /**
+     * FCM (Firebase Admin) не инициализирован
+     */
+    503: unknown;
+};
+
+export type DevFcmTestTestFcmResponses = {
+    200: {
+        ok: boolean;
+        userId: string;
+        email: string;
+        tokensCount: number;
+        delaySecondsApplied: number;
+        fcm: {
+            attempted: number;
+            successCount: number;
+            errors: Array<{
+                code?: string;
+                message?: string;
+            }>;
+        };
+    };
+};
+
+export type DevFcmTestTestFcmResponse = DevFcmTestTestFcmResponses[keyof DevFcmTestTestFcmResponses];

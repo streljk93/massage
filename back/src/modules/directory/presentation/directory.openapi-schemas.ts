@@ -72,6 +72,7 @@ export const specialistListItemSchema = {
     'categories',
     'slotGroups',
     'bookableServices',
+    'autoConfirmBookings',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -112,6 +113,11 @@ export const specialistListItemSchema = {
     bookableServices: {
       type: 'array',
       items: specialistBookableServiceSchema,
+    },
+    autoConfirmBookings: {
+      type: 'boolean',
+      description:
+        'Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.',
     },
   },
 };

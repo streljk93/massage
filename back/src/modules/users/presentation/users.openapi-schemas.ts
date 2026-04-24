@@ -1,6 +1,13 @@
 export const userProfileSchema = {
   type: 'object',
-  required: ['id', 'email', 'name', 'avatarUrl'],
+  required: [
+    'id',
+    'email',
+    'name',
+    'avatarUrl',
+    'bookingReminderEnabled',
+    'bookingReminderLeadMinutes',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     email: { type: 'string', format: 'email' },
@@ -9,6 +16,13 @@ export const userProfileSchema = {
       type: 'string',
       nullable: true,
       description: 'Путь `/v1/files/public/...` или абсолютный URL',
+    },
+    bookingReminderEnabled: { type: 'boolean' },
+    bookingReminderLeadMinutes: {
+      type: 'integer',
+      enum: [15, 30, 60],
+      description:
+        'За сколько минут до визита прислать push (только при включённом флаге).',
     },
   },
 };
@@ -25,6 +39,8 @@ export const patchMeRequestSchema = {
         { type: 'null' },
       ],
     },
+    bookingReminderEnabled: { type: 'boolean' },
+    bookingReminderLeadMinutes: { type: 'integer', enum: [15, 30, 60] },
   },
 };
 

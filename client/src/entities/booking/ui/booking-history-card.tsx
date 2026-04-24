@@ -51,6 +51,8 @@ export type BookingHistoryCardProps = {
   specialistProfileHref?: string;
   /** Приглушить дату/время (отмена, истечение и т.п.). */
   dateTagsMuted?: boolean;
+  /** Фон полосы статуса в стиле успеха (например «Подтверждено»). */
+  statusFooterSuccess?: boolean;
   /** Системное пояснение (например авто-отмена из-за отсутствия подтверждения). */
   systemNote?: string;
   /** Есть ли отзыв; если нет — блок «Review me» и пустые звёзды. */
@@ -71,6 +73,7 @@ export function BookingHistoryCard({
   avatarSrc,
   specialistProfileHref,
   dateTagsMuted,
+  statusFooterSuccess,
   systemNote,
   reviewed,
   rating = 0,
@@ -132,6 +135,7 @@ export function BookingHistoryCard({
           : undefined
       }
       statusFooter={statusFooter}
+      statusFooterSuccess={statusFooterSuccess}
       actions={actions}
       dateTagsMuted={dateTagsMuted}
     />

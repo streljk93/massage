@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -23,6 +24,7 @@ import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
+import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
@@ -46,6 +48,7 @@ export class BookingsService {
     private readonly config: ConfigService,
     private readonly bookingsRepository: BookingsRepository,
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
+    private readonly pushNotifications: PushNotificationsService,
   ) {}
 
   private async resolveBookingsListLocale(
@@ -142,7 +145,12 @@ export class BookingsService {
 
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: body.specialistId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: {
+        id: true,
+        activeOrganizationId: true,
+        userId: true,
+        autoConfirmBookings: true,
+      },
     });
     if (!specialist) {
       throw new NotFoundException({
@@ -236,7 +244,10 @@ export class BookingsService {
 
     const serviceNameSnapshot = pickLocalizedServiceName(service, locale);
 
-    const pendingExpiresAt = addMinutes(new Date(now), graceMinutes);
+    const shouldAutoConfirm = specialist.autoConfirmBookings;
+    const pendingExpiresAt = shouldAutoConfirm
+      ? null
+      : addMinutes(new Date(now), graceMinutes);
 
     const booking = await this.prisma.$transaction(async (tx) => {
       const b = await tx.booking.create({
@@ -251,7 +262,7 @@ export class BookingsService {
           currencySnapshot: priceOpt.currency ?? 'VND',
           startsAt,
           endsAt,
-          status: 'pending',
+          status: shouldAutoConfirm ? 'confirmed' : 'pending',
           pendingExpiresAt,
         },
       });
@@ -263,8 +274,22 @@ export class BookingsService {
           actorUserId: clientUserId,
         },
       });
+      if (shouldAutoConfirm) {
+        await tx.bookingStatusHistory.create({
+          data: {
+            bookingId: b.id,
+            fromStatus: 'pending',
+            toStatus: 'confirmed',
+            /** Автоподтверждение по настройке мастера. */
+            actorUserId: specialist.userId,
+          },
+        });
+      }
       return b;
     });
+
+    void this.pushNotifications.notifySpecialistNewBooking(booking.id);
+    /** Не уведомляем клиента о сразу `confirmed` (автоподтверждение) — пуш о подтверждении шлём только при ручном `pending` → `confirmed` у мастера. */
 
     return {
       id: booking.id,
@@ -310,8 +335,86 @@ export class BookingsService {
   }
 
   /** Вызывается cron: авто-expired для просроченного pending. */
-  async expirePendingPastDeadline(): Promise<number> {
+  async expirePendingPastDeadline(): Promise<{
+    count: number;
+    bookingIds: string[];
+  }> {
     return this.bookingsRepository.expirePendingPastDeadline(new Date());
+  }
+
+  /**
+   * Ручное подтверждение записи мастером: `pending` → `confirmed` + FCM клиенту.
+   */
+  async confirmPendingBySpecialist(
+    specialistUserId: string,
+    bookingId: string,
+  ): Promise<{
+    id: string;
+    status: 'confirmed';
+    startsAt: string;
+    endsAt: string;
+    pendingExpiresAt: null;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId: specialistUserId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new ForbiddenException({
+        code: 'NOT_A_SPECIALIST',
+        message: 'Only specialist accounts can confirm bookings',
+      });
+    }
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        specialistId: specialist.id,
+        deletedAt: null,
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: 'BOOKING_NOT_FOUND',
+        message: 'Booking not found',
+      });
+    }
+    if (booking.status !== 'pending') {
+      throw new BadRequestException({
+        code: 'BOOKING_NOT_PENDING',
+        message: 'Only a pending booking can be confirmed by the specialist',
+      });
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: 'confirmed', pendingExpiresAt: null },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          fromStatus: 'pending',
+          toStatus: 'confirmed',
+          actorUserId: specialistUserId,
+          reason: null,
+        },
+      });
+      return row;
+    });
+
+    void this.pushNotifications.notifyClientBookingStatusChange(
+      bookingId,
+      'pending',
+      'confirmed',
+    );
+
+    return {
+      id: updated.id,
+      status: 'confirmed',
+      startsAt: updated.startsAt.toISOString(),
+      endsAt: updated.endsAt.toISOString(),
+      pendingExpiresAt: null,
+    };
   }
 
   async cancelByClient(
@@ -396,6 +499,10 @@ export class BookingsService {
       });
       return row;
     });
+
+    void this.pushNotifications.notifySpecialistBookingCancelledByClient(
+      bookingId,
+    );
 
     return {
       id: updated.id,

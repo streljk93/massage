@@ -14,6 +14,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { DirectoryModule } from './modules/directory/directory.module';
 import { FilesModule } from './modules/files/files.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -39,6 +40,7 @@ import { UsersModule } from './modules/users/users.module';
     HealthModule,
     FilesModule,
     AuthModule,
+    NotificationsModule,
     UsersModule,
     CatalogModule,
     DirectoryModule,

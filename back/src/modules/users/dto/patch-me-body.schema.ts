@@ -15,6 +15,10 @@ const avatarUrlStored = z
 export const patchMeBodySchema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
   avatarUrl: z.union([avatarUrlStored, z.null()]).optional(),
+  bookingReminderEnabled: z.boolean().optional(),
+  bookingReminderLeadMinutes: z
+    .union([z.literal(15), z.literal(30), z.literal(60)])
+    .optional(),
 });
 
 export type PatchMeBody = z.infer<typeof patchMeBodySchema>;

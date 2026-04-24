@@ -21,10 +21,21 @@ export const createBookingResponseSchema = {
   required: ['id', 'status', 'startsAt', 'endsAt'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    status: { type: 'string', enum: ['pending'] },
+    status: {
+      type: 'string',
+      enum: ['pending', 'confirmed'],
+      description:
+        '`confirmed` — если у мастера включено авто‑подтверждение; иначе `pending` с `pendingExpiresAt`.',
+    },
     startsAt: { type: 'string', format: 'date-time' },
     endsAt: { type: 'string', format: 'date-time' },
-    pendingExpiresAt: { type: 'string', format: 'date-time', nullable: true },
+    pendingExpiresAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      description:
+        'Дедлайн подтверждения для `pending`; для `confirmed` — `null`.',
+    },
   },
 };
 
@@ -122,3 +133,7 @@ export const cancelBookingResponseSchema = {
     },
   },
 };
+
+/** Ответ `POST /specialist/bookings/:id/confirm` — после ручного подтверждения мастером. */
+export const specialistConfirmBookingResponseSchema =
+  createBookingResponseSchema;

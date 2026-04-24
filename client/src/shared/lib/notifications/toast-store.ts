@@ -6,6 +6,13 @@ const TOAST_LIMIT = 5;
 /** ~24 days — long enough to behave like a loading toast; Radix uses duration for the timer. */
 const LOADING_LIKE_MS = 2_000_000;
 
+/**
+ * `duration` ниже — закрытие несёт `NotificationToastRow` (свой setTimeout + `duration={∞}` в Radix),
+ * потому что у Radix Toasts таймер **ставится на паузу** при движении курсора / фокусе в зоне viewport
+ * и буквальные 2s по факту не срабатывают. От порога вверх — внутри Radix (лоадер 2M ms).
+ */
+export const TOAST_RADIX_INTERNAL_TIMER_MIN_MS = 1_000_000;
+
 export type ToastItem = {
   id: string;
   title: string;

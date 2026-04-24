@@ -8,6 +8,8 @@ export type UserRecord = {
   name: string;
   passwordHash: string | null;
   avatarUrl: string | null;
+  bookingReminderEnabled: boolean;
+  bookingReminderLeadMinutes: number;
 };
 
 @Injectable()
@@ -46,7 +48,12 @@ export class UserRepository {
 
   async updateProfile(
     id: string,
-    data: { name?: string; avatarUrl?: string | null },
+    data: {
+      name?: string;
+      avatarUrl?: string | null;
+      bookingReminderEnabled?: boolean;
+      bookingReminderLeadMinutes?: number;
+    },
   ): Promise<UserRecord | null> {
     const existing = await this.findActiveById(id);
     if (!existing) {
@@ -57,6 +64,12 @@ export class UserRepository {
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+        ...(data.bookingReminderEnabled !== undefined
+          ? { bookingReminderEnabled: data.bookingReminderEnabled }
+          : {}),
+        ...(data.bookingReminderLeadMinutes !== undefined
+          ? { bookingReminderLeadMinutes: data.bookingReminderLeadMinutes }
+          : {}),
       },
     });
   }

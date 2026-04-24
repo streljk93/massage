@@ -6,6 +6,7 @@ import {
 import { BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN } from '../../bookings/domain/booking-cancel-reason';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 
 @Injectable()
@@ -13,6 +14,7 @@ export class SpecialistWorkplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly pushNotifications: PushNotificationsService,
   ) {}
 
   async setActiveOrganization(
@@ -65,28 +67,35 @@ export class SpecialistWorkplaceService {
       };
     }
 
-    const cancelledBookingsCount = await this.prisma.$transaction(
-      async (tx) => {
-        await tx.specialist.update({
-          where: { id: specialist.id },
-          data: { activeOrganizationId: body.organizationId },
-        });
-        if (!previousOrgId) {
-          return 0;
-        }
-        return this.bookingsRepository.cancelActiveBookingsAtOrganization(tx, {
-          specialistId: specialist.id,
-          organizationId: previousOrgId,
-          actorUserId: userId,
-          cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
-          cancellationComment: null,
-        });
-      },
-    );
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      await tx.specialist.update({
+        where: { id: specialist.id },
+        data: { activeOrganizationId: body.organizationId },
+      });
+      if (!previousOrgId) {
+        return [] as Awaited<
+          ReturnType<BookingsRepository['cancelActiveBookingsAtOrganization']>
+        >;
+      }
+      return this.bookingsRepository.cancelActiveBookingsAtOrganization(tx, {
+        specialistId: specialist.id,
+        organizationId: previousOrgId,
+        actorUserId: userId,
+        cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
+        cancellationComment: null,
+      });
+    });
+    for (const row of cancelled) {
+      void this.pushNotifications.notifyClientBookingStatusChange(
+        row.id,
+        row.fromStatus,
+        'canceled_by_master',
+      );
+    }
 
     return {
       activeOrganizationId: body.organizationId,
-      cancelledBookingsCount,
+      cancelledBookingsCount: cancelled.length,
     };
   }
 }

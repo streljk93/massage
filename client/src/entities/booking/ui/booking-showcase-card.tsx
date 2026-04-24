@@ -23,6 +23,10 @@ export type BookingShowcaseCardProps = {
   specialistLinkAriaLabel?: string;
   /** Нижняя полоса статуса / таймера. */
   statusFooter?: ReactNode;
+  /**
+   * Светлая карточка: фон полосы статуса в «успех» (тот же `primary`, что success-toast), например «Подтверждено».
+   */
+  statusFooterSuccess?: boolean;
   /** Кнопки и прочие действия под статусом (страница записей). */
   actions?: ReactNode;
   /** Приглушить дату/время и полосу статуса (например просрочено). Для `light` — те же правила, что у списка. */
@@ -43,6 +47,7 @@ export function BookingShowcaseCard({
   specialistProfileHref,
   specialistLinkAriaLabel,
   statusFooter,
+  statusFooterSuccess,
   actions,
   dateTagsMuted,
 }: BookingShowcaseCardProps) {
@@ -91,10 +96,18 @@ export function BookingShowcaseCard({
   const tagClass = "text-[0.7rem]";
 
   const footerWrapClass = isDark
-    ? "mt-3 rounded-lg bg-white/10 px-2 py-1.5 text-[0.7rem] leading-snug"
+    ? cn(
+        "mt-3 rounded-lg px-2 py-1.5 text-[0.7rem] leading-snug",
+        statusFooterSuccess ? "bg-primary/25" : "bg-white/10",
+      )
     : cn(
-        "mt-3 rounded-xl bg-muted/80 px-2.5 py-2 text-xs leading-snug",
-        dateTagsMuted && "text-muted-foreground/70",
+        "mt-3 rounded-xl px-2.5 py-2 text-xs leading-snug",
+        statusFooterSuccess
+          ? "bg-primary/20 text-foreground"
+          : cn(
+              "bg-muted/80",
+              dateTagsMuted && "text-muted-foreground/70",
+            ),
       );
 
   return (

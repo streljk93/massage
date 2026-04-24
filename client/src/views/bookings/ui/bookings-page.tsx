@@ -28,6 +28,7 @@ import {
   createBrowserSdkClient,
 } from "@/shared/api";
 import type { BookingsCancelData } from "@/shared/api/generated/sdk/types.gen";
+import { FCM_CLIENT_BOOKINGS_LIST_REFETCH } from "@/shared/lib/bookings/fcm-list-refetch";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { parseISO } from "date-fns";
 import {
@@ -120,6 +121,16 @@ export function BookingsPage() {
   useLayoutEffect(() => {
     refreshBookingsRef.current = refreshBookings;
   }, [refreshBookings]);
+
+  useEffect(() => {
+    const onFcmRefetch = () => {
+      void refreshBookingsRef.current();
+    };
+    window.addEventListener(FCM_CLIENT_BOOKINGS_LIST_REFETCH, onFcmRefetch);
+    return () => {
+      window.removeEventListener(FCM_CLIENT_BOOKINGS_LIST_REFETCH, onFcmRefetch);
+    };
+  }, []);
 
   useEffect(() => {
     if (sessionStatus === "loading") {
@@ -359,6 +370,7 @@ export function BookingsPage() {
         specialistProfileHref: `/specialists/${row.specialistId}`,
         dateTagsMuted: bookingHistoryDateTagsMuted(row.status),
         statusLabel: row.statusLabel,
+        statusFooterSuccess: row.status === "confirmed",
         systemNote,
       };
     });
@@ -506,6 +518,7 @@ export function BookingsPage() {
                     avatarSrc={row.avatarSrc}
                     specialistProfileHref={row.specialistProfileHref}
                     dateTagsMuted={row.dateTagsMuted}
+                    statusFooterSuccess={row.statusFooterSuccess}
                     systemNote={row.systemNote}
                     reviewed={false}
                   />

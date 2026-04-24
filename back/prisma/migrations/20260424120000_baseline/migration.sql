@@ -1,5 +1,5 @@
 -- Baseline: full schema as of current prisma/schema.prisma (replaces previous incremental migrations).
--- Apply only on empty DB (`prisma migrate reset`). Includes BookingStatusLocale seed + partial unique index for org owner.
+-- Apply only on empty DB (`prisma migrate reset`). Includes BookingStatusLocale seed + partial unique index for org owner + UserFcmToken.
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -177,6 +177,7 @@ CREATE TABLE "Specialist" (
     "listingServicesLine" TEXT,
     "listingSlotGroups" JSONB,
     "listedInDirectory" BOOLEAN NOT NULL DEFAULT true,
+    "autoConfirmBookings" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -609,3 +610,25 @@ INSERT INTO "BookingStatusLocale" ("status", "locale", "label") VALUES
 CREATE UNIQUE INDEX "SpecialistOrganizationEmployment_one_owner_per_organization"
   ON "SpecialistOrganizationEmployment" ("organizationId")
   WHERE "role" = 'owner'::"OrganizationMembershipRole";
+
+-- UserFcmToken: web push (FCM); ранее отдельная миграция 20260424150000_user_fcm_tokens.
+-- CreateTable
+CREATE TABLE "UserFcmToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "userAgent" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserFcmToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserFcmToken_token_key" ON "UserFcmToken"("token");
+
+-- CreateIndex
+CREATE INDEX "UserFcmToken_userId_idx" ON "UserFcmToken"("userId");
+
+-- AddForeignKey
+ALTER TABLE "UserFcmToken" ADD CONSTRAINT "UserFcmToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

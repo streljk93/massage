@@ -580,6 +580,12 @@ export async function seedDemoSpecialists(prisma) {
     clientReviewer4,
   ]);
 
+  /** Демо «Мастер 3» (лист / localhost): фиксированный id из витрины; иначе срабатывает флаг у demo.salon.worker2@. */
+  await prisma.specialist.updateMany({
+    where: { id: "53436e5a-1499-4805-a3d2-95185fdf1a24" },
+    data: { autoConfirmBookings: true },
+  });
+
   console.log(
     `[seed] Демо: «${org.slug}» + доводка до ≥5 мастеров; салоны ` +
       `demo-salon-seed-2 … 6. ` +
@@ -843,6 +849,9 @@ async function topUpOriginalSalon(prisma, ctx) {
       },
     });
 
+    const isDemoAutoConfirm =
+      email === "demo.salon.worker2@example.com";
+
     const specialist = await prisma.specialist.upsert({
       where: { userId: user.id },
       create: {
@@ -854,11 +863,13 @@ async function topUpOriginalSalon(prisma, ctx) {
         listingServicesLine: null,
         listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listedInDirectory: true,
+        autoConfirmBookings: isDemoAutoConfirm,
       },
       update: {
         listedInDirectory: true,
         listingSlotGroups: LISTING_SLOTS_DEFAULT,
         listingMetaLine: "Dương Đông · Phú Quốc",
+        autoConfirmBookings: isDemoAutoConfirm,
       },
     });
 

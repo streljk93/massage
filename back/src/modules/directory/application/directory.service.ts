@@ -248,6 +248,7 @@ function mapSpecialistRowToListItem(
     categories: mapDirectoryCategoryTags(s.serviceCategories, locale),
     slotGroups,
     bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
+    autoConfirmBookings: s.autoConfirmBookings,
   };
 }
 

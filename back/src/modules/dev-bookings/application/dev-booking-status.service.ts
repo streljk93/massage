@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { addMinutes } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { SetTestBookingStatusBody } from '../dto/set-test-booking-status-body.schema';
 
 const DEV_PENDING_GRACE_MINUTES = 15;
 
 @Injectable()
 export class DevBookingStatusService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushNotificationsService,
+  ) {}
 
   /**
    * Принудительная смена статуса по `bookingId` для отладки (без проверки переходов и без роли мастера).
@@ -73,6 +77,16 @@ export class DevBookingStatusService {
 
       return row;
     });
+
+    if (fromStatus !== toStatus) {
+      // await: FCM + контекст брони — до ответа 200, иначе при void фоновая задача
+      // (serverless/таймаут/рестарт) могла не успеть, в т.ч. для `pending` → `confirmed`.
+      await this.push.notifyClientBookingStatusChange(
+        body.bookingId,
+        fromStatus,
+        toStatus,
+      );
+    }
 
     return {
       id: updated.id,

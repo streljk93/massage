@@ -66,6 +66,10 @@ model User {
   avatarUrl    String?
   /// Предпочитаемая локаль UI (например vi, en, ru).
   locale       String?
+  /// Push: напоминание клиенту о визите за N минут до `startsAt` (только `bookingReminderEnabled`).
+  bookingReminderEnabled     Boolean @default(false)
+  /// Допустимые значения: 15, 30, 60 (валидация в API).
+  bookingReminderLeadMinutes Int     @default(30)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -77,6 +81,21 @@ model User {
   orgReviews        OrganizationReview[]
   specialistReviews SpecialistReview[]
   ownedOrganizations Organization[]        @relation("OrganizationOwner")
+  fcmTokens            UserFcmToken[]
+}
+
+/// FCM (web) registration token: одно устройство/браузер — одна запись, токен уникален глобально.
+model UserFcmToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// FCM device token; при смене владельца (другой логин с того же устройства) — upsert.
+  token     String   @unique
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /// Большая категория услуг (вертикаль): массаж, в будущем — бьюти, стрижки и т.д.
@@ -296,6 +315,9 @@ model Specialist {
   /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.
   listedInDirectory Boolean @default(true)
 
+  /// Записи сразу в `confirmed` (без ожидания ручного подтверждения мастером / без pending).
+  autoConfirmBookings Boolean @default(false)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -469,6 +491,9 @@ model Booking {
   cancelReason String?
   /// Дополнительный комментарий при отмене (например пояснение от мастера); системные отмены часто без текста.
   cancellationComment String?
+
+  /// Когда ушло push-напоминание клиенту о визите (заданный lead); null = ещё не отправляли.
+  clientReminderSentAt DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

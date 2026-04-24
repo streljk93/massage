@@ -47,7 +47,7 @@ export type BookingListCardProps = {
   specialistProfileHref?: string;
   /** Id сущности `Booking` (показ под кнопками, напр. для dev / поддержки). */
   bookingEntityId?: string;
-  /** ISO начала/конца слота — для «Напомнить» → системный календарь (.ics / share). */
+  /** ISO начала/конца слота — кнопка «Добавить в календарь» → .ics / share. */
   calendarStartsAtIso?: string;
   calendarEndsAtIso?: string;
   className?: string;
@@ -244,6 +244,7 @@ export function BookingListCard({
               name: providerName,
             })}
             statusFooter={statusFooter}
+            statusFooterSuccess={status === "confirmed"}
             dateTagsMuted={muted}
             actions={actionsWithMeta}
           />

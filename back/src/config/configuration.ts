@@ -83,4 +83,12 @@ export default () => ({
       nodeEnv !== 'production' &&
       process.env.DISABLE_DEV_TEST_ROUTES !== 'true',
   },
+  /**
+   * Firebase Admin (FCM). JSON сервисного аккаунта: целиком в `FIREBASE_SERVICE_ACCOUNT_JSON`
+   * или путь `GOOGLE_APPLICATION_CREDENTIALS` (стандартный путь gcloud).
+   * Без учётных данных уведомления на сервере не отправляются; регистрация токенов в БД всё равно работает.
+   */
+  firebase: {
+    serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim() ?? '',
+  },
 });

@@ -10,7 +10,12 @@
         "emailTitle": "Email summary",
         "emailDescription": "Weekly digest of activity",
         "on": "On",
-        "off": "Off"
+        "off": "Off",
+        "reminderLeadLabel": "Remind me before the visit",
+        "lead15": "15 min",
+        "lead30": "30 min",
+        "lead60": "1 hour",
+        "loadError": "Couldn’t load settings. Try again later."
       }
     },
     "vi": {
@@ -23,7 +28,12 @@
         "emailTitle": "Email tóm tắt",
         "emailDescription": "Tóm tắt hoạt động mỗi tuần",
         "on": "Bật",
-        "off": "Tắt"
+        "off": "Tắt",
+        "reminderLeadLabel": "Nhắc trước giờ hẹn",
+        "lead15": "15 phút",
+        "lead30": "30 phút",
+        "lead60": "1 giờ",
+        "loadError": "Không tải được cài đặt. Thử lại sau."
       }
     },
     "ru": {
@@ -36,7 +46,12 @@
         "emailTitle": "Email-дайджест",
         "emailDescription": "Еженедельная сводка активности",
         "on": "Вкл.",
-        "off": "Выкл."
+        "off": "Выкл.",
+        "reminderLeadLabel": "Напомнить до визита",
+        "lead15": "15 мин",
+        "lead30": "30 мин",
+        "lead60": "1 час",
+        "loadError": "Не удалось загрузить настройки. Попробуйте позже."
       }
     }
   }

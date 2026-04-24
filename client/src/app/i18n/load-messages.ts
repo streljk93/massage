@@ -8,6 +8,7 @@ import { organizationCardI18n } from "@/entities/organizations";
 import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { comingSoonI18n } from "@/features/coming-soon";
+import { fcmInAppI18n } from "@/features/push-notifications";
 import { apiErrorToastI18n, metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { authLoginPageI18n, authRegisterPageI18n } from "@/views/auth";
@@ -41,6 +42,7 @@ const bundles: ColocatedI18nBundle[] = [
   metaI18n,
   apiErrorToastI18n,
   comingSoonI18n,
+  fcmInAppI18n,
   availabilitySlotStripI18n,
   homeBottomNavI18n,
   homeScreenHeaderI18n,

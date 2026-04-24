@@ -676,6 +676,111 @@
         ]
       }
     },
+    "/users/me/push-tokens": {
+      "post": {
+        "description": "Регистрирует токен устройства для текущего пользователя. Повтор с тем же token переназначит userId (другой логин с того же браузера).",
+        "operationId": "PushTokens_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "FCM registration token (web)"
+                  },
+                  "userAgent": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Сохранить FCM token (web push)",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "PushTokens_revoke",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Токен удалён или не существовал"
+          },
+          "401": {
+            "description": "Нет access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить FCM token (отписка от push на этом устройстве)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/users/me": {
       "get": {
         "operationId": "Users_me",
@@ -691,7 +796,9 @@
                     "id",
                     "email",
                     "name",
-                    "avatarUrl"
+                    "avatarUrl",
+                    "bookingReminderEnabled",
+                    "bookingReminderLeadMinutes"
                   ],
                   "properties": {
                     "id": {
@@ -709,6 +816,18 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    },
+                    "bookingReminderEnabled": {
+                      "type": "boolean"
+                    },
+                    "bookingReminderLeadMinutes": {
+                      "type": "integer",
+                      "enum": [
+                        15,
+                        30,
+                        60
+                      ],
+                      "description": "За сколько минут до визита прислать push (только при включённом флаге)."
                     }
                   }
                 }
@@ -759,6 +878,17 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "bookingReminderEnabled": {
+                    "type": "boolean"
+                  },
+                  "bookingReminderLeadMinutes": {
+                    "type": "integer",
+                    "enum": [
+                      15,
+                      30,
+                      60
+                    ]
                   }
                 }
               }
@@ -776,7 +906,9 @@
                     "id",
                     "email",
                     "name",
-                    "avatarUrl"
+                    "avatarUrl",
+                    "bookingReminderEnabled",
+                    "bookingReminderLeadMinutes"
                   ],
                   "properties": {
                     "id": {
@@ -794,6 +926,18 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    },
+                    "bookingReminderEnabled": {
+                      "type": "boolean"
+                    },
+                    "bookingReminderLeadMinutes": {
+                      "type": "integer",
+                      "enum": [
+                        15,
+                        30,
+                        60
+                      ],
+                      "description": "За сколько минут до визита прислать push (только при включённом флаге)."
                     }
                   }
                 }
@@ -893,7 +1037,7 @@
     },
     "/bookings": {
       "post": {
-        "description": "Запись в статусе `pending`. Требуется JWT клиента. `startsAt` — ISO 8601.",
+        "description": "Создаёт бронь: обычно `pending` (ожидание мастера) с `pendingExpiresAt`, либо сразу `confirmed`, если у мастера включено авто‑подтверждение. Требуется JWT клиента. `startsAt` — ISO 8601.",
         "operationId": "Bookings_create",
         "parameters": [
           {
@@ -966,8 +1110,10 @@
                     "status": {
                       "type": "string",
                       "enum": [
-                        "pending"
-                      ]
+                        "pending",
+                        "confirmed"
+                      ],
+                      "description": "`confirmed` — если у мастера включено авто‑подтверждение; иначе `pending` с `pendingExpiresAt`."
                     },
                     "startsAt": {
                       "type": "string",
@@ -980,7 +1126,8 @@
                     "pendingExpiresAt": {
                       "type": "string",
                       "format": "date-time",
-                      "nullable": true
+                      "nullable": true,
+                      "description": "Дедлайн подтверждения для `pending`; для `confirmed` — `null`."
                     }
                   }
                 }
@@ -1264,6 +1411,90 @@
         "summary": "Отменить бронирование (клиент)",
         "tags": [
           "bookings"
+        ]
+      }
+    },
+    "/specialist/bookings/{id}/confirm": {
+      "post": {
+        "description": "Переводит `pending` → `confirmed` для брони этого мастера, пишет историю, отправляет push клиенту. JWT — пользователь с профилем `Specialist`.",
+        "operationId": "SpecialistBookings_confirmPending",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status",
+                    "startsAt",
+                    "endsAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "confirmed"
+                      ],
+                      "description": "`confirmed` — если у мастера включено авто‑подтверждение; иначе `pending` с `pendingExpiresAt`."
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "pendingExpiresAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true,
+                      "description": "Дедлайн подтверждения для `pending`; для `confirmed` — `null`."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Статус не `pending` (код `BOOKING_NOT_PENDING`)"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "У JWT нет профиля специалиста"
+          },
+          "404": {
+            "description": "Бронь не найдена или чужая"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Подтвердить запись (специалист)",
+        "tags": [
+          "bookings",
+          "specialist"
         ]
       }
     },
@@ -1764,7 +1995,8 @@
                           "servicesLine",
                           "categories",
                           "slotGroups",
-                          "bookableServices"
+                          "bookableServices",
+                          "autoConfirmBookings"
                         ],
                         "properties": {
                           "id": {
@@ -1924,6 +2156,10 @@
                                 }
                               }
                             }
+                          },
+                          "autoConfirmBookings": {
+                            "type": "boolean",
+                            "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
                           }
                         }
                       }
@@ -2001,7 +2237,8 @@
                     "servicesLine",
                     "categories",
                     "slotGroups",
-                    "bookableServices"
+                    "bookableServices",
+                    "autoConfirmBookings"
                   ],
                   "properties": {
                     "id": {
@@ -2161,6 +2398,10 @@
                           }
                         }
                       }
+                    },
+                    "autoConfirmBookings": {
+                      "type": "boolean",
+                      "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
                     }
                   }
                 }
@@ -3034,6 +3275,134 @@
           }
         },
         "summary": "[Dev] Принудительно сменить статус брони по booking id",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/notifications/test-fcm": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true` (иначе 404). Ищет пользователя по email, проверяет `UserFcmToken`, шлёт произвольный title + text. Проверка сервисного ключа Firebase и веб-конфига без прод-ролей. **Получатель** — тот **браузер**, в котором этот user однажды залогинился и **зарегистрировал FCM** (`POST push-tokens`); не тот, кто дергает ручку из Swagger с другой сессии. Опционально `delaySeconds` (0–120): **ждать N с**, затем отправить FCM; HTTP «висит» ~N с, чтобы переключить вкладку и поймать пуш в фоне. `fcm.successCount: 1` — FCM принял запрос, панель OS видна в том окне, где залогинен этот user и не запрещены уведомления.",
+        "operationId": "DevFcmTest_testFcm",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "title",
+                  "text"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Текст уведомления"
+                  },
+                  "delaySeconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 120,
+                    "description": "Секунд ждать до FCM; запрос завершится сразу после отправки. Для теста фона/другой вкладки"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "userId",
+                    "email",
+                    "tokensCount",
+                    "delaySecondsApplied",
+                    "fcm"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "userId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "tokensCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "delaySecondsApplied": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 120
+                    },
+                    "fcm": {
+                      "type": "object",
+                      "required": [
+                        "attempted",
+                        "successCount",
+                        "errors"
+                      ],
+                      "properties": {
+                        "attempted": {
+                          "type": "integer"
+                        },
+                        "successCount": {
+                          "type": "integer"
+                        },
+                        "errors": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "type": "string"
+                              },
+                              "message": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет FCM токенов у пользователя"
+          },
+          "404": {
+            "description": "Пользователь с email не найден"
+          },
+          "503": {
+            "description": "FCM (Firebase Admin) не инициализирован"
+          }
+        },
+        "summary": "[Dev] Тестовый FCM push по email",
         "tags": [
           "dev"
         ]

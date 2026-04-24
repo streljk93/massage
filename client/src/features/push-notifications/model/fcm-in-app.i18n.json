@@ -1,0 +1,169 @@
+{
+  "messages": {
+    "en": {
+      "fcmInApp": {
+        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "genericMessageTitle": "Message",
+        "reminder": {
+          "title": "Upcoming visit"
+        },
+        "toStatus": {
+          "pending": {
+            "title": "Booking update",
+            "bodyPrefix": "Pending"
+          },
+          "confirmed": {
+            "title": "Booking confirmed",
+            "bodyPrefix": "Confirmed"
+          },
+          "expired": {
+            "title": "Booking expired",
+            "bodyPrefix": "Not confirmed in time"
+          },
+          "reject_by_master": {
+            "title": "Booking declined",
+            "bodyPrefix": "Declined"
+          },
+          "reject_by_client": {
+            "title": "Booking update",
+            "bodyPrefix": ""
+          },
+          "canceled_by_master": {
+            "title": "Booking cancelled",
+            "bodyPrefix": "Cancelled by specialist"
+          },
+          "canceled_by_client": {
+            "title": "Booking update",
+            "bodyPrefix": ""
+          },
+          "no_show_by_client": {
+            "title": "No-show",
+            "bodyPrefix": "You did not attend"
+          },
+          "no_show_by_master": {
+            "title": "No-show",
+            "bodyPrefix": "Specialist was unavailable"
+          },
+          "in_progress": {
+            "title": "Visit started",
+            "bodyPrefix": "In progress"
+          },
+          "done": {
+            "title": "Visit completed",
+            "bodyPrefix": "Done"
+          }
+        }
+      }
+    },
+    "vi": {
+      "fcmInApp": {
+        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "genericMessageTitle": "Thông báo",
+        "reminder": {
+          "title": "Sắp đến giờ hẹn"
+        },
+        "toStatus": {
+          "pending": {
+            "title": "Cập nhật lịch",
+            "bodyPrefix": "Chờ xác nhận"
+          },
+          "confirmed": {
+            "title": "Đã xác nhận lịch",
+            "bodyPrefix": "Đã xác nhận"
+          },
+          "expired": {
+            "title": "Lịch hết hạn",
+            "bodyPrefix": "Hết hạn xác nhận"
+          },
+          "reject_by_master": {
+            "title": "Lịch bị từ chối",
+            "bodyPrefix": "Đã từ chối"
+          },
+          "reject_by_client": {
+            "title": "Cập nhật",
+            "bodyPrefix": ""
+          },
+          "canceled_by_master": {
+            "title": "Đã hủy lịch",
+            "bodyPrefix": "Chuyên gia đã hủy"
+          },
+          "canceled_by_client": {
+            "title": "Cập nhật",
+            "bodyPrefix": ""
+          },
+          "no_show_by_client": {
+            "title": "Vắng mặt",
+            "bodyPrefix": "Bạn đã không đến"
+          },
+          "no_show_by_master": {
+            "title": "Vắng mặt",
+            "bodyPrefix": "Chuyên gia không sẵn sàng"
+          },
+          "in_progress": {
+            "title": "Đang diễn ra",
+            "bodyPrefix": "Đang thực hiện"
+          },
+          "done": {
+            "title": "Đã hoàn thành",
+            "bodyPrefix": "Xong"
+          }
+        }
+      }
+    },
+    "ru": {
+      "fcmInApp": {
+        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "genericMessageTitle": "Сообщение",
+        "reminder": {
+          "title": "Скоро визит"
+        },
+        "toStatus": {
+          "pending": {
+            "title": "Запись",
+            "bodyPrefix": "В ожидании"
+          },
+          "confirmed": {
+            "title": "Запись подтверждена",
+            "bodyPrefix": "Подтверждено"
+          },
+          "expired": {
+            "title": "Запись не подтверждена",
+            "bodyPrefix": "Время ожидания вышло"
+          },
+          "reject_by_master": {
+            "title": "Запись отклонена",
+            "bodyPrefix": "Отклонено"
+          },
+          "reject_by_client": {
+            "title": "Запись",
+            "bodyPrefix": ""
+          },
+          "canceled_by_master": {
+            "title": "Запись отменена",
+            "bodyPrefix": "Отмена специалистом"
+          },
+          "canceled_by_client": {
+            "title": "Запись",
+            "bodyPrefix": ""
+          },
+          "no_show_by_client": {
+            "title": "Неявка",
+            "bodyPrefix": "Вы не пришли"
+          },
+          "no_show_by_master": {
+            "title": "Неявка",
+            "bodyPrefix": "Специалист не принял"
+          },
+          "in_progress": {
+            "title": "Визит",
+            "bodyPrefix": "Идёт приём"
+          },
+          "done": {
+            "title": "Визит завершён",
+            "bodyPrefix": "Завершено"
+          }
+        }
+      }
+    }
+  }
+}

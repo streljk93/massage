@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { BookingStatus, Prisma } from '@prisma/client';
+import { Prisma, type BookingStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT } from '../domain/booking-cancel-reason';
 
@@ -86,7 +86,10 @@ export class BookingsRepository {
   /**
    * Истечение ожидания подтверждения: pending с истёкшим pendingExpiresAt → expired.
    */
-  async expirePendingPastDeadline(now: Date): Promise<number> {
+  async expirePendingPastDeadline(now: Date): Promise<{
+    count: number;
+    bookingIds: string[];
+  }> {
     return this.prisma.$transaction(async (tx) => {
       const due = await tx.booking.findMany({
         where: {
@@ -116,7 +119,7 @@ export class BookingsRepository {
           },
         });
       }
-      return due.length;
+      return { count: due.length, bookingIds: due.map((d) => d.id) };
     });
   }
 
@@ -133,7 +136,7 @@ export class BookingsRepository {
       cancelReason: string;
       cancellationComment?: string | null;
     },
-  ): Promise<number> {
+  ): Promise<Array<{ id: string; fromStatus: BookingStatus }>> {
     const rows = await tx.booking.findMany({
       where: {
         specialistId: args.specialistId,
@@ -167,6 +170,33 @@ export class BookingsRepository {
         },
       });
     }
-    return rows.length;
+    return rows.map((row) => ({ id: row.id, fromStatus: row.status }));
+  }
+
+  /**
+   * Брони клиентов: пора напомнить (порог по `User.bookingReminderLeadMinutes` уже прошёл, визит ещё впереди).
+   */
+  async findDueClientReminderBookingIds(now: Date): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT b.id
+      FROM "Booking" b
+      INNER JOIN "User" u ON u.id = b."clientUserId"
+      WHERE b."deletedAt" IS NULL
+        AND b.status IN ('pending', 'confirmed')
+        AND b."clientReminderSentAt" IS NULL
+        AND b."startsAt" > ${now}
+        AND u."bookingReminderEnabled" = true
+        AND b."startsAt" - (u."bookingReminderLeadMinutes" * interval '1 minute') <= ${now}
+    `);
+    return rows.map((r) => r.id);
+  }
+
+  markClientReminderSent(bookingId: string): Promise<void> {
+    return this.prisma.booking
+      .update({
+        where: { id: bookingId },
+        data: { clientReminderSentAt: new Date() },
+      })
+      .then(() => undefined);
   }
 }

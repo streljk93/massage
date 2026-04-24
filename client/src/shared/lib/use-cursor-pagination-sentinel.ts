@@ -19,7 +19,9 @@ export function useCursorPaginationSentinel({
 }: UseCursorPaginationSentinelArgs) {
   const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
   const fetchRef = useRef(fetchNextPage);
-  fetchRef.current = fetchNextPage;
+  useEffect(() => {
+    fetchRef.current = fetchNextPage;
+  }, [fetchNextPage]);
 
   useEffect(() => {
     if (!enabled || !sentinel || !hasNextPage || isFetchingNextPage) {
