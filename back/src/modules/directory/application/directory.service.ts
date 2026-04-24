@@ -373,6 +373,18 @@ export class DirectoryService {
     );
   }
 
+  /**
+   * Одно окно для расчёта свободных слотов в списках и на профиле.
+   * Иначе карточка (узкое `listingCardPreview`) и страница (`profileSlotPreview`) расходятся,
+   * а deep link `?slotDay=&slotTime=` с витрины не находит время в сетке профиля.
+   */
+  private getUnifiedDirectorySlotPreviewCalendarDays(): number {
+    return Math.max(
+      this.getListingCardPreviewCalendarDays(),
+      this.getProfileSlotPreviewCalendarDays(),
+    );
+  }
+
   private async buildOccupiedAndFreeSlotMaps(
     specialistIds: string[],
     now: Date,
@@ -446,7 +458,7 @@ export class DirectoryService {
       await this.buildOccupiedAndFreeSlotMaps(
         slice.map((s) => s.id),
         now,
-        this.getListingCardPreviewCalendarDays(),
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
     const last = slice[slice.length - 1];
     const nextCursor =
@@ -513,7 +525,7 @@ export class DirectoryService {
       await this.buildOccupiedAndFreeSlotMaps(
         [...specialistIds],
         now,
-        this.getListingCardPreviewCalendarDays(),
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
     const last = slice[slice.length - 1];
     const nextCursor =
@@ -545,7 +557,7 @@ export class DirectoryService {
       await this.buildOccupiedAndFreeSlotMaps(
         [id],
         now,
-        this.getProfileSlotPreviewCalendarDays(),
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
     return mapSpecialistRowToListItem(
       row,
@@ -572,7 +584,7 @@ export class DirectoryService {
       await this.buildOccupiedAndFreeSlotMaps(
         specialistIds,
         now,
-        this.getProfileSlotPreviewCalendarDays(),
+        this.getUnifiedDirectorySlotPreviewCalendarDays(),
       );
     const base = mapOrganizationRowToListItem(
       row,

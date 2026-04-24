@@ -52,3 +52,38 @@ export function filterSlotTimesForDuration(
     return true;
   });
 }
+
+/**
+ * Минимальная длительность из кандидатов, при которой слот `preferredSlot` остаётся
+ * в {@link filterSlotTimesForDuration} (как при переходе с витрины с дефолтной «длинной» сессией).
+ */
+export function shortestDurationThatIncludesSlot(
+  daySlots: string[],
+  preferredSlot: string,
+  durationCandidates: readonly number[],
+): number | undefined {
+  if (daySlots.length === 0 || durationCandidates.length === 0) {
+    return undefined;
+  }
+  const wantTrim = preferredSlot.trim();
+  const canonical =
+    daySlots.find((s) => s.trim() === wantTrim) ??
+    (() => {
+      const wm = slotTimeToMinutes(wantTrim);
+      if (Number.isNaN(wm)) {
+        return undefined;
+      }
+      return daySlots.find((s) => slotTimeToMinutes(s.trim()) === wm);
+    })();
+  if (canonical === undefined) {
+    return undefined;
+  }
+  const sorted = [...durationCandidates].sort((a, b) => a - b);
+  for (const d of sorted) {
+    const filtered = filterSlotTimesForDuration(daySlots, d);
+    if (filtered.includes(canonical)) {
+      return d;
+    }
+  }
+  return undefined;
+}

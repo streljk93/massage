@@ -27,7 +27,7 @@ export type BookingShowcaseCardProps = {
    * Светлая карточка: фон полосы статуса в «успех» (тот же `primary`, что success-toast), например «Подтверждено».
    */
   statusFooterSuccess?: boolean;
-  /** Полоса статуса «идёт приём» — приглушённый синий фон (приоритет над `statusFooterSuccess`). */
+  /** Полоса статуса «идёт приём» — тон primary (приоритет над `statusFooterSuccess`). */
   statusFooterInProgress?: boolean;
   /** Кнопки и прочие действия под статусом (страница записей). */
   actions?: ReactNode;
@@ -105,7 +105,7 @@ export function BookingShowcaseCard({
     ? cn(
         "mt-3 rounded-lg px-2 py-1.5 text-[0.7rem] leading-snug",
         statusFooterInProgress
-          ? "bg-sky-400/35"
+          ? "bg-primary/30"
           : statusFooterSuccess
             ? "bg-primary/25"
             : "bg-white/10",
@@ -113,7 +113,7 @@ export function BookingShowcaseCard({
     : cn(
         "mt-3 rounded-xl px-2.5 py-2 text-xs leading-snug",
         statusFooterInProgress
-          ? "bg-sky-500/22 text-foreground"
+          ? "bg-primary/22 text-foreground"
           : statusFooterSuccess
             ? "bg-primary/20 text-foreground"
             : cn(
@@ -181,7 +181,7 @@ export function BookingShowcaseCard({
           ? "bg-neutral-800 text-white"
           : cn(
               "border border-border/60 bg-card text-card-foreground",
-              inProgressLeftBorder && "border-l-4 border-l-sky-500",
+              inProgressLeftBorder && "border-l-4 border-l-primary",
             ),
         className,
       )}

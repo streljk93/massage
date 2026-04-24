@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -28,12 +28,18 @@ import {
   interpretBookingCreateResponse,
   type BookingCreateMessageKey,
 } from "@/shared/lib/bookings/booking-create-outcome";
-import { initialDayAndSlotFromSearch } from "@/shared/lib/profile-booking-initial-from-search";
+import {
+  initialDayAndSlotFromSearch,
+  resolveSlotLabelInDay,
+} from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
 import type { SpecialistProfileData } from "../model/specialist-profile-data";
 import { bookingStartsAtIsoUtc } from "../lib/booking-starts-at";
-import { filterSlotTimesForDuration } from "../lib/filter-slots-for-duration";
+import {
+  filterSlotTimesForDuration,
+  shortestDurationThatIncludesSlot,
+} from "../lib/filter-slots-for-duration";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -99,6 +105,34 @@ export function SpecialistProfilePage({
   const [dayIndex, setDayIndex] = useState(initialDayIndex);
   const [slot, setSlot] = useState(initialSlot);
 
+  const profileSlotGridKey = useMemo(
+    () =>
+      `${profile.slotCalendarDates.join(",")}|${profile.timeSlotsByDay.map((d) => d.join(",")).join(";")}`,
+    [profile.slotCalendarDates, profile.timeSlotsByDay],
+  );
+  const deepLinkApplySigRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (bookingSlotFromSearch == null) {
+      deepLinkApplySigRef.current = null;
+      return;
+    }
+    const sig = `${profile.id}\0${bookingSlotFromSearch.calendarDate}\0${bookingSlotFromSearch.time}\0${profileSlotGridKey}`;
+    if (deepLinkApplySigRef.current === sig) {
+      return;
+    }
+    deepLinkApplySigRef.current = sig;
+    const next = initialDayAndSlotFromSearch(
+      {
+        slotCalendarDates: profile.slotCalendarDates,
+        timeSlotsByDay: profile.timeSlotsByDay,
+      },
+      bookingSlotFromSearch,
+    );
+    setDayIndex(next.dayIndex);
+    setSlot(next.slot);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- profileSlotGridKey от slotCalendarDates/timeSlotsByDay
+  }, [bookingSlotFromSearch, profile.id, profileSlotGridKey]);
+
   const daySlots = useMemo(
     () => profile.timeSlotsByDay[dayIndex] ?? [],
     [profile.timeSlotsByDay, dayIndex],
@@ -151,6 +185,63 @@ export function SpecialistProfilePage({
     }
     return filteredDaySlots[0] ?? "";
   }, [filteredDaySlots, slot]);
+
+  const urlBookingSlotKey =
+    bookingSlotFromSearch != null
+      ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}-${serviceId}-${dayIndex}`
+      : null;
+  const urlSlotDurationApplyKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    urlSlotDurationApplyKeyRef.current = null;
+  }, [urlBookingSlotKey]);
+
+  /** Дефолтная длительность может выкинуть слот из витрины; подбираем минимальную, куда он помещается. */
+  useEffect(() => {
+    if (
+      urlBookingSlotKey == null ||
+      bookingSlotFromSearch == null ||
+      !selectedService ||
+      selectedBookingMinutes === undefined
+    ) {
+      return;
+    }
+    if (urlSlotDurationApplyKeyRef.current === urlBookingSlotKey) {
+      return;
+    }
+    const raw = profile.timeSlotsByDay[dayIndex] ?? [];
+    const canonical = resolveSlotLabelInDay(raw, bookingSlotFromSearch.time);
+    if (canonical == null) {
+      urlSlotDurationApplyKeyRef.current = urlBookingSlotKey;
+      return;
+    }
+    const filtered = filterSlotTimesForDuration(raw, selectedBookingMinutes);
+    if (filtered.includes(canonical)) {
+      urlSlotDurationApplyKeyRef.current = urlBookingSlotKey;
+      return;
+    }
+    const minDur = shortestDurationThatIncludesSlot(
+      raw,
+      bookingSlotFromSearch.time,
+      selectedService.durationMinutes,
+    );
+    if (minDur !== undefined && minDur !== selectedBookingMinutes) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- длительность под URL-слот (иначе слот пропадает из сетки)
+      setDurationByService((prev) => ({
+        ...prev,
+        [serviceId]: minDur,
+      }));
+    }
+    urlSlotDurationApplyKeyRef.current = urlBookingSlotKey;
+  }, [
+    bookingSlotFromSearch,
+    dayIndex,
+    profile.timeSlotsByDay,
+    selectedBookingMinutes,
+    selectedService,
+    serviceId,
+    urlBookingSlotKey,
+  ]);
 
   const bookingPriceVnd =
     selectedService && selectedBookingMinutes !== undefined

@@ -1,9 +1,33 @@
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
+import { slotTimeToMinutes } from "@/views/specialist-profile/lib/filter-slots-for-duration";
 
 export type ProfileSlotGrid = {
   slotCalendarDates: string[];
   timeSlotsByDay: string[][];
 };
+
+/** Подпись слота из сетки, совпадающая с временем из URL (trim + совпадение по минутам суток). */
+export function resolveSlotLabelInDay(
+  slots: string[],
+  timeFromUrl: string,
+): string | null {
+  const want = timeFromUrl.trim();
+  if (!want) {
+    return null;
+  }
+  const exact = slots.find((s) => s.trim() === want);
+  if (exact !== undefined) {
+    return exact;
+  }
+  const wantMin = slotTimeToMinutes(want);
+  if (Number.isNaN(wantMin)) {
+    return null;
+  }
+  const byMin = slots.find(
+    (s) => slotTimeToMinutes(s.trim()) === wantMin,
+  );
+  return byMin ?? null;
+}
 
 export function initialDayAndSlotFromSearch(
   profile: ProfileSlotGrid,
@@ -19,8 +43,13 @@ export function initialDayAndSlotFromSearch(
     return { dayIndex: 0, slot: "" };
   }
   const slots = profile.timeSlotsByDay[dayIdx] ?? [];
-  if (!slots.includes(search.time)) {
-    return { dayIndex: 0, slot: "" };
+  const resolved = resolveSlotLabelInDay(slots, search.time);
+  if (resolved == null) {
+    const fallback = search.time.trim();
+    if (fallback === "") {
+      return { dayIndex: 0, slot: "" };
+    }
+    return { dayIndex: dayIdx, slot: fallback };
   }
-  return { dayIndex: dayIdx, slot: search.time };
+  return { dayIndex: dayIdx, slot: resolved };
 }
