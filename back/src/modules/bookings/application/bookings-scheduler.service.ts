@@ -40,6 +40,31 @@ export class BookingsSchedulerService {
   }
 
   @Cron(CronExpression.EVERY_MINUTE)
+  async completeInProgressBookingsPastEnd(): Promise<void> {
+    try {
+      const { count, bookingIds } =
+        await this.bookingsService.completeInProgressPastEndsAt();
+      for (const id of bookingIds) {
+        void this.push.notifyClientBookingStatusChange(
+          id,
+          'in_progress',
+          'done',
+        );
+      }
+      if (count > 0) {
+        this.logger.log(
+          `Auto-completed ${count} in_progress booking(s) at slot end`,
+        );
+      }
+    } catch (e) {
+      this.logger.error(
+        'completeInProgressPastEndsAt failed',
+        e instanceof Error ? e.stack : e,
+      );
+    }
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
   async sendClientBookingReminders(): Promise<void> {
     try {
       const n = await this.clientBookingReminders.sendDueClientReminders(

@@ -3,6 +3,7 @@ import type { BookingStatus } from '@prisma/client';
 /**
  * Полный набор статусов брони в удобном для UI порядке.
  * @see `.cursor/rules/business-logic.mdc`
+ * @see `booking-status-transitions.ts` — допустимые переходы между статусами
  * @see `BookingStatus` в `schema.prisma`
  */
 export const BOOKING_STATUS_ALL_ORDERED = [

@@ -98,7 +98,7 @@ export const cancelBookingRequestSchema = {
       type: 'string',
       enum: clientCancelReasonEnum,
       description:
-        'Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`.',
+        'Для `pending` не передаётся. Для `confirmed` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`. Отмена из `in_progress` клиентом не поддерживается.',
     },
     cancellationComment: {
       type: 'string',
@@ -129,7 +129,7 @@ export const cancelBookingResponseSchema = {
       type: 'string',
       enum: ['canceled_by_client', 'reject_by_client'],
       description:
-        '`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`.',
+        '`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed`.',
     },
   },
 };
@@ -137,3 +137,19 @@ export const cancelBookingResponseSchema = {
 /** Ответ `POST /specialist/bookings/:id/confirm` — после ручного подтверждения мастером. */
 export const specialistConfirmBookingResponseSchema =
   createBookingResponseSchema;
+
+/** Ответ `POST /specialist/bookings/:id/start-visit` — начало приёма. */
+export const specialistStartVisitResponseSchema = {
+  type: 'object',
+  required: ['id', 'status', 'startsAt', 'endsAt'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: ['in_progress'],
+      description: 'Приём отмечен как идущий.',
+    },
+    startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time' },
+  },
+};

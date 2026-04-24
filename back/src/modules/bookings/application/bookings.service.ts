@@ -26,16 +26,11 @@ import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
+import { isBookingSlotStartTimeReached } from '../domain/booking-in-progress-start-policy';
+import { isBookingStatusTransitionAllowed } from '../domain/booking-status-transitions';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
-
-/** Клиент может отменить до визита / до начала приёма. */
-const CLIENT_CANCELLABLE_STATUSES: readonly BookingStatus[] = [
-  'pending',
-  'confirmed',
-  'in_progress',
-];
 
 function isVndCurrency(currency: string | null | undefined): boolean {
   return (currency ?? 'VND').toUpperCase() === 'VND';
@@ -342,6 +337,14 @@ export class BookingsService {
     return this.bookingsRepository.expirePendingPastDeadline(new Date());
   }
 
+  /** Вызывается cron: `in_progress` с истёкшим `endsAt` → `done`. */
+  async completeInProgressPastEndsAt(): Promise<{
+    count: number;
+    bookingIds: string[];
+  }> {
+    return this.bookingsRepository.completeInProgressPastEndsAt(new Date());
+  }
+
   /**
    * Ручное подтверждение записи мастером: `pending` → `confirmed` + FCM клиенту.
    */
@@ -378,7 +381,7 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    if (booking.status !== 'pending') {
+    if (!isBookingStatusTransitionAllowed(booking.status, 'confirmed')) {
       throw new BadRequestException({
         code: 'BOOKING_NOT_PENDING',
         message: 'Only a pending booking can be confirmed by the specialist',
@@ -417,6 +420,87 @@ export class BookingsService {
     };
   }
 
+  /**
+   * Начало приёма: `confirmed` → `in_progress` (не раньше `startsAt`, с допуском как при создании брони).
+   */
+  async startVisitBySpecialist(
+    specialistUserId: string,
+    bookingId: string,
+  ): Promise<{
+    id: string;
+    status: 'in_progress';
+    startsAt: string;
+    endsAt: string;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId: specialistUserId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new ForbiddenException({
+        code: 'NOT_A_SPECIALIST',
+        message: 'Only specialist accounts can start visits',
+      });
+    }
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        specialistId: specialist.id,
+        deletedAt: null,
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: 'BOOKING_NOT_FOUND',
+        message: 'Booking not found',
+      });
+    }
+    if (!isBookingStatusTransitionAllowed(booking.status, 'in_progress')) {
+      throw new BadRequestException({
+        code: 'BOOKING_CANNOT_START_VISIT',
+        message: 'Only a confirmed booking can be started',
+      });
+    }
+    const now = new Date();
+    if (!isBookingSlotStartTimeReached(booking.startsAt, now)) {
+      throw new BadRequestException({
+        code: 'BOOKING_TOO_EARLY_FOR_IN_PROGRESS',
+        message: 'Cannot start visit before the scheduled start time',
+      });
+    }
+
+    const fromStatus = booking.status;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: 'in_progress' },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId,
+          fromStatus,
+          toStatus: 'in_progress',
+          actorUserId: specialistUserId,
+          reason: null,
+        },
+      });
+      return row;
+    });
+
+    void this.pushNotifications.notifyClientBookingStatusChange(
+      bookingId,
+      fromStatus,
+      'in_progress',
+    );
+
+    return {
+      id: updated.id,
+      status: 'in_progress',
+      startsAt: updated.startsAt.toISOString(),
+      endsAt: updated.endsAt.toISOString(),
+    };
+  }
+
   async cancelByClient(
     clientUserId: string,
     bookingId: string,
@@ -435,16 +519,16 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    if (!CLIENT_CANCELLABLE_STATUSES.some((s) => s === booking.status)) {
+    const fromStatus = booking.status;
+    const isPending = booking.status === 'pending';
+    const toStatus = isPending ? 'reject_by_client' : 'canceled_by_client';
+
+    if (!isBookingStatusTransitionAllowed(fromStatus, toStatus)) {
       throw new BadRequestException({
         code: 'BOOKING_NOT_CANCELLABLE',
         message: 'Booking cannot be canceled in its current state',
       });
     }
-
-    const fromStatus = booking.status;
-    const isPending = booking.status === 'pending';
-    const toStatus = isPending ? 'reject_by_client' : 'canceled_by_client';
 
     let cancelReasonDb: string | null = null;
     let cancellationCommentDb: string | null = null;

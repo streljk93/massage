@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { addMinutes } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { isBookingSlotStartTimeReached } from '../../bookings/domain/booking-in-progress-start-policy';
+import { isBookingStatusTransitionAllowed } from '../../bookings/domain/booking-status-transitions';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { SetTestBookingStatusBody } from '../dto/set-test-booking-status-body.schema';
 
@@ -14,7 +20,8 @@ export class DevBookingStatusService {
   ) {}
 
   /**
-   * Принудительная смена статуса по `bookingId` для отладки (без проверки переходов и без роли мастера).
+   * Принудительная смена статуса по `bookingId` для отладки (без роли мастера).
+   * Переходы те же, что в проде: {@link isBookingStatusTransitionAllowed}.
    */
   async setBookingStatusForDev(body: SetTestBookingStatusBody) {
     const booking = await this.prisma.booking.findFirst({
@@ -25,6 +32,7 @@ export class DevBookingStatusService {
       select: {
         id: true,
         status: true,
+        startsAt: true,
       },
     });
     if (!booking) {
@@ -36,6 +44,36 @@ export class DevBookingStatusService {
 
     const fromStatus = booking.status;
     const toStatus = body.status;
+
+    if (!isBookingStatusTransitionAllowed(fromStatus, toStatus)) {
+      throw new BadRequestException({
+        code: 'BOOKING_INVALID_STATUS_TRANSITION',
+        message: `Transition not allowed: ${fromStatus} -> ${toStatus}`,
+      });
+    }
+
+    const now = new Date();
+
+    if (
+      toStatus === 'in_progress' &&
+      !isBookingSlotStartTimeReached(booking.startsAt, now)
+    ) {
+      throw new BadRequestException({
+        code: 'BOOKING_TOO_EARLY_FOR_IN_PROGRESS',
+        message: 'Cannot mark in progress before the scheduled start time',
+      });
+    }
+
+    if (
+      fromStatus === 'confirmed' &&
+      (toStatus === 'no_show_by_client' || toStatus === 'no_show_by_master') &&
+      !isBookingSlotStartTimeReached(booking.startsAt, now)
+    ) {
+      throw new BadRequestException({
+        code: 'BOOKING_TOO_EARLY_FOR_NO_SHOW',
+        message: 'Cannot mark no-show before the scheduled service start time',
+      });
+    }
 
     const historyReason =
       [body.reason, body.cancelReason].filter(Boolean).join(' | ') || null;

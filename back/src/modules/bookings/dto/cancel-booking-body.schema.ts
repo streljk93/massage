@@ -11,7 +11,7 @@ const cancelReasonEnum = z.enum(
 /**
  * Тело `POST /bookings/:id/cancel`.
  * Для `pending` поля не используются (клиент может прислать `{}` или лишние поля — сервис их игнорирует).
- * Для `confirmed` / `in_progress` сервис требует `cancelReason`; при `client_other` — непустой `cancellationComment`.
+ * Для `confirmed` сервис требует `cancelReason`; при `client_other` — непустой `cancellationComment`. Отмена из `in_progress` не поддерживается.
  */
 export const cancelBookingBodySchema = z
   .object({

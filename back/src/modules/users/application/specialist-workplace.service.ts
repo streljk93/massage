@@ -89,7 +89,7 @@ export class SpecialistWorkplaceService {
       void this.pushNotifications.notifyClientBookingStatusChange(
         row.id,
         row.fromStatus,
-        'canceled_by_master',
+        row.toStatus,
       );
     }
 

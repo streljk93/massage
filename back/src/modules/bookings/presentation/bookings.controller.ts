@@ -132,7 +132,7 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Отменить бронирование (клиент)',
     description:
-      'Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.',
+      'Доступно для `pending` и `confirmed` (матрица допустимых переходов — `booking-status-transitions`). Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. В статусе `in_progress` клиентская отмена не предусмотрена — только завершение приёма (`done`) на стороне мастера/системы. Слот снова свободен.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: cancelBookingRequestSchema })

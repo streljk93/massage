@@ -1324,7 +1324,7 @@
     },
     "/bookings/{id}/cancel": {
       "post": {
-        "description": "Доступно для `pending`, `confirmed`, `in_progress`. Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` / `in_progress` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. Слот снова свободен.",
+        "description": "Доступно для `pending` и `confirmed` (матрица допустимых переходов — `booking-status-transitions`). Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. В статусе `in_progress` клиентская отмена не предусмотрена — только завершение приёма (`done`) на стороне мастера/системы. Слот снова свободен.",
         "operationId": "Bookings_cancel",
         "parameters": [
           {
@@ -1352,7 +1352,7 @@
                       "client_price_or_service",
                       "client_other"
                     ],
-                    "description": "Для `pending` не передаётся. Для `confirmed` / `in_progress` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`."
+                    "description": "Для `pending` не передаётся. Для `confirmed` — обязателен (пишется в `Booking.cancelReason`). При `client_other` нужен непустой `cancellationComment`. Отмена из `in_progress` клиентом не поддерживается."
                   },
                   "cancellationComment": {
                     "type": "string",
@@ -1386,7 +1386,7 @@
                         "canceled_by_client",
                         "reject_by_client"
                       ],
-                      "description": "`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed` / `in_progress`."
+                      "description": "`reject_by_client` — отмена из `pending`; `canceled_by_client` — из `confirmed`."
                     }
                   }
                 }
@@ -1492,6 +1492,83 @@
           }
         ],
         "summary": "Подтвердить запись (специалист)",
+        "tags": [
+          "bookings",
+          "specialist"
+        ]
+      }
+    },
+    "/specialist/bookings/{id}/start-visit": {
+      "post": {
+        "description": "Переводит `confirmed` → `in_progress` для брони этого мастера. Допустимо не раньше времени начала слота `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`, как при создании брони). Пишет историю, отправляет push клиенту.",
+        "operationId": "SpecialistBookings_startVisit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status",
+                    "startsAt",
+                    "endsAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "in_progress"
+                      ],
+                      "description": "Приём отмечен как идущий."
+                    },
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не `confirmed`, или слишком рано до `startsAt` (`BOOKING_CANNOT_START_VISIT`, `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`)"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "У JWT нет профиля специалиста"
+          },
+          "404": {
+            "description": "Бронь не найдена или чужая"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Начать приём (in_progress)",
         "tags": [
           "bookings",
           "specialist"
@@ -3138,7 +3215,7 @@
     },
     "/dev/bookings/set-status": {
       "post": {
-        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`; переходы не валидируются. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — по одному на статус.",
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /specialist/bookings/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).",
         "operationId": "DevBookings_setStatus",
         "parameters": [],
         "requestBody": {
@@ -3269,6 +3346,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Переход не разрешён (`BOOKING_INVALID_STATUS_TRANSITION`), слишком рано для `in_progress` / no-show (`BOOKING_TOO_EARLY_FOR_IN_PROGRESS`, `BOOKING_TOO_EARLY_FOR_NO_SHOW`), или невалидное тело"
           },
           "404": {
             "description": "Ручка выключена или бронь с таким id не найдена"
