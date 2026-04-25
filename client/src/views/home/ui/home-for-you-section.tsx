@@ -17,10 +17,21 @@ import {
 } from "@/shared/api";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import { useListingClock } from "@/shared/lib/use-listing-clock";
-import { searchTabQueryValue } from "@/shared/lib/search-tab";
+import {
+  applySearchUrlPatch,
+  buildSearchQueryString,
+  parseSearchUrlFilters,
+} from "@/views/search/lib/search-url-filters";
 import { cn } from "@/shared/lib";
 
 const LIST_LIMIT = 3;
+
+/** «Смотреть в поиске» — та же выдача, что и блок, через сортировку «рекомендованные». */
+const HOME_FOR_YOU_SEE_ALL_SEARCH_HREF = `/search?${buildSearchQueryString(
+  applySearchUrlPatch(parseSearchUrlFilters(new URLSearchParams()), {
+    sort: "recommended",
+  }),
+)}`;
 
 type HomeForYouSectionProps = {
   className?: string;
@@ -123,7 +134,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
         className="h-11 w-full rounded-full font-medium"
         asChild
       >
-        <Link href={`/search?tab=${searchTabQueryValue("specialists")}`}>
+        <Link href={HOME_FOR_YOU_SEE_ALL_SEARCH_HREF}>
           {t("seeAll")}
         </Link>
       </Button>
