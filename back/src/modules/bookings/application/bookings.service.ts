@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   HttpException,
   HttpStatus,
@@ -8,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { addMinutes, parseISO, subHours } from 'date-fns';
-import type { BookingStatus } from '@prisma/client';
+import type { BookingStatus, Prisma } from '@prisma/client';
 import {
   BOOKING_START_TOLERANCE_MS,
   checkListingBookability,
@@ -23,6 +24,7 @@ import {
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
+import type { SubmitBookingVisitReviewsBody } from '../dto/submit-booking-visit-reviews-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { BookingsRepository } from '../infrastructure/bookings.repository';
@@ -310,23 +312,172 @@ export class BookingsService {
     ]);
     const labelMap = buildBookingStatusLabelMap(localeRows);
     return {
-      bookings: rows.map((b) => ({
-        id: b.id,
-        status: b.status,
-        statusLabel: pickBookingStatusLabel(b.status, locale, labelMap),
-        specialistId: b.specialistId,
-        specialistName: b.specialist.user.name,
-        specialistImageUrl: b.specialist.imageUrl,
-        serviceName: b.serviceNameSnapshot ?? '—',
-        amount: b.priceAmountSnapshot,
-        currency: b.currencySnapshot ?? 'VND',
-        startsAt: b.startsAt.toISOString(),
-        endsAt: b.endsAt.toISOString(),
-        pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
-        cancelReason: b.cancelReason,
-        cancellationComment: b.cancellationComment,
-      })),
+      bookings: rows.map((b) => {
+        const orgRev = b.organizationReview;
+        const spRev = b.specialistReview;
+        const visitReviewComplete = orgRev != null && spRev != null;
+        const visitReviewExcerpt = visitReviewComplete
+          ? (spRev.comment?.trim() || orgRev.comment?.trim() || null)
+          : null;
+        const visitReviewDisplayRating = visitReviewComplete
+          ? Math.round(((orgRev.rating + spRev.rating) / 2) * 10) / 10
+          : null;
+
+        return {
+          id: b.id,
+          status: b.status,
+          statusLabel: pickBookingStatusLabel(b.status, locale, labelMap),
+          specialistId: b.specialistId,
+          specialistName: b.specialist.user.name,
+          organizationName: b.organization?.name ?? null,
+          specialistImageUrl: b.specialist.imageUrl,
+          serviceName: b.serviceNameSnapshot ?? '—',
+          amount: b.priceAmountSnapshot,
+          currency: b.currencySnapshot ?? 'VND',
+          startsAt: b.startsAt.toISOString(),
+          endsAt: b.endsAt.toISOString(),
+          pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
+          cancelReason: b.cancelReason,
+          cancellationComment: b.cancellationComment,
+          visitReviewComplete,
+          visitReviewDisplayRating,
+          visitReviewExcerpt,
+        };
+      }),
     };
+  }
+
+  /**
+   * Оценка визита: два отзыва в одной транзакции — `OrganizationReview` и `SpecialistReview`
+   * (с привязкой `bookingId`). Только `status === done`, только клиент-владелец брони, один раз.
+   */
+  async submitVisitReviews(
+    clientUserId: string,
+    bookingId: string,
+    body: SubmitBookingVisitReviewsBody,
+  ): Promise<{ ok: true }> {
+    const booking = await this.prisma.booking.findFirst({
+      where: {
+        id: bookingId,
+        clientUserId,
+        deletedAt: null,
+      },
+      include: {
+        organizationReview: {
+          where: { deletedAt: null },
+          select: { id: true },
+        },
+        specialistReview: {
+          where: { deletedAt: null },
+          select: { id: true },
+        },
+        specialist: {
+          select: { id: true, activeOrganizationId: true },
+        },
+      },
+    });
+
+    if (!booking) {
+      throw new NotFoundException({
+        code: 'BOOKING_NOT_FOUND',
+        message: 'Booking not found',
+      });
+    }
+    if (booking.status !== 'done') {
+      throw new BadRequestException({
+        code: 'BOOKING_NOT_REVIEWABLE',
+        message: 'Only completed visits can be reviewed',
+      });
+    }
+    if (booking.organizationReview != null || booking.specialistReview != null) {
+      throw new ConflictException({
+        code: 'BOOKING_REVIEW_EXISTS',
+        message: 'This visit has already been reviewed',
+      });
+    }
+
+    const organizationId =
+      booking.organizationId ?? booking.specialist.activeOrganizationId;
+    if (organizationId == null) {
+      throw new BadRequestException({
+        code: 'BOOKING_ORGANIZATION_UNKNOWN',
+        message: 'Cannot determine organization for this booking',
+      });
+    }
+
+    const orgComment =
+      body.organizationComment != null && body.organizationComment !== ''
+        ? body.organizationComment
+        : null;
+    const spComment =
+      body.specialistComment != null && body.specialistComment !== ''
+        ? body.specialistComment
+        : null;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.organizationReview.create({
+        data: {
+          organizationId,
+          authorUserId: clientUserId,
+          bookingId: booking.id,
+          rating: body.organizationRating,
+          comment: orgComment,
+        },
+      });
+      await tx.specialistReview.create({
+        data: {
+          specialistId: booking.specialistId,
+          authorUserId: clientUserId,
+          bookingId: booking.id,
+          rating: body.specialistRating,
+          comment: spComment,
+        },
+      });
+      await this.refreshOrganizationReviewAggregates(tx, organizationId);
+      await this.refreshSpecialistReviewAggregates(tx, booking.specialistId);
+    });
+
+    return { ok: true };
+  }
+
+  private async refreshOrganizationReviewAggregates(
+    tx: Prisma.TransactionClient,
+    organizationId: string,
+  ): Promise<void> {
+    const agg = await tx.organizationReview.aggregate({
+      where: { organizationId, deletedAt: null },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const count = agg._count._all;
+    const avg = agg._avg.rating;
+    await tx.organization.update({
+      where: { id: organizationId },
+      data: {
+        reviewsCount: count,
+        ratingAverage: count === 0 ? 0 : Number(avg ?? 0),
+      },
+    });
+  }
+
+  private async refreshSpecialistReviewAggregates(
+    tx: Prisma.TransactionClient,
+    specialistId: string,
+  ): Promise<void> {
+    const agg = await tx.specialistReview.aggregate({
+      where: { specialistId, deletedAt: null },
+      _avg: { rating: true },
+      _count: { _all: true },
+    });
+    const count = agg._count._all;
+    const avg = agg._avg.rating;
+    await tx.specialist.update({
+      where: { id: specialistId },
+      data: {
+        reviewsCount: count,
+        ratingAverage: count === 0 ? 0 : Number(avg ?? 0),
+      },
+    });
   }
 
   /** Вызывается cron: авто-expired для просроченного pending. */

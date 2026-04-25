@@ -1,0 +1,70 @@
+{
+  "messages": {
+    "en": {
+      "visitRate": {
+        "title": "Rate your visit",
+        "sectionSalon": "The salon",
+        "sectionSalonNamed": "{name}",
+        "sectionSpecialist": "The specialist",
+        "sectionSpecialistNamed": "{name}",
+        "commentSalonPlaceholder": "Comment about the salon (optional)",
+        "commentSpecialistPlaceholder": "Comment about the specialist (optional)",
+        "submit": "Submit",
+        "submitting": "Sending…",
+        "loading": "Loading…",
+        "backAria": "Back to bookings",
+        "errorLoad": "Could not load booking",
+        "errorNotFound": "Booking not found",
+        "errorNotDone": "This visit cannot be rated yet",
+        "errorAlready": "You have already rated this visit",
+        "errorGeneric": "Something went wrong",
+        "success": "Thanks for your feedback",
+        "signInHint": "Sign in to rate your visit"
+      }
+    },
+    "vi": {
+      "visitRate": {
+        "title": "Đánh giá buổi hẹn",
+        "sectionSalon": "Salon",
+        "sectionSalonNamed": "{name}",
+        "sectionSpecialist": "Chuyên gia",
+        "sectionSpecialistNamed": "{name}",
+        "commentSalonPlaceholder": "Nhận xét về salon (không bắt buộc)",
+        "commentSpecialistPlaceholder": "Nhận xét về chuyên gia (không bắt buộc)",
+        "submit": "Gửi đánh giá",
+        "submitting": "Đang gửi…",
+        "loading": "Đang tải…",
+        "backAria": "Quay lại lịch hẹn",
+        "errorLoad": "Không tải được lịch hẹn",
+        "errorNotFound": "Không tìm thấy lịch hẹn",
+        "errorNotDone": "Chưa thể đánh giá lượt này",
+        "errorAlready": "Bạn đã đánh giá lượt này rồi",
+        "errorGeneric": "Đã xảy ra lỗi",
+        "success": "Cảm ơn phản hồi của bạn",
+        "signInHint": "Đăng nhập để đánh giá buổi hẹn"
+      }
+    },
+    "ru": {
+      "visitRate": {
+        "title": "Оцените визит",
+        "sectionSalon": "Салон",
+        "sectionSalonNamed": "{name}",
+        "sectionSpecialist": "Мастер",
+        "sectionSpecialistNamed": "{name}",
+        "commentSalonPlaceholder": "Комментарий о салоне (необязательно)",
+        "commentSpecialistPlaceholder": "Комментарий о мастере (необязательно)",
+        "submit": "Отправить",
+        "submitting": "Отправка…",
+        "loading": "Загрузка…",
+        "backAria": "Назад к записям",
+        "errorLoad": "Не удалось загрузить запись",
+        "errorNotFound": "Запись не найдена",
+        "errorNotDone": "Этот визит пока нельзя оценить",
+        "errorAlready": "Вы уже оставили оценку",
+        "errorGeneric": "Что-то пошло не так",
+        "success": "Спасибо за отзыв",
+        "signInHint": "Войдите, чтобы оценить визит"
+      }
+    }
+  }
+}

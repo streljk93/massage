@@ -54,6 +54,7 @@ type ApiBooking = {
   status: string;
   specialistId: string;
   specialistName: string;
+  organizationName: string | null;
   specialistImageUrl?: string | null;
   serviceName: string;
   amount: number | null;
@@ -64,6 +65,9 @@ type ApiBooking = {
   cancelReason?: string | null;
   cancellationComment?: string | null;
   statusLabel: string;
+  visitReviewComplete: boolean;
+  visitReviewDisplayRating?: number | null;
+  visitReviewExcerpt?: string | null;
 };
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
@@ -360,6 +364,8 @@ export function BookingsPage() {
         (key) => tBookingHistory(key),
       );
 
+      const canRate =
+        row.status === "done" && row.visitReviewComplete === false;
       return {
         id: row.id,
         apiStatus: row.status,
@@ -373,6 +379,10 @@ export function BookingsPage() {
         statusLabel: row.statusLabel,
         statusFooterSuccess: row.status === "confirmed",
         systemNote,
+        visitReviewComplete: row.visitReviewComplete,
+        visitReviewDisplayRating: row.visitReviewDisplayRating,
+        visitReviewExcerpt: row.visitReviewExcerpt,
+        rateVisitHref: canRate ? `/bookings/${row.id}/rate` : undefined,
       };
     });
   }, [format, historyRows, tBookingHistory, tRoot]);
@@ -523,7 +533,10 @@ export function BookingsPage() {
                     statusFooterSuccess={row.statusFooterSuccess}
                     systemNote={row.systemNote}
                     reviewEligible={row.apiStatus === "done"}
-                    reviewed={false}
+                    reviewed={row.visitReviewComplete}
+                    rateVisitHref={row.rateVisitHref}
+                    rating={row.visitReviewDisplayRating ?? undefined}
+                    reviewExcerpt={row.visitReviewExcerpt ?? undefined}
                   />
                 ))
               )

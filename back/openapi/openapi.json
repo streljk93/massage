@@ -1219,11 +1219,13 @@
                           "statusLabel",
                           "specialistId",
                           "specialistName",
+                          "organizationName",
                           "serviceName",
                           "amount",
                           "currency",
                           "startsAt",
-                          "endsAt"
+                          "endsAt",
+                          "visitReviewComplete"
                         ],
                         "properties": {
                           "id": {
@@ -1257,6 +1259,11 @@
                           },
                           "specialistName": {
                             "type": "string"
+                          },
+                          "organizationName": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Название салона; может быть `null`, если в брони не зафиксирована организация."
                           },
                           "specialistImageUrl": {
                             "type": "string",
@@ -1295,6 +1302,20 @@
                             "type": "string",
                             "nullable": true,
                             "description": "Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым."
+                          },
+                          "visitReviewComplete": {
+                            "type": "boolean",
+                            "description": "Оба отзыва по визиту (салон + мастер) созданы. До отправки `POST .../visit-reviews` — `false`."
+                          },
+                          "visitReviewDisplayRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`."
+                          },
+                          "visitReviewExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`."
                           }
                         }
                       }
@@ -1317,6 +1338,102 @@
           }
         ],
         "summary": "Мои бронирования",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/{id}/visit-reviews": {
+      "post": {
+        "description": "Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. `organizationId` брони; если `null` — берётся `activeOrganizationId` мастера.",
+        "operationId": "Bookings_submitVisitReviews",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organizationRating",
+                  "specialistRating"
+                ],
+                "properties": {
+                  "organizationRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "specialistRating": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "organizationComment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Опционально. Пустая строка игнорируется."
+                  },
+                  "specialistComment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Опционально. Пустая строка игнорируется."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверные оценки, не `done` или нельзя определить организацию"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "404": {
+            "description": "Запись не найдена"
+          },
+          "409": {
+            "description": "По визиту отзыв уже оставлен"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Оценить визит (салон + мастер)",
         "tags": [
           "bookings"
         ]
@@ -2321,6 +2438,130 @@
         ]
       }
     },
+    "/specialists/{id}/reviews": {
+      "get": {
+        "description": "Список `SpecialistReview` (курсор). Отдельно от отзывов о салоне (`OrganizationReview`).",
+        "operationId": "Specialists_listReviews",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Размер страницы (1–100, по умолчанию 20).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Курсор (`cursorPage.nextCursor`). Сортировка: сначала новые (`createdAt desc`, `id desc`).",
+            "schema": {}
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "cursorPage"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "authorName",
+                          "rating",
+                          "comment",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "authorName": {
+                            "type": "string",
+                            "example": "Mai L."
+                          },
+                          "rating": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5,
+                            "example": 5
+                          },
+                          "comment": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "ISO-8601"
+                          }
+                        }
+                      }
+                    },
+                    "cursorPage": {
+                      "type": "object",
+                      "required": [
+                        "nextCursor",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
+                        },
+                        "hasMore": {
+                          "type": "boolean",
+                          "description": "Есть ли ещё элементы после текущей страницы."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale, limit или cursor"
+          },
+          "404": {
+            "description": "Специалист не найден"
+          }
+        },
+        "summary": "Отзывы о специалисте",
+        "tags": [
+          "specialists"
+        ]
+      }
+    },
     "/specialists/{id}": {
       "get": {
         "description": "Профиль мастера: те же поля, что в списке специалистов.",
@@ -2869,6 +3110,130 @@
           }
         },
         "summary": "Список организаций (курсорная пагинация)",
+        "tags": [
+          "organizations"
+        ]
+      }
+    },
+    "/organizations/{id}/reviews": {
+      "get": {
+        "description": "Список `OrganizationReview` для витрины (курсор). Отдельно от отзывов о мастерах (`SpecialistReview`).",
+        "operationId": "Organizations_listReviews",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Размер страницы (1–100, по умолчанию 20).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Курсор (`cursorPage.nextCursor`). Сортировка: сначала новые (`createdAt desc`, `id desc`).",
+            "schema": {}
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "items",
+                    "cursorPage"
+                  ],
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "authorName",
+                          "rating",
+                          "comment",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "authorName": {
+                            "type": "string",
+                            "example": "Mai L."
+                          },
+                          "rating": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5,
+                            "example": 5
+                          },
+                          "comment": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "description": "ISO-8601"
+                          }
+                        }
+                      }
+                    },
+                    "cursorPage": {
+                      "type": "object",
+                      "required": [
+                        "nextCursor",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
+                        },
+                        "hasMore": {
+                          "type": "boolean",
+                          "description": "Есть ли ещё элементы после текущей страницы."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale, limit или cursor"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "summary": "Отзывы о салоне",
         "tags": [
           "organizations"
         ]

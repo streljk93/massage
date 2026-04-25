@@ -25,6 +25,7 @@ export {
   type BookingHistoryCardProps,
 } from "./ui/booking-history-card";
 export {
+  BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
   BookingListCard,
   type BookingListCardProps,
   type BookingListStatus,

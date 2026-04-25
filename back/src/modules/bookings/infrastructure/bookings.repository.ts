@@ -16,6 +16,17 @@ const bookingListInclude = {
       user: { select: { name: true } },
     },
   },
+  organization: {
+    select: { name: true },
+  },
+  organizationReview: {
+    where: { deletedAt: null },
+    select: { id: true, rating: true, comment: true },
+  },
+  specialistReview: {
+    where: { deletedAt: null },
+    select: { id: true, rating: true, comment: true },
+  },
 } satisfies Prisma.BookingInclude;
 
 export type BookingListRow = Prisma.BookingGetPayload<{

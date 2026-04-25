@@ -362,7 +362,9 @@ export class DirectoryRepository {
   /**
    * Уникальные клиенты, у которых есть хотя бы одна `done` бронь в этом салоне.
    */
-  countDistinctDoneClientsForOrganization(organizationId: string): Promise<number> {
+  countDistinctDoneClientsForOrganization(
+    organizationId: string,
+  ): Promise<number> {
     return this.prisma.user.count({
       where: {
         clientBookings: {
@@ -399,5 +401,117 @@ export class DirectoryRepository {
       out.set(p.specialistId, (out.get(p.specialistId) ?? 0) + 1);
     }
     return out;
+  }
+
+  findActiveOrganizationId(id: string): Promise<{ id: string } | null> {
+    return this.prisma.organization.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
+  }
+
+  findActiveSpecialistId(id: string): Promise<{ id: string } | null> {
+    return this.prisma.specialist.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
+  }
+
+  async findOrganizationReviewsPage(args: {
+    organizationId: string;
+    limit: number;
+    cursor: { createdAt: Date; id: string } | null;
+  }): Promise<
+    Array<{
+      id: string;
+      rating: number;
+      comment: string | null;
+      createdAt: Date;
+      authorName: string;
+    }>
+  > {
+    const base = {
+      organizationId: args.organizationId,
+      deletedAt: null,
+    } satisfies Prisma.OrganizationReviewWhereInput;
+    const where: Prisma.OrganizationReviewWhereInput =
+      args.cursor == null
+        ? base
+        : {
+            ...base,
+            OR: [
+              { createdAt: { lt: args.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: args.cursor.createdAt },
+                  { id: { lt: args.cursor.id } },
+                ],
+              },
+            ],
+          };
+    const rows = await this.prisma.organizationReview.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: args.limit,
+      include: {
+        author: { select: { name: true } },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+      authorName: r.author.name,
+    }));
+  }
+
+  async findSpecialistReviewsPage(args: {
+    specialistId: string;
+    limit: number;
+    cursor: { createdAt: Date; id: string } | null;
+  }): Promise<
+    Array<{
+      id: string;
+      rating: number;
+      comment: string | null;
+      createdAt: Date;
+      authorName: string;
+    }>
+  > {
+    const base = {
+      specialistId: args.specialistId,
+      deletedAt: null,
+    } satisfies Prisma.SpecialistReviewWhereInput;
+    const where: Prisma.SpecialistReviewWhereInput =
+      args.cursor == null
+        ? base
+        : {
+            ...base,
+            OR: [
+              { createdAt: { lt: args.cursor.createdAt } },
+              {
+                AND: [
+                  { createdAt: args.cursor.createdAt },
+                  { id: { lt: args.cursor.id } },
+                ],
+              },
+            ],
+          };
+    const rows = await this.prisma.specialistReview.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: args.limit,
+      include: {
+        author: { select: { name: true } },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+      authorName: r.author.name,
+    }));
   }
 }

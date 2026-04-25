@@ -5,6 +5,8 @@
  *
  * Гео (Phú Quốc + карта), категории, отзывы/рейтинги (`applyDemoDirectoryReviewPack`),
  * listedInDirectory (владелец в каталоге мастеров — скрыт, сотрудники — да).
+ * Инвариант демо: у мастера число `Service` с `specialistId` = числу строк в
+ * `SpecialistServiceCategory` (одна услуга на выбранную подкатегорию).
  * Клиенты-авторы отзывов: нейтральные имена, email `demo.client.*@example.com` (без бренда салона).
  * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
@@ -381,6 +383,8 @@ export async function seedDemoSpecialists(prisma) {
       organizationId: org.id,
       slug: {
         in: [
+          "demo-seed-owner-neck",
+          "demo-seed-owner-back",
           "demo-seed-owner-sports",
           "demo-seed-worker-relax",
           "demo-seed-worker-foot",
@@ -390,12 +394,48 @@ export async function seedDemoSpecialists(prisma) {
     },
   });
 
+  /**
+   * По одной услуге на каждую привязанную к мастеру подкатегорию
+   * (`SpecialistServiceCategory` — см. `ownerPick` / `workerPick` выше).
+   */
   const serviceSeedRows = [
+    {
+      specialistId: ownerSpecialist.id,
+      categorySlug: "neck",
+      slug: "demo-seed-owner-neck",
+      sortOrder: 0,
+      priceTiers: [
+        [30, 290_000],
+        [45, 390_000],
+        [60, 490_000],
+      ],
+      locales: {
+        en: { name: "Neck & shoulder massage" },
+        vi: { name: "Massage cổ và vai" },
+        ru: { name: "Массаж шеи и плеч" },
+      },
+    },
+    {
+      specialistId: ownerSpecialist.id,
+      categorySlug: "back",
+      slug: "demo-seed-owner-back",
+      sortOrder: 1,
+      priceTiers: [
+        [60, 420_000],
+        [90, 580_000],
+        [120, 740_000],
+      ],
+      locales: {
+        en: { name: "Back massage" },
+        vi: { name: "Massage lưng" },
+        ru: { name: "Массаж спины" },
+      },
+    },
     {
       specialistId: ownerSpecialist.id,
       categorySlug: "sports",
       slug: "demo-seed-owner-sports",
-      sortOrder: 0,
+      sortOrder: 2,
       priceTiers: [
         [60, 450_000],
         [90, 620_000],
@@ -878,36 +918,48 @@ async function topUpOriginalSalon(prisma, ctx) {
       },
     });
 
-    const cat = ctx.bySlug.relaxing ?? ctx.bySlug.back;
-    if (cat) {
-      const slug = `demo-seed-topup-w${specIndex}-relax`;
-      await prisma.service.deleteMany({
-        where: { organizationId: org.id, slug },
+    const legacyTopupSlugs = [
+      `demo-seed-topup-w${specIndex}-relax`,
+      ...pick.map((c) => `demo-seed-topup-w${specIndex}-${c.slug}`),
+    ];
+    await prisma.service.deleteMany({
+      where: {
+        organizationId: org.id,
+        specialistId: specialist.id,
+        slug: { in: legacyTopupSlugs },
+      },
+    });
+
+    for (let j = 0; j < pick.length; j++) {
+      const cat = pick[j];
+      if (!cat) {
+        continue;
+      }
+      const slug = `demo-seed-topup-w${specIndex}-${cat.slug}`;
+      const catLocales = await prisma.serviceCategoryLocale.findMany({
+        where: { serviceCategoryId: cat.id, locale: { in: ["en", "vi", "ru"] } },
       });
+      const byLoc = Object.fromEntries(catLocales.map((l) => [l.locale, l.name]));
+      const nameEn = byLoc.en ?? cat.name;
       await prisma.service.create({
         data: {
           organizationId: org.id,
           categoryId: cat.id,
           specialistId: specialist.id,
-          name: "Relaxing massage",
+          name: nameEn,
           slug,
-          sortOrder: specIndex,
+          sortOrder: j,
           isActive: true,
           locales: {
             create: ["en", "vi", "ru"].map((locale) => ({
               locale,
-              name:
-                locale === "vi"
-                  ? "Massage thư giãn"
-                  : locale === "ru"
-                    ? "Расслабляющий массаж"
-                    : "Relaxing massage",
+              name: byLoc[locale] ?? cat.name,
             })),
           },
           priceOptions: {
             create: [
-              [60, 380_000],
-              [90, 520_000],
+              [60, 360_000 + j * 15_000],
+              [90, 500_000 + j * 20_000],
             ].map(([durationMinutes, priceAmount]) => ({
               durationMinutes,
               priceAmount,
@@ -1133,45 +1185,59 @@ async function upsertFullSalon(prisma, args) {
       },
     });
 
-    const primaryCat = slugsPick[0];
-    if (!primaryCat) continue;
-    const svcSlug = `seed-${def.slug}-spec-${i}-main`;
+    /** По одной услуге на каждую подкатегорию в `slugsPick` (как в продукте при выборе категории). */
+    const serviceSlugsForSpec = [
+      `seed-${def.slug}-spec-${i}-main`,
+      ...slugsPick.map((c) => `seed-${def.slug}-spec-${i}-cat-${c.slug}`),
+    ];
     await prisma.service.deleteMany({
-      where: { organizationId: org.id, slug: svcSlug },
-    });
-    await prisma.service.create({
-      data: {
+      where: {
         organizationId: org.id,
-        categoryId: primaryCat.id,
         specialistId: spec.id,
-        name: `Service ${i + 1}`,
-        slug: svcSlug,
-        sortOrder: i,
-        isActive: true,
-        locales: {
-          create: ["en", "vi", "ru"].map((locale) => ({
-            locale,
-            name:
-              locale === "vi"
-                ? `Dịch vụ ${i + 1}`
-                : locale === "ru"
-                  ? `Услуга ${i + 1}`
-                  : `Service ${i + 1}`,
-          })),
-        },
-        priceOptions: {
-          create: [
-            [60, 400_000 + i * 10_000],
-            [90, 540_000 + i * 10_000],
-            [120, 680_000 + i * 10_000],
-          ].map(([durationMinutes, priceAmount]) => ({
-            durationMinutes,
-            priceAmount,
-            currency: "VND",
-          })),
-        },
+        slug: { in: serviceSlugsForSpec },
       },
     });
+
+    for (let j = 0; j < slugsPick.length; j++) {
+      const c = slugsPick[j];
+      if (!c) {
+        continue;
+      }
+      const svcSlug = `seed-${def.slug}-spec-${i}-cat-${c.slug}`;
+      const catLocales = await prisma.serviceCategoryLocale.findMany({
+        where: { serviceCategoryId: c.id, locale: { in: ["en", "vi", "ru"] } },
+      });
+      const byLoc = Object.fromEntries(catLocales.map((l) => [l.locale, l.name]));
+      const nameEn = byLoc.en ?? c.name;
+      await prisma.service.create({
+        data: {
+          organizationId: org.id,
+          categoryId: c.id,
+          specialistId: spec.id,
+          name: nameEn,
+          slug: svcSlug,
+          sortOrder: j,
+          isActive: true,
+          locales: {
+            create: ["en", "vi", "ru"].map((locale) => ({
+              locale,
+              name: byLoc[locale] ?? c.name,
+            })),
+          },
+          priceOptions: {
+            create: [
+              [60, 400_000 + i * 10_000 + j * 8_000],
+              [90, 540_000 + i * 10_000 + j * 8_000],
+              [120, 680_000 + i * 10_000 + j * 8_000],
+            ].map(([durationMinutes, priceAmount]) => ({
+              durationMinutes,
+              priceAmount,
+              currency: "VND",
+            })),
+          },
+        },
+      });
+    }
   }
 
   await syncOrganizationRating(prisma, org.id);

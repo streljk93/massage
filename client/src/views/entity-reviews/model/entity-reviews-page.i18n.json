@@ -1,0 +1,37 @@
+{
+  "messages": {
+    "en": {
+      "entityReviews": {
+        "titleSalon": "Salon reviews",
+        "titleSpecialist": "Specialist reviews",
+        "backAria": "Back to profile",
+        "loadMore": "Load more",
+        "loading": "Loading…",
+        "empty": "No reviews yet.",
+        "commentHeading": "Comment"
+      }
+    },
+    "vi": {
+      "entityReviews": {
+        "titleSalon": "Đánh giá salon",
+        "titleSpecialist": "Đánh giá chuyên gia",
+        "backAria": "Quay lại hồ sơ",
+        "loadMore": "Tải thêm",
+        "loading": "Đang tải…",
+        "empty": "Chưa có đánh giá.",
+        "commentHeading": "Bình luận"
+      }
+    },
+    "ru": {
+      "entityReviews": {
+        "titleSalon": "Отзывы о салоне",
+        "titleSpecialist": "Отзывы о мастере",
+        "backAria": "Назад к профилю",
+        "loadMore": "Показать ещё",
+        "loading": "Загрузка…",
+        "empty": "Пока нет отзывов.",
+        "commentHeading": "Комментарий"
+      }
+    }
+  }
+}

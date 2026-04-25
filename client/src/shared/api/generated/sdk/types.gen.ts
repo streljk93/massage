@@ -545,6 +545,10 @@ export type BookingsListResponses = {
             statusLabel: string;
             specialistId: string;
             specialistName: string;
+            /**
+             * Название салона; может быть `null`, если в брони не зафиксирована организация.
+             */
+            organizationName: string | null;
             specialistImageUrl?: string | null;
             serviceName: string;
             amount: number | null;
@@ -560,6 +564,18 @@ export type BookingsListResponses = {
              * Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым.
              */
             cancellationComment?: string | null;
+            /**
+             * Оба отзыва по визиту (салон + мастер) созданы. До отправки `POST .../visit-reviews` — `false`.
+             */
+            visitReviewComplete: boolean;
+            /**
+             * Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`.
+             */
+            visitReviewDisplayRating?: number | null;
+            /**
+             * Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`.
+             */
+            visitReviewExcerpt?: string | null;
         }>;
     };
 };
@@ -618,6 +634,53 @@ export type BookingsCreateResponses = {
 };
 
 export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
+
+export type BookingsSubmitVisitReviewsData = {
+    body: {
+        organizationRating: number;
+        specialistRating: number;
+        /**
+         * Опционально. Пустая строка игнорируется.
+         */
+        organizationComment?: string;
+        /**
+         * Опционально. Пустая строка игнорируется.
+         */
+        specialistComment?: string;
+    };
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/bookings/{id}/visit-reviews';
+};
+
+export type BookingsSubmitVisitReviewsErrors = {
+    /**
+     * Неверные оценки, не `done` или нельзя определить организацию
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Запись не найдена
+     */
+    404: unknown;
+    /**
+     * По визиту отзыв уже оставлен
+     */
+    409: unknown;
+};
+
+export type BookingsSubmitVisitReviewsResponses = {
+    200: {
+        ok: true;
+    };
+};
+
+export type BookingsSubmitVisitReviewsResponse = BookingsSubmitVisitReviewsResponses[keyof BookingsSubmitVisitReviewsResponses];
 
 export type BookingsCancelData = {
     body: {
@@ -1037,6 +1100,64 @@ export type SpecialistsListResponses = {
 
 export type SpecialistsListResponse = SpecialistsListResponses[keyof SpecialistsListResponses];
 
+export type SpecialistsListReviewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Размер страницы (1–100, по умолчанию 20).
+         */
+        limit?: number;
+        /**
+         * Курсор (`cursorPage.nextCursor`). Сортировка: сначала новые (`createdAt desc`, `id desc`).
+         */
+        cursor?: unknown;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/{id}/reviews';
+};
+
+export type SpecialistsListReviewsErrors = {
+    /**
+     * Неверный формат locale, limit или cursor
+     */
+    400: unknown;
+    /**
+     * Специалист не найден
+     */
+    404: unknown;
+};
+
+export type SpecialistsListReviewsResponses = {
+    200: {
+        items: Array<{
+            id: string;
+            authorName: string;
+            rating: number;
+            comment: string | null;
+            /**
+             * ISO-8601
+             */
+            createdAt: string;
+        }>;
+        cursorPage: {
+            /**
+             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
+             */
+            nextCursor: string | null;
+            /**
+             * Есть ли ещё элементы после текущей страницы.
+             */
+            hasMore: boolean;
+        };
+    };
+};
+
+export type SpecialistsListReviewsResponse = SpecialistsListReviewsResponses[keyof SpecialistsListReviewsResponses];
+
 export type SpecialistsGetByIdData = {
     body?: never;
     path?: never;
@@ -1250,6 +1371,64 @@ export type OrganizationsListResponses = {
 };
 
 export type OrganizationsListResponse = OrganizationsListResponses[keyof OrganizationsListResponses];
+
+export type OrganizationsListReviewsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Размер страницы (1–100, по умолчанию 20).
+         */
+        limit?: number;
+        /**
+         * Курсор (`cursorPage.nextCursor`). Сортировка: сначала новые (`createdAt desc`, `id desc`).
+         */
+        cursor?: unknown;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{id}/reviews';
+};
+
+export type OrganizationsListReviewsErrors = {
+    /**
+     * Неверный формат locale, limit или cursor
+     */
+    400: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsListReviewsResponses = {
+    200: {
+        items: Array<{
+            id: string;
+            authorName: string;
+            rating: number;
+            comment: string | null;
+            /**
+             * ISO-8601
+             */
+            createdAt: string;
+        }>;
+        cursorPage: {
+            /**
+             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
+             */
+            nextCursor: string | null;
+            /**
+             * Есть ли ещё элементы после текущей страницы.
+             */
+            hasMore: boolean;
+        };
+    };
+};
+
+export type OrganizationsListReviewsResponse = OrganizationsListReviewsResponses[keyof OrganizationsListReviewsResponses];
 
 export type OrganizationsGetByIdData = {
     body?: never;

@@ -8,6 +8,10 @@ import {
   encodeOrganizationListCursor,
   encodeSpecialistListCursor,
 } from '../../../common/pagination/directory-list-cursor-codec';
+import {
+  decodeReviewListCursor,
+  encodeReviewListCursor,
+} from '../../../common/pagination/review-list-cursor-codec';
 import type { ApiLocale } from '../../../common/i18n';
 import {
   pickLocalizedOrganizationListItem,
@@ -28,6 +32,7 @@ import type {
   OrganizationListItemDto,
   SpecialistOccupiedSlotKeysEntryDto,
 } from '../dto/organizations-list-response.dto';
+import type { DirectoryReviewsListResponseDto } from '../dto/directory-reviews-list-response.dto';
 import type { OrganizationsListResponseDto } from '../dto/organizations-list-response.dto';
 import type {
   SpecialistBookableServiceDto,
@@ -498,9 +503,9 @@ export class DirectoryService {
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
     const doneBySpec =
-      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
-        [id],
-      );
+      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds([
+        id,
+      ]);
     return mapSpecialistRowToListItem(
       row,
       locale,
@@ -697,5 +702,99 @@ export class DirectoryService {
     }
 
     return { categories: tags, priceRangeVnd };
+  }
+
+  /**
+   * Отзывы о салоне (`OrganizationReview`) — отдельно от отзывов о мастерах.
+   */
+  async listOrganizationReviews(
+    _locale: ApiLocale,
+    organizationId: string,
+    options: { cursor: string | null; limit: number },
+  ): Promise<DirectoryReviewsListResponseDto | null> {
+    const org =
+      await this.directoryRepository.findActiveOrganizationId(organizationId);
+    if (!org) {
+      return null;
+    }
+    const rawCursor = options.cursor?.trim() || null;
+    const decoded =
+      rawCursor == null ? null : decodeReviewListCursor(rawCursor, 'orv');
+    if (rawCursor != null && decoded == null) {
+      throw new BadRequestException({
+        code: 'INVALID_CURSOR',
+        message: 'Invalid cursor',
+      });
+    }
+    const limit = options.limit;
+    const rows = await this.directoryRepository.findOrganizationReviewsPage({
+      organizationId,
+      limit: limit + 1,
+      cursor: decoded,
+    });
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor =
+      hasMore && last != null
+        ? encodeReviewListCursor('orv', last.createdAt, last.id)
+        : null;
+    return {
+      items: page.map((r) => ({
+        id: r.id,
+        authorName: r.authorName,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      cursorPage: { nextCursor, hasMore },
+    };
+  }
+
+  /**
+   * Отзывы о специалисте (`SpecialistReview`) — отдельно от отзывов о салоне.
+   */
+  async listSpecialistReviews(
+    _locale: ApiLocale,
+    specialistId: string,
+    options: { cursor: string | null; limit: number },
+  ): Promise<DirectoryReviewsListResponseDto | null> {
+    const spec =
+      await this.directoryRepository.findActiveSpecialistId(specialistId);
+    if (!spec) {
+      return null;
+    }
+    const rawCursor = options.cursor?.trim() || null;
+    const decoded =
+      rawCursor == null ? null : decodeReviewListCursor(rawCursor, 'srv');
+    if (rawCursor != null && decoded == null) {
+      throw new BadRequestException({
+        code: 'INVALID_CURSOR',
+        message: 'Invalid cursor',
+      });
+    }
+    const limit = options.limit;
+    const rows = await this.directoryRepository.findSpecialistReviewsPage({
+      specialistId,
+      limit: limit + 1,
+      cursor: decoded,
+    });
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor =
+      hasMore && last != null
+        ? encodeReviewListCursor('srv', last.createdAt, last.id)
+        : null;
+    return {
+      items: page.map((r) => ({
+        id: r.id,
+        authorName: r.authorName,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      cursorPage: { nextCursor, hasMore },
+    };
   }
 }

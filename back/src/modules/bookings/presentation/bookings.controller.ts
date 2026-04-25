@@ -14,6 +14,7 @@ import {
   ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -48,11 +49,17 @@ import {
   type CreateBookingBody,
 } from '../dto/create-booking-body.schema';
 import {
+  submitBookingVisitReviewsBodySchema,
+  type SubmitBookingVisitReviewsBody,
+} from '../dto/submit-booking-visit-reviews-body.schema';
+import {
   bookingsListResponseSchema,
   cancelBookingRequestSchema,
   cancelBookingResponseSchema,
   createBookingRequestSchema,
   createBookingResponseSchema,
+  submitBookingVisitReviewsRequestSchema,
+  submitBookingVisitReviewsResponseSchema,
 } from './bookings.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
@@ -123,6 +130,35 @@ export class BookingsController {
       req.query,
     ) as BookingsListQuery;
     return this.bookingsService.listMine(req.user.id, locale, query.status);
+  }
+
+  @Post(':id/visit-reviews')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Оценить визит (салон + мастер)',
+    description:
+      'Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. `organizationId` брони; если `null` — берётся `activeOrganizationId` мастера.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: submitBookingVisitReviewsRequestSchema })
+  @ApiOkResponse({ schema: submitBookingVisitReviewsResponseSchema })
+  @ApiBadRequestResponse({
+    description: 'Неверные оценки, не `done` или нельзя определить организацию',
+  })
+  @ApiConflictResponse({
+    description: 'По визиту отзыв уже оставлен',
+  })
+  @ApiNotFoundResponse({ description: 'Запись не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет access token' })
+  async submitVisitReviews(
+    @Req() req: AuthedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(submitBookingVisitReviewsBodySchema))
+    body: SubmitBookingVisitReviewsBody,
+  ) {
+    return this.bookingsService.submitVisitReviews(req.user.id, id, body);
   }
 
   @Post(':id/cancel')

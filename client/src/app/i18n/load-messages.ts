@@ -12,7 +12,11 @@ import { fcmInAppI18n } from "@/features/push-notifications";
 import { apiErrorToastI18n, metaI18n } from "@/shared/model";
 import { availabilitySlotStripI18n } from "@/shared/ui";
 import { authLoginPageI18n, authRegisterPageI18n } from "@/views/auth";
-import { bookingCancelDialogI18n, bookingsPageI18n } from "@/views/bookings";
+import {
+  bookingCancelDialogI18n,
+  bookingsPageI18n,
+  visitRatePageI18n,
+} from "@/views/bookings";
 import { becomeSpecialistPageI18n } from "@/views/become-specialist";
 import { homePageI18n } from "@/views/home";
 import {
@@ -28,6 +32,7 @@ import {
   profileTermsPageI18n,
   profileThemePageI18n,
 } from "@/views/profile";
+import { entityReviewsPageI18n } from "@/views/entity-reviews";
 import { organizationProfilePageI18n } from "@/views/organization-profile";
 import { specialistProfilePageI18n } from "@/views/specialist-profile";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
@@ -57,6 +62,7 @@ const bundles: ColocatedI18nBundle[] = [
   bookingHistoryCardI18n,
   bookingCancelDialogI18n,
   bookingsPageI18n,
+  visitRatePageI18n,
   profilePageI18n,
   profileFavoritesPageI18n,
   profileSubpageShellI18n,
@@ -72,6 +78,7 @@ const bundles: ColocatedI18nBundle[] = [
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,
+  entityReviewsPageI18n,
   organizationProfilePageI18n,
   organizationCardI18n,
   specialistCardI18n,

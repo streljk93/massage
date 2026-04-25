@@ -2,7 +2,10 @@
 
 import { Star } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
+import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib";
+import { BOOKING_ACTION_OUTLINE_BUTTON_CLASS } from "./booking-list-card";
 import { BookingShowcaseCard } from "./booking-showcase-card";
 
 function HistoryStars({
@@ -62,6 +65,8 @@ export type BookingHistoryCardProps = {
   reviewEligible?: boolean;
   /** Есть ли отзыв; если нет — блок «Review me» и пустые звёзды. */
   reviewed: boolean;
+  /** URL страницы оценки визита (например `/bookings/{id}/rate`). */
+  rateVisitHref?: string;
   /** 1–5 при `reviewed`. */
   rating?: number;
   /** Текст отзыва (превью), если `reviewed`. */
@@ -82,6 +87,7 @@ export function BookingHistoryCard({
   systemNote,
   reviewEligible = false,
   reviewed,
+  rateVisitHref,
   rating = 0,
   reviewExcerpt,
   className,
@@ -107,7 +113,24 @@ export function BookingHistoryCard({
 
   const actions = reviewEligible ? (
     <div className="border-t border-border/50 pt-3">
-      {!reviewed ? (
+      {!reviewed && rateVisitHref != null && rateVisitHref !== "" ? (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
+          <Button
+            asChild
+            type="button"
+            variant="ghost"
+            className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
+          >
+            <Link
+              href={rateVisitHref}
+              aria-label={t("rateVisitAria", { name: providerName })}
+            >
+              {t("rateVisit")}
+            </Link>
+          </Button>
+        </div>
+      ) : !reviewed ? (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
           <HistoryStars filledCount={0} emptyOutlined />

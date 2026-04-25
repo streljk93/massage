@@ -238,7 +238,8 @@ export const organizationListItemSchema = {
     slotGroups: {
       type: 'array',
       items: listingSlotGroupItemSchema,
-      description: 'Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.',
+      description:
+        'Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.',
     },
     specialistOccupiedSlotKeys: {
       type: 'array',
@@ -315,6 +316,35 @@ export const catalogFilterOptionsResponseSchema = {
         max: { type: 'integer', example: 2_000_000 },
       },
     },
+  },
+};
+
+const directoryReviewItemSchema = {
+  type: 'object',
+  required: ['id', 'authorName', 'rating', 'comment', 'createdAt'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    authorName: { type: 'string', example: 'Mai L.' },
+    rating: { type: 'integer', minimum: 1, maximum: 5, example: 5 },
+    comment: { type: 'string', nullable: true },
+    createdAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'ISO-8601',
+    },
+  },
+};
+
+/** GET /organizations/:id/reviews и GET /specialists/:id/reviews */
+export const directoryReviewsListResponseSchema = {
+  type: 'object',
+  required: ['items', 'cursorPage'],
+  properties: {
+    items: {
+      type: 'array',
+      items: directoryReviewItemSchema,
+    },
+    cursorPage: cursorPageMetaSchema,
   },
 };
 

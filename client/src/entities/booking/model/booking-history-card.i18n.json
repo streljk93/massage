@@ -2,7 +2,9 @@
   "messages": {
     "en": {
       "bookingHistory": {
-        "reviewMe": "Review me",
+        "reviewMe": "How was your visit?",
+        "rateVisit": "Rate visit",
+        "rateVisitAria": "Rate visit for appointment with {name}",
         "statusUnknown": "Status unavailable",
         "systemExpiredNoConfirmation": "Canceled: not confirmed in time",
         "systemMasterLeftWorkplace": "The specialist is no longer available at this address. The booking was cancelled automatically."
@@ -10,7 +12,9 @@
     },
     "vi": {
       "bookingHistory": {
-        "reviewMe": "Đánh giá tôi",
+        "reviewMe": "Buổi hẹn của bạn thế nào?",
+        "rateVisit": "Đánh giá lượt tới",
+        "rateVisitAria": "Đánh giá lượt tới với {name}",
         "statusUnknown": "Không xác định trạng thái",
         "systemExpiredNoConfirmation": "Đã hủy: không xác nhận kịp",
         "systemMasterLeftWorkplace": "Chuyên gia không còn làm việc tại địa chỉ này. Lịch hẹn đã được hủy tự động."
@@ -18,7 +22,9 @@
     },
     "ru": {
       "bookingHistory": {
-        "reviewMe": "Оцените визит",
+        "reviewMe": "Как прошёл визит?",
+        "rateVisit": "Оценить визит",
+        "rateVisitAria": "Оценить визит, запись с {name}",
         "statusUnknown": "Статус недоступен",
         "systemExpiredNoConfirmation": "Отменено: не подтвердили вовремя",
         "systemMasterLeftWorkplace": "Мастер больше не ведёт приём по этому адресу. Запись отменена автоматически."

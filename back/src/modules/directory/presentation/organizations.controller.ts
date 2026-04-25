@@ -31,9 +31,11 @@ import {
   parseDirectoryListLimit,
 } from '../../../common/pagination/parse-directory-list-limit';
 import { DirectoryService } from '../application/directory.service';
+import type { DirectoryReviewsListResponseDto } from '../dto/directory-reviews-list-response.dto';
 import type { OrganizationDetailResponseDto } from '../dto/organization-detail-response.dto';
 import type { OrganizationsListResponseDto } from '../dto/organizations-list-response.dto';
 import {
+  directoryReviewsListResponseSchema,
   organizationDetailResponseSchema,
   organizationsListResponseSchema,
 } from './directory.openapi-schemas';
@@ -85,7 +87,8 @@ export class OrganizationsController {
   @ApiQuery({
     name: 'radiusM',
     required: false,
-    description: 'Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.',
+    description:
+      'Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.',
     schema: { type: 'integer', minimum: 50, maximum: 500_000 },
   })
   @ApiQuery({
@@ -134,6 +137,53 @@ export class OrganizationsController {
               radiusM: radius.radiusM,
             },
     });
+  }
+
+  @Get(':id/reviews')
+  @ApiOperation({
+    summary: 'Отзывы о салоне',
+    description:
+      'Список `OrganizationReview` для витрины (курсор). Отдельно от отзывов о мастерах (`SpecialistReview`).',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    description:
+      'Курсор (`cursorPage.nextCursor`). Сортировка: сначала новые (`createdAt desc`, `id desc`).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: `Размер страницы (1–${DIRECTORY_LIST_MAX_LIMIT}, по умолчанию ${DIRECTORY_LIST_DEFAULT_LIMIT}).`,
+    schema: { type: 'integer', minimum: 1, maximum: DIRECTORY_LIST_MAX_LIMIT },
+  })
+  @ApiOkResponse({ schema: directoryReviewsListResponseSchema })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiBadRequestResponse({
+    description: 'Неверный формат locale, limit или cursor',
+  })
+  async listReviews(
+    @Param('id', ParseUUIDPipe) id: string,
+    @RequestLocale() locale: ApiLocale,
+    @Query('cursor') cursor?: string,
+    @Query('limit') limitRaw?: string,
+  ): Promise<DirectoryReviewsListResponseDto> {
+    const row = await this.directoryService.listOrganizationReviews(
+      locale,
+      id,
+      {
+        cursor: cursor ?? null,
+        limit: parseDirectoryListLimit(limitRaw),
+      },
+    );
+    if (!row) {
+      throw new NotFoundException({
+        code: 'ORG_NOT_FOUND',
+        message: 'Organization not found',
+      });
+    }
+    return row;
   }
 
   @Get(':id')

@@ -47,11 +47,13 @@ export const bookingListItemSchema = {
     'statusLabel',
     'specialistId',
     'specialistName',
+    'organizationName',
     'serviceName',
     'amount',
     'currency',
     'startsAt',
     'endsAt',
+    'visitReviewComplete',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -67,6 +69,11 @@ export const bookingListItemSchema = {
     },
     specialistId: { type: 'string', format: 'uuid' },
     specialistName: { type: 'string' },
+    organizationName: {
+      type: 'string',
+      nullable: true,
+      description: 'Название салона; может быть `null`, если в брони не зафиксирована организация.',
+    },
     specialistImageUrl: { type: 'string', nullable: true, format: 'uri' },
     serviceName: { type: 'string' },
     amount: { type: 'integer', nullable: true },
@@ -86,6 +93,50 @@ export const bookingListItemSchema = {
       description:
         'Дополнительный комментарий при отмене (часто от мастера); системные отмены могут оставлять поле пустым.',
     },
+    visitReviewComplete: {
+      type: 'boolean',
+      description:
+        'Оба отзыва по визиту (салон + мастер) созданы. До отправки `POST .../visit-reviews` — `false`.',
+    },
+    visitReviewDisplayRating: {
+      type: 'number',
+      nullable: true,
+      description:
+        'Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`.',
+    },
+    visitReviewExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`.',
+    },
+  },
+};
+
+export const submitBookingVisitReviewsRequestSchema = {
+  type: 'object',
+  required: ['organizationRating', 'specialistRating'],
+  properties: {
+    organizationRating: { type: 'integer', minimum: 1, maximum: 5 },
+    specialistRating: { type: 'integer', minimum: 1, maximum: 5 },
+    organizationComment: {
+      type: 'string',
+      maxLength: 2000,
+      description: 'Опционально. Пустая строка игнорируется.',
+    },
+    specialistComment: {
+      type: 'string',
+      maxLength: 2000,
+      description: 'Опционально. Пустая строка игнорируется.',
+    },
+  },
+};
+
+export const submitBookingVisitReviewsResponseSchema = {
+  type: 'object',
+  required: ['ok'],
+  properties: {
+    ok: { type: 'boolean', enum: [true] },
   },
 };
 

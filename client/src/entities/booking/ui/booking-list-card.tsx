@@ -13,7 +13,7 @@ import { usePendingBookingCountdown } from "../lib/use-pending-booking-countdown
 import { BookingShowcaseCard } from "./booking-showcase-card";
 
 /** Белая заливка + тонкая обводка (не `variant="secondary"` — там брендовый `--secondary`). */
-const actionOutlineButtonClass =
+export const BOOKING_ACTION_OUTLINE_BUTTON_CLASS =
   "h-11 w-full rounded-xl border border-border bg-card font-medium text-foreground shadow-none hover:bg-muted/45 hover:text-foreground active:bg-muted/55";
 
 export type BookingListStatus =
@@ -171,7 +171,7 @@ export function BookingListCard({
       <Button
         type="button"
         variant="ghost"
-        className={actionOutlineButtonClass}
+        className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
         onClick={onCancel}
         disabled={cancelPending || !onCancel}
         aria-busy={cancelPending}
@@ -183,7 +183,7 @@ export function BookingListCard({
         <Button
           type="button"
           variant="ghost"
-          className={actionOutlineButtonClass}
+          className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
           onClick={() => void handleAddToCalendar()}
           disabled={!canAddToCalendar || remindBusy}
           aria-busy={remindBusy}
@@ -194,7 +194,7 @@ export function BookingListCard({
         <Button
           type="button"
           variant="ghost"
-          className={actionOutlineButtonClass}
+          className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
           onClick={onCancel}
           disabled={cancelPending || !onCancel}
           aria-busy={cancelPending}
@@ -203,7 +203,7 @@ export function BookingListCard({
         </Button>
       </>
     ) : status === "in_progress" ? null : status === "expired" || status === "rejected" ? (
-      <Button type="button" variant="ghost" className={actionOutlineButtonClass}>
+      <Button type="button" variant="ghost" className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}>
         {t("findOther")}
       </Button>
     ) : null;

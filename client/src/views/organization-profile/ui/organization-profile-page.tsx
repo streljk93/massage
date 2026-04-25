@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useRouter } from "@/app/i18n/navigation";
+import { Link, useRouter } from "@/app/i18n/navigation";
+import { goBackOrFallback } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
 import { useClientFavorite } from "@/entities/favorites";
 import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
@@ -724,7 +725,9 @@ export function OrganizationProfilePage({
                 tone="light"
                 className="size-11 shrink-0 rounded-full border-0 bg-white/75 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
                 aria-label={t("backAria")}
-                onClick={() => router.back()}
+                onClick={() => {
+                  goBackOrFallback(router, "/search");
+                }}
               >
                 <ArrowLeft className="size-5" aria-hidden />
               </Button>
@@ -802,9 +805,12 @@ export function OrganizationProfilePage({
                         {profile.rating.toFixed(1)}
                       </span>
                     </span>
-                    <span className="text-white/85">
+                    <Link
+                      href={`/organizations/${profile.id}/reviews`}
+                      className="text-white/85 underline-offset-2 hover:underline"
+                    >
                       ({format.number(profile.reviewsCount)} {t("reviewsWord")})
-                    </span>
+                    </Link>
                   </p>
                   <p className="text-xs font-semibold leading-snug text-white/90">
                     {profile.addressLine}
@@ -840,7 +846,13 @@ export function OrganizationProfilePage({
                   {t("stats.clientsLabel")}
                 </p>
               </div>
-              <div className="flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1">
+              <Link
+                href={`/organizations/${profile.id}/reviews`}
+                className={cn(
+                  motion.interactivePressStrong,
+                  "flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1",
+                )}
+              >
                 <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <MessageSquare className="size-[0.9rem]" aria-hidden />
                 </span>
@@ -850,7 +862,7 @@ export function OrganizationProfilePage({
                 <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
                   {t("stats.reviewsLabel")}
                 </p>
-              </div>
+              </Link>
             </div>
 
             <div className="space-y-4 border-t border-border/50 bg-surface-light px-4 py-4 sm:px-5">
