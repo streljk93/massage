@@ -103,8 +103,8 @@ export function CatalogFiltersDialog({
       <DialogContent
         className={cn(
           "!flex max-h-[85dvh] min-h-0 !flex-col gap-0 overflow-hidden p-0 sm:max-w-sm",
-          "border border-border/45 bg-white text-foreground",
-          "rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.12)]",
+          "border border-border/45 bg-popover text-popover-foreground",
+          "rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40",
         )}
         showCloseButton
       >
@@ -127,7 +127,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <div className="rounded-xl border border-border/30 bg-white px-3 py-3.5">
+            <div className="rounded-xl border border-border/30 bg-muted/25 px-3 py-3.5">
               <PriceRangeSlider
                 min={priceFilter.extent.min}
                 max={priceFilter.extent.max}
@@ -147,7 +147,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <div className="space-y-2 rounded-xl border border-border/30 bg-white px-3 py-3.5 text-sm text-foreground">
+            <div className="space-y-2 rounded-xl border border-border/30 bg-muted/25 px-3 py-3.5 text-sm text-foreground">
               <p className="font-medium leading-relaxed">
                 {t("priceReadOnlyVnd", {
                   min: readOnlyVndLine.min,
@@ -169,7 +169,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <p className="rounded-xl border border-dashed border-border/45 bg-white px-3 py-3.5 text-sm leading-relaxed text-muted-foreground">
+            <p className="rounded-xl border border-dashed border-border/45 bg-muted/20 px-3 py-3.5 text-sm leading-relaxed text-muted-foreground">
               {t("priceNoData")}
             </p>
           </div>
@@ -204,7 +204,7 @@ export function CatalogFiltersDialog({
                   <SelectTrigger
                     id={slotDaySelectId}
                     className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-white py-2 text-sm",
+                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-background py-2 text-sm",
                       "text-foreground",
                     )}
                     size="sm"
@@ -247,7 +247,7 @@ export function CatalogFiltersDialog({
                   <SelectTrigger
                     id={slotTimeSelectId}
                     className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-white py-2 text-sm",
+                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-background py-2 text-sm",
                       "text-foreground",
                     )}
                     size="sm"
@@ -278,7 +278,7 @@ export function CatalogFiltersDialog({
               type="button"
               variant="secondary"
               tone="light"
-              className="h-11 w-full rounded-xl border border-border/50 bg-white text-sm font-medium shadow-none hover:bg-zinc-50/90"
+              className="h-11 w-full rounded-xl border border-border/50 bg-background text-sm font-medium shadow-none hover:bg-muted/60"
               onClick={radiusMapFilter.onSelectOnMap}
             >
               {radiusMapFilter.isActive ?
@@ -294,12 +294,12 @@ export function CatalogFiltersDialog({
             {t("category")}
           </p>
           {categoryOptions.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/45 bg-white px-3 py-4 text-center text-sm leading-relaxed text-muted-foreground">
+            <p className="rounded-xl border border-dashed border-border/45 bg-muted/20 px-3 py-4 text-center text-sm leading-relaxed text-muted-foreground">
               {t("noCategories")}
             </p>
           ) : (
             <div
-              className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-white p-3"
+              className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/25 p-3"
               role="group"
               aria-label={t("category")}
             >
@@ -315,11 +315,11 @@ export function CatalogFiltersDialog({
                     aria-pressed={isSelected}
                     className={cn(
                       "inline-flex h-9 min-h-9 max-w-full shrink-0 items-center justify-center rounded-full border px-3.5 text-left text-sm font-medium transition-[background-color,box-shadow,border-color,transform] duration-150",
-                      "focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:outline-none",
+                      "focus-visible:ring-2 focus-visible:ring-ring/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none",
                       "active:scale-[0.98]",
                       isSelected
                         ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
-                        : "border-border/55 bg-white text-foreground shadow-sm shadow-black/[0.04] hover:border-primary/30 hover:bg-white",
+                        : "border-border/55 bg-background text-foreground shadow-sm shadow-black/[0.04] hover:border-primary/30 hover:bg-muted/50",
                     )}
                   >
                     <span className="truncate">{shortName}</span>
@@ -333,7 +333,7 @@ export function CatalogFiltersDialog({
         <DialogFooter
           className={cn(
             "mt-0 shrink-0 flex flex-col gap-3",
-            "border-t border-border/35 bg-white px-5 py-4 !mx-0 !mb-0",
+            "border-t border-border/35 bg-popover px-5 py-4 !mx-0 !mb-0",
           )}
         >
           <div className="flex w-full gap-2.5">
@@ -341,7 +341,7 @@ export function CatalogFiltersDialog({
               type="button"
               variant="secondary"
               tone="light"
-              className="h-11 flex-1 rounded-full border border-border/50 bg-white font-medium shadow-none hover:bg-zinc-50/90"
+              className="h-11 flex-1 rounded-full border border-border/50 bg-background font-medium shadow-none hover:bg-muted/60"
               onClick={onResetFilters}
             >
               {t("reset")}

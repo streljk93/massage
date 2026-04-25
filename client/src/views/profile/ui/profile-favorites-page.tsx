@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useMemo } from "react";
 import type { AppLocale } from "@/app/i18n/routing";
 import { usePathname, useRouter } from "@/app/i18n/navigation";
 import {
@@ -28,6 +27,7 @@ import {
 } from "@/shared/api";
 import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
 import { cn, motion } from "@/shared/lib";
+import { useListingClock } from "@/shared/lib/use-listing-clock";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import {
   SEARCH_TABS,
@@ -51,7 +51,7 @@ export function ProfileFavoritesPage() {
   const userId = session?.user?.id;
   const isAuthed =
     status === "authenticated" && Boolean(accessToken && userId);
-  const listingNow = useMemo(() => new Date(), []);
+  const listingNow = useListingClock();
 
   const setTab = (id: SearchTab) => {
     const qs = new URLSearchParams(searchParams.toString());
@@ -219,7 +219,7 @@ export function ProfileFavoritesPage() {
               {t("emptyOrganizations")}
             </p>
           : organizations.map((o) => {
-              const card = organizationCardSeedFromApi(o);
+              const card = organizationCardSeedFromApi(o, listingNow);
               return (
                 <OrganizationCard
                   key={card.id}
@@ -239,7 +239,7 @@ export function ProfileFavoritesPage() {
             {t("emptySpecialists")}
           </p>
         : specialists.map((s) => {
-            const card = specialistCardSeedFromApi(s);
+            const card = specialistCardSeedFromApi(s, listingNow);
             return (
               <SpecialistCard
                 key={card.id}

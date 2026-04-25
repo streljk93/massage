@@ -29,6 +29,7 @@ import {
   searchMapSpecialistsFromApi,
 } from "@/widgets/home/lib/search-map-list-from-api";
 import { cn, motion } from "@/shared/lib";
+import { useListingClock } from "@/shared/lib/use-listing-clock";
 import {
   parseSearchTab,
   SEARCH_TABS,
@@ -380,7 +381,7 @@ export function SearchMapPageClient({
     () => parseSearchUrlFilters(new URLSearchParams(searchParams.toString())),
     [searchParams],
   );
-  const mapSlotNow = useMemo(() => new Date(), []);
+  const mapSlotNow = useListingClock();
 
   const organizationItems = useMemo(() => {
     let list = initialOrganizations ?? [];

@@ -1,27 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Open_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import Script from "next/script";
 import { AppProviders } from "@/app/providers";
-import "@/app/styles/globals.css";
-import { themePreferenceInlineScript } from "@/shared/lib/theme-preference";
+import { DocumentLangFromLocale } from "@/app/document-lang-from-locale";
 import type { AppLocale } from "@/app/i18n/routing";
 import { routing } from "@/app/i18n/routing";
-
-const manrope = Manrope({
-  variable: "--font-manrope",
-  subsets: ["latin", "cyrillic", "vietnamese"],
-  display: "swap",
-});
-
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
-  subsets: ["latin", "cyrillic", "vietnamese"],
-  display: "swap",
-  style: ["normal", "italic"],
-});
 
 type Props = {
   children: React.ReactNode;
@@ -68,23 +52,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   const messages = await getMessages();
 
   return (
-    <html
-      lang={locale}
-      className={`${manrope.variable} ${openSans.variable} h-full font-sans antialiased`}
-      suppressHydrationWarning
-    >
-      <head>
-        <Script
-          id="theme-preference-inline"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themePreferenceInlineScript() }}
-        />
-      </head>
-      <body className="flex min-h-full flex-col">
-        <NextIntlClientProvider messages={messages}>
-          <AppProviders>{children}</AppProviders>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider messages={messages}>
+      <DocumentLangFromLocale />
+      <AppProviders>{children}</AppProviders>
+    </NextIntlClientProvider>
   );
 }

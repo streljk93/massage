@@ -2,8 +2,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
 import { ScanLine, Search as SearchIcon } from "lucide-react";
 import { CategoryCard } from "@/entities/services";
-import { OrganizationCard } from "@/entities/organizations";
-import { SpecialistCard } from "@/entities/specialists";
 import { Link } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { Slider } from "@/shared/ui/slider";
@@ -23,14 +21,15 @@ import {
   HomeBottomNav,
   HomeScreenHeader,
 } from "@/widgets/home";
-import { organizationCardSeedFromApi } from "@/entities/organizations";
-import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { HomeForYouSection } from "./home-for-you-section";
+import {
+  HomeTopOrganizationCards,
+  HomeTopSpecialistCards,
+} from "./home-top-directory-section-cards";
 import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
-import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import { searchTabQueryValue } from "@/shared/lib/search-tab";
 
 function isAbsoluteHttpUrl(href: string): boolean {
@@ -94,9 +93,7 @@ const HOME_DIRECTORY_HIGHLIGHT_LIMIT = 3;
 
 export async function HomePage() {
   const t = await getTranslations();
-  const tSlots = await getTranslations("slots");
   const locale = (await getLocale()) as AppLocale;
-  const listingNow = new Date();
 
   const sdkClient = createServerSdkClient();
   let catalog: CatalogGetCategoriesByMajorSlugResponse | null = null;
@@ -266,24 +263,7 @@ export async function HomePage() {
             >
               {t("home.topSpecialists")}
             </h2>
-            <div className="space-y-2.5">
-              {(specialistsFromApi ?? []).map((s) => {
-                const card = specialistCardSeedFromApi(s);
-                return (
-                  <SpecialistCard
-                    key={card.id}
-                    {...card}
-                    imageAlt={card.name}
-                    profileHref={`/specialists/${s.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                      locale,
-                      maxGroups: 5,
-                      now: listingNow,
-                    })}
-                  />
-                );
-              })}
-            </div>
+            <HomeTopSpecialistCards list={specialistsFromApi ?? []} />
             <Button
               variant="secondary"
               tone="light"
@@ -305,24 +285,7 @@ export async function HomePage() {
             >
               {t("home.topSalons")}
             </h2>
-            <div className="space-y-2.5">
-              {(organizationsFromApi ?? []).map((o) => {
-                const card = organizationCardSeedFromApi(o);
-                return (
-                  <OrganizationCard
-                    key={card.id}
-                    {...card}
-                    imageAlt={card.name}
-                    profileHref={`/organizations/${o.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                      locale,
-                      maxGroups: 5,
-                      now: listingNow,
-                    })}
-                  />
-                );
-              })}
-            </div>
+            <HomeTopOrganizationCards list={organizationsFromApi ?? []} />
             <Button
               variant="secondary"
               tone="light"

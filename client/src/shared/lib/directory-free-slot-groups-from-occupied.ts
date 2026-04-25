@@ -4,6 +4,7 @@ import type { DirectoryListingWorkday } from "@/shared/lib/directory-listing-wor
 import {
   DEFAULT_LISTING_WORKDAY_END_MINUTE,
   DEFAULT_LISTING_WORKDAY_START_MINUTE,
+  normalizeDirectorySlotTimeHm,
   workdayOrDefault,
 } from "@/shared/lib/directory-listing-workday";
 import { SLOT_GRID_MINUTES } from "@/shared/lib/directory-slot-grid-constants";
@@ -61,6 +62,45 @@ function generateCandidateListingSlotInstants(
     const dayStart = addDays(startMidnight, i);
     const dk = formatListingCalendarYmd(dayStart);
     out.push(...slotInstantsForWorkday(dk, workday));
+  }
+  return out;
+}
+
+/**
+ * На случай рассхождения сетки и строк, а также дней без ни одного реально
+ * бронируемого времени: убрать прошедшие `HH:mm` и пустые дни.
+ */
+function pruneDirectorySlotSeedsToBookableFromNow(
+  groups: readonly DirectorySlotGroupSeed[],
+  now: Date,
+): DirectorySlotGroupSeed[] {
+  const minMs = now.getTime() - BOOKING_START_TOLERANCE_MS;
+  const out: DirectorySlotGroupSeed[] = [];
+  for (const g of groups) {
+    const kept: string[] = [];
+    for (const raw of g.times ?? []) {
+      const norm = normalizeDirectorySlotTimeHm(raw);
+      const parts = norm.split(":");
+      const hh = Number(parts[0]);
+      const mm = Number(parts[1] ?? 0);
+      if (!Number.isFinite(hh) || !Number.isFinite(mm)) {
+        continue;
+      }
+      const [y, mo, d] = g.calendarDate.split("-").map(Number);
+      if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) {
+        continue;
+      }
+      const inst = vnWallClockToUtcDate(y, mo, d, hh, mm);
+      if (inst.getTime() >= minMs) {
+        kept.push(norm);
+      }
+    }
+    const uniq = [...new Set(kept)].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    );
+    if (uniq.length > 0) {
+      out.push({ calendarDate: g.calendarDate, times: uniq });
+    }
   }
   return out;
 }
@@ -135,7 +175,10 @@ export function freeDirectorySlotGroupSeedsFromSpecialistOccupied(
       free.push(S);
     }
   }
-  return buildSlotGroupsFromStarts(free);
+  return pruneDirectorySlotSeedsToBookableFromNow(
+    buildSlotGroupsFromStarts(free),
+    now,
+  );
 }
 
 /**
@@ -182,5 +225,8 @@ export function freeDirectorySlotGroupSeedsForOrganization(
       free.push(S);
     }
   }
-  return buildSlotGroupsFromStarts(free);
+  return pruneDirectorySlotSeedsToBookableFromNow(
+    buildSlotGroupsFromStarts(free),
+    now,
+  );
 }

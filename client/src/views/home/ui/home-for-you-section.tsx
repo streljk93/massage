@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -14,8 +15,8 @@ import {
   createBrowserSdkClient,
   personalizationGetRecommendations,
 } from "@/shared/api";
-import { useMemo } from "react";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
+import { useListingClock } from "@/shared/lib/use-listing-clock";
 import { searchTabQueryValue } from "@/shared/lib/search-tab";
 import { cn } from "@/shared/lib";
 
@@ -33,7 +34,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
   const recommendationsEnabled =
     sessionStatus === "authenticated" && accessToken.length > 0;
   const locale = useLocale() as AppLocale;
-  const listingNow = useMemo(() => new Date(), []);
+  const listingNow = useListingClock();
 
   const client = useMemo(
     () => createBrowserSdkClient(accessToken, { locale }),
@@ -84,7 +85,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
       </h2>
       <div className="space-y-2.5">
         {specialists.map((s) => {
-          const card = specialistCardSeedFromApi(s);
+          const card = specialistCardSeedFromApi(s, listingNow);
           return (
             <SpecialistCard
               key={card.id}
@@ -100,7 +101,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
           );
         })}
         {organizations.map((o) => {
-          const card = organizationCardSeedFromApi(o);
+          const card = organizationCardSeedFromApi(o, listingNow);
           return (
             <OrganizationCard
               key={card.id}

@@ -45,6 +45,7 @@ import {
 } from "@/shared/api";
 import { useCursorPaginationSentinel } from "@/shared/lib/use-cursor-pagination-sentinel";
 import { useDelayedLoadingIndicator } from "@/shared/lib/use-delayed-loading-indicator";
+import { useListingClock } from "@/shared/lib/use-listing-clock";
 import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
 import { organizationCardSeedFromApi } from "@/entities/organizations";
 import { specialistCardSeedFromApi } from "@/entities/specialists";
@@ -109,7 +110,7 @@ export function SearchPageClient({
   const locale = useLocale() as AppLocale;
   const { data: session } = useSession();
   const accessToken = session?.accessToken ?? "";
-  const listingNow = useMemo(() => new Date(), []);
+  const listingNow = useListingClock();
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -869,17 +870,9 @@ export function SearchPageClient({
                   );
                 }, 350);
               }}
-              placeholder={
-                tab === "organizations"
-                  ? tSearch("placeholderSalon")
-                  : tSearch("placeholderSpecialist")
-              }
+              placeholder={tSearch("searchPlaceholder")}
               autoComplete="off"
-              aria-label={
-                tab === "organizations"
-                  ? tSearch("ariaSalon")
-                  : tSearch("ariaSpecialist")
-              }
+              aria-label={tSearch("searchAria")}
               startAdornment={<SearchIcon className="size-4" aria-hidden />}
               className="h-11 w-full rounded-full border-0 bg-surface-light"
             />
@@ -1005,7 +998,7 @@ export function SearchPageClient({
                 </div>
               : null}
               {displayOrganizations.map((o) => {
-                const card = organizationCardSeedFromApi(o);
+                const card = organizationCardSeedFromApi(o, listingNow);
                 return (
                   <OrganizationCard
                     key={card.id}
@@ -1049,7 +1042,7 @@ export function SearchPageClient({
                 </div>
               : null}
               {displaySpecialists.map((s) => {
-                const card = specialistCardSeedFromApi(s);
+                const card = specialistCardSeedFromApi(s, listingNow);
                 return (
                   <SpecialistCard
                     key={card.id}
