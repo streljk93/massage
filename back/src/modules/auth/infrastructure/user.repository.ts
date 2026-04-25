@@ -8,6 +8,7 @@ export type UserRecord = {
   name: string;
   passwordHash: string | null;
   avatarUrl: string | null;
+  emailVerifiedAt: Date | null;
   bookingReminderEnabled: boolean;
   bookingReminderLeadMinutes: number;
 };
@@ -36,7 +37,18 @@ export class UserRepository {
         email: data.email,
         name: data.name,
         passwordHash: data.passwordHash,
+        emailVerifiedAt: null,
       },
+    });
+  }
+
+  async setEmailVerifiedAt(
+    id: string,
+    at: Date = new Date(),
+  ): Promise<UserRecord> {
+    return this.prisma.user.update({
+      where: { id },
+      data: { emailVerifiedAt: at },
     });
   }
 

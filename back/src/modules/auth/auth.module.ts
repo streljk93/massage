@@ -1,13 +1,16 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { MailModule } from '../../infrastructure/mail/mail.module';
 import { AuthService } from './application/auth.service';
+import { EmailVerificationOtpRepository } from './infrastructure/email-verification-otp.repository';
 import { PasswordHasher } from './infrastructure/password-hasher';
 import { UserRepository } from './infrastructure/user.repository';
 import { AuthController } from './presentation/auth.controller';
 
 @Module({
   imports: [
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -18,7 +21,12 @@ import { AuthController } from './presentation/auth.controller';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PasswordHasher, UserRepository],
+  providers: [
+    AuthService,
+    PasswordHasher,
+    UserRepository,
+    EmailVerificationOtpRepository,
+  ],
   exports: [AuthService, JwtModule, UserRepository],
 })
 export class AuthModule {}

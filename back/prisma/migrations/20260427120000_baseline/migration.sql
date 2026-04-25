@@ -1,5 +1,5 @@
--- Baseline: full schema as of current prisma/schema.prisma (replaces previous incremental migrations).
--- Apply only on empty DB (`prisma migrate reset`). Includes BookingStatusLocale seed + partial unique index for org owner + UserFcmToken.
+-- Baseline: одна миграция, полная схема из `prisma/schema.prisma` (сжатые прежние миграции).
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -11,6 +11,9 @@ CREATE TYPE "AdvertOwnerKind" AS ENUM ('internal', 'external');
 
 -- CreateEnum
 CREATE TYPE "OrganizationMembershipRole" AS ENUM ('owner', 'admin', 'specialist');
+
+-- CreateEnum
+CREATE TYPE "FavoriteTargetKind" AS ENUM ('organization', 'specialist');
 
 -- CreateTable
 CREATE TABLE "BookingStatusLocale" (
@@ -30,11 +33,72 @@ CREATE TABLE "User" (
     "phone" TEXT,
     "avatarUrl" TEXT,
     "locale" TEXT,
+    "bookingReminderEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "bookingReminderLeadMinutes" INTEGER NOT NULL DEFAULT 30,
+    "emailVerifiedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EmailVerificationOtp" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "codeHash" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailVerificationOtp_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserFcmToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "userAgent" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserFcmToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserFavorite" (
+    "userId" TEXT NOT NULL,
+    "targetKind" "FavoriteTargetKind" NOT NULL,
+    "targetId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UserFavorite_pkey" PRIMARY KEY ("userId","targetKind","targetId")
+);
+
+-- CreateTable
+CREATE TABLE "UserBehaviorEvent" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT,
+    "sessionId" TEXT,
+    "eventType" TEXT NOT NULL,
+    "entityType" TEXT,
+    "entityId" TEXT,
+    "metadata" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "UserBehaviorEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserPreferenceProfile" (
+    "userId" TEXT NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "profile" JSONB NOT NULL,
+    "computedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserPreferenceProfile_pkey" PRIMARY KEY ("userId")
 );
 
 -- CreateTable
@@ -113,7 +177,8 @@ CREATE TABLE "Organization" (
     "yearsInBusiness" INTEGER,
     "listingMetaLine" TEXT,
     "listingServicesLine" TEXT,
-    "listingSlotGroups" JSONB,
+    "listingWorkdayStartMinute" INTEGER NOT NULL DEFAULT 480,
+    "listingWorkdayEndMinute" INTEGER NOT NULL DEFAULT 1320,
     "ratingAverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "reviewsCount" INTEGER NOT NULL DEFAULT 0,
     "bookingConfirmationGraceMinutes" INTEGER NOT NULL DEFAULT 15,
@@ -175,7 +240,6 @@ CREATE TABLE "Specialist" (
     "activeOrganizationId" TEXT,
     "listingMetaLine" TEXT,
     "listingServicesLine" TEXT,
-    "listingSlotGroups" JSONB,
     "listedInDirectory" BOOLEAN NOT NULL DEFAULT true,
     "autoConfirmBookings" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -285,6 +349,7 @@ CREATE TABLE "Booking" (
     "pendingExpiresAt" TIMESTAMP(3),
     "cancelReason" TEXT,
     "cancellationComment" TEXT,
+    "clientReminderSentAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -344,6 +409,30 @@ CREATE INDEX "BookingStatusLocale_locale_idx" ON "BookingStatusLocale"("locale")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailVerificationOtp_userId_key" ON "EmailVerificationOtp"("userId");
+
+-- CreateIndex
+CREATE INDEX "EmailVerificationOtp_expiresAt_idx" ON "EmailVerificationOtp"("expiresAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserFcmToken_token_key" ON "UserFcmToken"("token");
+
+-- CreateIndex
+CREATE INDEX "UserFcmToken_userId_idx" ON "UserFcmToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "UserFavorite_userId_idx" ON "UserFavorite"("userId");
+
+-- CreateIndex
+CREATE INDEX "UserBehaviorEvent_userId_createdAt_idx" ON "UserBehaviorEvent"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "UserBehaviorEvent_sessionId_createdAt_idx" ON "UserBehaviorEvent"("sessionId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "UserBehaviorEvent_eventType_createdAt_idx" ON "UserBehaviorEvent"("eventType", "createdAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MajorServiceCategory_slug_key" ON "MajorServiceCategory"("slug");
@@ -478,6 +567,21 @@ CREATE INDEX "AdvertisementLocale_locale_idx" ON "AdvertisementLocale"("locale")
 CREATE UNIQUE INDEX "AdvertisementLocale_advertisementId_locale_key" ON "AdvertisementLocale"("advertisementId", "locale");
 
 -- AddForeignKey
+ALTER TABLE "EmailVerificationOtp" ADD CONSTRAINT "EmailVerificationOtp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserFcmToken" ADD CONSTRAINT "UserFcmToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserFavorite" ADD CONSTRAINT "UserFavorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserBehaviorEvent" ADD CONSTRAINT "UserBehaviorEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "UserPreferenceProfile" ADD CONSTRAINT "UserPreferenceProfile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "MajorServiceCategoryLocale" ADD CONSTRAINT "MajorServiceCategoryLocale_majorServiceCategoryId_fkey" FOREIGN KEY ("majorServiceCategoryId") REFERENCES "MajorServiceCategory"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -569,66 +673,3 @@ ALTER TABLE "BookingStatusHistory" ADD CONSTRAINT "BookingStatusHistory_actorUse
 
 -- AddForeignKey
 ALTER TABLE "AdvertisementLocale" ADD CONSTRAINT "AdvertisementLocale_advertisementId_fkey" FOREIGN KEY ("advertisementId") REFERENCES "Advertisement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- BookingStatusLocale: seed labels (en, vi, ru), aligned with BookingStatus enum.
-INSERT INTO "BookingStatusLocale" ("status", "locale", "label") VALUES
-('pending', 'en', 'Awaiting confirmation'),
-('expired', 'en', 'Booking was not confirmed'),
-('reject_by_master', 'en', 'Declined by specialist'),
-('reject_by_client', 'en', 'Canceled by you'),
-('confirmed', 'en', 'Confirmed'),
-('canceled_by_master', 'en', 'Canceled by specialist'),
-('canceled_by_client', 'en', 'Canceled by you'),
-('no_show_by_client', 'en', 'No-show (you did not attend)'),
-('no_show_by_master', 'en', 'No-show (specialist)'),
-('in_progress', 'en', 'In progress'),
-('done', 'en', 'Completed'),
-('pending', 'vi', 'Đang chờ xác nhận'),
-('expired', 'vi', 'Lịch chưa được xác nhận'),
-('reject_by_master', 'vi', 'Chuyên gia từ chối'),
-('reject_by_client', 'vi', 'Bạn đã hủy'),
-('confirmed', 'vi', 'Đã xác nhận'),
-('canceled_by_master', 'vi', 'Chuyên gia đã hủy'),
-('canceled_by_client', 'vi', 'Bạn đã hủy'),
-('no_show_by_client', 'vi', 'Không đến (phía bạn)'),
-('no_show_by_master', 'vi', 'Không đến (phía chuyên gia)'),
-('in_progress', 'vi', 'Đang thực hiện'),
-('done', 'vi', 'Đã hoàn thành'),
-('pending', 'ru', 'Ожидает подтверждения'),
-('expired', 'ru', 'Запись не была подтверждена'),
-('reject_by_master', 'ru', 'Отклонено специалистом'),
-('reject_by_client', 'ru', 'Отменено вами'),
-('confirmed', 'ru', 'Подтверждено'),
-('canceled_by_master', 'ru', 'Отменено специалистом'),
-('canceled_by_client', 'ru', 'Отменено вами'),
-('no_show_by_client', 'ru', 'Неявка (клиент)'),
-('no_show_by_master', 'ru', 'Неявка (специалист)'),
-('in_progress', 'ru', 'Услуга выполняется'),
-('done', 'ru', 'Завершено');
-
--- Partial unique: at most one owner membership row per organization (not modeled in Prisma DSL).
-CREATE UNIQUE INDEX "SpecialistOrganizationEmployment_one_owner_per_organization"
-  ON "SpecialistOrganizationEmployment" ("organizationId")
-  WHERE "role" = 'owner'::"OrganizationMembershipRole";
-
--- UserFcmToken: web push (FCM); ранее отдельная миграция 20260424150000_user_fcm_tokens.
--- CreateTable
-CREATE TABLE "UserFcmToken" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "token" TEXT NOT NULL,
-    "userAgent" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "UserFcmToken_pkey" PRIMARY KEY ("id")
-);
-
--- CreateIndex
-CREATE UNIQUE INDEX "UserFcmToken_token_key" ON "UserFcmToken"("token");
-
--- CreateIndex
-CREATE INDEX "UserFcmToken_userId_idx" ON "UserFcmToken"("userId");
-
--- AddForeignKey
-ALTER TABLE "UserFcmToken" ADD CONSTRAINT "UserFcmToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

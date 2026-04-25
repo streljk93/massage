@@ -76,12 +76,15 @@ model User {
   bookingReminderEnabled     Boolean @default(false)
   /// Допустимые значения: 15, 30, 60 (валидация в API).
   bookingReminderLeadMinutes Int     @default(30)
+  /// Подтверждение email: null до первой успешной верификации (регистрация по паролю).
+  emailVerifiedAt            DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  specialistProfile Specialist?
+  emailVerificationOtp EmailVerificationOtp?
+  specialistProfile    Specialist?
   clientBookings    Booking[]              @relation("ClientBookings")
   bookingChanges    BookingStatusHistory[]
   orgReviews        OrganizationReview[]
@@ -91,6 +94,18 @@ model User {
   favorites            UserFavorite[]
   behaviorEvents       UserBehaviorEvent[]
   preferenceProfile    UserPreferenceProfile?
+}
+
+/// Одноразовый код для подтверждения email при регистрации (заменяется при повторной отправке).
+model EmailVerificationOtp {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
 }
 
 /// FCM (web) registration token: одно устройство/браузер — одна запись, токен уникален глобально.

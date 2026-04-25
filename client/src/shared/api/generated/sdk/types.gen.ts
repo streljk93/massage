@@ -239,12 +239,47 @@ export type AuthRegisterErrors = {
         code: 'EMAIL_ALREADY_REGISTERED';
         message: string;
     };
+    503: {
+        code: 'MAIL_NOT_CONFIGURED' | 'MAIL_SEND_FAILED';
+        message: string;
+    };
 };
 
 export type AuthRegisterError = AuthRegisterErrors[keyof AuthRegisterErrors];
 
 export type AuthRegisterResponses = {
     201: {
+        status: 'verification_required';
+        email: string;
+    };
+};
+
+export type AuthRegisterResponse = AuthRegisterResponses[keyof AuthRegisterResponses];
+
+export type AuthVerifyEmailData = {
+    body: {
+        email: string;
+        /**
+         * 6-digit code from email
+         */
+        code: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/auth/verify-email';
+};
+
+export type AuthVerifyEmailErrors = {
+    400: {
+        code: 'VERIFICATION_NOT_FOUND' | 'VERIFICATION_EXPIRED' | 'INVALID_CODE' | 'ALREADY_VERIFIED';
+        message: string;
+    };
+};
+
+export type AuthVerifyEmailError = AuthVerifyEmailErrors[keyof AuthVerifyEmailErrors];
+
+export type AuthVerifyEmailResponses = {
+    200: {
         user: {
             id: string;
             email: string;
@@ -265,7 +300,43 @@ export type AuthRegisterResponses = {
     };
 };
 
-export type AuthRegisterResponse = AuthRegisterResponses[keyof AuthRegisterResponses];
+export type AuthVerifyEmailResponse = AuthVerifyEmailResponses[keyof AuthVerifyEmailResponses];
+
+export type AuthResendVerificationData = {
+    body: {
+        email: string;
+        password: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/auth/resend-verification';
+};
+
+export type AuthResendVerificationErrors = {
+    400: {
+        code: 'VERIFICATION_NOT_FOUND' | 'VERIFICATION_EXPIRED' | 'INVALID_CODE' | 'ALREADY_VERIFIED';
+        message: string;
+    };
+    401: {
+        code: 'INVALID_CREDENTIALS' | 'INVALID_REFRESH_TOKEN' | 'USER_NOT_FOUND' | 'USER_NOT_VERIFIED';
+        message: string;
+    };
+    503: {
+        code: 'MAIL_NOT_CONFIGURED' | 'MAIL_SEND_FAILED';
+        message: string;
+    };
+};
+
+export type AuthResendVerificationError = AuthResendVerificationErrors[keyof AuthResendVerificationErrors];
+
+export type AuthResendVerificationResponses = {
+    /**
+     * Код отправлен
+     */
+    204: void;
+};
+
+export type AuthResendVerificationResponse = AuthResendVerificationResponses[keyof AuthResendVerificationResponses];
 
 export type AuthLoginData = {
     body: {
@@ -283,7 +354,11 @@ export type AuthLoginErrors = {
      */
     400: unknown;
     401: {
-        code: 'INVALID_CREDENTIALS' | 'INVALID_REFRESH_TOKEN' | 'USER_NOT_FOUND';
+        code: 'INVALID_CREDENTIALS' | 'INVALID_REFRESH_TOKEN' | 'USER_NOT_FOUND' | 'USER_NOT_VERIFIED';
+        message: string;
+    };
+    403: {
+        code: 'EMAIL_NOT_VERIFIED';
         message: string;
     };
 };
@@ -332,7 +407,7 @@ export type AuthRefreshErrors = {
      */
     400: unknown;
     401: {
-        code: 'INVALID_CREDENTIALS' | 'INVALID_REFRESH_TOKEN' | 'USER_NOT_FOUND';
+        code: 'INVALID_CREDENTIALS' | 'INVALID_REFRESH_TOKEN' | 'USER_NOT_FOUND' | 'USER_NOT_VERIFIED';
         message: string;
     };
 };

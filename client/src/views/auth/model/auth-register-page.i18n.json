@@ -6,7 +6,8 @@
         "namePlaceholder": "Name",
         "emailPlaceholder": "Email",
         "passwordPlaceholder": "Password",
-        "submit": "Registration",
+        "submit": "Register",
+        "submitEmailHint": "We will send a 6-digit code to the email you enter above.",
         "loginCta": "Login",
         "socialAria": "Social sign-up",
         "oauthGoogle": "Google",
@@ -15,7 +16,19 @@
         "oauthInstagramSoon": "Instagram sign-in coming soon",
         "errorGeneric": "Something went wrong. Try again.",
         "errorEmailTaken": "This email is already registered.",
-        "errorBackendNotConfigured": "Registration service is unavailable. Set AUTH_BACKEND_URL for the app."
+        "errorBackendNotConfigured": "Registration service is unavailable. Set AUTH_BACKEND_URL for the app.",
+        "errorMailDelivery": "Email could not be sent. Configure SMTP on the server or check logs in development.",
+        "otpTitle": "Confirm your email",
+        "otpDescription": "Enter the 6-digit code we sent to your inbox.",
+        "otpTargetLabel": "Code sent to",
+        "resendSuccess": "A new code has been sent. Check your email.",
+        "otpSubmit": "Confirm",
+        "otpAria": "6-digit verification code",
+        "resendCode": "Resend code",
+        "backToForm": "Back",
+        "errorInvalidOtp": "Invalid code. Check the message and try again.",
+        "errorOtpExpired": "This code has expired. Request a new one.",
+        "errorResendCredentials": "Could not resend. Go back and check your email and password."
       }
     },
     "vi": {
@@ -25,6 +38,7 @@
         "emailPlaceholder": "Email",
         "passwordPlaceholder": "Mật khẩu",
         "submit": "Đăng ký",
+        "submitEmailHint": "Mã 6 số sẽ gửi tới email bạn nhập ở trên.",
         "loginCta": "Đăng nhập",
         "socialAria": "Đăng ký qua mạng xã hội",
         "oauthGoogle": "Google",
@@ -33,7 +47,19 @@
         "oauthInstagramSoon": "Đăng nhập Instagram sắp có",
         "errorGeneric": "Đã xảy ra lỗi. Thử lại.",
         "errorEmailTaken": "Email này đã được đăng ký.",
-        "errorBackendNotConfigured": "Dịch vụ đăng ký không khả dụng. Hãy cấu hình AUTH_BACKEND_URL."
+        "errorBackendNotConfigured": "Dịch vụ đăng ký không khả dụng. Hãy cấu hình AUTH_BACKEND_URL.",
+        "errorMailDelivery": "Không gửi được email. Cấu hình SMTP trên server hoặc xem log khi phát triển.",
+        "otpTitle": "Xác nhận email",
+        "otpDescription": "Nhập mã 6 số đã gửi tới hộp thư của bạn.",
+        "otpTargetLabel": "Gửi mã tới",
+        "resendSuccess": "Đã gửi mã mới. Kiểm tra email.",
+        "otpSubmit": "Xác nhận",
+        "otpAria": "Mã xác minh 6 số",
+        "resendCode": "Gửi lại mã",
+        "backToForm": "Quay lại",
+        "errorInvalidOtp": "Mã không đúng. Kiểm tra lại email.",
+        "errorOtpExpired": "Mã đã hết hạn. Yêu cầu mã mới.",
+        "errorResendCredentials": "Không gửi lại được. Quay lại và kiểm tra email, mật khẩu."
       }
     },
     "ru": {
@@ -43,6 +69,7 @@
         "emailPlaceholder": "Email",
         "passwordPlaceholder": "Пароль",
         "submit": "Регистрация",
+        "submitEmailHint": "Мы отправим 6-значный код на email, который вы ввели выше.",
         "loginCta": "Вход",
         "socialAria": "Регистрация через соцсети",
         "oauthGoogle": "Google",
@@ -51,7 +78,19 @@
         "oauthInstagramSoon": "Вход через Instagram скоро",
         "errorGeneric": "Что-то пошло не так. Попробуйте снова.",
         "errorEmailTaken": "Этот email уже зарегистрирован.",
-        "errorBackendNotConfigured": "Регистрация недоступна. Задайте AUTH_BACKEND_URL для приложения."
+        "errorBackendNotConfigured": "Регистрация недоступна. Задайте AUTH_BACKEND_URL для приложения.",
+        "errorMailDelivery": "Письмо не отправилось. Настройте SMTP на сервере или смотрите логи в dev.",
+        "otpTitle": "Подтвердите email",
+        "otpDescription": "Введите 6-значный код из письма.",
+        "otpTargetLabel": "Код отправлен на",
+        "resendSuccess": "Новый код отправлен. Проверьте почту.",
+        "otpSubmit": "Подтвердить",
+        "otpAria": "6-значный код подтверждения",
+        "resendCode": "Отправить код снова",
+        "backToForm": "Назад",
+        "errorInvalidOtp": "Неверный код. Проверьте письмо и попробуйте снова.",
+        "errorOtpExpired": "Срок кода истёк. Запросите новый.",
+        "errorResendCredentials": "Не удалось отправить. Вернитесь и проверьте email и пароль."
       }
     }
   }

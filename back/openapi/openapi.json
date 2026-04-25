@@ -319,6 +319,7 @@
     },
     "/auth/register": {
       "post": {
+        "description": "Создаёт пользователя с неподтверждённым email; на адрес уходит 6-значный код. Токены выдаёт `POST /auth/verify-email`.",
         "operationId": "Auth_register",
         "parameters": [],
         "requestBody": {
@@ -356,6 +357,123 @@
         },
         "responses": {
           "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "email"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "verification_required"
+                      ]
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ошибка валидации (Zod): неверный формат email, пароль короче 8 символов и т.д."
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "EMAIL_ALREADY_REGISTERED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "MAIL_NOT_CONFIGURED",
+                        "MAIL_SEND_FAILED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Регистрация по email и паролю",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "Auth_verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "code"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[0-9]{6}$",
+                    "description": "6-digit code from email"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
             "description": "",
             "content": {
               "application/json": {
@@ -409,9 +527,6 @@
             }
           },
           "400": {
-            "description": "Ошибка валидации (Zod): неверный формат email, пароль короче 8 символов и т.д."
-          },
-          "409": {
             "description": "",
             "content": {
               "application/json": {
@@ -425,7 +540,10 @@
                     "code": {
                       "type": "string",
                       "enum": [
-                        "EMAIL_ALREADY_REGISTERED"
+                        "VERIFICATION_NOT_FOUND",
+                        "VERIFICATION_EXPIRED",
+                        "INVALID_CODE",
+                        "ALREADY_VERIFIED"
                       ]
                     },
                     "message": {
@@ -437,7 +555,128 @@
             }
           }
         },
-        "summary": "Регистрация по email и паролю",
+        "summary": "Подтвердить email кодом из письма",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "Auth_resendVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Код отправлен"
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "VERIFICATION_NOT_FOUND",
+                        "VERIFICATION_EXPIRED",
+                        "INVALID_CODE",
+                        "ALREADY_VERIFIED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "INVALID_CREDENTIALS",
+                        "INVALID_REFRESH_TOKEN",
+                        "USER_NOT_FOUND",
+                        "USER_NOT_VERIFIED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "MAIL_NOT_CONFIGURED",
+                        "MAIL_SEND_FAILED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Повторно отправить код подтверждения",
         "tags": [
           "auth"
         ]
@@ -544,7 +783,33 @@
                       "enum": [
                         "INVALID_CREDENTIALS",
                         "INVALID_REFRESH_TOKEN",
-                        "USER_NOT_FOUND"
+                        "USER_NOT_FOUND",
+                        "USER_NOT_VERIFIED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "EMAIL_NOT_VERIFIED"
                       ]
                     },
                     "message": {
@@ -658,7 +923,8 @@
                       "enum": [
                         "INVALID_CREDENTIALS",
                         "INVALID_REFRESH_TOKEN",
-                        "USER_NOT_FOUND"
+                        "USER_NOT_FOUND",
+                        "USER_NOT_VERIFIED"
                       ]
                     },
                     "message": {

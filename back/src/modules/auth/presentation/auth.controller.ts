@@ -4,11 +4,15 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { AuthService } from '../application/auth.service';
 import type { AuthResponseDto } from '../dto/auth-response.dto';
@@ -18,13 +22,24 @@ import type { RefreshBody } from '../dto/refresh-body.schema';
 import { refreshBodySchema } from '../dto/refresh-body.schema';
 import type { RegisterBody } from '../dto/register-body.schema';
 import { registerBodySchema } from '../dto/register-body.schema';
+import type { RegisterPendingResponseDto } from '../dto/register-pending.dto';
+import type { ResendEmailVerificationBody } from '../dto/resend-email-verification-body.schema';
+import { resendEmailVerificationBodySchema } from '../dto/resend-email-verification-body.schema';
+import type { VerifyEmailRegistrationBody } from '../dto/verify-email-registration-body.schema';
+import { verifyEmailRegistrationBodySchema } from '../dto/verify-email-registration-body.schema';
 import {
+  authBadRequestVerificationSchema,
   authEmailConflictSchema,
+  authForbiddenSchema,
   authLoginRequestSchema,
   authRefreshRequestSchema,
+  authRegisterPendingResponseSchema,
   authRegisterRequestSchema,
+  authResendVerificationRequestSchema,
+  authServiceUnavailableMailSchema,
   authTokensResponseSchema,
   authUnauthorizedSchema,
+  authVerifyEmailRequestSchema,
 } from './auth.openapi-schemas';
 
 @ApiTags('auth')
@@ -34,10 +49,15 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Регистрация по email и паролю' })
+  @ApiOperation({
+    summary: 'Регистрация по email и паролю',
+    description:
+      'Создаёт пользователя с неподтверждённым email; на адрес уходит 6-значный код. Токены выдаёт `POST /auth/verify-email`.',
+  })
   @ApiBody({ schema: authRegisterRequestSchema })
-  @ApiCreatedResponse({ schema: authTokensResponseSchema })
+  @ApiCreatedResponse({ schema: authRegisterPendingResponseSchema })
   @ApiConflictResponse({ schema: authEmailConflictSchema })
+  @ApiServiceUnavailableResponse({ schema: authServiceUnavailableMailSchema })
   @ApiBadRequestResponse({
     description:
       'Ошибка валидации (Zod): неверный формат email, пароль короче 8 символов и т.д.',
@@ -45,8 +65,38 @@ export class AuthController {
   async register(
     @Body(new ZodValidationPipe(registerBodySchema))
     body: RegisterBody,
-  ): Promise<AuthResponseDto> {
+  ): Promise<RegisterPendingResponseDto> {
     return this.authService.register(body);
+  }
+
+  @Post('verify-email')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60_000, limit: 15 } })
+  @ApiOperation({ summary: 'Подтвердить email кодом из письма' })
+  @ApiBody({ schema: authVerifyEmailRequestSchema })
+  @ApiOkResponse({ schema: authTokensResponseSchema })
+  @ApiBadRequestResponse({ schema: authBadRequestVerificationSchema })
+  async verifyEmail(
+    @Body(new ZodValidationPipe(verifyEmailRegistrationBodySchema))
+    body: VerifyEmailRegistrationBody,
+  ): Promise<AuthResponseDto> {
+    return this.authService.verifyEmailRegistration(body);
+  }
+
+  @Post('resend-verification')
+  @HttpCode(204)
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @ApiOperation({ summary: 'Повторно отправить код подтверждения' })
+  @ApiBody({ schema: authResendVerificationRequestSchema })
+  @ApiNoContentResponse({ description: 'Код отправлен' })
+  @ApiUnauthorizedResponse({ schema: authUnauthorizedSchema })
+  @ApiBadRequestResponse({ schema: authBadRequestVerificationSchema })
+  @ApiServiceUnavailableResponse({ schema: authServiceUnavailableMailSchema })
+  async resendVerification(
+    @Body(new ZodValidationPipe(resendEmailVerificationBodySchema))
+    body: ResendEmailVerificationBody,
+  ): Promise<void> {
+    return this.authService.resendEmailVerification(body);
   }
 
   @Post('login')
@@ -55,6 +105,7 @@ export class AuthController {
   @ApiBody({ schema: authLoginRequestSchema })
   @ApiOkResponse({ schema: authTokensResponseSchema })
   @ApiUnauthorizedResponse({ schema: authUnauthorizedSchema })
+  @ApiForbiddenResponse({ schema: authForbiddenSchema })
   @ApiBadRequestResponse({ description: 'Ошибка валидации тела запроса' })
   async login(
     @Body(new ZodValidationPipe(loginBodySchema))

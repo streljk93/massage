@@ -104,4 +104,19 @@ export default () => ({
       ),
     ),
   },
+  /**
+   * Почта: в `production` — только Resend; в dev — только SMTP (MailHog: `127.0.0.1:1025` или `mailhog:1025` в compose).
+   * `POST /auth/register` в production без `RESEND_API_KEY` — 503. В dev без `SMTP_HOST` — код в лог (warn).
+   */
+  mail: {
+    from: process.env.MAIL_FROM?.trim() || 'Services <noreply@localhost>',
+    resendApiKey: process.env.RESEND_API_KEY?.trim() ?? '',
+    smtp: {
+      host: process.env.SMTP_HOST?.trim() ?? '',
+      port: positiveInt(process.env.SMTP_PORT, 587),
+      secure: process.env.SMTP_SECURE === 'true',
+      user: process.env.SMTP_USER?.trim() ?? '',
+      pass: process.env.SMTP_PASS?.trim() ?? '',
+    },
+  },
 });

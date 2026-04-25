@@ -10,8 +10,9 @@
  *   --skip-openapi    не вызывать openapi:sync
  *   --deps-only       только npm install в back и client
  *
- * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, back, client),
- * ожидается готовность Postgres и MinIO, затем migrate + seed + openapi:sync.
+ * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, MailHog, back, client),
+ * ожидается готовность Postgres, MinIO и веб-UI MailHog, при необходимости дописываются S3_* и SMTP_* в
+ * `back/.env` для dev на хосте, затем migrate + seed + openapi:sync.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -125,6 +126,31 @@ async function waitMinioReady(timeoutMs = 120000) {
   return false;
 }
 
+async function waitMailhogReady(timeoutMs = 120000) {
+  const stepMs = 2000;
+  const start = Date.now();
+  log("Ожидание готовности MailHog (веб-интерфейс на :8025)…");
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch("http://127.0.0.1:8025/", {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        log(
+          "MailHog готов (входящие: http://localhost:8025, SMTP для back: 127.0.0.1:1025).",
+        );
+        return true;
+      }
+    } catch {
+      /* контейнер ещё стартует */
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
 function ensureBackEnvMinioLocal() {
   const p = path.join(repoRoot, "back", ".env");
   let text = "";
@@ -146,6 +172,30 @@ function ensureBackEnvMinioLocal() {
   const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
   fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
   log("Добавлены S3_* в back/.env для загрузки файлов через localhost:9000.");
+}
+
+function ensureBackEnvMailhogLocal() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  if (/(?:^|\n)\s*SMTP_HOST\s*=/.test(text)) {
+    return;
+  }
+  const block =
+    "\n# init-project — MailHog (docker compose: сервис mailhog). В dev back шлёт OTP только по SMTP, не Resend\n" +
+    "SMTP_HOST=127.0.0.1\n" +
+    "SMTP_PORT=1025\n" +
+    "SMTP_SECURE=false\n" +
+    "MAIL_FROM=\"Dev <dev@local.test>\"\n";
+  const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
+  log(
+    "Добавлены SMTP_* / MAIL_FROM в back/.env (письма с localhost back → MailHog :8025).",
+  );
 }
 
 function ensureClientEnvBackendUrl() {
@@ -195,7 +245,7 @@ async function main() {
       );
     }
     log(
-      "Далее: docker compose up -d (postgres + minio + …), см. docker-compose.yml; для файлов — MinIO :9000.",
+      "Далее: docker compose up -d (postgres + minio + mailhog + …), см. docker-compose.yml; MinIO :9000, MailHog :8025.",
     );
     process.exit(0);
   }
@@ -223,7 +273,15 @@ async function main() {
     process.exit(1);
   }
 
+  if (!(await waitMailhogReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания MailHog. Проверьте: docker compose ps, docker compose logs mailhog (в compose должен быть сервис mailhog, см. docker-compose.yml)",
+    );
+    process.exit(1);
+  }
+
   ensureBackEnvMinioLocal();
+  ensureBackEnvMailhogLocal();
 
   await wait(5000);
 
@@ -269,6 +327,7 @@ async function main() {
   • Swagger:         http://localhost:3001/v1/docs
   • Postgres:        localhost:5432 (см. docker-compose)
   • MinIO (S3):      http://localhost:9000  • консоль http://localhost:9001 (minioadmin / minioadmin)
+  • MailHog:         http://localhost:8025 (входящие письма; OTP при регистрации при SMTP в back/.env, см. init)
   • Файлы (MinIO): POST /v1/files/public | POST /v1/files/private (Bearer); GET /v1/files/public/:filename | GET /v1/files/private/:filename (Bearer)
 
   Локальный фронт без Docker: cd client && npm run dev
