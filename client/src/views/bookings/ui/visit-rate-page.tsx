@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Star } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
@@ -12,6 +12,10 @@ import {
   bookingsSubmitVisitReviews,
   createBrowserSdkClient,
 } from "@/shared/api";
+import {
+  buildBookingsListPath,
+  parseBookingsListTab,
+} from "@/entities/booking";
 import { notify } from "@/shared/lib/notifications";
 import { AppBackButton, Button } from "@/shared/ui";
 import { HomeBottomNav } from "@/widgets/home";
@@ -68,6 +72,14 @@ export function VisitRatePage() {
   const router = useRouter();
   const params = useParams();
   const bookingId = params.id as string;
+  const searchParams = useSearchParams();
+  const returnBookingsPath = useMemo(
+    () =>
+      buildBookingsListPath(
+        parseBookingsListTab(searchParams.get("bookingsTab")),
+      ),
+    [searchParams],
+  );
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
 
@@ -157,7 +169,7 @@ export function VisitRatePage() {
         return;
       }
       notify.success(t("success"));
-      router.push("/bookings");
+      router.push(returnBookingsPath);
     } finally {
       setSubmitBusy(false);
     }
@@ -191,7 +203,7 @@ export function VisitRatePage() {
         <div className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-28">
           <div className="mb-2 flex items-center gap-2">
             <AppBackButton
-              fallback="/bookings"
+              fallback={returnBookingsPath}
               ariaLabel={t("backAria")}
             />
           </div>
@@ -218,42 +230,12 @@ export function VisitRatePage() {
       <div className="mx-auto w-full max-w-lg flex-1 space-y-5 px-4 pt-3 pb-28">
         <div className="flex items-center gap-2">
           <AppBackButton
-            fallback="/bookings"
+            fallback={returnBookingsPath}
             ariaLabel={t("backAria")}
           />
           <h1 className="font-heading text-lg font-semibold leading-tight text-foreground">
             {t("title")}
           </h1>
-        </div>
-
-        <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4">
-          <div className="space-y-2">
-            <h2
-              className="text-sm font-semibold text-foreground"
-              id="rate-org"
-            >
-              {salonLabel}
-            </h2>
-            <RatingInput
-              value={orgRating}
-              onChange={setOrgRating}
-              sectionId="rate-org"
-            />
-            <label className="sr-only" htmlFor="visit-org-comment">
-              {t("commentSalonPlaceholder")}
-            </label>
-            <textarea
-              id="visit-org-comment"
-              className="min-h-[4.5rem] w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
-              rows={2}
-              maxLength={2000}
-              value={orgComment}
-              onChange={(e) => {
-                setOrgComment(e.target.value);
-              }}
-              placeholder={t("commentSalonPlaceholder")}
-            />
-          </div>
         </div>
 
         <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4">
@@ -274,7 +256,7 @@ export function VisitRatePage() {
             </label>
             <textarea
               id="visit-spec-comment"
-              className="min-h-[4.5rem] w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+              className="min-h-[4.5rem] w-full resize-y rounded-xl border border-border/45 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
               rows={2}
               maxLength={2000}
               value={specComment}
@@ -282,6 +264,36 @@ export function VisitRatePage() {
                 setSpecComment(e.target.value);
               }}
               placeholder={t("commentSpecialistPlaceholder")}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4">
+          <div className="space-y-2">
+            <h2
+              className="text-sm font-semibold text-foreground"
+              id="rate-org"
+            >
+              {salonLabel}
+            </h2>
+            <RatingInput
+              value={orgRating}
+              onChange={setOrgRating}
+              sectionId="rate-org"
+            />
+            <label className="sr-only" htmlFor="visit-org-comment">
+              {t("commentSalonPlaceholder")}
+            </label>
+            <textarea
+              id="visit-org-comment"
+              className="min-h-[4.5rem] w-full resize-y rounded-xl border border-border/45 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+              rows={2}
+              maxLength={2000}
+              value={orgComment}
+              onChange={(e) => {
+                setOrgComment(e.target.value);
+              }}
+              placeholder={t("commentSalonPlaceholder")}
             />
           </div>
         </div>

@@ -14,6 +14,12 @@ export {
 } from "./model/booking-cancel-reasons";
 export { formatBookingServiceLine } from "./lib/format-service-line";
 export { formatBookingServiceLineClient } from "./lib/format-service-line-client";
+export {
+  buildBookingsListPath,
+  buildVisitRatePath,
+  parseBookingsListTab,
+  type BookingsListTab,
+} from "./lib/bookings-list-tab";
 export { BookingCard, type BookingCardProps } from "./ui/booking-card";
 export {
   BookingShowcaseCard,

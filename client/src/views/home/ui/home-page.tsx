@@ -256,45 +256,6 @@ export async function HomePage() {
 
           <HomeCurrentBookingSection />
 
-          <section className="space-y-2.5" aria-labelledby="salons-heading">
-            <h2
-              id="salons-heading"
-              className="font-heading text-lg font-semibold tracking-tight"
-            >
-              {t("home.topSalons")}
-            </h2>
-            <div className="space-y-2.5">
-              {(organizationsFromApi ?? []).map((o) => {
-                const card = organizationCardSeedFromApi(o);
-                return (
-                  <OrganizationCard
-                    key={card.id}
-                    {...card}
-                    imageAlt={card.name}
-                    profileHref={`/organizations/${o.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                      locale,
-                      maxGroups: 5,
-                      now: listingNow,
-                    })}
-                  />
-                );
-              })}
-            </div>
-            <Button
-              variant="secondary"
-              tone="light"
-              className="h-11 w-full rounded-full font-medium"
-              asChild
-            >
-              <Link
-                href={`/search?tab=${searchTabQueryValue("organizations")}`}
-              >
-                {t("home.seeAll")}
-              </Link>
-            </Button>
-          </section>
-
           <section className="space-y-2.5" aria-labelledby="specialists-heading">
             <h2
               id="specialists-heading"
@@ -323,11 +284,50 @@ export async function HomePage() {
             <Button
               variant="secondary"
               tone="light"
-              className="mb-2 h-11 w-full rounded-full font-medium"
+              className="h-11 w-full rounded-full font-medium"
               asChild
             >
               <Link
                 href={`/search?tab=${searchTabQueryValue("specialists")}`}
+              >
+                {t("home.seeAll")}
+              </Link>
+            </Button>
+          </section>
+
+          <section className="space-y-2.5" aria-labelledby="salons-heading">
+            <h2
+              id="salons-heading"
+              className="font-heading text-lg font-semibold tracking-tight"
+            >
+              {t("home.topSalons")}
+            </h2>
+            <div className="space-y-2.5">
+              {(organizationsFromApi ?? []).map((o) => {
+                const card = organizationCardSeedFromApi(o);
+                return (
+                  <OrganizationCard
+                    key={card.id}
+                    {...card}
+                    imageAlt={card.name}
+                    profileHref={`/organizations/${o.id}`}
+                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                      locale,
+                      maxGroups: 5,
+                      now: listingNow,
+                    })}
+                  />
+                );
+              })}
+            </div>
+            <Button
+              variant="secondary"
+              tone="light"
+              className="mb-2 h-11 w-full rounded-full font-medium"
+              asChild
+            >
+              <Link
+                href={`/search?tab=${searchTabQueryValue("organizations")}`}
               >
                 {t("home.seeAll")}
               </Link>

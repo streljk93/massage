@@ -3,8 +3,8 @@
     "en": {
       "home": {
         "welcome": "Welcome, {name}",
-        "searchPlaceholder": "Search salons and specialists",
-        "searchAriaLabel": "Search salons and specialists",
+        "searchPlaceholder": "Search services",
+        "searchAriaLabel": "Search services",
         "categoriesHeading": "Massage categories",
         "yourBooking": "Your bookings",
         "bookingsSliderDotsAria": "Your bookings slides",
@@ -30,8 +30,8 @@
     "vi": {
       "home": {
         "welcome": "Xin chào, {name}",
-        "searchPlaceholder": "Tìm salon và chuyên viên",
-        "searchAriaLabel": "Tìm salon và chuyên viên",
+        "searchPlaceholder": "Tìm dịch vụ",
+        "searchAriaLabel": "Tìm dịch vụ",
         "categoriesHeading": "Danh mục massage",
         "yourBooking": "Các lịch hẹn của bạn",
         "bookingsSliderDotsAria": "Các lịch hẹn của bạn",
@@ -57,8 +57,8 @@
     "ru": {
       "home": {
         "welcome": "Добро пожаловать, {name}",
-        "searchPlaceholder": "Поиск салонов и специалистов",
-        "searchAriaLabel": "Поиск салонов и специалистов",
+        "searchPlaceholder": "Поиск услуг",
+        "searchAriaLabel": "Поиск услуг",
         "categoriesHeading": "Категории массажа",
         "yourBooking": "Ваши записи",
         "bookingsSliderDotsAria": "Слайды с вашими записями",

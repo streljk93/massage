@@ -10,8 +10,9 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
-import { Link } from "@/app/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/app/i18n/navigation";
 import {
   BookingHistoryCard,
   BookingListCard,
@@ -29,6 +30,11 @@ import {
 } from "@/shared/api";
 import type { BookingsCancelData } from "@/shared/api/generated/sdk/types.gen";
 import { FCM_CLIENT_BOOKINGS_LIST_REFETCH } from "@/shared/lib/bookings/fcm-list-refetch";
+import {
+  buildVisitRatePath,
+  parseBookingsListTab,
+  type BookingsListTab,
+} from "@/entities/booking";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { parseISO } from "date-fns";
 import {
@@ -43,8 +49,6 @@ import {
 import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
 import { BookingCancelDialog } from "./booking-cancel-dialog";
 import { BookingPendingCancelDialog } from "./booking-pending-cancel-dialog";
-
-type BookingsTab = "new" | "history";
 
 /** Чуть дольше `--motion-duration-slow`, чтобы успели grid + fade на карточке. */
 const BOOKING_CANCEL_EXIT_MS = 360;
@@ -85,10 +89,29 @@ export function BookingsPage() {
   const tRoot = useTranslations();
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = useMemo(
+    () => parseBookingsListTab(searchParams.get("tab")),
+    [searchParams],
+  );
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
 
-  const [tab, setTab] = useState<BookingsTab>("new");
+  const setBookingsTab = useCallback(
+    (id: BookingsListTab) => {
+      const qs = new URLSearchParams(searchParams.toString());
+      if (id === "new") {
+        qs.delete("tab");
+      } else {
+        qs.set("tab", "history");
+      }
+      const s = qs.toString();
+      router.replace(s ? `${pathname}?${s}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
   const [rows, setRows] = useState<ApiBooking[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -382,7 +405,9 @@ export function BookingsPage() {
         visitReviewComplete: row.visitReviewComplete,
         visitReviewDisplayRating: row.visitReviewDisplayRating,
         visitReviewExcerpt: row.visitReviewExcerpt,
-        rateVisitHref: canRate ? `/bookings/${row.id}/rate` : undefined,
+        rateVisitHref: canRate
+          ? buildVisitRatePath(row.id, "history")
+          : undefined,
       };
     });
   }, [format, historyRows, tBookingHistory, tRoot]);
@@ -467,7 +492,7 @@ export function BookingsPage() {
                       : "text-muted-foreground hover:text-foreground",
                   )}
                   onClick={() => {
-                    setTab(id);
+                    setBookingsTab(id);
                   }}
                 >
                   {t(labelKey)}

@@ -8,15 +8,16 @@ export type SearchTabItem = {
   labelKey: SearchTabLabelKey;
 };
 
-/** Табы списка поиска: список и карта должны использовать одну конфигурацию. */
+/** Табы списка поиска: список и карта должны использовать одну конфигурацию. Приоритет — специалисты. */
 export const SEARCH_TABS: readonly SearchTabItem[] = [
-  { id: "organizations", labelKey: "tabSalons" },
   { id: "specialists", labelKey: "tabSpecialists" },
+  { id: "organizations", labelKey: "tabSalons" },
 ];
 
+/** Без `?tab=` по умолчанию открываем специалистов. Явно `?tab=organizations` — салоны. */
 export function parseSearchTab(raw: string | null): SearchTab {
-  if (raw === "specialists") return "specialists";
-  return "organizations";
+  if (raw === "organizations") return "organizations";
+  return "specialists";
 }
 
 export function searchTabQueryValue(id: SearchTab) {

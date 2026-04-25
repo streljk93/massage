@@ -3,6 +3,7 @@ import { Manrope, Open_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import Script from "next/script";
 import { AppProviders } from "@/app/providers";
 import "@/app/styles/globals.css";
 import { themePreferenceInlineScript } from "@/shared/lib/theme-preference";
@@ -73,11 +74,10 @@ export default async function LocaleLayout({ children, params }: Props) {
       suppressHydrationWarning
     >
       <head>
-        <script
-          // Тема до первой отрисовки; ключ совпадает с `theme-preference.ts`.
-          dangerouslySetInnerHTML={{
-            __html: themePreferenceInlineScript(),
-          }}
+        <Script
+          id="theme-preference-inline"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themePreferenceInlineScript() }}
         />
       </head>
       <body className="flex min-h-full flex-col">
