@@ -3742,6 +3742,19 @@
         "operationId": "Personalization_getRecommendations",
         "parameters": [
           {
+            "name": "priceMaxVnd",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "priceMinVnd",
+            "required": false,
+            "in": "query",
+            "description": "В паре с `priceMaxVnd` (как в поиске); иначе из портрета; только для выдачи мастеров.",
+            "schema": {}
+          },
+          {
             "name": "radiusLng",
             "required": false,
             "in": "query",

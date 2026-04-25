@@ -208,6 +208,49 @@ export class PersonalizationRepository {
   }
 
   /**
+   * Последний `search_apply_filters` с полями `priceMinVnd` / `priceMaxVnd` в `metadata` (клиент с новой версией).
+   * Если `fromEvent: false` — в событиях нет цен: при пересчёте портрета **сохраняйте** цену из прежнего `profile`.
+   */
+  async getLatestSearchPriceFromBehaviorEvents(userId: string): Promise<
+    | { fromEvent: false }
+    | {
+        fromEvent: true;
+        priceMinVnd: number | null;
+        priceMaxVnd: number | null;
+      }
+  > {
+    const row = await this.prisma.userBehaviorEvent.findFirst({
+      where: { userId, eventType: 'search_apply_filters' },
+      orderBy: { createdAt: 'desc' },
+      select: { metadata: true },
+    });
+    if (row == null) {
+      return { fromEvent: false };
+    }
+    const m = row.metadata as Record<string, unknown>;
+    if (!('priceMinVnd' in m) && !('priceMaxVnd' in m)) {
+      return { fromEvent: false };
+    }
+    const toInt = (v: unknown): number | null => {
+      if (v == null) {
+        return null;
+      }
+      if (typeof v === 'number' && Number.isInteger(v) && v >= 0) {
+        return v;
+      }
+      return null;
+    };
+    let min = toInt(m['priceMinVnd']);
+    let max = toInt(m['priceMaxVnd']);
+    if (min != null && max != null && min > max) {
+      const t = min;
+      min = max;
+      max = t;
+    }
+    return { fromEvent: true, priceMinVnd: min, priceMaxVnd: max };
+  }
+
+  /**
    * Сырые события витрины строго старше `cutoff` (по `createdAt`).
    */
   async deleteBehaviorEventsCreatedBefore(cutoff: Date): Promise<number> {

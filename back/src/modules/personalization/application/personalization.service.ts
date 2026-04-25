@@ -46,6 +46,8 @@ export class PersonalizationService {
       categorySlugs: [],
       majorSlug: null,
       lastGeo: null,
+      priceMinVnd: null,
+      priceMaxVnd: null,
     };
     const fromDb = (row?.profile ?? null) as Record<string, unknown> | null;
     if (fromDb == null) {
@@ -80,6 +82,26 @@ export class PersonalizationService {
             lng: (lastGeoRaw as { lng: number }).lng,
           }
         : null;
+    const parseStoredVnd = (v: unknown): number | null => {
+      if (v == null) {
+        return null;
+      }
+      if (typeof v === 'number' && Number.isInteger(v) && v >= 0) {
+        return v;
+      }
+      return null;
+    };
+    let priceMinVnd = parseStoredVnd(fromDb['priceMinVnd']);
+    let priceMaxVnd = parseStoredVnd(fromDb['priceMaxVnd']);
+    if (
+      priceMinVnd != null &&
+      priceMaxVnd != null &&
+      priceMinVnd > priceMaxVnd
+    ) {
+      const t = priceMinVnd;
+      priceMinVnd = priceMaxVnd;
+      priceMaxVnd = t;
+    }
     if (!versionOk && categorySlugs.length === 0) {
       return empty;
     }
@@ -88,6 +110,8 @@ export class PersonalizationService {
       categorySlugs,
       majorSlug,
       lastGeo,
+      priceMinVnd,
+      priceMaxVnd,
     };
   }
 
@@ -160,6 +184,12 @@ export class PersonalizationService {
    * Пересчёт портрета: избранное, брони, события (подкатегории в metadata).
    */
   async recomputeProfileForUser(userId: string): Promise<PreferenceProfileV1> {
+    const existingRow =
+      await this.personalizationRepository.findPreferenceProfileByUserId(
+        userId,
+      );
+    const previousProfile = this.mapPreferenceProfileFromRow(existingRow);
+
     const scores = new Map<string, number>();
 
     for (const slug of await this.personalizationRepository.getFavoriteServiceCategorySlugs(
@@ -211,6 +241,17 @@ export class PersonalizationService {
         userId,
       );
 
+    const priceHint =
+      await this.personalizationRepository.getLatestSearchPriceFromBehaviorEvents(
+        userId,
+      );
+    const priceMinVnd = priceHint.fromEvent
+      ? priceHint.priceMinVnd
+      : (previousProfile.priceMinVnd ?? null);
+    const priceMaxVnd = priceHint.fromEvent
+      ? priceHint.priceMaxVnd
+      : (previousProfile.priceMaxVnd ?? null);
+
     if (orderedSlugs.length > 0 && majorSlug == null) {
       for (const s of orderedSlugs) {
         const m =
@@ -229,6 +270,8 @@ export class PersonalizationService {
       categorySlugs: orderedSlugs,
       majorSlug: majorSlug ?? null,
       lastGeo,
+      priceMinVnd,
+      priceMaxVnd,
     };
 
     await this.personalizationRepository.upsertPreferenceProfile({
@@ -267,6 +310,14 @@ export class PersonalizationService {
       /** Явно заданные подкатегории (с поиска), иначе из портрета. */
       categorySlugs: string[] | null;
       radius: DirectoryListRadiusFilter | null;
+      /**
+       * Если задано (хотя бы один query `priceMinVnd` / `priceMaxVnd`) — как в поиске.
+       * Иначе цена из портрета (последний `search_apply_filters` с ценой в metadata).
+       */
+      vndPriceOverride: {
+        priceMinVnd: number | null;
+        priceMaxVnd: number | null;
+      } | null;
     },
   ): Promise<PersonalizationRecommendationsResult> {
     if (userId == null) {
@@ -320,6 +371,15 @@ export class PersonalizationService {
 
     const radius = options.radius;
 
+    const priceMinVnd =
+      options.vndPriceOverride != null
+        ? options.vndPriceOverride.priceMinVnd
+        : (profile.priceMinVnd ?? null);
+    const priceMaxVnd =
+      options.vndPriceOverride != null
+        ? options.vndPriceOverride.priceMaxVnd
+        : (profile.priceMaxVnd ?? null);
+
     const fromProfileOrExplicitFilters =
       (options.categorySlugs != null && options.categorySlugs.length > 0) ||
       (options.majorSlug != null && options.majorSlug !== '');
@@ -346,8 +406,8 @@ export class PersonalizationService {
       majorCategorySlug: majorForList,
       q: null,
       categorySlugs: categorySlugs.length > 0 ? categorySlugs : [],
-      priceMinVnd: null,
-      priceMaxVnd: null,
+      priceMinVnd,
+      priceMaxVnd,
       radius,
     });
     const org = await this.directoryService.listOrganizations(locale, {

@@ -88,8 +88,8 @@ export class DevPersonalizationRecomputeService {
           majorCategorySlug: profile.majorSlug,
           q: null,
           categorySlugs: categorySlugsForReadyCheck,
-          priceMinVnd: null,
-          priceMaxVnd: null,
+          priceMinVnd: profile.priceMinVnd ?? null,
+          priceMaxVnd: profile.priceMaxVnd ?? null,
           radius: null,
         }),
         this.directoryService.listOrganizations(locale, {

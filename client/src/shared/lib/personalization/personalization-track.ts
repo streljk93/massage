@@ -114,6 +114,8 @@ export function trackSearchFiltersApplied(input: {
   radiusM: number | null;
   radiusLat: number | null;
   radiusLng: number | null;
+  priceMinVnd: number | null;
+  priceMaxVnd: number | null;
 }): void {
   const searchKey = [
     "search_apply_filters",
@@ -122,6 +124,8 @@ export function trackSearchFiltersApplied(input: {
     String(input.radiusM),
     String(input.radiusLat),
     String(input.radiusLng),
+    String(input.priceMinVnd),
+    String(input.priceMaxVnd),
   ].join("|");
   if (isDuplicateEventWithinWindow(searchKey)) {
     return;
@@ -129,6 +133,8 @@ export function trackSearchFiltersApplied(input: {
   const metadata: Record<string, unknown> = {
     majorSlug: input.majorSlug,
     categorySlugs: input.categorySlugs,
+    priceMinVnd: input.priceMinVnd,
+    priceMaxVnd: input.priceMaxVnd,
   };
   if (
     input.radiusM != null &&

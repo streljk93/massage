@@ -12,4 +12,10 @@ export type PreferenceProfileV1 = {
   majorSlug: string | null;
   /** Из последнего события с гео (поиск), WGS-84. */
   lastGeo: { lat: number; lng: number } | null;
+  /**
+   * Диапазон цен из последнего `search_apply_filters` с `metadata` (VND, как в URL поиска).
+   * `null` — фильтр по цене не задан. Организации в каталоге по цене не фильтруются, только мастера.
+   */
+  priceMinVnd: number | null;
+  priceMaxVnd: number | null;
 };

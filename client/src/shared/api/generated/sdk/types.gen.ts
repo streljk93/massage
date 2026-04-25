@@ -1643,6 +1643,11 @@ export type PersonalizationGetRecommendationsData = {
     body?: never;
     path?: never;
     query?: {
+        priceMaxVnd?: unknown;
+        /**
+         * В паре с `priceMaxVnd` (как в поиске); иначе из портрета; только для выдачи мастеров.
+         */
+        priceMinVnd?: unknown;
         radiusLng?: unknown;
         radiusLat?: unknown;
         /**

@@ -189,6 +189,8 @@ export function SearchPageClient({
         radiusM: urlFilters.radiusM,
         radiusLat: urlFilters.radiusLat,
         radiusLng: urlFilters.radiusLng,
+        priceMinVnd: urlFilters.priceMinVnd,
+        priceMaxVnd: urlFilters.priceMaxVnd,
       });
     }, 800);
     return () => window.clearTimeout(tid);
@@ -199,6 +201,8 @@ export function SearchPageClient({
     urlFilters.radiusM,
     urlFilters.radiusLat,
     urlFilters.radiusLng,
+    urlFilters.priceMinVnd,
+    urlFilters.priceMaxVnd,
     accessToken,
   ]);
 

@@ -33,6 +33,7 @@ import { parseDirectoryListRadiusFromQuery } from '../../../common/pagination/pa
 import {
   parseListCategorySlugsCsv,
   parseOptionalMajorCategorySlug,
+  parseOptionalVndPriceRange,
 } from '../../../common/pagination/directory-list-search-query.parse';
 import { PersonalizationService } from '../application/personalization.service';
 import {
@@ -139,6 +140,13 @@ export class PersonalizationController {
   })
   @ApiQuery({ name: 'radiusLat', required: false })
   @ApiQuery({ name: 'radiusLng', required: false })
+  @ApiQuery({
+    name: 'priceMinVnd',
+    required: false,
+    description:
+      'В паре с `priceMaxVnd` (как в поиске); иначе из портрета; только для выдачи мастеров.',
+  })
+  @ApiQuery({ name: 'priceMaxVnd', required: false })
   @ApiOkResponse({ schema: personalizationRecommendationsResponseSchema })
   async getRecommendations(
     @Req() req: AuthedOrGuest,
@@ -149,6 +157,8 @@ export class PersonalizationController {
     @Query('radiusM') radiusMRaw: string | undefined,
     @Query('radiusLat') radiusLatRaw: string | undefined,
     @Query('radiusLng') radiusLngRaw: string | undefined,
+    @Query('priceMinVnd') priceMinVndRaw: string | undefined,
+    @Query('priceMaxVnd') priceMaxVndRaw: string | undefined,
   ) {
     const listLimit = parsePerListLimit(listLimitRaw, 6);
     const majorFromQuery = parseOptionalMajorCategorySlug(majorSlugRaw);
@@ -168,6 +178,11 @@ export class PersonalizationController {
             centerLat: radius.centerLat,
             centerLng: radius.centerLng,
           };
+    const hasPriceInQuery =
+      priceMinVndRaw !== undefined || priceMaxVndRaw !== undefined;
+    const vndPriceOverride = hasPriceInQuery
+      ? parseOptionalVndPriceRange(priceMinVndRaw, priceMaxVndRaw)
+      : null;
     return this.personalizationService.getRecommendations(
       req.user?.id ?? null,
       locale,
@@ -177,6 +192,7 @@ export class PersonalizationController {
         majorSlug: majorFromQuery,
         categorySlugs: categorySlugsForService,
         radius: radiusForService,
+        vndPriceOverride: hasPriceInQuery ? vndPriceOverride : null,
       },
     );
   }
