@@ -17,8 +17,13 @@ import type { IngestPersonalizationEventsBody } from '../dto/personalization-bod
 const FAVORITE_CATEGORY_WEIGHT = 3;
 const BEHAVIOR_EVENT_CATEGORY_WEIGHT = 1;
 
+/** Сколько slug подкатегорий в портрете нужно, чтобы показывать блок «Рекомендуем» на главной. */
+const MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED = 1;
+
 export type PersonalizationRecommendationsResult = {
   source: 'profile' | 'guest_popular';
+  /** Показывать ли блок: только залогиненный + достаточно сигнала в портрете (категории). */
+  personalizationReady: boolean;
   majorSlug: string | null;
   categorySlugsUsed: string[];
   specialists: SpecialistsListResponseDto['specialists'];
@@ -214,30 +219,13 @@ export class PersonalizationService {
     },
   ): Promise<PersonalizationRecommendationsResult> {
     if (userId == null) {
-      const sp = await this.directoryService.listSpecialists(locale, {
-        limit: options.limitSpecialists,
-        cursor: null,
-        majorCategorySlug: null,
-        q: null,
-        categorySlugs: [],
-        priceMinVnd: null,
-        priceMaxVnd: null,
-        radius: options.radius,
-      });
-      const org = await this.directoryService.listOrganizations(locale, {
-        limit: options.limitOrganizations,
-        cursor: null,
-        majorCategorySlug: null,
-        q: null,
-        categorySlugs: [],
-        radius: options.radius,
-      });
       return {
         source: 'guest_popular',
+        personalizationReady: false,
         majorSlug: null,
         categorySlugsUsed: [],
-        specialists: sp.specialists,
-        organizations: org.organizations,
+        specialists: [],
+        organizations: [],
       };
     }
 
@@ -287,6 +275,25 @@ export class PersonalizationService {
 
     const radius = options.radius;
 
+    const fromProfileOrExplicitFilters =
+      (options.categorySlugs != null && options.categorySlugs.length > 0) ||
+      (options.majorSlug != null && options.majorSlug !== '');
+
+    const personalizationReady =
+      fromProfileOrExplicitFilters ||
+      profile.categorySlugs.length >= MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED;
+
+    if (!personalizationReady) {
+      return {
+        source: 'profile',
+        personalizationReady: false,
+        majorSlug: majorForList,
+        categorySlugsUsed: categorySlugs,
+        specialists: [],
+        organizations: [],
+      };
+    }
+
     const sp = await this.directoryService.listSpecialists(locale, {
       limit: options.limitSpecialists,
       cursor: null,
@@ -308,6 +315,7 @@ export class PersonalizationService {
 
     return {
       source: 'profile',
+      personalizationReady: true,
       majorSlug: majorForList,
       categorySlugsUsed: categorySlugs,
       specialists: sp.specialists,

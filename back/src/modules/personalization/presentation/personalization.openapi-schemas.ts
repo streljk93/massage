@@ -43,6 +43,7 @@ export const personalizationRecommendationsResponseSchema = {
   type: 'object',
   required: [
     'source',
+    'personalizationReady',
     'majorSlug',
     'categorySlugsUsed',
     'specialists',
@@ -52,6 +53,11 @@ export const personalizationRecommendationsResponseSchema = {
     source: {
       type: 'string',
       enum: ['profile', 'guest_popular'],
+    },
+    personalizationReady: {
+      type: 'boolean',
+      description:
+        'true — достаточно сигнала (портрет: подкатегории или запрос с фильтрами) для персонального блока; false — гость или пустой портрет (клиент скрывает блок).',
     },
     majorSlug: { type: 'string', nullable: true, example: 'massage' },
     categorySlugsUsed: {

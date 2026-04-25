@@ -28,8 +28,10 @@ type HomeForYouSectionProps = {
 export function HomeForYouSection({ className }: HomeForYouSectionProps) {
   const t = useTranslations("homeForYou");
   const tSlots = useTranslations("slots");
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
+  const recommendationsEnabled =
+    sessionStatus === "authenticated" && accessToken.length > 0;
   const locale = useLocale() as AppLocale;
   const listingNow = useMemo(() => new Date(), []);
 
@@ -38,7 +40,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
     [accessToken, locale],
   );
 
-  const { data, isLoading, isError } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["personalization", "recommendations", accessToken, locale] as const,
     queryFn: async () => {
       const { data: res, error } = await personalizationGetRecommendations({
@@ -50,15 +52,22 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
       }
       return res;
     },
+    enabled: recommendationsEnabled,
     staleTime: 120_000,
   });
 
-  const specialists = data?.specialists ?? [];
-  const organizations = data?.organizations ?? [];
-  if (isError || (data == null && !isLoading)) {
+  if (isError) {
     return null;
   }
-  if (!isLoading && specialists.length === 0 && organizations.length === 0) {
+  /** Пока нет ответа (или query выключен) — не рисуем заголовок/скелетон, иначе мигание. */
+  if (data == null) {
+    return null;
+  }
+  if (!data.personalizationReady) {
+    return null;
+  }
+  const { specialists, organizations } = data;
+  if (specialists.length === 0 && organizations.length === 0) {
     return null;
   }
 
@@ -73,46 +82,40 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
       >
         {t("title")}
       </h2>
-      {isLoading ?
-        <div className="space-y-2.5" aria-hidden>
-          <div className="h-32 animate-pulse rounded-2xl bg-muted" />
-          <div className="h-32 animate-pulse rounded-2xl bg-muted" />
-        </div>
-      : <div className="space-y-2.5">
-          {specialists.map((s) => {
-            const card = specialistCardSeedFromApi(s);
-            return (
-              <SpecialistCard
-                key={card.id}
-                {...card}
-                imageAlt={card.name}
-                profileHref={`/specialists/${s.id}`}
-                slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                  locale,
-                  maxGroups: 5,
-                  now: listingNow,
-                })}
-              />
-            );
-          })}
-          {organizations.map((o) => {
-            const card = organizationCardSeedFromApi(o);
-            return (
-              <OrganizationCard
-                key={card.id}
-                {...card}
-                imageAlt={card.name}
-                profileHref={`/organizations/${o.id}`}
-                slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                  locale,
-                  maxGroups: 5,
-                  now: listingNow,
-                })}
-              />
-            );
-          })}
-        </div>
-      }
+      <div className="space-y-2.5">
+        {specialists.map((s) => {
+          const card = specialistCardSeedFromApi(s);
+          return (
+            <SpecialistCard
+              key={card.id}
+              {...card}
+              imageAlt={card.name}
+              profileHref={`/specialists/${s.id}`}
+              slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                locale,
+                maxGroups: 5,
+                now: listingNow,
+              })}
+            />
+          );
+        })}
+        {organizations.map((o) => {
+          const card = organizationCardSeedFromApi(o);
+          return (
+            <OrganizationCard
+              key={card.id}
+              {...card}
+              imageAlt={card.name}
+              profileHref={`/organizations/${o.id}`}
+              slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                locale,
+                maxGroups: 5,
+                now: listingNow,
+              })}
+            />
+          );
+        })}
+      </div>
       <Button
         variant="secondary"
         tone="light"

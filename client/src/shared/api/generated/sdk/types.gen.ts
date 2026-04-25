@@ -1638,6 +1638,10 @@ export type PersonalizationGetRecommendationsData = {
 export type PersonalizationGetRecommendationsResponses = {
     200: {
         source: 'profile' | 'guest_popular';
+        /**
+         * true — достаточно сигнала (портрет: подкатегории или запрос с фильтрами) для персонального блока; false — гость или пустой портрет (клиент скрывает блок).
+         */
+        personalizationReady: boolean;
         majorSlug: string | null;
         categorySlugsUsed: Array<string>;
         specialists: Array<{
