@@ -169,9 +169,7 @@ export function SalonSpecialistPickCard({
             tone="light"
             aria-pressed={showSelected}
             aria-disabled={scheduleDisabled}
-            aria-label={
-              scheduleDisabled ? scheduleDisabledLabel : undefined
-            }
+            aria-label={scheduleDisabled ? scheduleDisabledLabel : undefined}
             className={cn(
               motion.interactivePressStrong,
               "h-9 w-full rounded-2xl border px-4 text-sm shadow-none pointer-events-auto transition-colors",

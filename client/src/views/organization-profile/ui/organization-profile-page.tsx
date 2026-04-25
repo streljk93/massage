@@ -116,6 +116,35 @@ function findStaffRowForMenuAnchor(
   return candidates[0];
 }
 
+/** Сводное меню салона: одна карточка на логическую услугу (имя + категория). */
+function mergeSalonBookableOptions(
+  specialists: SalonSpecialistPick[],
+): BookableServiceOption[] {
+  const byKey = new Map<string, BookableServiceOption>();
+  for (const p of specialists) {
+    for (const opt of pickToBookableOptions(p)) {
+      const k = serviceMenuKeyFromOption(opt);
+      if (!byKey.has(k)) {
+        byKey.set(k, opt);
+      }
+    }
+  }
+  return [...byKey.values()].sort((a, b) =>
+    serviceMenuKeyFromOption(a).localeCompare(
+      serviceMenuKeyFromOption(b),
+      undefined,
+      { numeric: true },
+    ),
+  );
+}
+
+function anchorOptionForMenuKey(
+  merged: BookableServiceOption[],
+  menuKey: string,
+): BookableServiceOption | undefined {
+  return merged.find((o) => serviceMenuKeyFromOption(o) === menuKey);
+}
+
 export type OrganizationProfilePageProps = {
   profile: OrganizationProfileData;
   bookingSlotFromSearch: BookingSlotSearch | null;
@@ -168,25 +197,89 @@ export function OrganizationProfilePage({
     [profile],
   );
 
+  const [selectedServiceMenuKey, setSelectedServiceMenuKey] = useState(() => {
+    const merged = mergeSalonBookableOptions(profile.specialists);
+    return merged[0] ? serviceMenuKeyFromOption(merged[0]) : "";
+  });
+
   const [selectedSalonSpecialistId, setSelectedSalonSpecialistId] = useState(
-    () => profile.specialists[0]?.specialistId ?? "",
+    () => {
+      const merged = mergeSalonBookableOptions(profile.specialists);
+      const k = merged[0] ? serviceMenuKeyFromOption(merged[0]) : "";
+      const first = k
+        ? profile.specialists.find((p) =>
+            p.bookableServices.some(
+              (b) => serviceMenuKeyFromStaff(b) === k,
+            ),
+          )
+        : undefined;
+      return (
+        first?.specialistId ?? profile.specialists[0]?.specialistId ?? ""
+      );
+    },
   );
 
-  const [serviceId, setServiceId] = useState(() => {
-    const pick = profile.specialists[0];
-    return pickToBookableOptions(pick)[0]?.id ?? "";
-  });
-  const [durationByService, setDurationByService] = useState<
+  const [durationByMenuKey, setDurationByMenuKey] = useState<
     Record<string, number>
   >(() => {
-    const pick = profile.specialists[0];
-    const opts = pickToBookableOptions(pick);
+    const merged = mergeSalonBookableOptions(profile.specialists);
     const init: Record<string, number> = {};
-    for (const s of opts) {
-      init[s.id] = s.durationMinutes[0];
+    for (const opt of merged) {
+      init[serviceMenuKeyFromOption(opt)] = opt.durationMinutes[0];
     }
     return init;
   });
+
+  const salonBookableServiceOptions = useMemo(
+    () => mergeSalonBookableOptions(profile.specialists),
+    [profile.specialists],
+  );
+
+  const selectedPick = useMemo(
+    () =>
+      profile.specialists.find(
+        (p) => p.specialistId === selectedSalonSpecialistId,
+      ),
+    [profile.specialists, selectedSalonSpecialistId],
+  );
+
+  const selectedServiceRow = useMemo(() => {
+    if (!selectedPick || !selectedServiceMenuKey) {
+      return undefined;
+    }
+    const anchor = anchorOptionForMenuKey(
+      salonBookableServiceOptions,
+      selectedServiceMenuKey,
+    );
+    if (!anchor) {
+      return undefined;
+    }
+    return findStaffRowForMenuAnchor(
+      selectedPick,
+      anchor,
+      durationByMenuKey[selectedServiceMenuKey],
+    );
+  }, [
+    selectedPick,
+    selectedServiceMenuKey,
+    durationByMenuKey,
+    salonBookableServiceOptions,
+  ]);
+
+  const serviceId = selectedServiceRow?.id ?? "";
+
+  const selectedService = useMemo((): BookableServiceOption | undefined => {
+    if (!selectedServiceRow) {
+      return undefined;
+    }
+    return {
+      id: selectedServiceRow.id,
+      title: selectedServiceRow.name,
+      categoryShortName: selectedServiceRow.categoryShortName,
+      durationMinutes: selectedServiceRow.durationMinutes,
+      priceVndByDuration: selectedServiceRow.priceVndByDuration,
+    };
+  }, [selectedServiceRow]);
 
   const { dayIndex: initialDayIndex, slot: initialSlot } =
     initialDayAndSlotFromSearch(profile, bookingSlotFromSearch);
@@ -231,24 +324,6 @@ export function OrganizationProfilePage({
     urlSlotDurationApplyKeyRef.current = null;
   }, [urlBookingSlotKey]);
 
-  const selectedPick = useMemo(
-    () =>
-      profile.specialists.find(
-        (p) => p.specialistId === selectedSalonSpecialistId,
-      ),
-    [profile.specialists, selectedSalonSpecialistId],
-  );
-
-  const bookableServiceOptions = useMemo(
-    () => pickToBookableOptions(selectedPick),
-    [selectedPick],
-  );
-
-  const selectedService = useMemo(
-    () => bookableServiceOptions.find((s) => s.id === serviceId),
-    [bookableServiceOptions, serviceId],
-  );
-
   const daySlots = useMemo(
     () => profile.timeSlotsByDay[dayIndex] ?? [],
     [profile.timeSlotsByDay, dayIndex],
@@ -258,10 +333,12 @@ export function OrganizationProfilePage({
     if (!selectedService) {
       return undefined;
     }
-    return (
-      durationByService[serviceId] ?? selectedService.durationMinutes[0]
-    );
-  }, [durationByService, selectedService, serviceId]);
+    const m = durationByMenuKey[selectedServiceMenuKey];
+    if (m !== undefined && selectedService.durationMinutes.includes(m)) {
+      return m;
+    }
+    return selectedService.durationMinutes[0];
+  }, [durationByMenuKey, selectedService, selectedServiceMenuKey]);
 
   const filteredDaySlots = useMemo(() => {
     if (selectedBookingMinutes === undefined) {
@@ -311,9 +388,9 @@ export function OrganizationProfilePage({
     );
     if (minDur !== undefined && minDur !== selectedBookingMinutes) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- длительность под URL-слот (иначе слот пропадает из сетки)
-      setDurationByService((prev) => ({
+      setDurationByMenuKey((prev) => ({
         ...prev,
-        [serviceId]: minDur,
+        [selectedServiceMenuKey]: minDur,
       }));
     }
     urlSlotDurationApplyKeyRef.current = urlBookingSlotKey;
@@ -323,7 +400,7 @@ export function OrganizationProfilePage({
     profile.timeSlotsByDay,
     selectedBookingMinutes,
     selectedService,
-    serviceId,
+    selectedServiceMenuKey,
     urlBookingSlotKey,
   ]);
 
@@ -350,30 +427,29 @@ export function OrganizationProfilePage({
     selectedBookingMinutes,
   ]);
 
-  /** Та же услуга по меню (все такие карточки показываем; занятость — через disabled). */
-  const specialistsForSelectedService = useMemo(() => {
-    if (!selectedService) {
+  const specialistsWithSelectedMenuService = useMemo(() => {
+    if (!selectedServiceMenuKey) {
       return profile.specialists;
     }
-    const menuKey = serviceMenuKeyFromOption(selectedService);
     return profile.specialists.filter((p) =>
-      p.bookableServices.some((b) => serviceMenuKeyFromStaff(b) === menuKey),
+      p.bookableServices.some(
+        (b) => serviceMenuKeyFromStaff(b) === selectedServiceMenuKey,
+      ),
     );
-  }, [profile.specialists, selectedService]);
+  }, [profile.specialists, selectedServiceMenuKey]);
 
-  /** Свободны на выбранный интервал (для автопереключения и кнопки записи). */
   const selectableSpecialistsAtSlot = useMemo(() => {
     if (!proposedBookingSlotKeys || proposedBookingSlotKeys.size === 0) {
-      return specialistsForSelectedService;
+      return specialistsWithSelectedMenuService;
     }
-    return specialistsForSelectedService.filter(
+    return specialistsWithSelectedMenuService.filter(
       (p) =>
         !specialistOccupiedOverlapsProposed(
           p.occupiedListingSlotKeys,
           proposedBookingSlotKeys,
         ),
     );
-  }, [specialistsForSelectedService, proposedBookingSlotKeys]);
+  }, [proposedBookingSlotKeys, specialistsWithSelectedMenuService]);
 
   const applySpecialistRemapService = useCallback(
     (
@@ -389,14 +465,6 @@ export function OrganizationProfilePage({
         return;
       }
 
-      const initDurationsForPick = (p: SalonSpecialistPick) => {
-        const m: Record<string, number> = {};
-        for (const s of pickToBookableOptions(p)) {
-          m[s.id] = s.durationMinutes[0];
-        }
-        return m;
-      };
-
       if (anchorOption) {
         const row = findStaffRowForMenuAnchor(
           pick,
@@ -404,43 +472,101 @@ export function OrganizationProfilePage({
           preferredMinutes,
         );
         if (row) {
-          const m = initDurationsForPick(pick);
           const want =
             preferredMinutes !== undefined &&
             row.durationMinutes.includes(preferredMinutes)
               ? preferredMinutes
               : row.durationMinutes[0];
-          m[row.id] = want;
-          setServiceId(row.id);
-          setDurationByService(m);
+          const mk = serviceMenuKeyFromOption(anchorOption);
+          setSelectedServiceMenuKey(mk);
+          setDurationByMenuKey((prev) => ({ ...prev, [mk]: want }));
           return;
         }
       }
 
       const opts = pickToBookableOptions(pick);
-      setServiceId(opts[0]?.id ?? "");
-      setDurationByService(initDurationsForPick(pick));
+      const first = opts[0];
+      if (first) {
+        setSelectedServiceMenuKey(serviceMenuKeyFromOption(first));
+        setDurationByMenuKey((prev) => {
+          const next = { ...prev };
+          for (const s of opts) {
+            const mk = serviceMenuKeyFromOption(s);
+            if (next[mk] === undefined) {
+              next[mk] = s.durationMinutes[0];
+            }
+          }
+          return next;
+        });
+      }
     },
     [profile.specialists],
   );
 
   const onSelectSpecialist = useCallback(
     (specialistId: string) => {
+      const anchor = anchorOptionForMenuKey(
+        salonBookableServiceOptions,
+        selectedServiceMenuKey,
+      );
       applySpecialistRemapService(
         specialistId,
-        selectedService,
+        anchor,
         selectedBookingMinutes,
       );
     },
     [
       applySpecialistRemapService,
-      selectedService,
+      salonBookableServiceOptions,
+      selectedServiceMenuKey,
       selectedBookingMinutes,
     ],
   );
 
   useEffect(() => {
-    if (!selectedService || selectableSpecialistsAtSlot.length === 0) {
+    if (!selectedServiceMenuKey) {
+      return;
+    }
+    if (selectedServiceRow) {
+      return;
+    }
+    const anchor = anchorOptionForMenuKey(
+      salonBookableServiceOptions,
+      selectedServiceMenuKey,
+    );
+    if (!anchor) {
+      return;
+    }
+    const first = profile.specialists.find((p) =>
+      p.bookableServices.some(
+        (b) => serviceMenuKeyFromStaff(b) === selectedServiceMenuKey,
+      ),
+    );
+    if (!first) {
+      return;
+    }
+    queueMicrotask(() => {
+      applySpecialistRemapService(
+        first.specialistId,
+        anchor,
+        durationByMenuKey[selectedServiceMenuKey] ?? anchor.durationMinutes[0],
+      );
+    });
+  }, [
+    applySpecialistRemapService,
+    durationByMenuKey,
+    profile.specialists,
+    salonBookableServiceOptions,
+    selectedServiceMenuKey,
+    selectedServiceRow,
+  ]);
+
+  useEffect(() => {
+    const anchor = anchorOptionForMenuKey(
+      salonBookableServiceOptions,
+      selectedServiceMenuKey,
+    );
+    if (!selectedService || !anchor || selectableSpecialistsAtSlot.length === 0) {
       return;
     }
     const ok = selectableSpecialistsAtSlot.some(
@@ -451,7 +577,7 @@ export function OrganizationProfilePage({
       queueMicrotask(() => {
         applySpecialistRemapService(
           nextId,
-          selectedService,
+          anchor,
           selectedBookingMinutes,
         );
       });
@@ -462,6 +588,8 @@ export function OrganizationProfilePage({
     selectedBookingMinutes,
     selectedSalonSpecialistId,
     selectedService,
+    selectedServiceMenuKey,
+    salonBookableServiceOptions,
   ]);
 
   const bookingPriceVnd =
@@ -548,19 +676,21 @@ export function OrganizationProfilePage({
   const bookingDisabled =
     bookingPending ||
     profile.specialists.length === 0 ||
-    specialistsForSelectedService.length === 0 ||
+    salonBookableServiceOptions.length === 0 ||
+    !selectedService ||
     selectableSpecialistsAtSlot.length === 0 ||
     !selectableSpecialistsAtSlot.some(
       (p) => p.specialistId === selectedSalonSpecialistId,
     ) ||
     !selectedSalonSpecialistId ||
-    bookableServiceOptions.length === 0 ||
     selectedBookingMinutes === undefined ||
     filteredDaySlots.length === 0 ||
     !effectiveSlot.trim();
 
   const showBookingFlow =
-    profile.specialists.length > 0 && selectedPick !== undefined;
+    profile.specialists.length > 0 &&
+    selectedPick !== undefined &&
+    salonBookableServiceOptions.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
@@ -765,19 +895,20 @@ export function OrganizationProfilePage({
                 </div>
               </section>
 
-              {showBookingFlow && bookableServiceOptions.length > 0 ? (
+              {showBookingFlow && salonBookableServiceOptions.length > 0 ? (
                 <section className="space-y-2.5">
                   <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                     {t("selectService")}
                   </h2>
                   <div className="space-y-2.5">
-                    {bookableServiceOptions.map((svc) => {
-                      const selected = svc.id === serviceId;
+                    {salonBookableServiceOptions.map((svc) => {
+                      const menuKey = serviceMenuKeyFromOption(svc);
+                      const selected = menuKey === selectedServiceMenuKey;
                       const dur =
-                        durationByService[svc.id] ?? svc.durationMinutes[0];
+                        durationByMenuKey[menuKey] ?? svc.durationMinutes[0];
                       return (
                         <ProfileServicePickCard
-                          key={svc.id}
+                          key={menuKey}
                           service={svc}
                           selected={selected}
                           selectedDurationMinutes={dur}
@@ -786,26 +917,69 @@ export function OrganizationProfilePage({
                           formatDurationMinutes={(m) =>
                             t("durationMin", { n: m })
                           }
-                          onSelectService={() => setServiceId(svc.id)}
-                          onSelectDuration={(m) => {
-                            setDurationByService((prev) => ({
+                          onSelectService={() => {
+                            const nextDur = dur;
+                            setSelectedServiceMenuKey(menuKey);
+                            setDurationByMenuKey((prev) => ({
                               ...prev,
-                              [svc.id]: m,
+                              [menuKey]: nextDur,
                             }));
-                            setServiceId(svc.id);
+                            const first = profile.specialists.find((p) =>
+                              p.bookableServices.some(
+                                (b) => serviceMenuKeyFromStaff(b) === menuKey,
+                              ),
+                            );
+                            if (first) {
+                              applySpecialistRemapService(
+                                first.specialistId,
+                                svc,
+                                nextDur,
+                              );
+                            }
+                          }}
+                          onSelectDuration={(m) => {
+                            setDurationByMenuKey((prev) => ({
+                              ...prev,
+                              [menuKey]: m,
+                            }));
+                            setSelectedServiceMenuKey(menuKey);
+                            const currentHasService = profile.specialists
+                              .find(
+                                (p) =>
+                                  p.specialistId === selectedSalonSpecialistId,
+                              )
+                              ?.bookableServices.some(
+                                (b) =>
+                                  serviceMenuKeyFromStaff(b) === menuKey,
+                              );
+                            const targetId = currentHasService
+                              ? selectedSalonSpecialistId
+                              : profile.specialists.find((p) =>
+                                    p.bookableServices.some(
+                                      (b) =>
+                                        serviceMenuKeyFromStaff(b) === menuKey,
+                                    ),
+                                  )?.specialistId;
+                            if (targetId) {
+                              applySpecialistRemapService(
+                                targetId,
+                                svc,
+                                m,
+                              );
+                            }
                           }}
                         />
                       );
                     })}
                   </div>
                 </section>
-              ) : showBookingFlow ? (
+              ) : profile.specialists.length > 0 && salonBookableServiceOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  {t("noServicesForSpecialist")}
+                  {t("noServicesForSalon")}
                 </p>
               ) : null}
 
-              {showBookingFlow && bookableServiceOptions.length > 0 ? (
+              {showBookingFlow && salonBookableServiceOptions.length > 0 ? (
                 <>
                   <section className="space-y-2.5">
                     <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
@@ -901,13 +1075,13 @@ export function OrganizationProfilePage({
                 </>
               ) : null}
 
-              {specialistsForSelectedService.length > 0 ? (
+              {specialistsWithSelectedMenuService.length > 0 ? (
                 <section className="space-y-2.5">
                   <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                     {t("selectSpecialist")}
                   </h2>
                   <div className="flex flex-col gap-3">
-                    {specialistsForSelectedService.map((pick, index) => {
+                    {specialistsWithSelectedMenuService.map((pick, index) => {
                       const scheduleBusy =
                         proposedBookingSlotKeys !== null &&
                         proposedBookingSlotKeys.size > 0 &&

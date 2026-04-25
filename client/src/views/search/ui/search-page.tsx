@@ -57,7 +57,6 @@ import {
   parseSearchUrlFilters,
   type SearchUrlFilters,
 } from "../lib/search-url-filters";
-import { dedupeDirectoryListItemsByLatLng } from "../lib/directory-list-item-geo";
 import {
   buildSearchSlotDayOptions,
   buildSearchSlotTimeOptions,
@@ -315,16 +314,12 @@ export function SearchPageClient({
         directoryOrganizationHasFreeSlotAt(o, d, tm, listingNow),
       );
     }
-    if (hasRadiusFilter) {
-      out = dedupeDirectoryListItemsByLatLng(out);
-    }
     return out;
   }, [
     organizations,
     urlFilters.slotDay,
     urlFilters.slotTime,
     listingNow,
-    hasRadiusFilter,
   ]);
 
   const displaySpecialists = useMemo(() => {
@@ -336,16 +331,12 @@ export function SearchPageClient({
         directorySpecialistHasFreeSlotAt(s, d, tm, listingNow),
       );
     }
-    if (hasRadiusFilter) {
-      out = dedupeDirectoryListItemsByLatLng(out);
-    }
     return out;
   }, [
     specialists,
     urlFilters.slotDay,
     urlFilters.slotTime,
     listingNow,
-    hasRadiusFilter,
   ]);
 
   const orgSentinelRef = useCursorPaginationSentinel({
