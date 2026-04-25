@@ -12,6 +12,7 @@ import {
   type OrganizationListApiFilters,
   type SpecialistListApiFilters,
 } from './directory-list-query-filters';
+import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
 
 const serviceCategoryWithLocales = {
   include: {
@@ -103,11 +104,7 @@ export const specialistListIncludeShape = specialistListPayloadArgs.include;
 
 export const organizationListIncludeShape = organizationListPayloadArgs.include;
 
-export type DirectoryListRadiusFilter = {
-  centerLat: number;
-  centerLng: number;
-  radiusM: number;
-};
+export type { DirectoryListRadiusFilter };
 
 /** Активные записи: интервал брони занимает слоты до отмены / завершения. */
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =

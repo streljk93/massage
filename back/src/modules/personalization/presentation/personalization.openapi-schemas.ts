@@ -53,6 +53,8 @@ export const personalizationRecommendationsResponseSchema = {
     source: {
       type: 'string',
       enum: ['profile', 'guest_popular'],
+      description:
+        '`guest_popular` — в запросе нет валидного access JWT (гость), персонализация выключена. `profile` — известен user id из токена.',
     },
     personalizationReady: {
       type: 'boolean',

@@ -44,6 +44,40 @@ export type SetTestBookingStatusResponseSwaggerDto = {
     previousStatus: string;
 };
 
+export type DevRecomputePreferenceProfileRequestSwaggerDto = {
+    /**
+     * Email пользователя (`User.email`)
+     */
+    email: string;
+    /**
+     * Локаль для проверки `readiness` по каталогу (без поля — `en`, как `parseApiLocale`).
+     */
+    locale?: 'en' | 'vi' | 'ru';
+};
+
+export type DevRecomputePreferenceProfileResponseSwaggerDto = {
+    userId: string;
+    email: string;
+    /**
+     * Агрегат `PreferenceProfileV1` после пересчёта
+     */
+    profile: {
+        [key: string]: unknown;
+    };
+    /**
+     * Сырьё для портрета: `fromFavorites` (string[]), `fromBookings` ([{slug, totalWeight}]), `fromBehaviorEventsLast30Days` ([{slug, weight}]), `behaviorEventRowsInWindow` (number).
+     */
+    inputsConsidered: {
+        [key: string]: unknown;
+    };
+    /**
+     * `minCategorySlugsRequired`, `personalizationReady` (как GET рекомендаций без query), `homeBlockWouldRender` (и персонализация готова, и в каталоге есть сущности), `catalogListLimitUsed` (=3, как на главной), `catalogLocale`, `catalogSpecialistsCount`, `catalogOrganizationsCount`, `note` (радиус в проверке не передаётся).
+     */
+    readiness: {
+        [key: string]: unknown;
+    };
+};
+
 export type HealthGetHealthData = {
     body?: never;
     path?: never;
@@ -1637,6 +1671,9 @@ export type PersonalizationGetRecommendationsData = {
 
 export type PersonalizationGetRecommendationsResponses = {
     200: {
+        /**
+         * `guest_popular` — в запросе нет валидного access JWT (гость), персонализация выключена. `profile` — известен user id из токена.
+         */
         source: 'profile' | 'guest_popular';
         /**
          * true — достаточно сигнала (портрет: подкатегории или запрос с фильтрами) для персонального блока; false — гость или пустой портрет (клиент скрывает блок).
@@ -1884,6 +1921,26 @@ export type DevFcmTestTestFcmResponses = {
 };
 
 export type DevFcmTestTestFcmResponse = DevFcmTestTestFcmResponses[keyof DevFcmTestTestFcmResponses];
+
+export type DevPersonalizationRecomputeProfileData = {
+    body: DevRecomputePreferenceProfileRequestSwaggerDto;
+    path?: never;
+    query?: never;
+    url: '/dev/personalization/recompute-profile';
+};
+
+export type DevPersonalizationRecomputeProfileErrors = {
+    /**
+     * Ручка выключена (`404`) или пользователь с таким email не найден
+     */
+    404: unknown;
+};
+
+export type DevPersonalizationRecomputeProfileResponses = {
+    200: DevRecomputePreferenceProfileResponseSwaggerDto;
+};
+
+export type DevPersonalizationRecomputeProfileResponse = DevPersonalizationRecomputeProfileResponses[keyof DevPersonalizationRecomputeProfileResponses];
 
 export type FavoritesListData = {
     body?: never;

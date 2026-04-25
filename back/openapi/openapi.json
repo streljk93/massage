@@ -3725,6 +3725,11 @@
             "description": "Нет sessionId у гостя"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "События витрины (для портрета и рекомендаций)",
         "tags": [
           "personalization"
@@ -3733,7 +3738,7 @@
     },
     "/personalization/recommendations": {
       "get": {
-        "description": "Гость — отдача без фильтра по портрету. Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.",
+        "description": "**Блок «Рекомендуем» на клиенте:** для `personalizationReady: true` нужен **валидный Bearer access** (без заголовка или с refresh вместо access — пользователь считается гостем: `source: guest_popular`, `personalizationReady: false`). Пересчёт портрета по email (dev) не подменяет пользователя в запросе — в токене должен быть тот же аккаунт. Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.",
         "operationId": "Personalization_getRecommendations",
         "parameters": [
           {
@@ -3812,7 +3817,8 @@
                       "enum": [
                         "profile",
                         "guest_popular"
-                      ]
+                      ],
+                      "description": "`guest_popular` — в запросе нет валидного access JWT (гость), персонализация выключена. `profile` — известен user id из токена."
                     },
                     "personalizationReady": {
                       "type": "boolean",
@@ -4217,6 +4223,11 @@
             }
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Персональные рекомендации (салоны и мастера)",
         "tags": [
           "personalization"
@@ -4607,6 +4618,42 @@
           }
         },
         "summary": "[Dev] Тестовый FCM push по email",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/personalization/recompute-profile": {
+      "post": {
+        "description": "Вызывает `PersonalizationService.recomputeProfileForUser` (тот же алгоритм, что cron и ingest). В ответе: сырые сигналы `inputsConsidered`, флаги `readiness.personalizationReady` (как GET рекомендаций без query) и `readiness.homeBlockWouldRender` (с учётом пустой/непустой выдачи каталога при `listLimit=3` как на главной). Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true` — иначе `404`.",
+        "operationId": "DevPersonalization_recomputeProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevRecomputePreferenceProfileRequestSwaggerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevRecomputePreferenceProfileResponseSwaggerDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ручка выключена (`404`) или пользователь с таким email не найден"
+          }
+        },
+        "summary": "[Dev] Пересчитать портрет персонализации по email",
         "tags": [
           "dev"
         ]
@@ -5465,6 +5512,65 @@
           "id",
           "status",
           "previousStatus"
+        ]
+      },
+      "DevRecomputePreferenceProfileRequestSwaggerDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email пользователя (`User.email`)",
+            "example": "user@example.com"
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "en",
+              "vi",
+              "ru"
+            ],
+            "description": "Локаль для проверки `readiness` по каталогу (без поля — `en`, как `parseApiLocale`).",
+            "example": "ru"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "DevRecomputePreferenceProfileResponseSwaggerDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "profile": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Агрегат `PreferenceProfileV1` после пересчёта"
+          },
+          "inputsConsidered": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Сырьё для портрета: `fromFavorites` (string[]), `fromBookings` ([{slug, totalWeight}]), `fromBehaviorEventsLast30Days` ([{slug, weight}]), `behaviorEventRowsInWindow` (number)."
+          },
+          "readiness": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "`minCategorySlugsRequired`, `personalizationReady` (как GET рекомендаций без query), `homeBlockWouldRender` (и персонализация готова, и в каталоге есть сущности), `catalogListLimitUsed` (=3, как на главной), `catalogLocale`, `catalogSpecialistsCount`, `catalogOrganizationsCount`, `note` (радиус в проверке не передаётся)."
+          }
+        },
+        "required": [
+          "userId",
+          "email",
+          "profile",
+          "inputsConsidered",
+          "readiness"
         ]
       }
     }

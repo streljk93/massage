@@ -74,7 +74,7 @@ export default () => ({
     ),
   },
   /**
-   * Dev-only HTTP-ручки (напр. `POST /v1/dev/bookings/set-status` и будущие под `/v1/dev/*`).
+   * Dev-only HTTP-ручки (напр. `POST /v1/dev/bookings/set-status`, `POST /v1/dev/personalization/recompute-profile`).
    * В `production` всегда выключено. В dev/staging: по умолчанию включено;
    * отключить все такие ручки: `DISABLE_DEV_TEST_ROUTES=true`.
    */

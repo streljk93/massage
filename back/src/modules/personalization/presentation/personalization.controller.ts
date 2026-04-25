@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiBody,
   ApiOkResponse,
   ApiOperation,
@@ -68,6 +69,7 @@ export class PersonalizationController {
 
   @Post('events')
   @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'События витрины (для портрета и рекомендаций)',
     description:
@@ -103,11 +105,14 @@ export class PersonalizationController {
 
   @Get('recommendations')
   @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Персональные рекомендации (салоны и мастера)',
     description:
-      'Гость — отдача без фильтра по портрету. Авторизованный — портрет и фильтрация ' +
-      'категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.',
+      '**Блок «Рекомендуем» на клиенте:** для `personalizationReady: true` нужен **валидный Bearer access** ' +
+      '(без заголовка или с refresh вместо access — пользователь считается гостем: `source: guest_popular`, `personalizationReady: false`). ' +
+      'Пересчёт портрета по email (dev) не подменяет пользователя в запросе — в токене должен быть тот же аккаунт. ' +
+      'Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.',
   })
   @ApiLocaleQueryDocs()
   @ApiQuery({

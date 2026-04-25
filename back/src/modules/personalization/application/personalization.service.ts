@@ -2,8 +2,8 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { subDays } from 'date-fns';
+import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
 import { DirectoryService } from '../../directory/application/directory.service';
-import type { DirectoryListRadiusFilter } from '../../directory/infrastructure/directory.repository';
 import type { OrganizationsListResponseDto } from '../../directory/dto/organizations-list-response.dto';
 import type { SpecialistsListResponseDto } from '../../directory/dto/specialists-list-response.dto';
 import type { ApiLocale } from '../../../common/i18n';
@@ -12,13 +12,11 @@ import {
   type PreferenceProfileV1,
 } from '../domain/preference-profile.v1';
 import { PersonalizationRepository } from '../infrastructure/personalization.repository';
+import { MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED } from '../personalization.constants';
 import type { IngestPersonalizationEventsBody } from '../dto/personalization-body.schema';
 
 const FAVORITE_CATEGORY_WEIGHT = 3;
 const BEHAVIOR_EVENT_CATEGORY_WEIGHT = 1;
-
-/** Сколько slug подкатегорий в портрете нужно, чтобы показывать блок «Рекомендуем» на главной. */
-const MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED = 1;
 
 export type PersonalizationRecommendationsResult = {
   source: 'profile' | 'guest_popular';
@@ -39,6 +37,59 @@ export class PersonalizationService {
     private readonly directoryService: DirectoryService,
     private readonly config: ConfigService,
   ) {}
+
+  private mapPreferenceProfileFromRow(
+    row: { profile: Prisma.JsonValue } | null,
+  ): PreferenceProfileV1 {
+    const empty: PreferenceProfileV1 = {
+      version: PREFERENCE_PROFILE_JSON_VERSION,
+      categorySlugs: [],
+      majorSlug: null,
+      lastGeo: null,
+    };
+    const fromDb = (row?.profile ?? null) as Record<string, unknown> | null;
+    if (fromDb == null) {
+      return empty;
+    }
+    const v = fromDb['version'];
+    const versionOk =
+      v === PREFERENCE_PROFILE_JSON_VERSION ||
+      v === '1' ||
+      Number(v) === PREFERENCE_PROFILE_JSON_VERSION;
+    const categorySlugs = Array.isArray(fromDb['categorySlugs'])
+      ? (fromDb['categorySlugs'] as unknown[]).filter(
+          (s): s is string => typeof s === 'string' && s.length > 0,
+        )
+      : [];
+    const majorRaw = fromDb['majorSlug'];
+    const majorSlug: string | null =
+      typeof majorRaw === 'string' || majorRaw === null
+        ? typeof majorRaw === 'string'
+          ? majorRaw
+          : null
+        : null;
+    const lastGeoRaw = fromDb['lastGeo'];
+    const lastGeo =
+      lastGeoRaw != null &&
+      typeof lastGeoRaw === 'object' &&
+      !Array.isArray(lastGeoRaw) &&
+      typeof (lastGeoRaw as { lat?: unknown }).lat === 'number' &&
+      typeof (lastGeoRaw as { lng?: unknown }).lng === 'number'
+        ? {
+            lat: (lastGeoRaw as { lat: number }).lat,
+            lng: (lastGeoRaw as { lng: number }).lng,
+          }
+        : null;
+    if (!versionOk && categorySlugs.length === 0) {
+      return empty;
+    }
+    return {
+      version: PREFERENCE_PROFILE_JSON_VERSION,
+      categorySlugs,
+      majorSlug,
+      lastGeo,
+    };
+  }
 
   /**
    * Удаляет `UserBehaviorEvent` старше `personalization.behaviorEventsRetentionDays` (cron).
@@ -233,6 +284,7 @@ export class PersonalizationService {
       await this.personalizationRepository.findPreferenceProfileByUserId(
         userId,
       );
+    const hadProfileRowAtStart = row != null;
     if (row == null) {
       await this.recomputeProfileForUser(userId);
       row =
@@ -241,27 +293,20 @@ export class PersonalizationService {
         );
     }
 
-    const fromDb = (row?.profile ??
-      null) as Partial<PreferenceProfileV1> | null;
-    const profile: PreferenceProfileV1 =
-      fromDb != null && fromDb.version === PREFERENCE_PROFILE_JSON_VERSION
-        ? {
-            version: PREFERENCE_PROFILE_JSON_VERSION,
-            categorySlugs: Array.isArray(fromDb.categorySlugs)
-              ? fromDb.categorySlugs
-              : [],
-            majorSlug:
-              typeof fromDb.majorSlug === 'string' || fromDb.majorSlug === null
-                ? (fromDb.majorSlug ?? null)
-                : null,
-            lastGeo: fromDb.lastGeo ?? null,
-          }
-        : {
-            version: PREFERENCE_PROFILE_JSON_VERSION,
-            categorySlugs: [],
-            majorSlug: null,
-            lastGeo: null,
-          };
+    let profile = this.mapPreferenceProfileFromRow(row);
+
+    /**
+     * Запись портрета уже была, но `categorySlugs` пусты — брони/избранное
+     * могли появиться позже; при первом создании строки пересчёт выше уже был.
+     */
+    if (profile.categorySlugs.length === 0 && hadProfileRowAtStart) {
+      await this.recomputeProfileForUser(userId);
+      row =
+        await this.personalizationRepository.findPreferenceProfileByUserId(
+          userId,
+        );
+      profile = this.mapPreferenceProfileFromRow(row);
+    }
 
     const categorySlugs =
       options.categorySlugs && options.categorySlugs.length > 0
@@ -281,7 +326,8 @@ export class PersonalizationService {
 
     const personalizationReady =
       fromProfileOrExplicitFilters ||
-      profile.categorySlugs.length >= MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED;
+      profile.categorySlugs.length >=
+        MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED;
 
     if (!personalizationReady) {
       return {

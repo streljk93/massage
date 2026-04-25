@@ -16,6 +16,6 @@ import { PersonalizationController } from './presentation/personalization.contro
     PersonalizationCronService,
     JwtAccessOptionalGuard,
   ],
-  exports: [PersonalizationService],
+  exports: [PersonalizationService, PersonalizationRepository],
 })
 export class PersonalizationModule {}
