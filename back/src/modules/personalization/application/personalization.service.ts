@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Prisma } from '@prisma/client';
 import { subDays } from 'date-fns';
@@ -28,13 +34,33 @@ export type PersonalizationRecommendationsResult = {
   organizations: OrganizationsListResponseDto['organizations'];
 };
 
+/** Результат той же логики, что и для GET /personalization/recommendations (фильтры портрета/запроса). */
+export type RecommendationListingResolution =
+  | {
+      personalizationReady: false;
+      majorForList: string | null;
+      categorySlugsUsed: string[];
+      priceMinVnd: number | null;
+      priceMaxVnd: number | null;
+    }
+  | {
+      personalizationReady: true;
+      majorForList: string | null;
+      categorySlugsUsed: string[];
+      priceMinVnd: number | null;
+      priceMaxVnd: number | null;
+    };
+
 @Injectable()
 export class PersonalizationService {
   private readonly logger = new Logger(PersonalizationService.name);
 
   constructor(
+    @Inject(PersonalizationRepository)
     private readonly personalizationRepository: PersonalizationRepository,
+    @Inject(forwardRef(() => DirectoryService))
     private readonly directoryService: DirectoryService,
+    @Inject(ConfigService)
     private readonly config: ConfigService,
   ) {}
 
@@ -300,6 +326,103 @@ export class PersonalizationService {
     return { processed: ids.length };
   }
 
+  /**
+   * Общая логика с GET /personalization/recommendations: портрет, готовность, фильтры списка.
+   * Нужна для `sort=recommended` в каталоге и для превью без загрузки списков (`listLimit=0`).
+   */
+  async resolveRecommendationListing(
+    userId: string | null,
+    options: {
+      majorSlug: string | null;
+      /** Явно заданные подкатегории (с поиска), иначе из портрета. */
+      categorySlugs: string[] | null;
+      radius: DirectoryListRadiusFilter | null;
+      vndPriceOverride: {
+        priceMinVnd: number | null;
+        priceMaxVnd: number | null;
+      } | null;
+    },
+  ): Promise<RecommendationListingResolution> {
+    if (userId == null) {
+      return {
+        personalizationReady: false,
+        majorForList: null,
+        categorySlugsUsed: [],
+        priceMinVnd: null,
+        priceMaxVnd: null,
+      };
+    }
+
+    let row =
+      await this.personalizationRepository.findPreferenceProfileByUserId(
+        userId,
+      );
+    const hadProfileRowAtStart = row != null;
+    if (row == null) {
+      await this.recomputeProfileForUser(userId);
+      row =
+        await this.personalizationRepository.findPreferenceProfileByUserId(
+          userId,
+        );
+    }
+
+    let profile = this.mapPreferenceProfileFromRow(row);
+
+    if (profile.categorySlugs.length === 0 && hadProfileRowAtStart) {
+      await this.recomputeProfileForUser(userId);
+      row =
+        await this.personalizationRepository.findPreferenceProfileByUserId(
+          userId,
+        );
+      profile = this.mapPreferenceProfileFromRow(row);
+    }
+
+    const categorySlugs =
+      options.categorySlugs && options.categorySlugs.length > 0
+        ? options.categorySlugs
+        : profile.categorySlugs;
+
+    const majorForList =
+      options.majorSlug !== null && options.majorSlug !== undefined
+        ? options.majorSlug
+        : (profile.majorSlug ?? null);
+
+    const priceMinVnd =
+      options.vndPriceOverride != null
+        ? options.vndPriceOverride.priceMinVnd
+        : (profile.priceMinVnd ?? null);
+    const priceMaxVnd =
+      options.vndPriceOverride != null
+        ? options.vndPriceOverride.priceMaxVnd
+        : (profile.priceMaxVnd ?? null);
+
+    const fromProfileOrExplicitFilters =
+      (options.categorySlugs != null && options.categorySlugs.length > 0) ||
+      (options.majorSlug != null && options.majorSlug !== '');
+
+    const personalizationReady =
+      fromProfileOrExplicitFilters ||
+      profile.categorySlugs.length >=
+        MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED;
+
+    if (!personalizationReady) {
+      return {
+        personalizationReady: false,
+        majorForList,
+        categorySlugsUsed: categorySlugs,
+        priceMinVnd,
+        priceMaxVnd,
+      };
+    }
+    return {
+      personalizationReady: true,
+      majorForList,
+      categorySlugsUsed: categorySlugs,
+      priceMinVnd,
+      priceMaxVnd,
+    };
+  }
+
   async getRecommendations(
     userId: string | null,
     locale: ApiLocale,
@@ -331,99 +454,71 @@ export class PersonalizationService {
       };
     }
 
-    let row =
-      await this.personalizationRepository.findPreferenceProfileByUserId(
-        userId,
-      );
-    const hadProfileRowAtStart = row != null;
-    if (row == null) {
-      await this.recomputeProfileForUser(userId);
-      row =
-        await this.personalizationRepository.findPreferenceProfileByUserId(
-          userId,
-        );
-    }
+    const resolved = await this.resolveRecommendationListing(userId, {
+      majorSlug: options.majorSlug,
+      categorySlugs: options.categorySlugs,
+      radius: options.radius,
+      vndPriceOverride: options.vndPriceOverride,
+    });
 
-    let profile = this.mapPreferenceProfileFromRow(row);
-
-    /**
-     * Запись портрета уже была, но `categorySlugs` пусты — брони/избранное
-     * могли появиться позже; при первом создании строки пересчёт выше уже был.
-     */
-    if (profile.categorySlugs.length === 0 && hadProfileRowAtStart) {
-      await this.recomputeProfileForUser(userId);
-      row =
-        await this.personalizationRepository.findPreferenceProfileByUserId(
-          userId,
-        );
-      profile = this.mapPreferenceProfileFromRow(row);
-    }
-
-    const categorySlugs =
-      options.categorySlugs && options.categorySlugs.length > 0
-        ? options.categorySlugs
-        : profile.categorySlugs;
-
-    const majorForList =
-      options.majorSlug !== null && options.majorSlug !== undefined
-        ? options.majorSlug
-        : (profile.majorSlug ?? null);
-
-    const radius = options.radius;
-
-    const priceMinVnd =
-      options.vndPriceOverride != null
-        ? options.vndPriceOverride.priceMinVnd
-        : (profile.priceMinVnd ?? null);
-    const priceMaxVnd =
-      options.vndPriceOverride != null
-        ? options.vndPriceOverride.priceMaxVnd
-        : (profile.priceMaxVnd ?? null);
-
-    const fromProfileOrExplicitFilters =
-      (options.categorySlugs != null && options.categorySlugs.length > 0) ||
-      (options.majorSlug != null && options.majorSlug !== '');
-
-    const personalizationReady =
-      fromProfileOrExplicitFilters ||
-      profile.categorySlugs.length >=
-        MIN_PROFILE_CATEGORY_SLUGS_FOR_RECOMMENDED;
-
-    if (!personalizationReady) {
+    if (!resolved.personalizationReady) {
       return {
         source: 'profile',
         personalizationReady: false,
-        majorSlug: majorForList,
-        categorySlugsUsed: categorySlugs,
+        majorSlug: resolved.majorForList,
+        categorySlugsUsed: resolved.categorySlugsUsed,
         specialists: [],
         organizations: [],
       };
     }
 
+    const { majorForList, categorySlugsUsed, priceMinVnd, priceMaxVnd } =
+      resolved;
+    const catForApi =
+      categorySlugsUsed.length > 0 ? categorySlugsUsed : [];
+
+    if (options.limitSpecialists === 0 && options.limitOrganizations === 0) {
+      return {
+        source: 'profile',
+        personalizationReady: true,
+        majorSlug: majorForList,
+        categorySlugsUsed,
+        specialists: [],
+        organizations: [],
+      };
+    }
+
+    const priceFromQuery = options.vndPriceOverride != null;
+
     const sp = await this.directoryService.listSpecialists(locale, {
       limit: options.limitSpecialists,
+      sort: 'popularity',
       cursor: null,
       majorCategorySlug: majorForList,
       q: null,
-      categorySlugs: categorySlugs.length > 0 ? categorySlugs : [],
+      categorySlugs: catForApi,
       priceMinVnd,
       priceMaxVnd,
-      radius,
+      radius: options.radius,
+      userId,
+      priceFromQuery,
     });
     const org = await this.directoryService.listOrganizations(locale, {
       limit: options.limitOrganizations,
+      sort: 'popularity',
       cursor: null,
       majorCategorySlug: majorForList,
       q: null,
-      categorySlugs: categorySlugs.length > 0 ? categorySlugs : [],
-      radius,
+      categorySlugs: catForApi,
+      radius: options.radius,
+      userId,
     });
 
     return {
       source: 'profile',
       personalizationReady: true,
       majorSlug: majorForList,
-      categorySlugsUsed: categorySlugs,
+      categorySlugsUsed,
       specialists: sp.specialists,
       organizations: org.organizations,
     };

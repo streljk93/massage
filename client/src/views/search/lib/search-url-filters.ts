@@ -1,4 +1,9 @@
-import { searchCategoriesQueryCsv } from "./search-directory-list-api-filters";
+import {
+  searchCategoriesQueryCsv,
+  type SearchDirectoryListSort,
+  parseSearchDirectoryListSort,
+  SEARCH_DIRECTORY_DEFAULT_SORT,
+} from "./search-directory-list-api-filters";
 import {
   type SearchTab,
   parseSearchTab,
@@ -10,6 +15,8 @@ export type SearchUrlFilters = {
   q: string;
   orgCategorySlugs: string[];
   specCategorySlugs: string[];
+  /** Общий для обеих вкладок (салоны / специалисты). */
+  sort: SearchDirectoryListSort;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
   /** `yyyy-MM-dd` в календаре витрины; в паре с `slotTime` — фильтр по свободному слоту. */
@@ -102,6 +109,7 @@ export function parseSearchUrlFiltersFromRecord(
   const keys = [
     "tab",
     "q",
+    "sort",
     "orgCat",
     "specCat",
     "category",
@@ -164,11 +172,13 @@ export function parseSearchUrlFilters(
     rawRM.trim() && rawRLat.trim() && rawRLng.trim() ?
       parseRadiusTriplet(rawRM, rawRLat, rawRLng)
     : null;
+  const sort = parseSearchDirectoryListSort(getParam(searchParams, "sort"));
   return {
     tab,
     q,
     orgCategorySlugs,
     specCategorySlugs,
+    sort,
     priceMinVnd,
     priceMaxVnd,
     slotDay,
@@ -188,6 +198,7 @@ export function applySearchUrlPatch(
     q: patch.q !== undefined ? patch.q : current.q,
     orgCategorySlugs: patch.orgCategorySlugs ?? current.orgCategorySlugs,
     specCategorySlugs: patch.specCategorySlugs ?? current.specCategorySlugs,
+    sort: patch.sort !== undefined ? patch.sort : current.sort,
     priceMinVnd:
       patch.priceMinVnd !== undefined ? patch.priceMinVnd : current.priceMinVnd,
     priceMaxVnd:
@@ -240,6 +251,9 @@ export function buildSearchQueryString(
     sp.set("radiusM", String(f.radiusM));
     sp.set("radiusLat", String(f.radiusLat));
     sp.set("radiusLng", String(f.radiusLng));
+  }
+  if (f.sort !== SEARCH_DIRECTORY_DEFAULT_SORT) {
+    sp.set("sort", f.sort);
   }
   if (options?.filtersOneShot) {
     sp.set("filters", "1");

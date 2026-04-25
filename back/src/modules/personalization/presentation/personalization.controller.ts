@@ -57,6 +57,9 @@ function parsePerListLimit(
   if (listLimitRaw === undefined || listLimitRaw === '') {
     return fallback;
   }
+  if (listLimitRaw.trim() === '0') {
+    return 0;
+  }
   const n = parseDirectoryListLimit(listLimitRaw);
   return Math.min(RECOMMENDATIONS_MAX_LIST, n);
 }

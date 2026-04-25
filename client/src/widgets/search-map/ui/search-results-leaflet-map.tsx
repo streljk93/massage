@@ -5,12 +5,12 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  memo,
   useRef,
   useState,
   type MutableRefObject,
 } from "react";
 import {
-  Circle,
   CircleMarker,
   MapContainer,
   Marker,
@@ -21,6 +21,9 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster";
+import MarkerClusterGroup from "react-leaflet-markercluster";
+import "react-leaflet-markercluster/styles";
 import { cn } from "@/shared/lib";
 
 export type SearchMapMarkerItem = {
@@ -36,7 +39,8 @@ export type SearchMapMarkerItem = {
 
 type SearchResultsLeafletMapProps = {
   items: SearchMapMarkerItem[];
-  selectedIndex: number;
+  /** `null` — ничего не выделено, без fly к маркеру. */
+  selectedIndex: number | null;
   onMarkerSelect: (index: number) => void;
   /** Подпись для маркера «моё местоположение» (a11y) */
   userLocationAriaLabel?: string;
@@ -66,6 +70,11 @@ type SearchResultsLeafletMapProps = {
     center: [number, number];
     radiusM: number;
   }) => void;
+  /**
+   * Клик по тайлу/пустой области карты (не по `leaflet-marker-icon` — пины и кластеры).
+   * Не вызывать в обработчике тяжёлых операций: подписка с `ref` на колбэк.
+   */
+  onMapBackgroundClick?: () => void;
 };
 
 const PHU_QUOC_CENTER: [number, number] = [10.223, 103.968];
@@ -94,6 +103,8 @@ function MapRadiusMetersOverlay({
   }, [radiusM]);
   const [center, setCenter] = useState<[number, number] | null>(null);
   const didInitRef = useRef(false);
+  const circleRef = useRef<L.Circle | null>(null);
+  const pointRef = useRef<L.CircleMarker | null>(null);
 
   /** Сразу при панорамировании и зуме — круг следует без ожидания `moveend`. */
   const syncCenterFromMap = useCallback(() => {
@@ -134,41 +145,76 @@ function MapRadiusMetersOverlay({
   }, [map, initialCenter, initialZoom, emitInitial]);
 
   const c = center ?? initialCenter;
-  return (
-    <>
-      <Circle
-        center={c}
-        radius={radiusM}
-        pathOptions={{
+  const c0 = c[0];
+  const c1 = c[1];
+  useLayoutEffect(() => {
+    if (circleRef.current == null) {
+      circleRef.current = L.circle(
+        L.latLng(c0, c1),
+        {
+          radius: radiusM,
           color: "#2563eb",
           fillColor: "#2563eb",
           fillOpacity: 0.12,
           weight: 2,
-        }}
-      />
-      <CircleMarker
-        center={c}
-        radius={7}
-        pathOptions={{
-          color: "#ffffff",
-          fillColor: "#2563eb",
-          fillOpacity: 1,
-          weight: 3,
-        }}
-      />
-    </>
+        },
+      );
+      pointRef.current = L.circleMarker(L.latLng(c0, c1), {
+        radius: 7,
+        color: "#ffffff",
+        fillColor: "#2563eb",
+        fillOpacity: 1,
+        weight: 3,
+      });
+      map.addLayer(circleRef.current);
+      map.addLayer(pointRef.current);
+    } else {
+      const ll = L.latLng(c0, c1);
+      circleRef.current.setLatLng(ll);
+      circleRef.current.setRadius(radiusM);
+      if (pointRef.current != null) {
+        pointRef.current.setLatLng(ll);
+      }
+    }
+  }, [map, c0, c1, radiusM]);
+
+  useLayoutEffect(
+    () => () => {
+      if (circleRef.current != null) {
+        try {
+          map.removeLayer(circleRef.current);
+        } catch {
+          /* unmounted map */
+        }
+        circleRef.current = null;
+      }
+      if (pointRef.current != null) {
+        try {
+          map.removeLayer(pointRef.current);
+        } catch {
+          /* unmounted map */
+        }
+        pointRef.current = null;
+      }
+    },
+    [map],
   );
+
+  return null;
 }
 
 function escapeAttr(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
-function createPinIcon(
+/**
+ * `dimmed` не в HTML — тот же `L.divIcon` остаётся в кеше, иначе при смене радиуса
+ * маркеры и кластер перерисовываются с морганием.
+ */
+function buildSearchMapPinIcon(
   selected: boolean,
   imageSrc: string,
   rating: number,
-  dimmed = false,
 ) {
   const pad = 5;
   const gap = 6;
@@ -185,12 +231,9 @@ function createPinIcon(
     ? "0 2px 10px rgba(0,0,0,.16),0 0 0 2px #fff,0 0 0 4px var(--primary)"
     : "0 2px 8px rgba(0,0,0,.14)";
   const src = escapeAttr(imageSrc);
-  const dimmedStyle = dimmed
-    ? "opacity:0.38;filter:grayscale(0.2)"
-    : "opacity:1";
   return L.divIcon({
     className: "search-map-pin",
-    html: `<div style="display:flex;align-items:center;box-sizing:border-box;gap:${gap}px;width:${totalW}px;height:${totalH}px;padding:${pad}px;background:#fff;border-radius:9999px;box-shadow:${shadow};${dimmedStyle}">
+    html: `<div style="display:flex;align-items:center;box-sizing:border-box;gap:${gap}px;width:${totalW}px;height:${totalH}px;padding:${pad}px;background:#fff;border-radius:9999px;box-shadow:${shadow};opacity:1">
       <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.12)">
         <img src="${src}" alt="" width="${avatarSize}" height="${avatarSize}" style="display:block;width:100%;height:100%;object-fit:cover"/>
       </div>
@@ -201,22 +244,198 @@ function createPinIcon(
   });
 }
 
+const PIN_ICON_CACHE_MAX = 200;
+const searchMapPinIconCache = new Map<string, L.DivIcon>();
+
+function getSearchMapPinIcon(
+  selected: boolean,
+  imageSrc: string,
+  rating: number,
+) {
+  const k = `${selected ? 1 : 0}\0${imageSrc}\0${rating.toFixed(1)}`;
+  let icon = searchMapPinIconCache.get(k);
+  if (icon == null) {
+    if (searchMapPinIconCache.size >= PIN_ICON_CACHE_MAX) {
+      searchMapPinIconCache.clear();
+    }
+    icon = buildSearchMapPinIcon(selected, imageSrc, rating);
+    searchMapPinIconCache.set(k, icon);
+  }
+  return icon;
+}
+
+/**
+ * Схлопывание близких точек: круг с числом (как single-brand cluster на картах).
+ * `cluster` — экземпляр из leaflet.markercluster.
+ */
+function createSearchMapClusterIcon(
+  cluster: { getChildCount: () => number },
+): L.DivIcon {
+  const n = cluster.getChildCount();
+  const w = n >= 100 ? 48 : 44;
+  return L.divIcon({
+    className: "search-map-cluster-icon",
+    html: `<div style="box-sizing:border-box;width:${w}px;height:${w}px;display:flex;align-items:center;justify-content:center;border-radius:9999px;background:var(--primary);color:var(--primary-foreground);font-size:15px;font-weight:700;border:2px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.2);font-family:system-ui,sans-serif">${n}</div>`,
+    iconSize: L.point(w, w),
+    iconAnchor: L.point(w / 2, w / 2),
+  });
+}
+
+function mapClusterMaxRadiusForZoom(zoom: number): number {
+  if (zoom <= 9) {
+    return 100;
+  }
+  if (zoom <= 11) {
+    return 80;
+  }
+  if (zoom <= 13) {
+    return 60;
+  }
+  return 44;
+}
+
+type SearchMapPinsLayerProps = {
+  items: SearchMapMarkerItem[];
+  selectedIndex: number | null;
+  clusterMarkerClickByIndex: Record<number, { click: () => void }>;
+  /** В режиме радиуса `false` — без анимации merge/split кластеров. */
+  clusterAnimate: boolean;
+  userPosition: [number, number] | null;
+  userLocationAriaLabel?: string;
+};
+
+const SearchMapPinsLayer = memo(function SearchMapPinsLayer({
+  items,
+  selectedIndex,
+  clusterMarkerClickByIndex,
+  clusterAnimate,
+  userPosition,
+  userLocationAriaLabel,
+}: SearchMapPinsLayerProps) {
+  const activeMarkerIndex =
+    selectedIndex == null || items.length === 0
+      ? null
+      : Math.min(items.length - 1, Math.max(0, selectedIndex));
+  const clusteredEntries = useMemo(
+    () =>
+      items
+        .map((item, index) => ({ item, index }))
+        .filter(
+          ({ index }) =>
+            activeMarkerIndex == null || index !== activeMarkerIndex,
+        ),
+    [items, activeMarkerIndex],
+  );
+  const selectedMapItem =
+    activeMarkerIndex != null ? items[activeMarkerIndex] : null;
+
+  return (
+    <>
+      {items.length > 0 ?
+        <>
+          {clusteredEntries.length > 0 ?
+            /* Без `disableClusteringAtZoom`: на большом зуме кластеризация иначе отключается, маркеры
+               в одной точке накладываются, а `spiderfy` действует только по сгруппированным. */
+            <MarkerClusterGroup
+              chunkedLoading={items.length > 150}
+              showCoverageOnHover={false}
+              zoomToBoundsOnClick
+              spiderfyOnMaxZoom
+              removeOutsideVisibleBounds
+              animate={clusterAnimate}
+              maxClusterRadius={mapClusterMaxRadiusForZoom}
+              iconCreateFunction={createSearchMapClusterIcon}
+              spiderfyDistanceMultiplier={1.35}
+            >
+              {clusteredEntries.map(({ item, index }) => (
+                <Marker
+                  key={`c-${item.id}`}
+                  position={[item.lat, item.lng]}
+                  zIndexOffset={0}
+                  opacity={item.dimmed ? 0.38 : 1}
+                  icon={getSearchMapPinIcon(
+                    false,
+                    item.imageSrc,
+                    item.rating,
+                  )}
+                  eventHandlers={clusterMarkerClickByIndex[index]}
+                />
+              ))}
+            </MarkerClusterGroup>
+          : null}
+          {selectedMapItem != null && activeMarkerIndex != null ?
+            <Marker
+              key={`s-${selectedMapItem.id}`}
+              position={[selectedMapItem.lat, selectedMapItem.lng]}
+              zIndexOffset={2000}
+              opacity={selectedMapItem.dimmed ? 0.38 : 1}
+              icon={getSearchMapPinIcon(
+                true,
+                selectedMapItem.imageSrc,
+                selectedMapItem.rating,
+              )}
+              eventHandlers={clusterMarkerClickByIndex[activeMarkerIndex]}
+            />
+          : null}
+        </>
+      : null}
+      {userPosition ? (
+        <CircleMarker
+          center={userPosition}
+          radius={11}
+          pathOptions={{
+            color: "#ffffff",
+            fillColor: "#2563eb",
+            fillOpacity: 1,
+            weight: 3,
+          }}
+        >
+          {userLocationAriaLabel ? (
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+              {userLocationAriaLabel}
+            </Tooltip>
+          ) : null}
+        </CircleMarker>
+      ) : null}
+    </>
+  );
+}, (a, b) => (
+  a.items === b.items &&
+  a.selectedIndex === b.selectedIndex &&
+  a.clusterMarkerClickByIndex === b.clusterMarkerClickByIndex &&
+  a.clusterAnimate === b.clusterAnimate &&
+  a.userPosition === b.userPosition &&
+  a.userLocationAriaLabel === b.userLocationAriaLabel
+));
+
+const MAP_FOLLOW_ZOOM = 15;
+/** Не панорамировать снова, если центр уже у цели (рядом с соседним пином — меньше дёрганья). */
+const MAP_FOLLOW_MIN_MOVE_METERS = 80;
+
 function MapViewSync({
   items,
   selectedIndex,
   userPositionRef,
 }: {
   items: SearchMapMarkerItem[];
-  selectedIndex: number;
+  selectedIndex: number | null;
   userPositionRef: MutableRefObject<[number, number] | null>;
 }) {
   const map = useMap();
   const itemsKey = useMemo(() => items.map((i) => i.id).join("|"), [items]);
   const prevItemsKey = useRef<string | null>(null);
-  const safeIndex = Math.min(items.length - 1, Math.max(0, selectedIndex));
+  const itemsRef = useRef(items);
+  useLayoutEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+  const activeIndex =
+    selectedIndex == null || items.length === 0
+      ? null
+      : Math.min(items.length - 1, Math.max(0, selectedIndex));
 
   useEffect(() => {
-    if (items.length === 0) {
+    const list = itemsRef.current;
+    if (list.length === 0) {
       return;
     }
 
@@ -225,19 +444,31 @@ function MapViewSync({
     if (isNewList) {
       prevItemsKey.current = itemsKey;
       const bounds = L.latLngBounds(
-        items.map((i) => [i.lat, i.lng] as [number, number]),
+        list.map((i) => [i.lat, i.lng] as [number, number]),
       );
       const u = userPositionRef.current;
       if (u) {
         bounds.extend(u);
       }
-      map.fitBounds(bounds, { padding: [56, 56], maxZoom: 15 });
+      map.fitBounds(bounds, { padding: [56, 56], maxZoom: MAP_FOLLOW_ZOOM });
       return;
     }
 
-    const item = items[safeIndex];
-    map.flyTo([item.lat, item.lng], 15, { duration: 0.45 });
-  }, [items, itemsKey, map, safeIndex, selectedIndex, userPositionRef]);
+    if (activeIndex == null) {
+      return;
+    }
+    const item = list[activeIndex];
+    const target = L.latLng(item.lat, item.lng);
+    const center = map.getCenter();
+    if (
+      center.distanceTo(target) < MAP_FOLLOW_MIN_MOVE_METERS &&
+      Math.round(map.getZoom()) === MAP_FOLLOW_ZOOM
+    ) {
+      return;
+    }
+    map.stop();
+    map.flyTo([item.lat, item.lng], MAP_FOLLOW_ZOOM, { duration: 0.45 });
+  }, [activeIndex, itemsKey, map, userPositionRef]);
 
   return null;
 }
@@ -345,6 +576,35 @@ function MapFocusOnBackgroundClick({
   return null;
 }
 
+const LEAFLET_MARKER_ICON_SELECTOR = ".leaflet-marker-icon";
+
+/** Сброс выбора (например выделенного пина) по клику вне маркеров/кластеров. */
+function MapBackgroundDeselectSync({
+  onMapBackgroundClick,
+}: {
+  onMapBackgroundClick?: (() => void) | undefined;
+}) {
+  const map = useMap();
+  const onMapBackgroundClickRef = useRef(onMapBackgroundClick);
+  useLayoutEffect(() => {
+    onMapBackgroundClickRef.current = onMapBackgroundClick;
+  }, [onMapBackgroundClick]);
+  useEffect(() => {
+    const handler = (e: L.LeafletMouseEvent) => {
+      if (onMapBackgroundClickRef.current == null) return;
+      const t = e.originalEvent?.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest(LEAFLET_MARKER_ICON_SELECTOR) != null) return;
+      onMapBackgroundClickRef.current();
+    };
+    map.on("click", handler);
+    return () => {
+      map.off("click", handler);
+    };
+  }, [map]);
+  return null;
+}
+
 export function SearchResultsLeafletMap({
   items,
   selectedIndex,
@@ -359,6 +619,7 @@ export function SearchResultsLeafletMap({
   radiusMapInitialZoom = 14,
   radiusPickerMeters = 2000,
   onRadiusSelectionChange,
+  onMapBackgroundClick,
 }: SearchResultsLeafletMapProps) {
   /**
    * React 19 + Strict Mode: синхронный mount `MapContainer` + `TileLayer` даёт гонку с
@@ -392,8 +653,10 @@ export function SearchResultsLeafletMap({
 
   const mapInteractive = !interactionGate || mapFocused;
 
-  const safeIndex = Math.min(items.length - 1, Math.max(0, selectedIndex));
   const userPositionRef = useRef<[number, number] | null>(null);
+  const onMarkerSelectRef = useRef(onMarkerSelect);
+  const radiusPickerModeRef = useRef(radiusPickerMode);
+  const interactionGateRef = useRef(interactionGate);
   const wrapRef = useRef<HTMLDivElement>(null);
   const mapFocusedRef = useRef(mapFocused);
   const scrollHintVisibleRef = useRef(scrollHintVisible);
@@ -403,9 +666,39 @@ export function SearchResultsLeafletMap({
   }, [userPosition]);
 
   useLayoutEffect(() => {
+    onMarkerSelectRef.current = onMarkerSelect;
+  }, [onMarkerSelect]);
+
+  useLayoutEffect(() => {
+    radiusPickerModeRef.current = radiusPickerMode;
+  }, [radiusPickerMode]);
+
+  useLayoutEffect(() => {
+    interactionGateRef.current = interactionGate;
+  }, [interactionGate]);
+
+  useLayoutEffect(() => {
     mapFocusedRef.current = mapFocused;
     scrollHintVisibleRef.current = scrollHintVisible;
   });
+
+  const clusterMarkerClickByIndex = useMemo(() => {
+    const h: Record<number, { click: () => void }> = {};
+    for (let index = 0; index < items.length; index++) {
+      h[index] = {
+        click: () => {
+          if (radiusPickerModeRef.current) {
+            return;
+          }
+          if (interactionGateRef.current && !mapFocusedRef.current) {
+            setMapFocused(true);
+          }
+          onMarkerSelectRef.current(index);
+        },
+      };
+    }
+    return h;
+  }, [items]);
 
   const focusMap = useCallback(() => {
     setMapFocused(true);
@@ -529,6 +822,7 @@ export function SearchResultsLeafletMap({
             enabled={Boolean(interactionGate && !mapFocused)}
             onFocus={focusMap}
           />
+          <MapBackgroundDeselectSync onMapBackgroundClick={onMapBackgroundClick} />
           <MapStripLeafletBranding />
           {radiusPickerMode ? null : (
             <MapEmptyAndUserSync
@@ -552,48 +846,14 @@ export function SearchResultsLeafletMap({
               onChange={onRadiusSelectionChange}
             />
           ) : null}
-          {userPosition ? (
-            <CircleMarker
-              center={userPosition}
-              radius={11}
-              pathOptions={{
-                color: "#ffffff",
-                fillColor: "#2563eb",
-                fillOpacity: 1,
-                weight: 3,
-              }}
-            >
-              {userLocationAriaLabel ? (
-                <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
-                  {userLocationAriaLabel}
-                </Tooltip>
-              ) : null}
-            </CircleMarker>
-          ) : null}
-          {items.map((item, index) => (
-            <Marker
-              key={item.id}
-              position={[item.lat, item.lng]}
-              zIndexOffset={item.dimmed ? -400 : 0}
-              icon={createPinIcon(
-                !radiusPickerMode && index === safeIndex,
-                item.imageSrc,
-                item.rating,
-                Boolean(item.dimmed),
-              )}
-              eventHandlers={{
-                click: () => {
-                  if (radiusPickerMode) {
-                    return;
-                  }
-                  if (interactionGate && !mapFocused) {
-                    setMapFocused(true);
-                  }
-                  onMarkerSelect(index);
-                },
-              }}
-            />
-          ))}
+          <SearchMapPinsLayer
+            items={items}
+            selectedIndex={selectedIndex}
+            clusterMarkerClickByIndex={clusterMarkerClickByIndex}
+            clusterAnimate={!radiusPickerMode}
+            userPosition={userPosition}
+            userLocationAriaLabel={userLocationAriaLabel}
+          />
         </MapContainer>
       ) : (
         <div className="size-full min-h-[280px] bg-muted/20" aria-hidden />

@@ -84,6 +84,7 @@ export class DevPersonalizationRecomputeService {
       const [sp, org] = await Promise.all([
         this.directoryService.listSpecialists(locale, {
           limit: HOME_FOR_YOU_LIST_LIMIT,
+          sort: 'popularity',
           cursor: null,
           majorCategorySlug: profile.majorSlug,
           q: null,
@@ -91,14 +92,18 @@ export class DevPersonalizationRecomputeService {
           priceMinVnd: profile.priceMinVnd ?? null,
           priceMaxVnd: profile.priceMaxVnd ?? null,
           radius: null,
+          userId: null,
+          priceFromQuery: false,
         }),
         this.directoryService.listOrganizations(locale, {
           limit: HOME_FOR_YOU_LIST_LIMIT,
+          sort: 'popularity',
           cursor: null,
           majorCategorySlug: profile.majorSlug,
           q: null,
           categorySlugs: categorySlugsForReadyCheck,
           radius: null,
+          userId: null,
         }),
       ]);
       catalogSpecialistsCount = sp.specialists.length;

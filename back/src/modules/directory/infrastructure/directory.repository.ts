@@ -13,6 +13,13 @@ import {
   type SpecialistListApiFilters,
 } from './directory-list-query-filters';
 import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
+import type { DirectoryListSort } from '../../../common/pagination/directory-list-sort';
+import type {
+  DecodedOrganizationListCursor,
+  DecodedOrganizationOffsetCursor,
+  DecodedSpecialistListCursor,
+  DecodedSpecialistOffsetCursor,
+} from '../../../common/pagination/directory-list-cursor-codec';
 
 const serviceCategoryWithLocales = {
   include: {
@@ -106,13 +113,480 @@ export const organizationListIncludeShape = organizationListPayloadArgs.include;
 
 export type { DirectoryListRadiusFilter };
 
+const DIRECTORY_OFFSET_SORTS: ReadonlySet<DirectoryListSort> = new Set([
+  'recommended',
+  'price_asc',
+  'price_desc',
+]);
+
+function specialistListOrderBy(
+  sort: DirectoryListSort,
+): Prisma.SpecialistOrderByWithRelationInput[] {
+  if (DIRECTORY_OFFSET_SORTS.has(sort)) {
+    return [{ id: 'asc' }];
+  }
+  if (sort === 'newest') {
+    return [{ createdAt: 'desc' }, { id: 'desc' }];
+  }
+  if (sort === 'rating') {
+    return [{ ratingAverage: 'desc' }, { id: 'asc' }];
+  }
+  return [{ reviewsCount: 'desc' }, { ratingAverage: 'desc' }, { id: 'asc' }];
+}
+
+function organizationListOrderBy(
+  sort: DirectoryListSort,
+): Prisma.OrganizationOrderByWithRelationInput[] {
+  if (DIRECTORY_OFFSET_SORTS.has(sort)) {
+    return [{ id: 'asc' }];
+  }
+  if (sort === 'newest') {
+    return [{ createdAt: 'desc' }, { id: 'desc' }];
+  }
+  if (sort === 'rating') {
+    return [{ ratingAverage: 'desc' }, { id: 'asc' }];
+  }
+  return [{ reviewsCount: 'desc' }, { ratingAverage: 'desc' }, { id: 'asc' }];
+}
+
+function specialistListCursorWhere(
+  sort: DirectoryListSort,
+  cursor: DecodedSpecialistListCursor,
+): Prisma.SpecialistWhereInput {
+  if (sort === 'popularity') {
+    const c = cursor as Extract<
+      DecodedSpecialistListCursor,
+      { sort: 'popularity' }
+    >;
+    const { reviewsCount, id } = c;
+    if (c.ratingAverage == null) {
+      return {
+        OR: [
+          { reviewsCount: { lt: reviewsCount } },
+          { AND: [{ reviewsCount: reviewsCount }, { id: { gt: id } }] },
+        ],
+      };
+    }
+    const { ratingAverage } = c;
+    return {
+      OR: [
+        { reviewsCount: { lt: reviewsCount } },
+        {
+          AND: [
+            { reviewsCount: reviewsCount },
+            { ratingAverage: { lt: ratingAverage } },
+          ],
+        },
+        {
+          AND: [
+            { reviewsCount: reviewsCount },
+            { ratingAverage: ratingAverage },
+            { id: { gt: id } },
+          ],
+        },
+      ],
+    };
+  }
+  if (sort === 'newest') {
+    const { createdAtIso, id } = cursor as Extract<
+      DecodedSpecialistListCursor,
+      { sort: 'newest' }
+    >;
+    const t = new Date(createdAtIso);
+    return {
+      OR: [
+        { createdAt: { lt: t } },
+        { AND: [{ createdAt: t }, { id: { lt: id } }] },
+      ],
+    };
+  }
+  const { ratingAverage, id } = cursor as Extract<
+    DecodedSpecialistListCursor,
+    { sort: 'rating' }
+  >;
+  return {
+    OR: [
+      { ratingAverage: { lt: ratingAverage } },
+      { AND: [{ ratingAverage: ratingAverage }, { id: { gt: id } }] },
+    ],
+  };
+}
+
+function organizationListCursorWhere(
+  sort: DirectoryListSort,
+  cursor: DecodedOrganizationListCursor,
+): Prisma.OrganizationWhereInput {
+  if (sort === 'popularity') {
+    const c = cursor as Extract<
+      DecodedOrganizationListCursor,
+      { sort: 'popularity' }
+    >;
+    const { reviewsCount, id } = c;
+    if (c.ratingAverage == null) {
+      return {
+        OR: [
+          { reviewsCount: { lt: reviewsCount } },
+          { AND: [{ reviewsCount: reviewsCount }, { id: { gt: id } }] },
+        ],
+      };
+    }
+    const { ratingAverage } = c;
+    return {
+      OR: [
+        { reviewsCount: { lt: reviewsCount } },
+        {
+          AND: [
+            { reviewsCount: reviewsCount },
+            { ratingAverage: { lt: ratingAverage } },
+          ],
+        },
+        {
+          AND: [
+            { reviewsCount: reviewsCount },
+            { ratingAverage: ratingAverage },
+            { id: { gt: id } },
+          ],
+        },
+      ],
+    };
+  }
+  if (sort === 'newest') {
+    const { createdAtIso, id } = cursor as Extract<
+      DecodedOrganizationListCursor,
+      { sort: 'newest' }
+    >;
+    const t = new Date(createdAtIso);
+    return {
+      OR: [
+        { createdAt: { lt: t } },
+        { AND: [{ createdAt: t }, { id: { lt: id } }] },
+      ],
+    };
+  }
+  const { ratingAverage, id } = cursor as Extract<
+    DecodedOrganizationListCursor,
+    { sort: 'rating' }
+  >;
+  return {
+    OR: [
+      { ratingAverage: { lt: ratingAverage } },
+      { AND: [{ ratingAverage: ratingAverage }, { id: { gt: id } }] },
+    ],
+  };
+}
+
 /** Активные записи: интервал брони занимает слоты до отмены / завершения. */
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
   ['pending', 'confirmed', 'in_progress'];
 
+const SPECIALIST_LIST_CAP = 8000;
+
 @Injectable()
 export class DirectoryRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private async specialistDirectoryAndParts(
+    filters: SpecialistListApiFilters | null,
+    radius: DirectoryListRadiusFilter | null,
+  ): Promise<Prisma.SpecialistWhereInput[] | null> {
+    const andParts: Prisma.SpecialistWhereInput[] = [
+      { deletedAt: null, listedInDirectory: true },
+    ];
+    if (radius != null) {
+      const inRadius = await findSpecialistIdsWithinRadiusMeters(
+        this.prisma,
+        radius.centerLat,
+        radius.centerLng,
+        radius.radiusM,
+      );
+      if (inRadius.length === 0) {
+        return null;
+      }
+      andParts.push({ id: { in: inRadius } });
+    }
+    if (filters != null) {
+      const fw = specialistListFiltersWhere(filters);
+      if (Object.keys(fw).length > 0) {
+        andParts.push(fw);
+      }
+    }
+    return andParts;
+  }
+
+  private async organizationDirectoryAndParts(
+    filters: OrganizationListApiFilters | null,
+    radius: DirectoryListRadiusFilter | null,
+  ): Promise<Prisma.OrganizationWhereInput[] | null> {
+    const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
+    if (radius != null) {
+      const inRadius = await findOrganizationIdsWithinRadiusMeters(
+        this.prisma,
+        radius.centerLat,
+        radius.centerLng,
+        radius.radiusM,
+      );
+      if (inRadius.length === 0) {
+        return null;
+      }
+      andParts.push({ id: { in: inRadius } });
+    }
+    if (filters != null) {
+      const fw = organizationListFiltersWhere(filters);
+      if (Object.keys(fw).length > 0) {
+        andParts.push(fw);
+      }
+    }
+    return andParts;
+  }
+
+  /**
+   * Рекомендации, цена: полная сортировка в памяти, курсор = offset.
+   */
+  private async findSpecialistsOffsetSortedPage(args: {
+    take: number;
+    sort: 'recommended' | 'price_asc' | 'price_desc';
+    offset: number;
+    filters: SpecialistListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
+    overlapCategorySlugs: string[];
+  }): Promise<SpecialistListRow[]> {
+    const andParts = await this.specialistDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (andParts == null) {
+      return [];
+    }
+    const where: Prisma.SpecialistWhereInput = { AND: andParts };
+    const candidates = await this.prisma.specialist.findMany({
+      where,
+      select: {
+        id: true,
+        ratingAverage: true,
+        reviewsCount: true,
+        createdAt: true,
+      },
+      take: SPECIALIST_LIST_CAP,
+      orderBy: { id: 'asc' },
+    });
+    if (candidates.length === 0) {
+      return [];
+    }
+    const ids = candidates.map((c) => c.id);
+    const byId = new Map(candidates.map((c) => [c.id, c] as const));
+    let orderedIds: string[] = [];
+    if (args.sort === 'recommended') {
+      const slugs = args.overlapCategorySlugs
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const overlap = new Map<string, number>();
+      if (slugs.length > 0) {
+        const rows = await this.prisma.$queryRaw<
+          { specialistId: string; cnt: number }[]
+        >(
+          Prisma.sql`
+            SELECT ssc."specialistId"::text AS "specialistId", COUNT(*)::int AS cnt
+            FROM "SpecialistServiceCategory" ssc
+            INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
+            WHERE ssc."specialistId"::text IN (${Prisma.join(ids)})
+              AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
+            GROUP BY ssc."specialistId"
+          `,
+        );
+        for (const r of rows) {
+          overlap.set(r.specialistId, r.cnt);
+        }
+      }
+      orderedIds = [...ids].sort((a, b) => {
+        const oa = overlap.get(a) ?? 0;
+        const ob = overlap.get(b) ?? 0;
+        if (ob !== oa) {
+          return ob - oa;
+        }
+        const ra = byId.get(a)!.ratingAverage;
+        const rb = byId.get(b)!.ratingAverage;
+        if (rb !== ra) {
+          return rb - ra;
+        }
+        return a.localeCompare(b);
+      });
+    } else {
+      const rows = await this.prisma.$queryRaw<
+        { specId: string; mp: number | null }[]
+      >(
+        Prisma.sql`
+          SELECT sv."specialistId"::text AS "specId", MIN(po."priceAmount")::int AS mp
+          FROM "Service" sv
+          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id
+          WHERE sv."specialistId"::text IN (${Prisma.join(ids)})
+            AND sv."deletedAt" IS NULL
+            AND sv."isActive" = true
+            AND po."currency" = 'VND'
+          GROUP BY sv."specialistId"
+        `,
+      );
+      const minPrice = new Map<string, number | null>();
+      for (const id of ids) {
+        minPrice.set(id, null);
+      }
+      for (const r of rows) {
+        minPrice.set(r.specId, r.mp);
+      }
+      const desc = args.sort === 'price_desc';
+      orderedIds = [...ids].sort((a, b) => {
+        const pa = minPrice.get(a) ?? null;
+        const pb = minPrice.get(b) ?? null;
+        if (pa == null && pb == null) {
+          return a.localeCompare(b);
+        }
+        if (pa == null) {
+          return 1;
+        }
+        if (pb == null) {
+          return -1;
+        }
+        if (pa !== pb) {
+          return desc ? pb - pa : pa - pb;
+        }
+        return a.localeCompare(b);
+      });
+    }
+    const slice = orderedIds.slice(args.offset, args.offset + args.take + 1);
+    if (slice.length === 0) {
+      return [];
+    }
+    const rowsFull = await this.prisma.specialist.findMany({
+      where: { id: { in: slice } },
+      include: specialistListInclude(),
+    });
+    const orderIndex = new Map(slice.map((id, i) => [id, i]));
+    return [...rowsFull].sort(
+      (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+    );
+  }
+
+  private async findOrganizationsOffsetSortedPage(args: {
+    take: number;
+    sort: 'recommended' | 'price_asc' | 'price_desc';
+    offset: number;
+    filters: OrganizationListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
+    overlapCategorySlugs: string[];
+  }): Promise<OrganizationListRow[]> {
+    const andParts = await this.organizationDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (andParts == null) {
+      return [];
+    }
+    const where: Prisma.OrganizationWhereInput = { AND: andParts };
+    const candidates = await this.prisma.organization.findMany({
+      where,
+      select: {
+        id: true,
+        ratingAverage: true,
+        reviewsCount: true,
+        createdAt: true,
+      },
+      take: SPECIALIST_LIST_CAP,
+      orderBy: { id: 'asc' },
+    });
+    if (candidates.length === 0) {
+      return [];
+    }
+    const ids = candidates.map((c) => c.id);
+    const byId = new Map(candidates.map((c) => [c.id, c] as const));
+    let orderedIds: string[] = [];
+    if (args.sort === 'recommended') {
+      const slugs = args.overlapCategorySlugs
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const overlap = new Map<string, number>();
+      if (slugs.length > 0) {
+        const rows = await this.prisma.$queryRaw<
+          { organizationId: string; cnt: number }[]
+        >(
+          Prisma.sql`
+            SELECT osc."organizationId"::text AS "organizationId", COUNT(*)::int AS cnt
+            FROM "OrganizationServiceCategory" osc
+            INNER JOIN "ServiceCategory" sc ON sc.id = osc."serviceCategoryId"
+            WHERE osc."organizationId"::text IN (${Prisma.join(ids)})
+              AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
+            GROUP BY osc."organizationId"
+          `,
+        );
+        for (const r of rows) {
+          overlap.set(r.organizationId, r.cnt);
+        }
+      }
+      orderedIds = [...ids].sort((a, b) => {
+        const oa = overlap.get(a) ?? 0;
+        const ob = overlap.get(b) ?? 0;
+        if (ob !== oa) {
+          return ob - oa;
+        }
+        const ra = byId.get(a)!.ratingAverage;
+        const rb = byId.get(b)!.ratingAverage;
+        if (rb !== ra) {
+          return rb - ra;
+        }
+        return a.localeCompare(b);
+      });
+    } else {
+      const rows = await this.prisma.$queryRaw<
+        { orgId: string; mp: number | null }[]
+      >(
+        Prisma.sql`
+          SELECT sv."organizationId"::text AS "orgId", MIN(po."priceAmount")::int AS mp
+          FROM "Service" sv
+          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id
+          WHERE sv."organizationId"::text IN (${Prisma.join(ids)})
+            AND sv."deletedAt" IS NULL
+            AND sv."isActive" = true
+            AND po."currency" = 'VND'
+          GROUP BY sv."organizationId"
+        `,
+      );
+      const minPrice = new Map<string, number | null>();
+      for (const id of ids) {
+        minPrice.set(id, null);
+      }
+      for (const r of rows) {
+        minPrice.set(r.orgId, r.mp);
+      }
+      const desc = args.sort === 'price_desc';
+      orderedIds = [...ids].sort((a, b) => {
+        const pa = minPrice.get(a) ?? null;
+        const pb = minPrice.get(b) ?? null;
+        if (pa == null && pb == null) {
+          return a.localeCompare(b);
+        }
+        if (pa == null) {
+          return 1;
+        }
+        if (pb == null) {
+          return -1;
+        }
+        if (pa !== pb) {
+          return desc ? pb - pa : pa - pb;
+        }
+        return a.localeCompare(b);
+      });
+    }
+    const slice = orderedIds.slice(args.offset, args.offset + args.take + 1);
+    if (slice.length === 0) {
+      return [];
+    }
+    const rowsFull = await this.prisma.organization.findMany({
+      where: { id: { in: slice } },
+      include: organizationListInclude(),
+    });
+    const orderIndex = new Map(slice.map((id, i) => [id, i]));
+    return [...rowsFull].sort(
+      (a, b) => (orderIndex.get(a.id) ?? 0) - (orderIndex.get(b.id) ?? 0),
+    );
+  }
 
   /**
    * Брони, пересекающиеся с окном витрины слотов (горизонт как у вычисляемых слотов).
@@ -141,92 +615,84 @@ export class DirectoryRepository {
 
   async findSpecialistsPage(args: {
     take: number;
-    cursor: { userName: string; id: string } | null;
+    sort: DirectoryListSort;
+    cursor: DecodedSpecialistListCursor | null;
     filters: SpecialistListApiFilters | null;
     radius: DirectoryListRadiusFilter | null;
+    /** Пересечение slug подкатегорий с портретом (сортировка `recommended`). */
+    overlapCategorySlugs?: string[];
   }): Promise<SpecialistListRow[]> {
-    const andParts: Prisma.SpecialistWhereInput[] = [
-      { deletedAt: null, listedInDirectory: true },
-    ];
-    if (args.radius != null) {
-      const inRadius = await findSpecialistIdsWithinRadiusMeters(
-        this.prisma,
-        args.radius.centerLat,
-        args.radius.centerLng,
-        args.radius.radiusM,
-      );
-      if (inRadius.length === 0) {
-        return [];
-      }
-      andParts.push({ id: { in: inRadius } });
-    }
-    if (args.cursor != null) {
-      andParts.push({
-        OR: [
-          { user: { name: { gt: args.cursor.userName } } },
-          {
-            AND: [
-              { user: { name: args.cursor.userName } },
-              { id: { gt: args.cursor.id } },
-            ],
-          },
-        ],
+    if (DIRECTORY_OFFSET_SORTS.has(args.sort)) {
+      const off =
+        args.cursor == null
+          ? 0
+          : (args.cursor as DecodedSpecialistOffsetCursor).offset;
+      return this.findSpecialistsOffsetSortedPage({
+        take: args.take,
+        sort: args.sort as 'recommended' | 'price_asc' | 'price_desc',
+        offset: off,
+        filters: args.filters,
+        radius: args.radius,
+        overlapCategorySlugs: args.overlapCategorySlugs ?? [],
       });
     }
-    if (args.filters != null) {
-      const fw = specialistListFiltersWhere(args.filters);
-      if (Object.keys(fw).length > 0) {
-        andParts.push(fw);
-      }
+    const base = await this.specialistDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (base == null) {
+      return [];
+    }
+    const andParts: Prisma.SpecialistWhereInput[] = [...base];
+    if (args.cursor != null) {
+      andParts.push(specialistListCursorWhere(args.sort, args.cursor));
     }
     return await this.prisma.specialist.findMany({
       where: { AND: andParts },
       take: args.take,
       include: specialistListInclude(),
-      orderBy: [{ user: { name: 'asc' } }, { id: 'asc' }],
+      orderBy: specialistListOrderBy(args.sort),
     });
   }
 
   async findOrganizationsPage(args: {
     take: number;
-    cursor: { name: string; id: string } | null;
+    sort: DirectoryListSort;
+    cursor: DecodedOrganizationListCursor | null;
     filters: OrganizationListApiFilters | null;
     radius: DirectoryListRadiusFilter | null;
+    overlapCategorySlugs?: string[];
   }): Promise<OrganizationListRow[]> {
-    const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
-    if (args.radius != null) {
-      const inRadius = await findOrganizationIdsWithinRadiusMeters(
-        this.prisma,
-        args.radius.centerLat,
-        args.radius.centerLng,
-        args.radius.radiusM,
-      );
-      if (inRadius.length === 0) {
-        return [];
-      }
-      andParts.push({ id: { in: inRadius } });
-    }
-    if (args.cursor != null) {
-      andParts.push({
-        OR: [
-          { name: { gt: args.cursor.name } },
-          {
-            AND: [{ name: args.cursor.name }, { id: { gt: args.cursor.id } }],
-          },
-        ],
+    if (DIRECTORY_OFFSET_SORTS.has(args.sort)) {
+      const off =
+        args.cursor == null
+          ? 0
+          : (args.cursor as DecodedOrganizationOffsetCursor).offset;
+      return this.findOrganizationsOffsetSortedPage({
+        take: args.take,
+        sort: args.sort as 'recommended' | 'price_asc' | 'price_desc',
+        offset: off,
+        filters: args.filters,
+        radius: args.radius,
+        overlapCategorySlugs: args.overlapCategorySlugs ?? [],
       });
     }
-    if (args.filters != null) {
-      const fw = organizationListFiltersWhere(args.filters);
-      if (Object.keys(fw).length > 0) {
-        andParts.push(fw);
-      }
+    const base = await this.organizationDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (base == null) {
+      return [];
+    }
+    const andParts: Prisma.OrganizationWhereInput[] = [...base];
+    if (args.cursor != null) {
+      andParts.push(organizationListCursorWhere(args.sort, args.cursor));
     }
     return await this.prisma.organization.findMany({
       where: { AND: andParts },
       take: args.take,
       include: organizationListInclude(),
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      orderBy: organizationListOrderBy(args.sort),
     });
   }
 

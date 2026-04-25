@@ -2079,7 +2079,7 @@
     },
     "/specialists": {
       "get": {
-        "description": "Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.",
+        "description": "Активные профили специалистов (не удалённые). Сортировка: `sort` — `popularity` (по умолчанию, отзывы), `newest`, `rating`, `price_asc` / `price_desc`, `recommended` (релевантность по портрету; нужен Bearer и готовность персонализации). Вертикаль: `majorSlug`. Фильтры: `q`, `categories`, цена, радиус. `sort=recommended` требует валидный access token и доступность персонализации (как GET /personalization/recommendations).",
         "operationId": "Specialists_list",
         "parameters": [
           {
@@ -2167,8 +2167,25 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.",
+            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.",
             "schema": {}
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recommended",
+                "popularity",
+                "newest",
+                "price_asc",
+                "price_desc",
+                "rating"
+              ]
+            }
           },
           {
             "name": "locale",
@@ -2429,9 +2446,14 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса"
+            "description": "Неверный формат locale, limit, cursor, sort, majorSlug, categories, цены VND или радиуса"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Список специалистов (курсорная пагинация)",
         "tags": [
           "specialists"
@@ -2810,7 +2832,7 @@
     },
     "/organizations": {
       "get": {
-        "description": "Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`, `radiusM`+`radiusLat`+`radiusLng` (круг на Земле, метры). Курсор — в том же наборе фильтров.",
+        "description": "Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.",
         "operationId": "Organizations_list",
         "parameters": [
           {
@@ -2878,8 +2900,25 @@
             "name": "cursor",
             "required": false,
             "in": "query",
-            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.",
+            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.",
             "schema": {}
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recommended",
+                "popularity",
+                "newest",
+                "price_asc",
+                "price_desc",
+                "rating"
+              ]
+            }
           },
           {
             "name": "locale",
@@ -3106,9 +3145,14 @@
             }
           },
           "400": {
-            "description": "Неверный формат locale, limit, cursor, majorSlug, categories или радиуса"
+            "description": "Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Список организаций (курсорная пагинация)",
         "tags": [
           "organizations"

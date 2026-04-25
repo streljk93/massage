@@ -1,5 +1,16 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  forwardRef,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  DirectoryRepository,
+  type DirectoryListRadiusFilter,
+  type OrganizationListRow,
+  type SpecialistListRow,
+} from '../infrastructure/directory.repository';
 import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
 import { listingCardPreviewWindowMs } from '../../../common/availability/listing-slot-policy';
 import {
@@ -8,6 +19,8 @@ import {
   encodeOrganizationListCursor,
   encodeSpecialistListCursor,
 } from '../../../common/pagination/directory-list-cursor-codec';
+import type { DirectoryListSort } from '../../../common/pagination/directory-list-sort';
+import { PersonalizationService } from '../../personalization/application/personalization.service';
 import {
   decodeReviewListCursor,
   encodeReviewListCursor,
@@ -43,12 +56,6 @@ import type {
   OrganizationListApiFilters,
   SpecialistListApiFilters,
 } from '../infrastructure/directory-list-query-filters';
-import {
-  DirectoryRepository,
-  type DirectoryListRadiusFilter,
-  type OrganizationListRow,
-  type SpecialistListRow,
-} from '../infrastructure/directory.repository';
 
 function specialistListFiltersOrNull(
   locale: ApiLocale,
@@ -308,8 +315,12 @@ function mapSpecialistToStaffMember(
 @Injectable()
 export class DirectoryService {
   constructor(
+    @Inject(forwardRef(() => DirectoryRepository))
     private readonly directoryRepository: DirectoryRepository,
+    @Inject(ConfigService)
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => PersonalizationService))
+    private readonly personalizationService: PersonalizationService,
   ) {}
 
   /** Дни превью слотов на карточках списка / главной / поиска. */
@@ -345,6 +356,86 @@ export class DirectoryService {
     );
   }
 
+  private encodeSpecialistListNextCursor(
+    sort: DirectoryListSort,
+    limit: number,
+    decoded: ReturnType<typeof decodeSpecialistListCursor>,
+    last: SpecialistListRow,
+  ): string {
+    if (
+      sort === 'recommended' ||
+      sort === 'price_asc' ||
+      sort === 'price_desc'
+    ) {
+      const base = decoded != null && 'offset' in decoded ? decoded.offset : 0;
+      return encodeSpecialistListCursor({
+        sort,
+        specialistId: last.id,
+        offset: base + limit,
+      });
+    }
+    if (sort === 'popularity') {
+      return encodeSpecialistListCursor({
+        sort: 'popularity',
+        specialistId: last.id,
+        reviewsCount: last.reviewsCount,
+        ratingAverage: last.ratingAverage,
+      });
+    }
+    if (sort === 'newest') {
+      return encodeSpecialistListCursor({
+        sort: 'newest',
+        specialistId: last.id,
+        createdAt: last.createdAt,
+      });
+    }
+    return encodeSpecialistListCursor({
+      sort: 'rating',
+      specialistId: last.id,
+      ratingAverage: last.ratingAverage,
+    });
+  }
+
+  private encodeOrganizationListNextCursor(
+    sort: DirectoryListSort,
+    limit: number,
+    decoded: ReturnType<typeof decodeOrganizationListCursor>,
+    last: OrganizationListRow,
+  ): string {
+    if (
+      sort === 'recommended' ||
+      sort === 'price_asc' ||
+      sort === 'price_desc'
+    ) {
+      const base = decoded != null && 'offset' in decoded ? decoded.offset : 0;
+      return encodeOrganizationListCursor({
+        sort,
+        organizationId: last.id,
+        offset: base + limit,
+      });
+    }
+    if (sort === 'popularity') {
+      return encodeOrganizationListCursor({
+        sort: 'popularity',
+        organizationId: last.id,
+        reviewsCount: last.reviewsCount,
+        ratingAverage: last.ratingAverage,
+      });
+    }
+    if (sort === 'newest') {
+      return encodeOrganizationListCursor({
+        sort: 'newest',
+        organizationId: last.id,
+        createdAt: last.createdAt,
+      });
+    }
+    return encodeOrganizationListCursor({
+      sort: 'rating',
+      organizationId: last.id,
+      ratingAverage: last.ratingAverage,
+    });
+  }
+
   private async buildOccupiedBySpecialistMap(
     specialistIds: string[],
     now: Date,
@@ -364,6 +455,7 @@ export class DirectoryService {
     locale: ApiLocale,
     options: {
       limit: number;
+      sort: DirectoryListSort;
       cursor: string | null;
       majorCategorySlug: string | null;
       q: string | null;
@@ -371,6 +463,13 @@ export class DirectoryService {
       priceMinVnd: number | null;
       priceMaxVnd: number | null;
       radius: DirectoryListRadiusFilter | null;
+      /** Пользователь (Bearer) — нужен для `sort=recommended`. */
+      userId: string | null;
+      /**
+       * true, если `priceMinVnd`/`priceMaxVnd` заданы в query; иначе при рекомендациях
+       * подмешивается цена из портрета.
+       */
+      priceFromQuery: boolean;
     },
   ): Promise<SpecialistsListResponseDto> {
     const now = new Date();
@@ -383,20 +482,68 @@ export class DirectoryService {
         message: 'Invalid cursor',
       });
     }
+    if (decoded != null && decoded.sort !== options.sort) {
+      throw new BadRequestException({
+        code: 'INVALID_CURSOR',
+        message: 'Cursor does not match sort',
+      });
+    }
+    if (options.sort === 'recommended') {
+      if (options.userId == null || options.userId.trim() === '') {
+        throw new BadRequestException({
+          code: 'RECOMMENDED_AUTH_REQUIRED',
+          message: 'sort=recommended requires an authenticated user',
+        });
+      }
+    }
+    let listPriceMin = options.priceMinVnd;
+    let listPriceMax = options.priceMaxVnd;
+    let overlapCategorySlugs: string[] | undefined;
+    if (options.sort === 'recommended' && options.userId != null) {
+      const res =
+        await this.personalizationService.resolveRecommendationListing(
+          options.userId,
+          {
+            majorSlug: options.majorCategorySlug,
+            categorySlugs:
+              options.categorySlugs.length > 0 ? options.categorySlugs : null,
+            radius: options.radius,
+            vndPriceOverride: options.priceFromQuery
+              ? {
+                  priceMinVnd: options.priceMinVnd,
+                  priceMaxVnd: options.priceMaxVnd,
+                }
+              : null,
+          },
+        );
+      if (!res.personalizationReady) {
+        throw new BadRequestException({
+          code: 'RECOMMENDED_SORT_UNAVAILABLE',
+          message: 'Personalized sort is not available for this user',
+        });
+      }
+      if (!options.priceFromQuery) {
+        listPriceMin = res.priceMinVnd;
+        listPriceMax = res.priceMaxVnd;
+      }
+      overlapCategorySlugs = res.categorySlugsUsed;
+    }
     const limit = options.limit;
     const filters = specialistListFiltersOrNull(
       locale,
       options.majorCategorySlug,
       options.q,
       options.categorySlugs,
-      options.priceMinVnd,
-      options.priceMaxVnd,
+      listPriceMin,
+      listPriceMax,
     );
     const rows = await this.directoryRepository.findSpecialistsPage({
       take: limit + 1,
+      sort: options.sort,
       cursor: decoded,
       filters,
       radius: options.radius,
+      overlapCategorySlugs,
     });
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
@@ -408,7 +555,12 @@ export class DirectoryService {
     const last = slice[slice.length - 1];
     const nextCursor =
       hasMore && last
-        ? encodeSpecialistListCursor(last.user.name, last.id)
+        ? this.encodeSpecialistListNextCursor(
+            options.sort,
+            limit,
+            decoded,
+            last,
+          )
         : null;
     const doneClientsBySpec =
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
@@ -432,11 +584,13 @@ export class DirectoryService {
     locale: ApiLocale,
     options: {
       limit: number;
+      sort: DirectoryListSort;
       cursor: string | null;
       majorCategorySlug: string | null;
       q: string | null;
       categorySlugs: string[];
       radius: DirectoryListRadiusFilter | null;
+      userId: string | null;
     },
   ): Promise<OrganizationsListResponseDto> {
     const now = new Date();
@@ -449,6 +603,41 @@ export class DirectoryService {
         message: 'Invalid cursor',
       });
     }
+    if (decoded != null && decoded.sort !== options.sort) {
+      throw new BadRequestException({
+        code: 'INVALID_CURSOR',
+        message: 'Cursor does not match sort',
+      });
+    }
+    if (options.sort === 'recommended') {
+      if (options.userId == null || options.userId.trim() === '') {
+        throw new BadRequestException({
+          code: 'RECOMMENDED_AUTH_REQUIRED',
+          message: 'sort=recommended requires an authenticated user',
+        });
+      }
+    }
+    let overlapCategorySlugs: string[] | undefined;
+    if (options.sort === 'recommended' && options.userId != null) {
+      const res =
+        await this.personalizationService.resolveRecommendationListing(
+          options.userId,
+          {
+            majorSlug: options.majorCategorySlug,
+            categorySlugs:
+              options.categorySlugs.length > 0 ? options.categorySlugs : null,
+            radius: options.radius,
+            vndPriceOverride: null,
+          },
+        );
+      if (!res.personalizationReady) {
+        throw new BadRequestException({
+          code: 'RECOMMENDED_SORT_UNAVAILABLE',
+          message: 'Personalized sort is not available for this user',
+        });
+      }
+      overlapCategorySlugs = res.categorySlugsUsed;
+    }
     const limit = options.limit;
     const filters = organizationListFiltersOrNull(
       locale,
@@ -458,9 +647,11 @@ export class DirectoryService {
     );
     const rows = await this.directoryRepository.findOrganizationsPage({
       take: limit + 1,
+      sort: options.sort,
       cursor: decoded,
       filters,
       radius: options.radius,
+      overlapCategorySlugs,
     });
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
@@ -479,7 +670,14 @@ export class DirectoryService {
     );
     const last = slice[slice.length - 1];
     const nextCursor =
-      hasMore && last ? encodeOrganizationListCursor(last.name, last.id) : null;
+      hasMore && last
+        ? this.encodeOrganizationListNextCursor(
+            options.sort,
+            limit,
+            decoded,
+            last,
+          )
+        : null;
     return {
       organizations: slice.map((o) =>
         mapOrganizationRowToListItem(o, locale, now, occupiedBySpecialist),

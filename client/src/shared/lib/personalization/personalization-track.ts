@@ -111,6 +111,8 @@ export function trackSearchFiltersApplied(input: {
   accessToken: string | undefined;
   majorSlug: string;
   categorySlugs: string[];
+  /** Сортировка из URL: `recommended`, `popularity`, `newest`, `price_asc` / `price_desc`, `rating`. */
+  sort?: string;
   radiusM: number | null;
   radiusLat: number | null;
   radiusLng: number | null;
@@ -121,6 +123,7 @@ export function trackSearchFiltersApplied(input: {
     "search_apply_filters",
     input.majorSlug,
     [...input.categorySlugs].sort().join(","),
+    String(input.sort ?? ""),
     String(input.radiusM),
     String(input.radiusLat),
     String(input.radiusLng),
@@ -133,6 +136,7 @@ export function trackSearchFiltersApplied(input: {
   const metadata: Record<string, unknown> = {
     majorSlug: input.majorSlug,
     categorySlugs: input.categorySlugs,
+    sort: input.sort,
     priceMinVnd: input.priceMinVnd,
     priceMaxVnd: input.priceMaxVnd,
   };

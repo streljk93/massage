@@ -5,15 +5,23 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
+import {
+  JwtAccessOptionalGuard,
+  type AuthenticatedUser,
+} from '../../../common/guards';
 import {
   ApiLocaleQueryDocs,
   RequestLocale,
@@ -30,6 +38,7 @@ import {
   DIRECTORY_LIST_MAX_LIMIT,
   parseDirectoryListLimit,
 } from '../../../common/pagination/parse-directory-list-limit';
+import { parseDirectoryListSort } from '../../../common/pagination/directory-list-sort';
 import { DirectoryService } from '../application/directory.service';
 import type { DirectoryReviewsListResponseDto } from '../dto/directory-reviews-list-response.dto';
 import type { OrganizationDetailResponseDto } from '../dto/organization-detail-response.dto';
@@ -40,23 +49,44 @@ import {
   organizationsListResponseSchema,
 } from './directory.openapi-schemas';
 
+type AuthedOrGuest = Request & { user?: AuthenticatedUser };
+
 @ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly directoryService: DirectoryService) {}
 
   @Get()
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Список организаций (курсорная пагинация)',
     description:
-      'Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`, `radiusM`+`radiusLat`+`radiusLng` (круг на Земле, метры). Курсор — в том же наборе фильтров.',
+      'Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.',
   })
   @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    description:
+      '`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.',
+    schema: {
+      type: 'string',
+      enum: [
+        'recommended',
+        'popularity',
+        'newest',
+        'price_asc',
+        'price_desc',
+        'rating',
+      ],
+    },
+  })
   @ApiQuery({
     name: 'cursor',
     required: false,
     description:
-      'Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.',
+      'Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.',
   })
   @ApiQuery({
     name: 'limit',
@@ -104,10 +134,12 @@ export class OrganizationsController {
   @ApiOkResponse({ schema: organizationsListResponseSchema })
   @ApiBadRequestResponse({
     description:
-      'Неверный формат locale, limit, cursor, majorSlug, categories или радиуса',
+      'Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса',
   })
   async list(
     @RequestLocale() locale: ApiLocale,
+    @Req() req: AuthedOrGuest,
+    @Query('sort') sortRaw?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limitRaw?: string,
     @Query('majorSlug') majorSlugRaw?: string,
@@ -123,6 +155,7 @@ export class OrganizationsController {
       radiusLngRaw,
     );
     return this.directoryService.listOrganizations(locale, {
+      sort: parseDirectoryListSort(sortRaw),
       cursor: cursor ?? null,
       limit: parseDirectoryListLimit(limitRaw),
       majorCategorySlug: parseOptionalMajorCategorySlug(majorSlugRaw),
@@ -136,6 +169,7 @@ export class OrganizationsController {
               centerLng: radius.centerLng,
               radiusM: radius.radiusM,
             },
+      userId: req.user?.id ?? null,
     });
   }
 

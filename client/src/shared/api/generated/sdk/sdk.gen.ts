@@ -273,9 +273,13 @@ export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = f
 /**
  * Список специалистов (курсорная пагинация)
  *
- * Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.
+ * Активные профили специалистов (не удалённые). Сортировка: `sort` — `popularity` (по умолчанию, отзывы), `newest`, `rating`, `price_asc` / `price_desc`, `recommended` (релевантность по портрету; нужен Bearer и готовность персонализации). Вертикаль: `majorSlug`. Фильтры: `q`, `categories`, цена, радиус. `sort=recommended` требует валидный access token и доступность персонализации (как GET /personalization/recommendations).
  */
-export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({ url: '/specialists', ...options });
+export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists',
+    ...options
+});
 
 /**
  * Отзывы о специалисте
@@ -294,9 +298,13 @@ export const specialistsGetById = <ThrowOnError extends boolean = false>(options
 /**
  * Список организаций (курсорная пагинация)
  *
- * Активные организации (салоны), не удалённые. Стабильная сортировка: `name` asc, затем `id` asc. Вертикаль: `majorSlug` (большая категория). Фильтры: `q`, `categories`, `radiusM`+`radiusLat`+`radiusLng` (круг на Земле, метры). Курсор — в том же наборе фильтров.
+ * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
  */
-export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({ url: '/organizations', ...options });
+export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations',
+    ...options
+});
 
 /**
  * Отзывы о салоне

@@ -9,7 +9,10 @@ import {
 } from "@/shared/api";
 import { SEARCH_DIRECTORY_CURSOR_PAGE_SIZE } from "@/shared/config/directory-cursor-pagination";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
-import { searchCategoriesQueryCsv } from "@/views/search/lib/search-directory-list-api-filters";
+import {
+  searchCategoriesQueryCsv,
+  searchDirectoryListSortForPublicApi,
+} from "@/views/search/lib/search-directory-list-api-filters";
 import { parseSearchUrlFiltersFromRecord } from "@/views/search/lib/search-url-filters";
 import { SearchPageClient } from "@/views/search";
 
@@ -21,6 +24,7 @@ export default async function Page({ searchParams }: PageProps) {
   const locale = (await getLocale()) as AppLocale;
   const sp = (await searchParams) ?? {};
   const f = parseSearchUrlFiltersFromRecord(sp);
+  const listSort = searchDirectoryListSortForPublicApi(f.sort);
   const hasRadius =
     f.radiusM != null &&
     f.radiusLat != null &&
@@ -39,6 +43,7 @@ export default async function Page({ searchParams }: PageProps) {
           locale,
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: SEARCH_DIRECTORY_CURSOR_PAGE_SIZE,
+          sort: listSort,
           ...(f.q.trim() ? { q: f.q.trim() } : {}),
           ...(orgCategoriesCsv ? { categories: orgCategoriesCsv } : {}),
           ...(hasRadius ?
@@ -57,6 +62,7 @@ export default async function Page({ searchParams }: PageProps) {
           locale,
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: SEARCH_DIRECTORY_CURSOR_PAGE_SIZE,
+          sort: listSort,
           ...(f.q.trim() ? { q: f.q.trim() } : {}),
           ...(specCategoriesCsv ? { categories: specCategoriesCsv } : {}),
           ...(f.priceMinVnd != null ? { priceMinVnd: f.priceMinVnd } : {}),
@@ -83,6 +89,7 @@ export default async function Page({ searchParams }: PageProps) {
   const initialOrgListPrefetch = {
     q: f.q.trim(),
     categoryCsv: orgCategoriesCsv,
+    sort: listSort,
     radiusM: hasRadius ? f.radiusM : null,
     radiusLat: hasRadius ? f.radiusLat : null,
     radiusLng: hasRadius ? f.radiusLng : null,
@@ -90,6 +97,7 @@ export default async function Page({ searchParams }: PageProps) {
   const initialSpecListPrefetch = {
     q: f.q.trim(),
     categoryCsv: specCategoriesCsv,
+    sort: listSort,
     priceMinVnd: f.priceMinVnd,
     priceMaxVnd: f.priceMaxVnd,
     radiusM: hasRadius ? f.radiusM : null,

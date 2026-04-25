@@ -17,7 +17,14 @@
         "noSlotMatch": "No one matches the selected time. Try another day or time.",
         "slotFilterClientNote": "Filter applies to the loaded list; scroll down to load more and refine.",
         "noSpecialistsForFilters": "No specialists match your current filters. Try changing or clearing them.",
-        "noSalonsForFilters": "No salons match your current filters. Try changing or clearing them."
+        "noSalonsForFilters": "No salons match your current filters. Try changing or clearing them.",
+        "sortLabel": "Sort",
+        "sortRecommended": "Recommended",
+        "sortPopularity": "Popularity",
+        "sortNewest": "Newest",
+        "sortPriceAsc": "Cheaper",
+        "sortPriceDesc": "More expensive",
+        "sortRating": "Highest rating"
       }
     },
     "vi": {
@@ -37,7 +44,14 @@
         "noSlotMatch": "Chưa có mục nào trùng thời gian. Thử ngày/giờ khác.",
         "slotFilterClientNote": "Bộ lọc áp dụng theo trang đã tải; kéo xuống để tải thêm.",
         "noSpecialistsForFilters": "Không có chuyên viên nào khớp bộ lọc hiện tại. Hãy đổi bộ lọc hoặc xóa bộ lọc.",
-        "noSalonsForFilters": "Không có salon nào khớp bộ lọc hiện tại. Hãy đổi bộ lọc hoặc xóa bộ lọc."
+        "noSalonsForFilters": "Không có salon nào khớp bộ lọc hiện tại. Hãy đổi bộ lọc hoặc xóa bộ lọc.",
+        "sortLabel": "Sắp xếp",
+        "sortRecommended": "Gợi ý cho bạn",
+        "sortPopularity": "Phổ biến",
+        "sortNewest": "Mới",
+        "sortPriceAsc": "Rẻ hơn",
+        "sortPriceDesc": "Đắt hơn",
+        "sortRating": "Đánh giá cao"
       }
     },
     "ru": {
@@ -57,7 +71,14 @@
         "noSlotMatch": "Никто не подходит под выбранное время. Попробуйте другой день или часы.",
         "slotFilterClientNote": "Фильтр действует на уже загруженный список — пролистайте, чтобы догрузить варианты.",
         "noSpecialistsForFilters": "Нет специалистов, подходящих под текущие фильтры. Измените или сбросьте их.",
-        "noSalonsForFilters": "Нет салонов, подходящих под текущие фильтры. Измените или сбросьте их."
+        "noSalonsForFilters": "Нет салонов, подходящих под текущие фильтры. Измените или сбросьте их.",
+        "sortLabel": "Сортировка",
+        "sortRecommended": "Рекомендуемые",
+        "sortPopularity": "По популярности",
+        "sortNewest": "Новые",
+        "sortPriceAsc": "Дешевле",
+        "sortPriceDesc": "Дороже",
+        "sortRating": "С высоким рейтингом"
       }
     }
   }

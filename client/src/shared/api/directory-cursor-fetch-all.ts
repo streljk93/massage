@@ -17,6 +17,16 @@ export type DirectoryCursorFetchRadius = {
   radiusLng: number;
 };
 
+/** Один в один с запросом списка на /search, чтобы курсор и набор совпадали. */
+export type DirectoryFetchAllListQuery = {
+  sort: "recommended" | "popularity" | "newest" | "price_asc" | "price_desc" | "rating";
+  q?: string;
+  /** CSV slug категорий */
+  categories?: string;
+  priceMinVnd?: number | null;
+  priceMaxVnd?: number | null;
+};
+
 async function fetchAllPaged<T extends { cursorPage: { hasMore: boolean; nextCursor: string | null } }>(
   fetchPage: (cursor: string | undefined) => Promise<{ error: unknown; data?: T }>,
   pickItems: (page: T) => unknown[],
@@ -92,8 +102,12 @@ export async function fetchAllSpecialistsPages(options: {
   fetch?: typeof fetch;
   /** Если задан, совпадает с фильтром радиуса в поиске (гео на бэке). */
   radius?: DirectoryCursorFetchRadius | null;
+  /** Как в GET /specialists на экране поиска: сужает набор, иначе на карте «всё подряд». */
+  listQuery?: DirectoryFetchAllListQuery | null;
 }): Promise<SpecialistsListResponse["specialists"]> {
   const r = options.radius;
+  const lq = options.listQuery;
+  const sort = lq?.sort ?? "popularity";
   const rows = await fetchAllPaged<SpecialistsListResponse>(
     (cursor) =>
       specialistsList({
@@ -102,7 +116,12 @@ export async function fetchAllSpecialistsPages(options: {
           locale: options.locale,
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
+          sort,
           ...(cursor ? { cursor } : {}),
+          ...(lq?.q?.trim() ? { q: lq.q.trim() } : {}),
+          ...(lq?.categories ? { categories: lq.categories } : {}),
+          ...(lq?.priceMinVnd != null ? { priceMinVnd: lq.priceMinVnd } : {}),
+          ...(lq?.priceMaxVnd != null ? { priceMaxVnd: lq.priceMaxVnd } : {}),
           ...(r != null ?
             { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
           : {}),
@@ -121,8 +140,12 @@ export async function fetchAllOrganizationsPages(options: {
   fetch?: typeof fetch;
   /** Если задан, совпадает с фильтром радиуса в поиске (гео на бэке). */
   radius?: DirectoryCursorFetchRadius | null;
+  /** Как в GET /organizations на экране поиска. */
+  listQuery?: DirectoryFetchAllListQuery | null;
 }): Promise<OrganizationsListResponse["organizations"]> {
   const r = options.radius;
+  const lq = options.listQuery;
+  const sort = lq?.sort ?? "popularity";
   const rows = await fetchAllPaged<OrganizationsListResponse>(
     (cursor) =>
       organizationsList({
@@ -131,7 +154,10 @@ export async function fetchAllOrganizationsPages(options: {
           locale: options.locale,
           majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
           limit: DIRECTORY_CURSOR_FETCH_CHUNK_MAX,
+          sort,
           ...(cursor ? { cursor } : {}),
+          ...(lq?.q?.trim() ? { q: lq.q.trim() } : {}),
+          ...(lq?.categories ? { categories: lq.categories } : {}),
           ...(r != null ?
             { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
           : {}),

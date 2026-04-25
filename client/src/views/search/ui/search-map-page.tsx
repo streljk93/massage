@@ -1,17 +1,18 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Range, Root, Thumb, Track } from "@radix-ui/react-slider";
 import { LocateFixed, X } from "lucide-react";
 import { Link, useRouter } from "@/app/i18n/navigation";
-import {
-  Slider,
-  type SliderHandle,
-  type SliderSlide,
-} from "@/shared/ui/slider";
 import type {
   OrganizationsListResponse,
   SpecialistsListResponse,
@@ -28,7 +29,6 @@ import {
   searchMapSpecialistsFromApi,
 } from "@/widgets/home/lib/search-map-list-from-api";
 import { cn, motion } from "@/shared/lib";
-import { distanceMeters } from "@/shared/lib/geo/distance-meters";
 import {
   parseSearchTab,
   SEARCH_TABS,
@@ -94,7 +94,7 @@ function SearchMapInteractiveLayer({
   const isRadiusPick = mapMode === "radiusPick";
   const list =
     tab === "organizations" ? organizationItems : specialistItems;
-  const [activeCardIndex, setActiveCardIndex] = useState(0);
+  const [activeCardIndex, setActiveCardIndex] = useState<number | null>(null);
   const initialRadiusM = useMemo(() => {
     if (
       urlFilters.radiusM != null &&
@@ -113,7 +113,6 @@ function SearchMapInteractiveLayer({
       : { center: mapCenter, radiusM: radiusMeters },
     [mapCenter, radiusMeters],
   );
-  const sliderRef = useRef<SliderHandle>(null);
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
   const { userPosition, requestFromUserGesture } = useUserGeolocation();
 
@@ -140,65 +139,45 @@ function SearchMapInteractiveLayer({
     [],
   );
 
-  const mapItems = useMemo(() => {
-    if (!isRadiusPick) {
-      return list.map((item) => ({
-        id: item.id,
-        lat: item.lat,
-        lng: item.lng,
-        imageSrc: item.imageSrc,
-        name: item.name,
-        rating: item.rating,
-      }));
-    }
-    const center = mapCenter ?? radiusMapCenter;
-    return list.map((item) => {
-      const within =
-        distanceMeters(item.lat, item.lng, center[0], center[1]) <=
-        radiusMeters;
-      return {
-        id: item.id,
-        lat: item.lat,
-        lng: item.lng,
-        imageSrc: item.imageSrc,
-        name: item.name,
-        rating: item.rating,
-        dimmed: !within,
-      };
-    });
-  }, [isRadiusPick, list, mapCenter, radiusMapCenter, radiusMeters]);
-
-  const onMarkerSelect = useCallback((index: number) => {
-    setActiveCardIndex(index);
-    sliderRef.current?.scrollToIndex(index);
-  }, []);
-
-  const onSlideIndexChange = useCallback((index: number) => {
-    setActiveCardIndex(index);
-  }, []);
-
-  const slides: SliderSlide[] = useMemo(
+  /**
+   * Пины **не** зависят от радиуса — иначе при смене радиуса React перерисовывает маркеры/кластер
+   * и визуально «мигают». Зона поиска показывается кругом на карте (`MapRadiusMetersOverlay`).
+   */
+  const mapItems = useMemo(
     () =>
       list.map((item) => ({
         id: item.id,
-        content: (
-          <SearchMapResultCard
-            name={item.name}
-            imageSrc={item.imageSrc}
-            imageAlt={item.name}
-            rating={item.rating}
-            metaLine={item.metaLine}
-            profileHref={
-              tab === "organizations"
-                ? `/organizations/${item.id}`
-                : `/specialists/${item.id}`
-            }
-            className={cardGlass}
-          />
-        ),
+        lat: item.lat,
+        lng: item.lng,
+        imageSrc: item.imageSrc,
+        name: item.name,
+        rating: item.rating,
       })),
-    [list, tab],
+    [list],
   );
+
+  useEffect(() => {
+    setActiveCardIndex((prev) => {
+      if (list.length === 0) return null;
+      if (prev == null) return null;
+      return Math.min(prev, list.length - 1);
+    });
+  }, [list.length]);
+
+  const onMarkerSelect = useCallback((index: number) => {
+    setActiveCardIndex(index);
+  }, []);
+
+  const onMapBackgroundClick = useCallback(() => {
+    setActiveCardIndex(null);
+  }, []);
+
+  const noopMarkerSelect = useCallback(() => {}, []);
+
+  const selectedListItem =
+    activeCardIndex != null && list.length > 0
+      ? list[Math.min(list.length - 1, activeCardIndex)]
+      : null;
 
   const radiusReadout = useMemo(() => {
     const m = radiusMeters;
@@ -224,8 +203,9 @@ function SearchMapInteractiveLayer({
           userPosition={userPosition}
           onMapFlyReady={onMapFlyReady}
           items={mapItems}
-          selectedIndex={isRadiusPick ? 0 : activeCardIndex}
-          onMarkerSelect={isRadiusPick ? () => {} : onMarkerSelect}
+          selectedIndex={activeCardIndex}
+          onMarkerSelect={isRadiusPick ? noopMarkerSelect : onMarkerSelect}
+          onMapBackgroundClick={isRadiusPick ? undefined : onMapBackgroundClick}
           userLocationAriaLabel={tMap("userLocationAria")}
           radiusPickerMode={isRadiusPick}
           radiusMapCenter={radiusMapCenter}
@@ -350,22 +330,31 @@ function SearchMapInteractiveLayer({
             >
               {`${tMap("applyRadius")} ${radiusReadout}`}
             </Button>
-          : list.length > 0 ?
-            <Slider
-              ref={sliderRef}
-              slides={slides}
-              slideClassName="!min-w-[min(276px,calc(100vw-2rem))] max-w-[276px]"
-              showDots
-              dotsAriaLabel={tMap("sliderDotsAria")}
-              onActiveIndexChange={onSlideIndexChange}
-              className="pb-1"
-            />
-          : <p
+          : list.length === 0 ?
+            <p
               className="rounded-2xl border border-white/20 bg-card/80 px-3 py-3 text-center text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-card/60"
               role="status"
             >
               {tMap("emptyResults")}
             </p>
+          : activeCardIndex != null && selectedListItem != null ?
+            <div className="w-full min-w-0">
+              <SearchMapResultCard
+                key={selectedListItem.id}
+                name={selectedListItem.name}
+                imageSrc={selectedListItem.imageSrc}
+                imageAlt={selectedListItem.name}
+                rating={selectedListItem.rating}
+                metaLine={selectedListItem.metaLine}
+                profileHref={
+                  tab === "organizations"
+                    ? `/organizations/${selectedListItem.id}`
+                    : `/specialists/${selectedListItem.id}`
+                }
+                className={cardGlass}
+              />
+            </div>
+          : null
           }
         </div>
       </div>

@@ -1032,9 +1032,13 @@ export type SpecialistsListData = {
          */
         limit?: number;
         /**
-         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.
+         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.
          */
         cursor?: unknown;
+        /**
+         * `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.
+         */
+        sort?: 'recommended' | 'popularity' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
         /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
@@ -1045,7 +1049,7 @@ export type SpecialistsListData = {
 
 export type SpecialistsListErrors = {
     /**
-     * Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса
+     * Неверный формат locale, limit, cursor, sort, majorSlug, categories, цены VND или радиуса
      */
     400: unknown;
 };
@@ -1320,9 +1324,13 @@ export type OrganizationsListData = {
          */
         limit?: number;
         /**
-         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.
+         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.
          */
         cursor?: unknown;
+        /**
+         * `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.
+         */
+        sort?: 'recommended' | 'popularity' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
         /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
          */
@@ -1333,7 +1341,7 @@ export type OrganizationsListData = {
 
 export type OrganizationsListErrors = {
     /**
-     * Неверный формат locale, limit, cursor, majorSlug, categories или радиуса
+     * Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса
      */
     400: unknown;
 };

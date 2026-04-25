@@ -14,6 +14,7 @@ import {
   searchDirectoryRadiusActive,
   searchOrganizationsFiltersEmpty,
   searchSpecialistsFiltersEmpty,
+  type SearchDirectoryListSort,
   type SearchOrganizationsListApiFilters,
   type SearchSpecialistsListApiFilters,
 } from "./search-directory-list-api-filters";
@@ -33,6 +34,7 @@ function getNextCursorPageParam(last: CursorPagePayload): string | undefined {
 export type SearchOrganizationsListPrefetchSnapshot = {
   q: string;
   categoryCsv: string;
+  sort: SearchDirectoryListSort;
   radiusM: number | null;
   radiusLat: number | null;
   radiusLng: number | null;
@@ -41,6 +43,7 @@ export type SearchOrganizationsListPrefetchSnapshot = {
 export type SearchSpecialistsListPrefetchSnapshot = {
   q: string;
   categoryCsv: string;
+  sort: SearchDirectoryListSort;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
   radiusM: number | null;
@@ -60,6 +63,7 @@ function organizationsInitialPageMatchesSnapshot(
   return (
     qTrim === snapshot.q.trim() &&
     categoryCsv === snapshot.categoryCsv &&
+    filters.sort === snapshot.sort &&
     filters.radiusM === snapshot.radiusM &&
     filters.radiusLat === snapshot.radiusLat &&
     filters.radiusLng === snapshot.radiusLng
@@ -90,6 +94,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
       CATALOG_MAJOR_CATEGORY_SLUG,
       qTrim,
       categoryCsv,
+      filters.sort,
       radiusQ ? (filters.radiusM ?? "x") : "noR",
       radiusQ ? (filters.radiusLat ?? "x") : "noR",
       radiusQ ? (filters.radiusLng ?? "x") : "noR",
@@ -113,6 +118,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
           ...(pageParam ? { cursor: String(pageParam) } : {}),
           ...(qTrim ? { q: qTrim } : {}),
           ...(categoryCsv ? { categories: categoryCsv } : {}),
+          sort: filters.sort,
           ...(radiusQ ?
             {
               radiusM: filters.radiusM as number,
@@ -144,6 +150,7 @@ function specialistsInitialPageMatchesSnapshot(
   return (
     qTrim === snapshot.q.trim() &&
     categoryCsv === snapshot.categoryCsv &&
+    filters.sort === snapshot.sort &&
     priceMinVnd === snapshot.priceMinVnd &&
     priceMaxVnd === snapshot.priceMaxVnd &&
     filters.radiusM === snapshot.radiusM &&
@@ -177,6 +184,7 @@ export function useSearchSpecialistsCursorInfiniteQuery(
       CATALOG_MAJOR_CATEGORY_SLUG,
       qTrim,
       categoryCsv,
+      filters.sort,
       priceMinVnd ?? "none",
       priceMaxVnd ?? "none",
       radiusQ ? (filters.radiusM ?? "x") : "noR",
@@ -202,6 +210,7 @@ export function useSearchSpecialistsCursorInfiniteQuery(
           ...(pageParam ? { cursor: String(pageParam) } : {}),
           ...(qTrim ? { q: qTrim } : {}),
           ...(categoryCsv ? { categories: categoryCsv } : {}),
+          sort: filters.sort,
           ...(priceMinVnd != null ? { priceMinVnd } : {}),
           ...(priceMaxVnd != null ? { priceMaxVnd } : {}),
           ...(radiusQ ?

@@ -17,17 +17,29 @@ import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { Map as MapIcon, Search as SearchIcon, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowUpDown,
+  Map as MapIcon,
+  Search as SearchIcon,
+  SlidersHorizontal,
+} from "lucide-react";
 import { OrganizationCard } from "@/entities/organizations";
 import { SpecialistCard } from "@/entities/specialists";
 import type { AppLocale } from "@/app/i18n/routing";
 import { Link, usePathname, useRouter } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/ui/shadcn/dropdown-menu";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import {
   createBrowserSdkClient,
   directoryGetCatalogFilterOptions,
+  personalizationGetRecommendations,
   type OrganizationsListResponse,
   type SpecialistsListResponse,
 } from "@/shared/api";
@@ -45,9 +57,14 @@ import {
   useSearchOrganizationsCursorInfiniteQuery,
   useSearchSpecialistsCursorInfiniteQuery,
 } from "../lib/use-search-directory-cursor-infinite-queries";
-import type {
-  SearchOrganizationsListApiFilters,
-  SearchSpecialistsListApiFilters,
+import {
+  effectiveSearchDirectoryListSort,
+  searchCategoriesQueryCsv,
+  SEARCH_DIRECTORY_DEFAULT_SORT,
+  SEARCH_DIRECTORY_LIST_SORT_BASE_VALUES,
+  type SearchDirectoryListSort,
+  type SearchOrganizationsListApiFilters,
+  type SearchSpecialistsListApiFilters,
 } from "../lib/search-directory-list-api-filters";
 import { SEARCH_TABS } from "@/shared/lib/search-tab";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
@@ -108,6 +125,90 @@ export function SearchPageClient({
     urlFilters.radiusM != null &&
     urlFilters.radiusLat != null &&
     urlFilters.radiusLng != null;
+
+  const recQueryClient = useMemo(
+    () => createBrowserSdkClient(accessToken, { locale }),
+    [accessToken, locale],
+  );
+
+  const categorySlugsForRec = useMemo(
+    () =>
+      tab === "organizations" ?
+        urlFilters.orgCategorySlugs
+      : urlFilters.specCategorySlugs,
+    [tab, urlFilters.orgCategorySlugs, urlFilters.specCategorySlugs],
+  );
+
+  const categoriesCsvForRec = useMemo(
+    () => searchCategoriesQueryCsv(categorySlugsForRec),
+    [categorySlugsForRec],
+  );
+
+  const { data: recMeta } = useQuery({
+    queryKey: [
+      "personalizationSearchSortMeta",
+      accessToken,
+      locale,
+      CATALOG_MAJOR_CATEGORY_SLUG,
+      categoriesCsvForRec,
+      urlFilters.priceMinVnd,
+      urlFilters.priceMaxVnd,
+      hasRadiusFilter,
+      hasRadiusFilter ? urlFilters.radiusM : null,
+      hasRadiusFilter ? urlFilters.radiusLat : null,
+      hasRadiusFilter ? urlFilters.radiusLng : null,
+    ] as const,
+    queryFn: async () => {
+      const { data, error } = await personalizationGetRecommendations({
+        client: recQueryClient,
+        query: {
+          locale,
+          listLimit: 0,
+          majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+          ...(categoriesCsvForRec ? { categories: categoriesCsvForRec } : {}),
+          ...(urlFilters.priceMinVnd != null && urlFilters.priceMaxVnd != null ?
+            {
+              priceMinVnd: urlFilters.priceMinVnd,
+              priceMaxVnd: urlFilters.priceMaxVnd,
+            }
+          : {}),
+          ...(hasRadiusFilter ?
+            {
+              radiusM: urlFilters.radiusM as number,
+              radiusLat: urlFilters.radiusLat as number,
+              radiusLng: urlFilters.radiusLng as number,
+            }
+          : {}),
+        },
+      });
+      if (error || !data) {
+        throw new Error("personalization recommendations meta");
+      }
+      return data;
+    },
+    enabled: accessToken.length > 0,
+    staleTime: 60_000,
+  });
+
+  const listSortEffective = useMemo(
+    () =>
+      effectiveSearchDirectoryListSort(urlFilters.sort, {
+        accessToken,
+        personalizationReady: recMeta?.personalizationReady,
+      }),
+    [urlFilters.sort, accessToken, recMeta?.personalizationReady],
+  );
+
+  const showRecommendedSortOption = Boolean(
+    accessToken.length > 0 && recMeta?.personalizationReady,
+  );
+
+  const selectSortValue = useMemo((): SearchDirectoryListSort => {
+    if (urlFilters.sort === "recommended" && !showRecommendedSortOption) {
+      return listSortEffective;
+    }
+    return urlFilters.sort;
+  }, [urlFilters.sort, showRecommendedSortOption, listSortEffective]);
 
   const [slotPick, setSlotPick] = useState<CatalogSlotTimeFilterValue>({
     day: "",
@@ -186,6 +287,7 @@ export function SearchPageClient({
         accessToken: accessToken || undefined,
         majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
         categorySlugs,
+        sort: urlFilters.sort,
         radiusM: urlFilters.radiusM,
         radiusLat: urlFilters.radiusLat,
         radiusLng: urlFilters.radiusLng,
@@ -198,6 +300,7 @@ export function SearchPageClient({
     urlFilters.tab,
     urlFilters.orgCategorySlugs,
     urlFilters.specCategorySlugs,
+    urlFilters.sort,
     urlFilters.radiusM,
     urlFilters.radiusLat,
     urlFilters.radiusLng,
@@ -222,6 +325,39 @@ export function SearchPageClient({
     },
     [replaceUrlFilters],
   );
+
+  const applySearchSort = useCallback(
+    (v: SearchDirectoryListSort) => {
+      const isRecommended = v === "recommended";
+      const inBase = (
+        SEARCH_DIRECTORY_LIST_SORT_BASE_VALUES as readonly string[]
+      ).includes(v);
+      if (!inBase && (!isRecommended || !showRecommendedSortOption)) {
+        return;
+      }
+      commitUrlFilters(
+        applySearchUrlPatch(urlFiltersRef.current, { sort: v }),
+      );
+    },
+    [commitUrlFilters, showRecommendedSortOption],
+  );
+
+  useEffect(() => {
+    if (urlFilters.sort !== "recommended") {
+      return;
+    }
+    if (!accessToken) {
+      commitUrlFilters(
+        applySearchUrlPatch(urlFiltersRef.current, { sort: "popularity" }),
+      );
+      return;
+    }
+    if (recMeta && !recMeta.personalizationReady) {
+      commitUrlFilters(
+        applySearchUrlPatch(urlFiltersRef.current, { sort: "popularity" }),
+      );
+    }
+  }, [urlFilters.sort, accessToken, recMeta, commitUrlFilters]);
 
   const onSlotTimeFilterChange = useCallback(
     (next: CatalogSlotTimeFilterValue) => {
@@ -263,6 +399,7 @@ export function SearchPageClient({
     return {
       q: urlFilters.q,
       categorySlugs: urlFilters.orgCategorySlugs,
+      sort: listSortEffective,
       radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
       radiusLat: hasRadiusFilter ? urlFilters.radiusLat : null,
       radiusLng: hasRadiusFilter ? urlFilters.radiusLng : null,
@@ -270,6 +407,7 @@ export function SearchPageClient({
   }, [
     urlFilters.q,
     urlFilters.orgCategorySlugs,
+    listSortEffective,
     hasRadiusFilter,
     urlFilters.radiusM,
     urlFilters.radiusLat,
@@ -280,6 +418,7 @@ export function SearchPageClient({
     return {
       q: urlFilters.q,
       categorySlugs: urlFilters.specCategorySlugs,
+      sort: listSortEffective,
       priceMinVnd: urlFilters.priceMinVnd,
       priceMaxVnd: urlFilters.priceMaxVnd,
       radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
@@ -289,6 +428,7 @@ export function SearchPageClient({
   }, [
     urlFilters.q,
     urlFilters.specCategorySlugs,
+    listSortEffective,
     urlFilters.priceMinVnd,
     urlFilters.priceMaxVnd,
     hasRadiusFilter,
@@ -593,6 +733,7 @@ export function SearchPageClient({
       commitUrlFilters(
         applySearchUrlPatch(base, {
           orgCategorySlugs: [],
+          sort: SEARCH_DIRECTORY_DEFAULT_SORT,
           slotDay: null,
           slotTime: null,
           radiusM: null,
@@ -604,6 +745,7 @@ export function SearchPageClient({
       commitUrlFilters(
         applySearchUrlPatch(base, {
           specCategorySlugs: [],
+          sort: SEARCH_DIRECTORY_DEFAULT_SORT,
           priceMinVnd: null,
           priceMaxVnd: null,
           slotDay: null,
@@ -764,6 +906,63 @@ export function SearchPageClient({
               aria-hidden
             />
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                tone="light"
+                className="size-11 shrink-0 rounded-full p-0"
+                aria-label={tSearch("sortLabel")}
+              >
+                <ArrowUpDown
+                  className="size-5 text-muted-foreground"
+                  aria-hidden
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              className="w-[min(18rem,calc(100vw-2rem))]"
+            >
+              {(
+                [
+                  { value: "popularity" as const, key: "sortPopularity" as const },
+                  ...(showRecommendedSortOption ?
+                    [
+                      {
+                        value: "recommended" as const,
+                        key: "sortRecommended" as const,
+                      },
+                    ]
+                  : []),
+                  { value: "newest" as const, key: "sortNewest" as const },
+                  { value: "price_asc" as const, key: "sortPriceAsc" as const },
+                  {
+                    value: "price_desc" as const,
+                    key: "sortPriceDesc" as const,
+                  },
+                  { value: "rating" as const, key: "sortRating" as const },
+                ] as const
+              ).map(({ value, key }) => {
+                const selected = selectSortValue === value;
+                return (
+                  <DropdownMenuItem
+                    key={value}
+                    onSelect={() => {
+                      applySearchSort(value);
+                    }}
+                    className={cn(
+                      selected && "bg-muted font-medium",
+                    )}
+                  >
+                    {tSearch(key)}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button
             type="button"
             variant="secondary"

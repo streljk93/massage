@@ -12,6 +12,15 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./shadcn/select";
+export {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./shadcn/dropdown-menu";
 export { Separator } from "./shadcn/separator";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";

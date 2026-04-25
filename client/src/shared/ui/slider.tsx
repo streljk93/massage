@@ -16,8 +16,16 @@ export type SliderSlide = {
   content: ReactNode;
 };
 
+export type ScrollToIndexOptions = {
+  /**
+   * `smooth` — как при свайпе/точках. Для клика с карты лучше `auto`, иначе анимация
+   * может длиться дольше таймера/scrollend, и `scroll` снова отдаст 0,1,2… родителю.
+   */
+  behavior?: "auto" | "smooth";
+};
+
 export type SliderHandle = {
-  scrollToIndex: (index: number) => void;
+  scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
 };
 
 export type SliderDotsPlacement = "below" | "overlay";
@@ -70,6 +78,15 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
   const activeRef = useRef(0);
   const onActiveIndexChangeRef = useRef(onActiveIndexChange);
   onActiveIndexChangeRef.current = onActiveIndexChange;
+  /**
+   * Пока идёт programmatic `scrollIntoView({ behavior: "smooth" })`, `onScroll` даёт
+   * промежуточные `scrollLeft` — без этого родитель (карта) получает 0,1,2… и крутит пины
+   * подряд, пока анимация не доедет до целевого слайда.
+   */
+  const programmaticScrollToRef = useRef<number | null>(null);
+  const programmaticScrollClearTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
 
   const notifyParentIndex = useCallback((index: number) => {
     queueMicrotask(() => {
@@ -77,24 +94,53 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     });
   }, []);
 
+  const endProgrammaticScroll = useCallback(() => {
+    if (programmaticScrollClearTimeoutRef.current != null) {
+      clearTimeout(programmaticScrollClearTimeoutRef.current);
+      programmaticScrollClearTimeoutRef.current = null;
+    }
+    programmaticScrollToRef.current = null;
+  }, []);
+
   const scrollToIndex = useCallback(
-    (index: number) => {
+    (index: number, options?: ScrollToIndexOptions) => {
       const el = scrollerRef.current;
       if (!el) return;
+      const behavior = options?.behavior ?? "smooth";
       const clamped = Math.min(slides.length - 1, Math.max(0, index));
+      if (activeRef.current === clamped) {
+        return;
+      }
       const child = el.children[clamped] as HTMLElement | undefined;
+      if (behavior === "auto") {
+        child?.scrollIntoView({
+          behavior: "auto",
+          inline: "start",
+          block: "nearest",
+        });
+        activeRef.current = clamped;
+        setActive(clamped);
+        notifyParentIndex(clamped);
+        return;
+      }
+      programmaticScrollToRef.current = clamped;
+      if (programmaticScrollClearTimeoutRef.current != null) {
+        clearTimeout(programmaticScrollClearTimeoutRef.current);
+      }
+      /** Запас, если нет стабильного scrollend: анимация на длинной карусели может быть >0.5s. */
+      programmaticScrollClearTimeoutRef.current = setTimeout(() => {
+        endProgrammaticScroll();
+      }, 3000);
       child?.scrollIntoView({
         behavior: "smooth",
         inline: "start",
         block: "nearest",
       });
-      if (activeRef.current !== clamped) {
-        activeRef.current = clamped;
-        setActive(clamped);
-        notifyParentIndex(clamped);
-      }
+      activeRef.current = clamped;
+      setActive(clamped);
+      notifyParentIndex(clamped);
     },
-    [slides.length, notifyParentIndex],
+    [slides.length, notifyParentIndex, endProgrammaticScroll],
   );
 
   useImperativeHandle(
@@ -109,7 +155,21 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     const el = scrollerRef.current;
     if (!el) return;
 
+    const getTargetScrollLeft = (i: number) => {
+      const c = el.children[i] as HTMLElement | undefined;
+      return c != null ? c.offsetLeft : 0;
+    };
+
     const onScroll = () => {
+      if (programmaticScrollToRef.current !== null) {
+        const t = programmaticScrollToRef.current;
+        if (
+          Math.abs(el.scrollLeft - getTargetScrollLeft(t)) <= 4
+        ) {
+          endProgrammaticScroll();
+        }
+        return;
+      }
       const slideWidth = el.firstElementChild?.clientWidth ?? 1;
       const idx = Math.round(el.scrollLeft / (slideWidth + trackGapPx));
       const next = Math.min(slides.length - 1, Math.max(0, idx));
@@ -119,9 +179,24 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
       notifyParentIndex(next);
     };
 
+    const onScrollEnd = () => {
+      if (programmaticScrollToRef.current == null) {
+        return;
+      }
+      const t = programmaticScrollToRef.current;
+      if (Math.abs(el.scrollLeft - getTargetScrollLeft(t)) <= 4) {
+        endProgrammaticScroll();
+      }
+    };
+
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [slides.length, notifyParentIndex, trackGapPx]);
+    el.addEventListener("scrollend", onScrollEnd);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("scrollend", onScrollEnd);
+      endProgrammaticScroll();
+    };
+  }, [slides.length, notifyParentIndex, trackGapPx, endProgrammaticScroll]);
 
   if (slides.length === 0) return null;
 

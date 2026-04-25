@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DirectoryModule } from '../directory/directory.module';
 import { JwtAccessOptionalGuard } from '../../common/guards';
@@ -8,7 +8,7 @@ import { PersonalizationRepository } from './infrastructure/personalization.repo
 import { PersonalizationController } from './presentation/personalization.controller';
 
 @Module({
-  imports: [AuthModule, DirectoryModule],
+  imports: [AuthModule, forwardRef(() => DirectoryModule)],
   controllers: [PersonalizationController],
   providers: [
     PersonalizationService,

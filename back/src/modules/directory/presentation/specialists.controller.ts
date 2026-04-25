@@ -5,15 +5,23 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
+import {
+  JwtAccessOptionalGuard,
+  type AuthenticatedUser,
+} from '../../../common/guards';
 import {
   ApiLocaleQueryDocs,
   RequestLocale,
@@ -31,6 +39,7 @@ import {
   DIRECTORY_LIST_MAX_LIMIT,
   parseDirectoryListLimit,
 } from '../../../common/pagination/parse-directory-list-limit';
+import { parseDirectoryListSort } from '../../../common/pagination/directory-list-sort';
 import { DirectoryService } from '../application/directory.service';
 import type { DirectoryReviewsListResponseDto } from '../dto/directory-reviews-list-response.dto';
 import type { SpecialistListItemDto } from '../dto/specialists-list-response.dto';
@@ -41,23 +50,44 @@ import {
   specialistsListResponseSchema,
 } from './directory.openapi-schemas';
 
+type AuthedOrGuest = Request & { user?: AuthenticatedUser };
+
 @ApiTags('specialists')
 @Controller('specialists')
 export class SpecialistsController {
   constructor(private readonly directoryService: DirectoryService) {}
 
   @Get()
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Список специалистов (курсорная пагинация)',
     description:
-      'Активные профили специалистов (не удалённые). Имя — из `User.name`. Стабильная сортировка: `User.name` asc, затем `id` asc. Вертикаль: `majorSlug` (`MajorServiceCategory.slug`, напр. massage) — только мастера с подкатегориями в этой большой категории. Фильтры: `q`, `categories`, `priceMinVnd` / `priceMaxVnd`, `radiusM`+`radiusLat`+`radiusLng` (точка приёма = активный салон). Курсор — в том же наборе фильтров.',
+      'Активные профили специалистов (не удалённые). Сортировка: `sort` — `popularity` (по умолчанию, отзывы), `newest`, `rating`, `price_asc` / `price_desc`, `recommended` (релевантность по портрету; нужен Bearer и готовность персонализации). Вертикаль: `majorSlug`. Фильтры: `q`, `categories`, цена, радиус. `sort=recommended` требует валидный access token и доступность персонализации (как GET /personalization/recommendations).',
   })
   @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    description:
+      '`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.',
+    schema: {
+      type: 'string',
+      enum: [
+        'recommended',
+        'popularity',
+        'newest',
+        'price_asc',
+        'price_desc',
+        'rating',
+      ],
+    },
+  })
   @ApiQuery({
     name: 'cursor',
     required: false,
     description:
-      'Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница.',
+      'Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.',
   })
   @ApiQuery({
     name: 'limit',
@@ -118,10 +148,12 @@ export class SpecialistsController {
   @ApiOkResponse({ schema: specialistsListResponseSchema })
   @ApiBadRequestResponse({
     description:
-      'Неверный формат locale, limit, cursor, majorSlug, categories, цены VND или радиуса',
+      'Неверный формат locale, limit, cursor, sort, majorSlug, categories, цены VND или радиуса',
   })
   async list(
     @RequestLocale() locale: ApiLocale,
+    @Req() req: AuthedOrGuest,
+    @Query('sort') sortRaw?: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limitRaw?: string,
     @Query('majorSlug') majorSlugRaw?: string,
@@ -137,12 +169,15 @@ export class SpecialistsController {
       priceMinVndRaw,
       priceMaxVndRaw,
     );
+    const priceFromQuery =
+      priceMinVndRaw !== undefined || priceMaxVndRaw !== undefined;
     const radius = parseDirectoryListRadiusFromQuery(
       radiusMRaw,
       radiusLatRaw,
       radiusLngRaw,
     );
     return this.directoryService.listSpecialists(locale, {
+      sort: parseDirectoryListSort(sortRaw),
       cursor: cursor ?? null,
       limit: parseDirectoryListLimit(limitRaw),
       majorCategorySlug: parseOptionalMajorCategorySlug(majorSlugRaw),
@@ -158,6 +193,8 @@ export class SpecialistsController {
               centerLng: radius.centerLng,
               radiusM: radius.radiusM,
             },
+      userId: req.user?.id ?? null,
+      priceFromQuery,
     });
   }
 

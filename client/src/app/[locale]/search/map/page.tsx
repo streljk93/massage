@@ -7,6 +7,10 @@ import {
   fetchAllSpecialistsPages,
   serverSdkFetchNoStore,
 } from "@/shared/api";
+import {
+  searchCategoriesQueryCsv,
+  searchDirectoryListSortForPublicApi,
+} from "@/views/search/lib/search-directory-list-api-filters";
 import { parseSearchUrlFiltersFromRecord } from "@/views/search/lib/search-url-filters";
 import { SearchMapPageClient } from "@/views/search";
 
@@ -18,6 +22,9 @@ export default async function Page({ searchParams }: PageProps) {
   const locale = (await getLocale()) as AppLocale;
   const sp = (await searchParams) ?? {};
   const f = parseSearchUrlFiltersFromRecord(sp);
+  const listSort = searchDirectoryListSortForPublicApi(f.sort);
+  const orgCategoriesCsv = searchCategoriesQueryCsv(f.orgCategorySlugs);
+  const specCategoriesCsv = searchCategoriesQueryCsv(f.specCategorySlugs);
   const hasRadius =
     f.radiusM != null && f.radiusLat != null && f.radiusLng != null;
   const radius =
@@ -28,6 +35,18 @@ export default async function Page({ searchParams }: PageProps) {
         radiusLng: f.radiusLng as number,
       }
     : null;
+  const orgListQuery = {
+    sort: listSort,
+    ...(f.q.trim() ? { q: f.q.trim() } : {}),
+    ...(orgCategoriesCsv ? { categories: orgCategoriesCsv } : {}),
+  };
+  const specListQuery = {
+    sort: listSort,
+    ...(f.q.trim() ? { q: f.q.trim() } : {}),
+    ...(specCategoriesCsv ? { categories: specCategoriesCsv } : {}),
+    ...(f.priceMinVnd != null ? { priceMinVnd: f.priceMinVnd } : {}),
+    ...(f.priceMaxVnd != null ? { priceMaxVnd: f.priceMaxVnd } : {}),
+  };
   const sdkClient = createServerSdkClient();
   let initialOrganizations = null;
   let initialSpecialists = null;
@@ -39,12 +58,14 @@ export default async function Page({ searchParams }: PageProps) {
           locale,
           fetch: serverSdkFetchNoStore,
           radius,
+          listQuery: orgListQuery,
         }),
         fetchAllSpecialistsPages({
           client: sdkClient,
           locale,
           fetch: serverSdkFetchNoStore,
           radius,
+          listQuery: specListQuery,
         }),
       ]);
       initialOrganizations = orgs;
