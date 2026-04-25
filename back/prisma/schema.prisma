@@ -89,6 +89,8 @@ model User {
   ownedOrganizations Organization[]        @relation("OrganizationOwner")
   fcmTokens            UserFcmToken[]
   favorites            UserFavorite[]
+  behaviorEvents       UserBehaviorEvent[]
+  preferenceProfile    UserPreferenceProfile?
 }
 
 /// FCM (web) registration token: одно устройство/браузер — одна запись, токен уникален глобально.
@@ -115,6 +117,37 @@ model UserFavorite {
 
   @@id([userId, targetKind, targetId])
   @@index([userId])
+}
+
+/// События витрины для персонализации. `userId` null — гость; `sessionId` — анонимно, без PII.
+model UserBehaviorEvent {
+  id         String  @id @default(uuid())
+  userId     String?
+  user       User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Браузерная сессия, если нет `userId` (или для корреляции).
+  sessionId  String?
+  /// Напр. search_view, specialist_view, organization_view, search_apply_filters.
+  eventType  String
+  entityType String?
+  entityId   String?
+  /// Slugs, id фильтра, majorSlug; без ввода пользователя (политика приватности).
+  metadata   Json    @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([eventType, createdAt])
+}
+
+/// Агрегат предпочтений (портрет) для «для вас»; пересчёт cron’ом и при первом запросе.
+model UserPreferenceProfile {
+  userId     String   @id
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Схема `profile` JSON (см. `PreferenceProfileV1` в коде).
+  version    Int      @default(1)
+  profile    Json
+  computedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 /// Большая категория услуг (вертикаль): массаж, в будущем — бьюти, стрижки и т.д.

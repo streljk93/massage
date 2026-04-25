@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "homeForYou": {
+        "title": "Recommended",
+        "seeAll": "See all in search"
+      }
+    },
+    "vi": {
+      "homeForYou": {
+        "title": "Đề xuất",
+        "seeAll": "Xem tất cả ở tìm kiếm"
+      }
+    },
+    "ru": {
+      "homeForYou": {
+        "title": "Рекомендуем",
+        "seeAll": "Смотреть в поиске"
+      }
+    }
+  }
+}

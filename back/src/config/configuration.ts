@@ -91,4 +91,17 @@ export default () => ({
   firebase: {
     serviceAccountJson: process.env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim() ?? '',
   },
+  /**
+   * Персонализация витрины: хранение сырых `UserBehaviorEvent` (портрет пересчитывается отдельно).
+   * События старше N дней удаляются cron'ом (`PersonalizationCronService`).
+   */
+  personalization: {
+    behaviorEventsRetentionDays: Math.max(
+      1,
+      positiveInt(
+        process.env.PERSONALIZATION_BEHAVIOR_EVENTS_RETENTION_DAYS,
+        90,
+      ),
+    ),
+  },
 });

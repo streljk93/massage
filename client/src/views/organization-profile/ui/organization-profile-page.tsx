@@ -57,6 +57,7 @@ import {
   shortestDurationThatIncludesSlot,
 } from "@/views/specialist-profile/lib/filter-slots-for-duration";
 import type { OrganizationProfileData } from "../model/organization-profile-data";
+import { trackOrganizationProfileView } from "@/shared/lib/personalization/personalization-track";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -166,6 +167,12 @@ export function OrganizationProfilePage({
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
+  useEffect(() => {
+    trackOrganizationProfileView({
+      accessToken: accessToken || undefined,
+      organizationId: profile.id,
+    });
+  }, [profile.id, accessToken]);
 
   const [bookingPending, setBookingPending] = useState(false);
   const [bookingErrorKey, setBookingErrorKey] =

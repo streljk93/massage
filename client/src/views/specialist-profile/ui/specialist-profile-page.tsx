@@ -41,6 +41,7 @@ import {
   filterSlotTimesForDuration,
   shortestDurationThatIncludesSlot,
 } from "../lib/filter-slots-for-duration";
+import { trackSpecialistProfileView } from "@/shared/lib/personalization/personalization-track";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -75,6 +76,12 @@ export function SpecialistProfilePage({
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
+  useEffect(() => {
+    trackSpecialistProfileView({
+      accessToken: accessToken || undefined,
+      specialistId: profile.id,
+    });
+  }, [profile.id, accessToken]);
   const [bookingPending, setBookingPending] = useState(false);
   const [bookingErrorKey, setBookingErrorKey] =
     useState<SpecialistBookingErrorKey | null>(null);

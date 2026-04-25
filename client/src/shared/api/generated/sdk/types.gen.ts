@@ -1573,6 +1573,196 @@ export type DirectoryGetCatalogFilterOptionsResponses = {
 
 export type DirectoryGetCatalogFilterOptionsResponse = DirectoryGetCatalogFilterOptionsResponses[keyof DirectoryGetCatalogFilterOptionsResponses];
 
+export type PersonalizationIngestEventsData = {
+    body: {
+        sessionId?: string;
+        events: Array<{
+            eventType: string;
+            entityType?: string | null;
+            entityId?: string | null;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/personalization/events';
+};
+
+export type PersonalizationIngestEventsErrors = {
+    /**
+     * Нет sessionId у гостя
+     */
+    400: unknown;
+};
+
+export type PersonalizationIngestEventsResponses = {
+    200: {
+        accepted: number;
+    };
+};
+
+export type PersonalizationIngestEventsResponse = PersonalizationIngestEventsResponses[keyof PersonalizationIngestEventsResponses];
+
+export type PersonalizationGetRecommendationsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        radiusLng?: unknown;
+        radiusLat?: unknown;
+        /**
+         * Вместе с `radiusLat` / `radiusLng` — круг, метры (как в каталоге).
+         */
+        radiusM?: unknown;
+        /**
+         * Размер каждой из двух выдач (1–12, по умолчанию 6).
+         */
+        listLimit?: unknown;
+        /**
+         * Подкатегории slug через запятую (как `categories` в поиске).
+         */
+        categories?: unknown;
+        /**
+         * Фильтр по большой категории (как в поиске); иначе из портрета.
+         */
+        majorSlug?: unknown;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/personalization/recommendations';
+};
+
+export type PersonalizationGetRecommendationsResponses = {
+    200: {
+        source: 'profile' | 'guest_popular';
+        majorSlug: string | null;
+        categorySlugsUsed: Array<string>;
+        specialists: Array<{
+            id: string;
+            userId: string;
+            name: string;
+            bio?: string | null;
+            experienceYears?: number | null;
+            /**
+             * Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру.
+             */
+            doneClientsCount: number;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            latitude: number | null;
+            longitude: number | null;
+            /**
+             * Адрес текущей активной организации мастера (мастер сам выбирает место приёма).
+             */
+            addressLine?: string | null;
+            /**
+             * Город активной организации мастера.
+             */
+            city?: string | null;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            /**
+             * Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты.
+             */
+            slotGroups: Array<{
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
+                times: Array<string>;
+            }>;
+            bookableServices: Array<{
+                id: string;
+                name: string;
+                /**
+                 * Локализованный shortName подкатегории каталога (`Service.category`).
+                 */
+                categoryShortName: string;
+                durationMinutes: Array<number>;
+                priceVndByDuration: Array<number>;
+            }>;
+            /**
+             * Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера.
+             */
+            autoConfirmBookings: boolean;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
+        }>;
+        organizations: Array<{
+            id: string;
+            slug: string;
+            name: string;
+            description?: string | null;
+            city?: string | null;
+            addressLine: string | null;
+            phone: string | null;
+            yearsInBusiness: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            /**
+             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             */
+            slotGroups: Array<{
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
+                times: Array<string>;
+            }>;
+            specialistOccupiedSlotKeys: Array<{
+                specialistId: string;
+                /**
+                 * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
+                 */
+                keys: Array<string>;
+            }>;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
+        }>;
+    };
+};
+
+export type PersonalizationGetRecommendationsResponse = PersonalizationGetRecommendationsResponses[keyof PersonalizationGetRecommendationsResponses];
+
 export type AdvertisingListByPlacementData = {
     body?: never;
     path?: never;

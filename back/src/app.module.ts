@@ -13,6 +13,7 @@ import { DevBookingsModule } from './modules/dev-bookings/dev-bookings.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DirectoryModule } from './modules/directory/directory.module';
+import { PersonalizationModule } from './modules/personalization/personalization.module';
 import { FilesModule } from './modules/files/files.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -45,6 +46,7 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     CatalogModule,
     DirectoryModule,
+    PersonalizationModule,
     AdvertisingModule,
     BookingsModule,
     DevBookingsModule,

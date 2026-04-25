@@ -18,7 +18,7 @@ import {
   visitRatePageI18n,
 } from "@/views/bookings";
 import { becomeSpecialistPageI18n } from "@/views/become-specialist";
-import { homePageI18n } from "@/views/home";
+import { homeForYouSectionI18n, homePageI18n } from "@/views/home";
 import {
   profileEditPageI18n,
   profileFavoritesPageI18n,
@@ -53,6 +53,7 @@ const bundles: ColocatedI18nBundle[] = [
   homeBottomNavI18n,
   homeScreenHeaderI18n,
   homePageI18n,
+  homeForYouSectionI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,

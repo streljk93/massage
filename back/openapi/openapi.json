@@ -3644,6 +3644,580 @@
         ]
       }
     },
+    "/personalization/events": {
+      "post": {
+        "description": "Без токена передавайте `sessionId` (8+ символов). `metadata` — только slug’и категорий, id фильтра, `lat`/`lng` (числа), `majorSlug`; без PII и текста поиска.",
+        "operationId": "Personalization_ingestEvents",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "events"
+                ],
+                "properties": {
+                  "sessionId": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 128
+                  },
+                  "events": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 50,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "eventType"
+                      ],
+                      "properties": {
+                        "eventType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "entityType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32,
+                          "nullable": true
+                        },
+                        "entityId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "additionalProperties": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "accepted"
+                  ],
+                  "properties": {
+                    "accepted": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет sessionId у гостя"
+          }
+        },
+        "summary": "События витрины (для портрета и рекомендаций)",
+        "tags": [
+          "personalization"
+        ]
+      }
+    },
+    "/personalization/recommendations": {
+      "get": {
+        "description": "Гость — отдача без фильтра по портрету. Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.",
+        "operationId": "Personalization_getRecommendations",
+        "parameters": [
+          {
+            "name": "radiusLng",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "radiusLat",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "radiusM",
+            "required": false,
+            "in": "query",
+            "description": "Вместе с `radiusLat` / `radiusLng` — круг, метры (как в каталоге).",
+            "schema": {}
+          },
+          {
+            "name": "listLimit",
+            "required": false,
+            "in": "query",
+            "description": "Размер каждой из двух выдач (1–12, по умолчанию 6).",
+            "schema": {}
+          },
+          {
+            "name": "categories",
+            "required": false,
+            "in": "query",
+            "description": "Подкатегории slug через запятую (как `categories` в поиске).",
+            "schema": {}
+          },
+          {
+            "name": "majorSlug",
+            "required": false,
+            "in": "query",
+            "description": "Фильтр по большой категории (как в поиске); иначе из портрета.",
+            "schema": {}
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "source",
+                    "majorSlug",
+                    "categorySlugsUsed",
+                    "specialists",
+                    "organizations"
+                  ],
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "profile",
+                        "guest_popular"
+                      ]
+                    },
+                    "majorSlug": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": "massage"
+                    },
+                    "categorySlugsUsed": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "specialists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "userId",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "doneClientsCount",
+                          "latitude",
+                          "longitude",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups",
+                          "bookableServices",
+                          "autoConfirmBookings",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "userId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Иван"
+                          },
+                          "bio": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "experienceYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "doneClientsCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Сколько уникальных пользователей имели визит (бронь в статусе `done`) к этому мастеру."
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.8
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 12
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 10.7769
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true,
+                            "example": 106.7009
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "123 Nguyen Trai, District 1",
+                            "description": "Адрес текущей активной организации мастера (мастер сам выбирает место приёма)."
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Ho Chi Minh City",
+                            "description": "Город активной организации мастера."
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string",
+                            "example": "~ 1 km | ул. Нгуен Тхай Хок"
+                          },
+                          "servicesLine": {
+                            "type": "string",
+                            "example": "Классический массаж, спорт"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "calendarDate",
+                                "times"
+                              ],
+                              "properties": {
+                                "calendarDate": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                }
+                              }
+                            },
+                            "description": "Занятые ячейки витрины (HH:mm) по дням. Свободные строить на клиенте: сетка превью минус эти слоты."
+                          },
+                          "bookableServices": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "categoryShortName",
+                                "durationMinutes",
+                                "priceVndByDuration"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "example": "Relaxing massage"
+                                },
+                                "categoryShortName": {
+                                  "type": "string",
+                                  "example": "Body massage",
+                                  "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "durationMinutes": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 60
+                                  }
+                                },
+                                "priceVndByDuration": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "integer",
+                                    "example": 450000
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "autoConfirmBookings": {
+                            "type": "boolean",
+                            "description": "Если true — бронь сразу в статусе `confirmed` (без `pending`); иначе клиент ждёт подтверждения мастера."
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
+                          }
+                        }
+                      }
+                    },
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "addressLine",
+                          "phone",
+                          "yearsInBusiness",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups",
+                          "specialistOccupiedSlotKeys",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "demo-salon-seed"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "yearsInBusiness": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string"
+                          },
+                          "servicesLine": {
+                            "type": "string"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "calendarDate",
+                                "times"
+                              ],
+                              "properties": {
+                                "calendarDate": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                }
+                              }
+                            },
+                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                          },
+                          "specialistOccupiedSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "specialistId",
+                                "keys"
+                              ],
+                              "properties": {
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "keys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
+                                }
+                              }
+                            }
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Персональные рекомендации (салоны и мастера)",
+        "tags": [
+          "personalization"
+        ]
+      }
+    },
     "/advertisements": {
       "get": {
         "description": "Активные объявления для `placement` (например `home_promo` — карусель на главном экране). Тексты по `locale` (en, vi, ru): запрошенная локаль → en → канонические поля сущности. `ownerKind`: internal — наша реклама, external — партнёр или сторонний инвентарь.",

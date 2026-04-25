@@ -28,6 +28,7 @@ import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
+import { HomeForYouSection } from "./home-for-you-section";
 import { homeUser, promoSlides } from "@/widgets/home/lib/mock-data";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import { searchTabQueryValue } from "@/shared/lib/search-tab";
@@ -255,6 +256,8 @@ export async function HomePage() {
           : null}
 
           <HomeCurrentBookingSection />
+
+          <HomeForYouSection />
 
           <section className="space-y-2.5" aria-labelledby="specialists-heading">
             <h2

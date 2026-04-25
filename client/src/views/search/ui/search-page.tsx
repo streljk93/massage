@@ -50,6 +50,8 @@ import type {
   SearchSpecialistsListApiFilters,
 } from "../lib/search-directory-list-api-filters";
 import { SEARCH_TABS } from "@/shared/lib/search-tab";
+import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
+import { trackSearchFiltersApplied } from "@/shared/lib/personalization/personalization-track";
 import {
   applySearchUrlPatch,
   buildSearchMapQueryString,
@@ -173,6 +175,32 @@ export function SearchPageClient({
       }
     };
   }, []);
+
+  useEffect(() => {
+    const categorySlugs =
+      urlFilters.tab === "organizations" ?
+        urlFilters.orgCategorySlugs
+      : urlFilters.specCategorySlugs;
+    const tid = window.setTimeout(() => {
+      trackSearchFiltersApplied({
+        accessToken: accessToken || undefined,
+        majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
+        categorySlugs,
+        radiusM: urlFilters.radiusM,
+        radiusLat: urlFilters.radiusLat,
+        radiusLng: urlFilters.radiusLng,
+      });
+    }, 800);
+    return () => window.clearTimeout(tid);
+  }, [
+    urlFilters.tab,
+    urlFilters.orgCategorySlugs,
+    urlFilters.specCategorySlugs,
+    urlFilters.radiusM,
+    urlFilters.radiusLat,
+    urlFilters.radiusLng,
+    accessToken,
+  ]);
 
   const commitUrlFilters = useCallback(
     (next: SearchUrlFilters) => {

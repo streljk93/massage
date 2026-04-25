@@ -19,6 +19,7 @@ import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import { promoteUserCacheToGuestOnLogout } from "@/entities/favorites";
+import { resetPersonalizationSessionId } from "@/shared/lib/personalization/personalization-session-id";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
@@ -49,7 +50,9 @@ export function ProfilePage() {
       if (uid) {
         promoteUserCacheToGuestOnLogout(uid);
       }
+      resetPersonalizationSessionId();
       void queryClient.invalidateQueries({ queryKey: ["favorites"] });
+      void queryClient.invalidateQueries({ queryKey: ["personalization"] });
       router.replace("/");
       router.refresh();
     } finally {
