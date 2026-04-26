@@ -56,9 +56,14 @@ enum FavoriteTargetKind {
   specialist
 }
 
+/// Провайдер социального / OIDC-входа (клиентское приложение).
+enum OAuthProvider {
+  google
+}
+
 // --- Core user ---
 
-/// Учётная запись пользователя. Пароль только для email-входа; OAuth — отдельная связка позже.
+/// Учётная запись пользователя. Пароль только для email-входа; OAuth — `UserOAuthAccount`.
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
@@ -93,6 +98,22 @@ model User {
   favorites            UserFavorite[]
   behaviorEvents       UserBehaviorEvent[]
   preferenceProfile    UserPreferenceProfile?
+  oAuthAccounts        UserOAuthAccount[]
+}
+
+/// Привязка внешнего аккаунта (Google) к `User`.
+model UserOAuthAccount {
+  id                  String         @id @default(uuid())
+  userId              String
+  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider            OAuthProvider
+  /// `sub` в Google id_token.
+  providerAccountId  String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 /// Регистрация по email+паролю до подтверждения: `User` создаётся только после верного OTP.

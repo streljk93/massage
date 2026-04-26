@@ -18,6 +18,8 @@ import { AuthService } from '../application/auth.service';
 import type { AuthResponseDto } from '../dto/auth-response.dto';
 import type { LoginBody } from '../dto/login-body.schema';
 import { loginBodySchema } from '../dto/login-body.schema';
+import type { OauthLoginBody } from '../dto/oauth-login-body.schema';
+import { oauthLoginBodySchema } from '../dto/oauth-login-body.schema';
 import type { RefreshBody } from '../dto/refresh-body.schema';
 import { refreshBodySchema } from '../dto/refresh-body.schema';
 import type { RegisterBody } from '../dto/register-body.schema';
@@ -30,8 +32,10 @@ import { verifyEmailRegistrationBodySchema } from '../dto/verify-email-registrat
 import {
   authBadRequestVerificationSchema,
   authEmailConflictSchema,
+  authBadRequestOauthSchema,
   authForbiddenSchema,
   authLoginRequestSchema,
+  authOauthLoginRequestSchema,
   authRefreshRequestSchema,
   authRegisterPendingResponseSchema,
   authRegisterRequestSchema,
@@ -116,6 +120,25 @@ export class AuthController {
     body: LoginBody,
   ): Promise<AuthResponseDto> {
     return this.authService.login(body);
+  }
+
+  @Post('login/oauth')
+  @HttpCode(200)
+  @Throttle({ default: { ttl: 60_000, limit: 30 } })
+  @ApiOperation({
+    summary: 'Вход и регистрация через Google',
+    description:
+      'Сервер проверяет `idToken` (GSI) и при необходимости создаёт `User` + `UserOAuthAccount` или привязывает к существующему email.',
+  })
+  @ApiBody({ schema: authOauthLoginRequestSchema })
+  @ApiOkResponse({ schema: authTokensResponseSchema })
+  @ApiBadRequestResponse({ schema: authBadRequestOauthSchema })
+  @ApiBadRequestResponse({ description: 'Ошибка Zod: нет `idToken` / `accessToken` для провайдера' })
+  async loginWithOauth(
+    @Body(new ZodValidationPipe(oauthLoginBodySchema))
+    body: OauthLoginBody,
+  ): Promise<AuthResponseDto> {
+    return this.authService.loginWithOauth(body);
   }
 
   @Post('refresh')

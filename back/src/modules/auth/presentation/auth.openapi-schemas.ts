@@ -101,6 +101,41 @@ export const authLoginRequestSchema = {
   },
 };
 
+/** Google: `idToken` (Google Identity Services, JWT). */
+export const authOauthLoginRequestSchema = {
+  type: 'object',
+  required: ['provider', 'idToken'],
+  properties: {
+    provider: { type: 'string', enum: ['google'] },
+    idToken: {
+      type: 'string',
+      description: 'ID token от Google (GIS).',
+    },
+    locale: {
+      type: 'string',
+      enum: ['en', 'ru', 'vi'],
+      description: 'Сохраняется в профиль при первом OAuth-создании `User`.',
+    },
+  },
+};
+
+export const authBadRequestOauthSchema = {
+  type: 'object',
+  required: ['code', 'message'],
+  properties: {
+    code: {
+      type: 'string',
+      enum: [
+        'OAUTH_NOT_CONFIGURED',
+        'OAUTH_INVALID_TOKEN',
+        'OAUTH_PROFILE_INCOMPLETE',
+        'OAUTH_EMAIL_REQUIRED',
+      ],
+    },
+    message: { type: 'string' },
+  },
+};
+
 export const authRefreshRequestSchema = {
   type: 'object',
   required: ['refreshToken'],

@@ -1,24 +1,25 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import Facebook from "next-auth/providers/facebook";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
 import { z } from "zod";
-import { getOAuthEnvFlags } from "@/auth/oauth-env";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
-
-const flags = getOAuthEnvFlags();
-
-const oauthProviders = [
-  ...(flags.google ? [Google] : []),
-  ...(flags.github ? [GitHub] : []),
-  ...(flags.facebook ? [Facebook] : []),
-];
 
 const credentialsSchema = z.object({
   email: z.email(),
   password: z.string().min(1),
   name: z.string().optional(),
+});
+
+/**
+ * Сессия после `POST` `/api/auth/login-oauth` (тот же ответ, что `POST` `/v1/auth/login/oauth`).
+ * Передаётся в `signIn("credentials", { … })` вместо логина по паролю.
+ */
+const backendTokenSessionSchema = z.object({
+  userId: z.string().uuid(),
+  email: z.string().email(),
+  name: z.string().min(1).max(200),
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+  avatarUrl: z.string().max(2_000).nullish().optional(),
 });
 
 type BackendAuthResponse = {
@@ -177,7 +178,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   providers: [
-    ...oauthProviders,
     Credentials({
       id: "credentials",
       name: "Email",
@@ -187,6 +187,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         name: { label: "Name", type: "text" },
       },
       async authorize(raw) {
+        if (
+          raw &&
+          typeof raw === "object" &&
+          "accessToken" in raw &&
+          "refreshToken" in raw
+        ) {
+          const t = raw as Record<string, unknown>;
+          const parsed = backendTokenSessionSchema.safeParse({
+            userId: t.userId,
+            email: t.email,
+            name: t.name,
+            accessToken: t.accessToken,
+            refreshToken: t.refreshToken,
+            avatarUrl: t.avatarUrl,
+          });
+          if (parsed.success) {
+            return {
+              id: parsed.data.userId,
+              email: parsed.data.email,
+              name: parsed.data.name,
+              accessToken: parsed.data.accessToken,
+              refreshToken: parsed.data.refreshToken,
+              avatarUrl:
+                parsed.data.avatarUrl === undefined ||
+                parsed.data.avatarUrl === null ||
+                parsed.data.avatarUrl === ""
+                  ? null
+                  : parsed.data.avatarUrl,
+            };
+          }
+        }
+
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) {
           return null;

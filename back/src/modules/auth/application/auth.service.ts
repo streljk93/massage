@@ -9,17 +9,21 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma } from '@prisma/client';
+import { OAuthProvider, Prisma } from '@prisma/client';
 import { addMinutes } from 'date-fns';
 import { parseApiLocale } from '../../../common/i18n/api-locale';
 import { MailService } from '../../../infrastructure/mail/mail.service';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { AuthResponseDto } from '../dto/auth-response.dto';
 import type { LoginBody } from '../dto/login-body.schema';
+import type { OauthLoginBody } from '../dto/oauth-login-body.schema';
 import type { RegisterBody } from '../dto/register-body.schema';
 import type { RegisterPendingResponseDto } from '../dto/register-pending.dto';
 import type { ResendEmailVerificationBody } from '../dto/resend-email-verification-body.schema';
 import type { VerifyEmailRegistrationBody } from '../dto/verify-email-registration-body.schema';
+import { OAuthAccountRepository } from '../infrastructure/oauth-account.repository';
+import type { VerifiedOAuthProfile } from '../infrastructure/oauth-token-verifier';
+import { OAuthTokenVerifier } from '../infrastructure/oauth-token-verifier';
 import { PendingRegistrationRepository } from '../infrastructure/pending-registration.repository';
 import { PasswordHasher } from '../infrastructure/password-hasher';
 import { UserRepository } from '../infrastructure/user.repository';
@@ -47,6 +51,8 @@ export class AuthService {
     private readonly mailService: MailService,
     private readonly prisma: PrismaService,
     private readonly pendingRegistration: PendingRegistrationRepository,
+    private readonly oauthTokenVerifier: OAuthTokenVerifier,
+    private readonly oauthAccountRepository: OAuthAccountRepository,
   ) {}
 
   async register(body: RegisterBody): Promise<RegisterPendingResponseDto> {
@@ -228,6 +234,154 @@ export class AuthService {
         code: 'MAIL_SEND_FAILED',
         message: 'Failed to send verification email.',
       });
+    }
+  }
+
+  async loginWithOauth(body: OauthLoginBody): Promise<AuthResponseDto> {
+    const provider: OAuthProvider = 'google';
+    const profile: VerifiedOAuthProfile =
+      await this.oauthTokenVerifier.verifyGoogleIdToken(body.idToken);
+
+    const linkedUserId = await this.oauthAccountRepository.findUserIdByProviderAccount(
+      provider,
+      profile.providerAccountId,
+    );
+    if (linkedUserId) {
+      const user = await this.userRepository.findActiveById(linkedUserId);
+      if (!user) {
+        throw new UnauthorizedException({
+          code: 'USER_NOT_FOUND',
+          message: 'User no longer exists',
+        });
+      }
+      if (!user.emailVerifiedAt) {
+        const updated = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { emailVerifiedAt: new Date() },
+        });
+        return this.issueTokens({
+          id: updated.id,
+          email: updated.email,
+          name: updated.name,
+          avatarUrl: updated.avatarUrl,
+        });
+      }
+      return this.issueTokens(user);
+    }
+
+    if (!profile.email) {
+      throw new BadRequestException({
+        code: 'OAUTH_PROFILE_INCOMPLETE',
+        message: 'Email is not available from the provider.',
+      });
+    }
+    const email = normalizeEmail(profile.email);
+    const existing = await this.userRepository.findActiveByEmail(email);
+    if (existing) {
+      return this.linkOauthToExistingUser(
+        existing.id,
+        provider,
+        profile,
+        existing,
+      );
+    }
+
+    const locale = parseApiLocale(body.locale);
+    try {
+      const user = await this.prisma.$transaction(async (tx) => {
+        await tx.pendingRegistration.deleteMany({ where: { email } });
+        const u = await tx.user.create({
+          data: {
+            email,
+            name: profile.name,
+            emailVerifiedAt: new Date(),
+            passwordHash: null,
+            avatarUrl: profile.pictureUrl,
+            locale,
+          },
+        });
+        await tx.userOAuthAccount.create({
+          data: {
+            userId: u.id,
+            provider,
+            providerAccountId: profile.providerAccountId,
+          },
+        });
+        return u;
+      });
+      return this.issueTokens({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const again = await this.userRepository.findActiveByEmail(email);
+        if (again) {
+          return this.linkOauthToExistingUser(
+            again.id,
+            provider,
+            profile,
+            again,
+          );
+        }
+      }
+      throw e;
+    }
+  }
+
+  private async linkOauthToExistingUser(
+    userId: string,
+    provider: OAuthProvider,
+    profile: VerifiedOAuthProfile,
+    existing: {
+      id: string;
+      email: string;
+      name: string;
+      avatarUrl: string | null;
+      emailVerifiedAt: Date | null;
+    },
+  ): Promise<AuthResponseDto> {
+    try {
+      const user = await this.prisma.$transaction(async (tx) => {
+        await tx.userOAuthAccount.create({
+          data: {
+            userId,
+            provider,
+            providerAccountId: profile.providerAccountId,
+          },
+        });
+        if (!existing.emailVerifiedAt) {
+          return tx.user.update({
+            where: { id: userId },
+            data: { emailVerifiedAt: new Date() },
+          });
+        }
+        return tx.user.findFirstOrThrow({
+          where: { id: userId, deletedAt: null },
+        });
+      });
+      return this.issueTokens({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const uid = await this.oauthAccountRepository.findUserIdByProviderAccount(
+          provider,
+          profile.providerAccountId,
+        );
+        if (uid) {
+          const u2 = await this.userRepository.findActiveById(uid);
+          if (u2) {
+            return this.issueTokens(u2);
+          }
+        }
+      }
+      throw e;
     }
   }
 

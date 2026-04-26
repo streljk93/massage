@@ -17,6 +17,15 @@ export default () => ({
     refreshExpiresSec: Number(process.env.JWT_REFRESH_EXPIRES_SEC ?? 604800),
   },
   /**
+   * OAuth (клиентский вход): `POST /v1/auth/login/oauth` — Google `idToken`.
+   * Несколько client id через запятую: `GOOGLE_OAUTH_CLIENT_ID=web,ios,android`.
+   */
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_OAUTH_CLIENT_ID?.trim() ?? '',
+    },
+  },
+  /**
    * Лимит HTTP-запросов на IP (скользящее окно), защита от простого DoS.
    * Хранилище in-memory; при нескольких инстансах — вынести в Redis (см. @nestjs/throttler).
    */

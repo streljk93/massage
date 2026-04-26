@@ -6,7 +6,7 @@ export function createOpenApiDocument(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('Services App API')
     .setDescription(
-      'Backend REST API. Авторизация email/password и JWT; дальнейшие домены — по мере появления модулей.',
+      'Backend REST API. Авторизация email/password, OAuth (Google) и JWT; дальнейшие домены — по мере появления модулей.',
     )
     .setVersion('1.0')
     .addServer('/v1', 'Префикс Nest `setGlobalPrefix("v1")`')

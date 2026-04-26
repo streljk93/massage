@@ -287,16 +287,19 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
             <p className="text-center text-xs leading-snug text-muted-foreground">
               {t("submitEmailHint")}
             </p>
-            <Button
-              type="submit"
-              disabled={pending}
-              className={cn(
-                motion.interactivePressStrong,
-                "h-12 w-full rounded-2xl border-0 bg-foreground text-base font-medium text-background hover:bg-foreground/90",
-              )}
-            >
-              {t("submit")}
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button
+                type="submit"
+                disabled={pending}
+                className={cn(
+                  motion.interactivePressStrong,
+                  "h-12 w-full rounded-2xl border-0 bg-foreground text-base font-medium text-background hover:bg-foreground/90",
+                )}
+              >
+                {t("submit")}
+              </Button>
+              <AuthSocialCircles oauth={oauth} namespace="authRegister" />
+            </div>
           </form>
         ) : (
           <form
@@ -403,10 +406,6 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
 
         {step === "form" ? (
           <>
-            <div className="mt-8">
-              <AuthSocialCircles oauth={oauth} namespace="authRegister" />
-            </div>
-
             <div className="mt-8">
               <Button
                 variant="secondary"

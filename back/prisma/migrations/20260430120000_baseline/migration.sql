@@ -1,5 +1,5 @@
--- Baseline: одна миграция, полная схема из `prisma/schema.prisma`
--- (включая PendingRegistration вместо EmailVerificationOtp и дефолты напоминаний о визите).
+-- Squashed migration: полная схема из `prisma/schema.prisma` (в т.ч. `UserOAuthAccount`, `OAuthProvider` = `google` only).
+-- Заменяет прежние миграции `20260426…`–`20260429…`. Для уже существующей БД с ними — отдельный план (squash history / reset dev), для пустой — `migrate deploy`.
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
@@ -15,6 +15,9 @@ CREATE TYPE "OrganizationMembershipRole" AS ENUM ('owner', 'admin', 'specialist'
 
 -- CreateEnum
 CREATE TYPE "FavoriteTargetKind" AS ENUM ('organization', 'specialist');
+
+-- CreateEnum
+CREATE TYPE "OAuthProvider" AS ENUM ('google');
 
 -- CreateTable
 CREATE TABLE "BookingStatusLocale" (
@@ -42,6 +45,18 @@ CREATE TABLE "User" (
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "UserOAuthAccount" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "provider" "OAuthProvider" NOT NULL,
+    "providerAccountId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserOAuthAccount_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -415,6 +430,12 @@ CREATE INDEX "BookingStatusLocale_locale_idx" ON "BookingStatusLocale"("locale")
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
+CREATE INDEX "UserOAuthAccount_userId_idx" ON "UserOAuthAccount"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserOAuthAccount_provider_providerAccountId_key" ON "UserOAuthAccount"("provider", "providerAccountId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "PendingRegistration_email_key" ON "PendingRegistration"("email");
 
 -- CreateIndex
@@ -569,6 +590,9 @@ CREATE INDEX "AdvertisementLocale_locale_idx" ON "AdvertisementLocale"("locale")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AdvertisementLocale_advertisementId_locale_key" ON "AdvertisementLocale"("advertisementId", "locale");
+
+-- AddForeignKey
+ALTER TABLE "UserOAuthAccount" ADD CONSTRAINT "UserOAuthAccount_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserFcmToken" ADD CONSTRAINT "UserFcmToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

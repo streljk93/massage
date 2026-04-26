@@ -397,6 +397,59 @@ export type AuthLoginResponses = {
 
 export type AuthLoginResponse = AuthLoginResponses[keyof AuthLoginResponses];
 
+export type AuthLoginWithOauthData = {
+    body: {
+        provider: 'google';
+        /**
+         * ID token от Google (GIS).
+         */
+        idToken: string;
+        /**
+         * Сохраняется в профиль при первом OAuth-создании `User`.
+         */
+        locale?: 'en' | 'ru' | 'vi';
+    };
+    path?: never;
+    query?: never;
+    url: '/auth/login/oauth';
+};
+
+export type AuthLoginWithOauthErrors = {
+    /**
+     * Ошибка Zod: нет `idToken` / `accessToken` для провайдера
+     */
+    400: {
+        code: 'OAUTH_NOT_CONFIGURED' | 'OAUTH_INVALID_TOKEN' | 'OAUTH_PROFILE_INCOMPLETE' | 'OAUTH_EMAIL_REQUIRED';
+        message: string;
+    };
+};
+
+export type AuthLoginWithOauthError = AuthLoginWithOauthErrors[keyof AuthLoginWithOauthErrors];
+
+export type AuthLoginWithOauthResponses = {
+    200: {
+        user: {
+            id: string;
+            email: string;
+            name: string;
+            /**
+             * Публичный URL или путь `/v1/files/public/...`
+             */
+            avatarUrl: string | null;
+        };
+        /**
+         * JWT access token (Authorization: Bearer …)
+         */
+        accessToken: string;
+        /**
+         * JWT refresh token
+         */
+        refreshToken: string;
+    };
+};
+
+export type AuthLoginWithOauthResponse = AuthLoginWithOauthResponses[keyof AuthLoginWithOauthResponses];
+
 export type AuthRefreshData = {
     body: {
         /**

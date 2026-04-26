@@ -5,11 +5,14 @@ import { MailModule } from '../../infrastructure/mail/mail.module';
 import { AuthService } from './application/auth.service';
 import { PendingRegistrationRepository } from './infrastructure/pending-registration.repository';
 import { PasswordHasher } from './infrastructure/password-hasher';
+import { OAuthAccountRepository } from './infrastructure/oauth-account.repository';
+import { OAuthTokenVerifier } from './infrastructure/oauth-token-verifier';
 import { UserRepository } from './infrastructure/user.repository';
 import { AuthController } from './presentation/auth.controller';
 
 @Module({
   imports: [
+    ConfigModule,
     MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -26,6 +29,8 @@ import { AuthController } from './presentation/auth.controller';
     PasswordHasher,
     UserRepository,
     PendingRegistrationRepository,
+    OAuthTokenVerifier,
+    OAuthAccountRepository,
   ],
   exports: [AuthService, JwtModule, UserRepository],
 })

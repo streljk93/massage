@@ -846,6 +846,135 @@
         ]
       }
     },
+    "/auth/login/oauth": {
+      "post": {
+        "description": "Сервер проверяет `idToken` (GSI) и при необходимости создаёт `User` + `UserOAuthAccount` или привязывает к существующему email.",
+        "operationId": "Auth_loginWithOauth",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "idToken"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "google"
+                    ]
+                  },
+                  "idToken": {
+                    "type": "string",
+                    "description": "ID token от Google (GIS)."
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ru",
+                      "vi"
+                    ],
+                    "description": "Сохраняется в профиль при первом OAuth-создании `User`."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "user",
+                    "accessToken",
+                    "refreshToken"
+                  ],
+                  "properties": {
+                    "user": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "name",
+                        "avatarUrl"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Jane Doe"
+                        },
+                        "avatarUrl": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Публичный URL или путь `/v1/files/public/...`"
+                        }
+                      }
+                    },
+                    "accessToken": {
+                      "type": "string",
+                      "description": "JWT access token (Authorization: Bearer …)"
+                    },
+                    "refreshToken": {
+                      "type": "string",
+                      "description": "JWT refresh token"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ошибка Zod: нет `idToken` / `accessToken` для провайдера",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "OAUTH_NOT_CONFIGURED",
+                        "OAUTH_INVALID_TOKEN",
+                        "OAUTH_PROFILE_INCOMPLETE",
+                        "OAUTH_EMAIL_REQUIRED"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Вход и регистрация через Google",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/refresh": {
       "post": {
         "operationId": "Auth_refresh",
@@ -5775,7 +5904,7 @@
   },
   "info": {
     "title": "Services App API",
-    "description": "Backend REST API. Авторизация email/password и JWT; дальнейшие домены — по мере появления модулей.",
+    "description": "Backend REST API. Авторизация email/password, OAuth (Google) и JWT; дальнейшие домены — по мере появления модулей.",
     "version": "1.0",
     "contact": {}
   },
