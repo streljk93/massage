@@ -75,7 +75,7 @@ export const filesDownloadPrivate = <ThrowOnError extends boolean = false>(optio
 /**
  * Регистрация по email и паролю
  *
- * Создаёт пользователя с неподтверждённым email; на адрес уходит 6-значный код. Токены выдаёт `POST /auth/verify-email`.
+ * Запись в `User` не создаётся: сохраняется ожидание верификации и на email уходит 6-значный код. Учётная запись и токены — после `POST /auth/verify-email`.
  */
 export const authRegister = <ThrowOnError extends boolean = false>(options: Options<AuthRegisterData, ThrowOnError>) => (options.client ?? client).post<AuthRegisterResponses, AuthRegisterErrors, ThrowOnError>({
     url: '/auth/register',
@@ -100,6 +100,8 @@ export const authVerifyEmail = <ThrowOnError extends boolean = false>(options: O
 
 /**
  * Повторно отправить код подтверждения
+ *
+ * Только пока регистрация не завершена (`PendingRegistration`). Пароль — тот же, что при регистрации.
  */
 export const authResendVerification = <ThrowOnError extends boolean = false>(options: Options<AuthResendVerificationData, ThrowOnError>) => (options.client ?? client).post<AuthResendVerificationResponses, AuthResendVerificationErrors, ThrowOnError>({
     url: '/auth/resend-verification',
@@ -172,7 +174,7 @@ export const usersMe = <ThrowOnError extends boolean = false>(options?: Options<
 });
 
 /**
- * Обновить профиль (имя, аватар)
+ * Обновить профиль (имя, аватар, локаль UI)
  */
 export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Options<UsersPatchMeData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchMeResponses, UsersPatchMeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

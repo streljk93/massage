@@ -72,7 +72,8 @@ export const bookingListItemSchema = {
     organizationName: {
       type: 'string',
       nullable: true,
-      description: 'Название салона; может быть `null`, если в брони не зафиксирована организация.',
+      description:
+        'Название салона; может быть `null`, если в брони не зафиксирована организация.',
     },
     specialistImageUrl: { type: 'string', nullable: true, format: 'uri' },
     serviceName: { type: 'string' },

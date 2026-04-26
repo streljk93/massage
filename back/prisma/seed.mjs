@@ -1,24 +1,25 @@
 /**
- * Начальные данные каталога: большая категория «Массаж» и подкатегории + строки локалей (en, vi, ru).
- * Идемпотентно (upsert) — безопасно при повторном запуске.
+ * Начальные данные: каталог («Массаж» и подкатегории), подписи статусов бронирования (BookingStatusLocale),
+ * реклама, демо-специалисты. Идемпотентно (upsert) — безопасно при повторном запуске.
  *
  * Prisma 7: клиент с драйвером pg (как в Nest `PrismaService`).
  */
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { seedAdvertising } from "./seed-advertising.mjs";
-import { seedDemoSpecialists } from "./seed-demo-specialists.mjs";
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@prisma/client';
+import { Pool } from 'pg';
+import { seedAdvertising } from './seed-advertising.mjs';
+import { seedBookingStatusLocales } from './seed-booking-status-locale.mjs';
+import { seedDemoSpecialists } from './seed-demo-specialists.mjs';
 import {
   majorMassageI18n,
   massageCategorySeeds,
   SUPPORTED_CATALOG_LOCALES,
   serviceCategoryI18n,
-} from "./seed-catalog-i18n.mjs";
+} from './seed-catalog-i18n.mjs';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  throw new Error("DATABASE_URL is required for seed");
+  throw new Error('DATABASE_URL is required for seed');
 }
 
 const pool = new Pool({ connectionString });
@@ -26,10 +27,10 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
 async function main() {
   const massage = await prisma.majorServiceCategory.upsert({
-    where: { slug: "massage" },
+    where: { slug: 'massage' },
     create: {
       name: majorMassageI18n.en,
-      slug: "massage",
+      slug: 'massage',
       sortOrder: 0,
       isActive: true,
     },
@@ -114,9 +115,10 @@ async function main() {
   }
 
   console.log(
-    `[seed] Каталог: «${massage.slug}» (${massage.id}), подкатегорий: ${massageCategorySeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(", ")}.`,
+    `[seed] Каталог: «${massage.slug}» (${massage.id}), подкатегорий: ${massageCategorySeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(', ')}.`,
   );
 
+  await seedBookingStatusLocales(prisma);
   await seedAdvertising(prisma);
   await seedDemoSpecialists(prisma);
 }

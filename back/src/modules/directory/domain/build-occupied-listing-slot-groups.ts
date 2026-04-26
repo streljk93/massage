@@ -20,8 +20,8 @@ export function buildListingSlotGroupsFromOccupiedKeys(
     if (!m) {
       continue;
     }
-    const calendarDate = m[1]!;
-    const timeRaw = m[2]!;
+    const calendarDate = m[1];
+    const timeRaw = m[2];
     const t = normalizeListingSlotTimeLabel(timeRaw);
     const arr = byDay.get(calendarDate) ?? [];
     arr.push(t);

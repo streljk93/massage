@@ -54,18 +54,15 @@ export class DevPersonalizationRecomputeService {
       });
     }
     const userId = user.id;
-    const profile =
-      await this.personalization.recomputeProfileForUser(userId);
+    const profile = await this.personalization.recomputeProfileForUser(userId);
 
-    const [
-      fromFavorites,
-      bookingWeightsMap,
-      behaviorHints,
-    ] = await Promise.all([
-      this.personalizationRepository.getFavoriteServiceCategorySlugs(userId),
-      this.personalizationRepository.getBookingCategorySlugWeights(userId),
-      this.personalizationRepository.getBehaviorEventHints(userId, 30),
-    ]);
+    const [fromFavorites, bookingWeightsMap, behaviorHints] = await Promise.all(
+      [
+        this.personalizationRepository.getFavoriteServiceCategorySlugs(userId),
+        this.personalizationRepository.getBookingCategorySlugWeights(userId),
+        this.personalizationRepository.getBehaviorEventHints(userId, 30),
+      ],
+    );
 
     const fromBookings = [...bookingWeightsMap.entries()]
       .map(([slug, weight]) => ({ slug, totalWeight: weight }))
@@ -138,8 +135,7 @@ export class DevPersonalizationRecomputeService {
         catalogLocale: locale,
         catalogSpecialistsCount,
         catalogOrganizationsCount,
-        note:
-          'Радиус на главной не передаётся — здесь `radius: null`, как в клиенте без гео в запросе.',
+        note: 'Радиус на главной не передаётся — здесь `radius: null`, как в клиенте без гео в запросе.',
       },
     };
   }

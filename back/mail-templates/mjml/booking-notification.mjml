@@ -1,0 +1,141 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{title}}</mj-title>
+    <mj-preview>{{preview}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Ubuntu, Helvetica, Arial, sans-serif" />
+    </mj-attributes>
+    <mj-style>
+      .hero-img img {
+        height: 300px !important;
+        max-height: 300px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f4f5">
+    <mj-section padding="24px 16px 32px 16px" background-color="#f4f4f5">
+      <mj-column
+        background-color="#ffffff"
+        border-radius="12px"
+        padding="0"
+      >
+        <mj-image
+          src="{{heroImageUrl}}"
+          alt=""
+          padding="0"
+          border="none"
+          border-radius="12px 12px 0 0"
+          fluid-on-mobile="true"
+          css-class="hero-img"
+          height="300px"
+        />
+        <mj-text
+          font-size="20px"
+          font-weight="700"
+          line-height="28px"
+          color="#18181b"
+          padding="20px"
+        >
+          {{title}}
+        </mj-text>
+        <mj-table
+          cellpadding="0"
+          cellspacing="0"
+          width="100%"
+          border="0"
+          padding="0 20px 0 20px"
+        >
+          <tr>
+            <td
+              style="padding:4px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;width:38%;vertical-align:top;white-space:nowrap;"
+            >
+              {{primaryRowLabel}}
+            </td>
+            <td
+              style="padding:4px 0 8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{primaryRowValue}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{serviceRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{serviceRowValue}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{priceRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{priceRowValue}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{salonRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{salonRowValue}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{addressRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{addressRowHtml}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{visitRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{visitRowValue}}
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="padding:8px 16px 8px 0;border-bottom:1px solid #e4e4e7;font-weight:600;color:#52525b;font-size:14px;vertical-align:top;white-space:nowrap;"
+            >
+              {{statusRowLabel}}
+            </td>
+            <td
+              style="padding:8px 0;border-bottom:1px solid #e4e4e7;color:#18181b;font-size:15px;line-height:22px;vertical-align:top;"
+            >
+              {{statusRowValue}}
+            </td>
+          </tr>
+        </mj-table>
+        <mj-raw>{{bookingCardFooterHtml}}</mj-raw>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

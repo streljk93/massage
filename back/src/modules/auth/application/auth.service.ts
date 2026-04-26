@@ -9,15 +9,18 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { addMinutes } from 'date-fns';
+import { parseApiLocale } from '../../../common/i18n/api-locale';
 import { MailService } from '../../../infrastructure/mail/mail.service';
+import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { AuthResponseDto } from '../dto/auth-response.dto';
 import type { LoginBody } from '../dto/login-body.schema';
 import type { RegisterBody } from '../dto/register-body.schema';
 import type { RegisterPendingResponseDto } from '../dto/register-pending.dto';
 import type { ResendEmailVerificationBody } from '../dto/resend-email-verification-body.schema';
 import type { VerifyEmailRegistrationBody } from '../dto/verify-email-registration-body.schema';
-import { EmailVerificationOtpRepository } from '../infrastructure/email-verification-otp.repository';
+import { PendingRegistrationRepository } from '../infrastructure/pending-registration.repository';
 import { PasswordHasher } from '../infrastructure/password-hasher';
 import { UserRepository } from '../infrastructure/user.repository';
 
@@ -42,14 +45,16 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
     private readonly mailService: MailService,
-    private readonly emailVerificationOtp: EmailVerificationOtpRepository,
+    private readonly prisma: PrismaService,
+    private readonly pendingRegistration: PendingRegistrationRepository,
   ) {}
 
-  async register(
-    body: RegisterBody,
-  ): Promise<RegisterPendingResponseDto> {
+  async register(body: RegisterBody): Promise<RegisterPendingResponseDto> {
     const nodeEnv = this.config.get<string>('nodeEnv') ?? 'development';
-    if (nodeEnv === 'production' && !this.mailService.isMailDeliveryConfigured()) {
+    if (
+      nodeEnv === 'production' &&
+      !this.mailService.isMailDeliveryConfigured()
+    ) {
       throw new ServiceUnavailableException({
         code: 'MAIL_NOT_CONFIGURED',
         message:
@@ -57,32 +62,37 @@ export class AuthService {
       });
     }
     const email = normalizeEmail(body.email);
-    const passwordHash = await this.passwordHasher.hash(body.password);
-    let user: Awaited<ReturnType<UserRepository['createUser']>>;
-    try {
-      user = await this.userRepository.createUser({
-        email,
-        name: body.name.trim(),
-        passwordHash,
+    const existingUser = await this.userRepository.findActiveByEmail(email);
+    if (existingUser?.emailVerifiedAt) {
+      throw new ConflictException({
+        code: 'EMAIL_ALREADY_REGISTERED',
+        message: 'Email is already registered',
       });
-    } catch (error) {
-      if (this.userRepository.isUniqueViolation(error)) {
-        throw new ConflictException({
-          code: 'EMAIL_ALREADY_REGISTERED',
-          message: 'Email is already registered',
-        });
-      }
-      throw error;
     }
+    /** Старый поток: неподтверждённый `User` без pending — убираем, чтобы освободить email. */
+    if (existingUser && !existingUser.emailVerifiedAt) {
+      await this.prisma.user.deleteMany({
+        where: { email, emailVerifiedAt: null, deletedAt: null },
+      });
+    }
+    const passwordHash = await this.passwordHasher.hash(body.password);
     const code = this.generateOtp();
     const codeHash = await this.passwordHasher.hash(code);
     const expiresAt = addMinutes(new Date(), OTP_TTL_MINUTES);
-    await this.emailVerificationOtp.upsert(user.id, { codeHash, expiresAt });
+    const name = body.name.trim();
+    await this.pendingRegistration.upsert({
+      email,
+      name,
+      passwordHash,
+      codeHash,
+      expiresAt,
+    });
     try {
       await this.mailService.sendRegistrationOtp({
-        to: user.email,
-        name: user.name,
+        to: email,
+        name,
         code,
+        locale: parseApiLocale(body.locale),
       });
     } catch {
       throw new ServiceUnavailableException({
@@ -90,56 +100,87 @@ export class AuthService {
         message: 'Failed to send verification email.',
       });
     }
-    return { status: 'verification_required', email: user.email };
+    return { status: 'verification_required', email };
   }
 
   async verifyEmailRegistration(
     body: VerifyEmailRegistrationBody,
   ): Promise<AuthResponseDto> {
     const email = normalizeEmail(body.email);
-    const user = await this.userRepository.findActiveByEmail(email);
-    if (!user?.passwordHash) {
+    const pending = await this.pendingRegistration.findByEmail(email);
+    if (!pending) {
       throw new BadRequestException({
         code: 'VERIFICATION_NOT_FOUND',
         message: 'Invalid or expired code',
       });
     }
-    if (user.emailVerifiedAt) {
-      throw new BadRequestException({
-        code: 'ALREADY_VERIFIED',
-        message: 'Email is already verified',
-      });
-    }
-    const record = await this.emailVerificationOtp.findByUserId(user.id);
-    if (!record) {
-      throw new BadRequestException({
-        code: 'VERIFICATION_NOT_FOUND',
-        message: 'Invalid or expired code',
-      });
-    }
-    if (record.expiresAt.getTime() < Date.now()) {
+    if (pending.expiresAt.getTime() < Date.now()) {
       throw new BadRequestException({
         code: 'VERIFICATION_EXPIRED',
         message: 'Code has expired. Request a new one.',
       });
     }
-    const ok = await this.passwordHasher.verify(body.code, record.codeHash);
+    const ok = await this.passwordHasher.verify(body.code, pending.codeHash);
     if (!ok) {
       throw new BadRequestException({
         code: 'INVALID_CODE',
         message: 'Invalid or expired code',
       });
     }
-    await this.emailVerificationOtp.deleteByUserId(user.id);
-    const verified = await this.userRepository.setEmailVerifiedAt(user.id);
-    return this.issueTokens(verified);
+    const existingUser = await this.userRepository.findActiveByEmail(email);
+    if (existingUser?.emailVerifiedAt) {
+      await this.prisma.pendingRegistration.deleteMany({ where: { email } });
+      throw new BadRequestException({
+        code: 'ALREADY_VERIFIED',
+        message: 'Email is already verified',
+      });
+    }
+    if (existingUser && !existingUser.emailVerifiedAt) {
+      await this.prisma.user.deleteMany({
+        where: { email, emailVerifiedAt: null, deletedAt: null },
+      });
+    }
+    try {
+      const user = await this.prisma.$transaction(async (tx) => {
+        const u = await tx.user.create({
+          data: {
+            email,
+            name: pending.name,
+            passwordHash: pending.passwordHash,
+            emailVerifiedAt: new Date(),
+          },
+        });
+        await tx.pendingRegistration.delete({ where: { email } });
+        return u;
+      });
+      return this.issueTokens({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException({
+          code: 'EMAIL_ALREADY_REGISTERED',
+          message: 'Email is already registered',
+        });
+      }
+      throw e;
+    }
   }
 
   async resendEmailVerification(
     body: ResendEmailVerificationBody,
   ): Promise<void> {
     const nodeEnv = this.config.get<string>('nodeEnv') ?? 'development';
-    if (nodeEnv === 'production' && !this.mailService.isMailDeliveryConfigured()) {
+    if (
+      nodeEnv === 'production' &&
+      !this.mailService.isMailDeliveryConfigured()
+    ) {
       throw new ServiceUnavailableException({
         code: 'MAIL_NOT_CONFIGURED',
         message:
@@ -147,8 +188,15 @@ export class AuthService {
       });
     }
     const email = normalizeEmail(body.email);
-    const user = await this.userRepository.findActiveByEmail(email);
-    if (!user?.passwordHash) {
+    const verifiedUser = await this.userRepository.findActiveByEmail(email);
+    if (verifiedUser?.emailVerifiedAt) {
+      throw new BadRequestException({
+        code: 'ALREADY_VERIFIED',
+        message: 'Email is already verified',
+      });
+    }
+    const pending = await this.pendingRegistration.findByEmail(email);
+    if (!pending) {
       throw new UnauthorizedException({
         code: 'INVALID_CREDENTIALS',
         message: 'Invalid email or password',
@@ -156,7 +204,7 @@ export class AuthService {
     }
     const match = await this.passwordHasher.verify(
       body.password,
-      user.passwordHash,
+      pending.passwordHash,
     );
     if (!match) {
       throw new UnauthorizedException({
@@ -164,21 +212,16 @@ export class AuthService {
         message: 'Invalid email or password',
       });
     }
-    if (user.emailVerifiedAt) {
-      throw new BadRequestException({
-        code: 'ALREADY_VERIFIED',
-        message: 'Email is already verified',
-      });
-    }
     const code = this.generateOtp();
     const codeHash = await this.passwordHasher.hash(code);
     const expiresAt = addMinutes(new Date(), OTP_TTL_MINUTES);
-    await this.emailVerificationOtp.upsert(user.id, { codeHash, expiresAt });
+    await this.pendingRegistration.updateOtp(email, { codeHash, expiresAt });
     try {
       await this.mailService.sendRegistrationOtp({
-        to: user.email,
-        name: user.name,
+        to: email,
+        name: pending.name,
         code,
+        locale: parseApiLocale(body.locale),
       });
     } catch {
       throw new ServiceUnavailableException({

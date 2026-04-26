@@ -474,8 +474,7 @@ export class PersonalizationService {
 
     const { majorForList, categorySlugsUsed, priceMinVnd, priceMaxVnd } =
       resolved;
-    const catForApi =
-      categorySlugsUsed.length > 0 ? categorySlugsUsed : [];
+    const catForApi = categorySlugsUsed.length > 0 ? categorySlugsUsed : [];
 
     if (options.limitSpecialists === 0 && options.limitOrganizations === 0) {
       return {

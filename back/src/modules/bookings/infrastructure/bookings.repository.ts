@@ -246,6 +246,7 @@ export class BookingsRepository {
 
   /**
    * Брони клиентов: пора напомнить (порог по `User.bookingReminderLeadMinutes` уже прошёл, визит ещё впереди).
+   * Только `confirmed` — пока запись в ожидании мастера, напоминание «скоро визит» не шлём.
    */
   async findDueClientReminderBookingIds(now: Date): Promise<string[]> {
     const rows = await this.prisma.$queryRaw<{ id: string }[]>(Prisma.sql`
@@ -253,7 +254,7 @@ export class BookingsRepository {
       FROM "Booking" b
       INNER JOIN "User" u ON u.id = b."clientUserId"
       WHERE b."deletedAt" IS NULL
-        AND b.status IN ('pending', 'confirmed')
+        AND b.status = 'confirmed'
         AND b."clientReminderSentAt" IS NULL
         AND b."startsAt" > ${now}
         AND u."bookingReminderEnabled" = true

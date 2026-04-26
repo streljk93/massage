@@ -62,6 +62,12 @@ export const authResendVerificationRequestSchema = {
   properties: {
     email: { type: 'string', format: 'email' },
     password: { type: 'string', format: 'password' },
+    locale: {
+      type: 'string',
+      enum: ['en', 'ru', 'vi'],
+      description:
+        'Язык письма с кодом (аккаунт ещё не подтверждён — только для этого письма).',
+    },
   },
 };
 
@@ -76,6 +82,12 @@ export const authRegisterRequestSchema = {
       minLength: 8,
       maxLength: 256,
       format: 'password',
+    },
+    locale: {
+      type: 'string',
+      enum: ['en', 'ru', 'vi'],
+      description:
+        'Язык OTP-письма. До подтверждения email в профиль не сохраняется.',
     },
   },
 };

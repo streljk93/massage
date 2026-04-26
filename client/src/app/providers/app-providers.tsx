@@ -9,6 +9,7 @@ import { createAppQueryClient } from "@/shared/lib/notifications";
 import { ConfirmActionHost } from "@/shared/ui/confirm-action-host";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
 import { FavoritesSyncOnAuth } from "@/features/favorites-sync";
+import { SyncUserLocaleWithApp } from "@/features/user-locale-sync";
 import { FcmTokenSync } from "@/features/push-notifications";
 import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
 import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
@@ -33,7 +34,8 @@ export function AppProviders({ children }: AppProvidersProps) {
       <QueryClientProvider client={queryClient}>
         <ThemePreferenceProvider>
         <FavoritesSyncOnAuth />
-        {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
+        <SyncUserLocaleWithApp />
+        {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null}
         <NotificationToaster />
         <ConfirmActionHost />
         <PortraitOrientationLock />

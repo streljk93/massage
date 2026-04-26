@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import type { OAuthEnvFlags } from "@/auth/oauth-env";
 import { Button } from "@/shared/ui/button";
@@ -44,6 +44,7 @@ function readErrCode(data: unknown): string | undefined {
 
 export function RegisterPage({ oauth }: RegisterPageProps) {
   const t = useTranslations("authRegister");
+  const appLocale = useLocale();
   const router = useRouter();
   const [step, setStep] = useState<Step>("form");
   const [name, setName] = useState("");
@@ -76,6 +77,7 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
           email: email.trim(),
           password,
           name: name.trim(),
+          locale: appLocale,
         }),
       });
       const data = (await reg.json().catch(() => ({}))) as {
@@ -169,7 +171,11 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
       const res = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          locale: appLocale,
+        }),
       });
       if (res.status === 401) {
         setError("resendCreds");

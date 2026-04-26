@@ -1,0 +1,52 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{title}}</mj-title>
+    <mj-preview>{{title}}</mj-preview>
+    <mj-attributes>
+      <mj-all font-family="Ubuntu, Helvetica, Arial, sans-serif" />
+    </mj-attributes>
+    <mj-style>
+      .hero-img img {
+        height: 300px !important;
+        max-height: 300px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f4f5">
+    <mj-section padding="24px 16px 8px 16px" background-color="#f4f4f5">
+      <mj-column background-color="#ffffff" border-radius="12px" padding="0">
+        <mj-image
+          src="{{heroImageUrl}}"
+          alt=""
+          padding="0"
+          border="none"
+          border-radius="12px"
+          fluid-on-mobile="true"
+          css-class="hero-img"
+          height="300px"
+        />
+      </mj-column>
+    </mj-section>
+    <mj-section padding="0 16px 8px 16px" background-color="#ffffff">
+      <mj-column>
+        <mj-text
+          font-size="20px"
+          font-weight="700"
+          line-height="28px"
+          color="#18181b"
+        >
+          {{title}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="8px 16px 24px 16px" background-color="#ffffff">
+      <mj-column>
+        <mj-raw>{{contentHtml}}</mj-raw>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

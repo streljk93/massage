@@ -5,6 +5,7 @@ export {
   SUPPORTED_CATALOG_LOCALES,
 } from './api-locale';
 export type { ApiLocale, SupportedCatalogLocale } from './api-locale';
+export { localeFromSavedUserProfile } from './locale-from-saved-user-profile';
 export { ApiLocaleQueryDocs } from './api-locale-query.swagger';
 export {
   pickLocalizedMajorName,

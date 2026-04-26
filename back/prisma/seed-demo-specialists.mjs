@@ -10,8 +10,8 @@
  * Клиенты-авторы отзывов: нейтральные имена, email `demo.client.*@example.com` (без бренда салона).
  * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
-import bcrypt from "bcrypt";
-import { OrganizationMembershipRole } from "@prisma/client";
+import bcrypt from 'bcrypt';
+import { OrganizationMembershipRole } from '@prisma/client';
 
 const SALT_ROUNDS = 12;
 
@@ -28,16 +28,16 @@ const LISTING_WORKDAY_PRESETS = [
   { start: 10 * 60, end: 22 * 60 },
 ];
 
-const DEMO_PASSWORD = "Demo123456!";
+const DEMO_PASSWORD = 'Demo123456!';
 
-const OWNER_EMAIL = "demo.salon.owner@example.com";
-const WORKER_EMAIL = "demo.salon.worker@example.com";
+const OWNER_EMAIL = 'demo.salon.owner@example.com';
+const WORKER_EMAIL = 'demo.salon.worker@example.com';
 /** «Клиенты» для отзывов: нейтральные имена, без привязки к бренду салонов. */
-const CLIENT_REVIEW_EMAIL = "demo.client.mai@example.com";
-const CLIENT_REVIEW_EMAIL_2 = "demo.client.duc@example.com";
-const CLIENT_REVIEW_EMAIL_3 = "demo.client.hoang@example.com";
-const CLIENT_REVIEW_EMAIL_4 = "demo.client.phuong@example.com";
-const ORG_SLUG = "demo-salon-seed";
+const CLIENT_REVIEW_EMAIL = 'demo.client.mai@example.com';
+const CLIENT_REVIEW_EMAIL_2 = 'demo.client.duc@example.com';
+const CLIENT_REVIEW_EMAIL_3 = 'demo.client.hoang@example.com';
+const CLIENT_REVIEW_EMAIL_4 = 'demo.client.phuong@example.com';
+const ORG_SLUG = 'demo-salon-seed';
 
 /** Phú Quốc, Dương Đông — демо на острове (карта / адрес). */
 const ORG_LAT = 10.216_5;
@@ -48,18 +48,18 @@ const ORG_LNG = 103.963_5;
  */
 function listingServicesLineFromCategories(cats) {
   if (!cats.length) return null;
-  return cats.map((c) => c.shortName).join(" · ");
+  return cats.map((c) => c.shortName).join(' · ');
 }
 
 const AVATAR_POOL = [
-  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=128&h=128&fit=crop",
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&fit=crop",
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=128&h=128&fit=crop',
+  'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=128&h=128&fit=crop',
 ];
 
 function avatarForSeed(i) {
@@ -76,19 +76,19 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: OWNER_EMAIL },
     create: {
       email: OWNER_EMAIL,
-      name: "Демо владелец салона",
+      name: 'Демо владелец салона',
       passwordHash,
-      locale: "ru",
-      phone: "+84901234567",
+      locale: 'ru',
+      phone: '+84901234567',
       avatarUrl:
-        "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=128&h=128&fit=crop',
     },
     update: {
-      name: "Демо владелец салона",
+      name: 'Демо владелец салона',
       passwordHash,
-      phone: "+84901234567",
+      phone: '+84901234567',
       avatarUrl:
-        "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=128&h=128&fit=crop',
     },
   });
 
@@ -96,19 +96,19 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: WORKER_EMAIL },
     create: {
       email: WORKER_EMAIL,
-      name: "Демо мастер (сотрудник)",
+      name: 'Демо мастер (сотрудник)',
       passwordHash,
-      locale: "ru",
-      phone: "+84907654321",
+      locale: 'ru',
+      phone: '+84907654321',
       avatarUrl:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&fit=crop',
     },
     update: {
-      name: "Демо мастер (сотрудник)",
+      name: 'Демо мастер (сотрудник)',
       passwordHash,
-      phone: "+84907654321",
+      phone: '+84907654321',
       avatarUrl:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=128&h=128&fit=crop',
     },
   });
 
@@ -116,18 +116,18 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL },
     create: {
       email: CLIENT_REVIEW_EMAIL,
-      name: "Mai Lê",
+      name: 'Mai Lê',
       passwordHash: null,
-      locale: "vi",
-      phone: "+84901112233",
+      locale: 'vi',
+      phone: '+84901112233',
       avatarUrl:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop',
     },
     update: {
-      name: "Mai Lê",
-      phone: "+84901112233",
+      name: 'Mai Lê',
+      phone: '+84901112233',
       avatarUrl:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=128&h=128&fit=crop',
     },
   });
 
@@ -135,18 +135,18 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL_2 },
     create: {
       email: CLIENT_REVIEW_EMAIL_2,
-      name: "Đức Phạm",
+      name: 'Đức Phạm',
       passwordHash: null,
-      locale: "vi",
-      phone: "+84904445566",
+      locale: 'vi',
+      phone: '+84904445566',
       avatarUrl:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop',
     },
     update: {
-      name: "Đức Phạm",
-      phone: "+84904445566",
+      name: 'Đức Phạm',
+      phone: '+84904445566',
       avatarUrl:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop",
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=128&h=128&fit=crop',
     },
   });
 
@@ -154,15 +154,15 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL_3 },
     create: {
       email: CLIENT_REVIEW_EMAIL_3,
-      name: "Hoàng Văn Nam",
+      name: 'Hoàng Văn Nam',
       passwordHash: null,
-      locale: "vi",
-      phone: "+84905557788",
+      locale: 'vi',
+      phone: '+84905557788',
       avatarUrl: avatarForSeed(2),
     },
     update: {
-      name: "Hoàng Văn Nam",
-      phone: "+84905557788",
+      name: 'Hoàng Văn Nam',
+      phone: '+84905557788',
       avatarUrl: avatarForSeed(2),
     },
   });
@@ -171,15 +171,15 @@ export async function seedDemoSpecialists(prisma) {
     where: { email: CLIENT_REVIEW_EMAIL_4 },
     create: {
       email: CLIENT_REVIEW_EMAIL_4,
-      name: "Lê Phương Anh",
+      name: 'Lê Phương Anh',
       passwordHash: null,
-      locale: "en",
-      phone: "+84906668899",
+      locale: 'en',
+      phone: '+84906668899',
       avatarUrl: avatarForSeed(3),
     },
     update: {
-      name: "Lê Phương Anh",
-      phone: "+84906668899",
+      name: 'Lê Phương Anh',
+      phone: '+84906668899',
       avatarUrl: avatarForSeed(3),
     },
   });
@@ -188,20 +188,20 @@ export async function seedDemoSpecialists(prisma) {
     where: { userId: ownerUser.id },
     create: {
       userId: ownerUser.id,
-      bio: "Владелец демо-салона, массажист.",
+      bio: 'Владелец демо-салона, массажист.',
       experienceYears: 10,
       imageUrl:
-        "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 500m from night market | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listedInDirectory: false,
     },
     update: {
-      bio: "Владелец демо-салона, массажист.",
+      bio: 'Владелец демо-салона, массажист.',
       experienceYears: 10,
       imageUrl:
-        "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 500m from night market | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listedInDirectory: false,
     },
@@ -211,20 +211,20 @@ export async function seedDemoSpecialists(prisma) {
     where: { userId: workerUser.id },
     create: {
       userId: workerUser.id,
-      bio: "Мастер салона (сотрудник).",
+      bio: 'Мастер салона (сотрудник).',
       experienceYears: 5,
       imageUrl:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 1km from center | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listedInDirectory: true,
     },
     update: {
-      bio: "Мастер салона (сотрудник).",
+      bio: 'Мастер салона (сотрудник).',
       experienceYears: 5,
       imageUrl:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 1km from center | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 1km from center | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listedInDirectory: true,
     },
@@ -233,38 +233,38 @@ export async function seedDemoSpecialists(prisma) {
   const org = await prisma.organization.upsert({
     where: { slug: ORG_SLUG },
     create: {
-      name: "Демо-салон «Массаж»",
+      name: 'Демо-салон «Массаж»',
       slug: ORG_SLUG,
       ownerUserId: ownerUser.id,
-      description: "Сид для разработки: владелец и сотрудник.",
-      city: "Phú Quốc",
-      addressLine: "118 Tran Hung Dao, Duong Dong",
-      phone: "+842838220001",
-      email: "hello@demo-salon-seed.example.com",
+      description: 'Сид для разработки: владелец и сотрудник.',
+      city: 'Phú Quốc',
+      addressLine: '118 Tran Hung Dao, Duong Dong',
+      phone: '+842838220001',
+      email: 'hello@demo-salon-seed.example.com',
       yearsInBusiness: 8,
       latitude: ORG_LAT,
       longitude: ORG_LNG,
       imageUrl:
-        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 500m from night market | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
       listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
     },
     update: {
-      name: "Демо-салон «Массаж»",
+      name: 'Демо-салон «Массаж»',
       ownerUserId: ownerUser.id,
-      description: "Сид для разработки: владелец и сотрудник.",
-      city: "Phú Quốc",
-      addressLine: "118 Tran Hung Dao, Duong Dong",
-      phone: "+842838220001",
-      email: "hello@demo-salon-seed.example.com",
+      description: 'Сид для разработки: владелец и сотрудник.',
+      city: 'Phú Quốc',
+      addressLine: '118 Tran Hung Dao, Duong Dong',
+      phone: '+842838220001',
+      email: 'hello@demo-salon-seed.example.com',
       yearsInBusiness: 8,
       latitude: ORG_LAT,
       longitude: ORG_LNG,
       imageUrl:
-        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
-      listingMetaLine: "~ 500m from night market | Duong Dong, Phu Quoc",
+        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
+      listingMetaLine: '~ 500m from night market | Duong Dong, Phu Quoc',
       listingServicesLine: null,
       listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
       listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
@@ -294,20 +294,20 @@ export async function seedDemoSpecialists(prisma) {
   });
 
   const massageMajor = await prisma.majorServiceCategory.findUnique({
-    where: { slug: "massage" },
+    where: { slug: 'massage' },
   });
   if (!massageMajor) {
-    throw new Error("[seed-demo-specialists] major category massage not found");
+    throw new Error('[seed-demo-specialists] major category massage not found');
   }
 
   const categorySlugs = [
-    "neck",
-    "back",
-    "sports",
-    "relaxing",
-    "feet-reflexology",
-    "body",
-    "thai",
+    'neck',
+    'back',
+    'sports',
+    'relaxing',
+    'feet-reflexology',
+    'body',
+    'thai',
   ];
   const categories = await prisma.serviceCategory.findMany({
     where: {
@@ -321,9 +321,7 @@ export async function seedDemoSpecialists(prisma) {
   });
   const bySlug = Object.fromEntries(categories.map((x) => [x.slug, x]));
   /** Все выбранные для витрины подкатегории (порядок как в `categorySlugs`). */
-  const orgCategoryRows = categorySlugs
-    .map((s) => bySlug[s])
-    .filter(Boolean);
+  const orgCategoryRows = categorySlugs.map((s) => bySlug[s]).filter(Boolean);
   for (const c of orgCategoryRows) {
     await prisma.organizationServiceCategory.create({
       data: { organizationId: org.id, serviceCategoryId: c.id },
@@ -335,10 +333,10 @@ export async function seedDemoSpecialists(prisma) {
       specialistId: { in: [ownerSpecialist.id, workerSpecialist.id] },
     },
   });
-  const ownerPick = ["neck", "back", "sports"]
+  const ownerPick = ['neck', 'back', 'sports']
     .map((s) => bySlug[s])
     .filter(Boolean);
-  const workerPick = ["relaxing", "feet-reflexology", "neck"]
+  const workerPick = ['relaxing', 'feet-reflexology', 'neck']
     .map((s) => bySlug[s])
     .filter(Boolean);
   for (const c of ownerPick) {
@@ -383,12 +381,12 @@ export async function seedDemoSpecialists(prisma) {
       organizationId: org.id,
       slug: {
         in: [
-          "demo-seed-owner-neck",
-          "demo-seed-owner-back",
-          "demo-seed-owner-sports",
-          "demo-seed-worker-relax",
-          "demo-seed-worker-foot",
-          "demo-seed-worker-neck",
+          'demo-seed-owner-neck',
+          'demo-seed-owner-back',
+          'demo-seed-owner-sports',
+          'demo-seed-worker-relax',
+          'demo-seed-worker-foot',
+          'demo-seed-worker-neck',
         ],
       },
     },
@@ -401,8 +399,8 @@ export async function seedDemoSpecialists(prisma) {
   const serviceSeedRows = [
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: "neck",
-      slug: "demo-seed-owner-neck",
+      categorySlug: 'neck',
+      slug: 'demo-seed-owner-neck',
       sortOrder: 0,
       priceTiers: [
         [30, 290_000],
@@ -410,15 +408,15 @@ export async function seedDemoSpecialists(prisma) {
         [60, 490_000],
       ],
       locales: {
-        en: { name: "Neck & shoulder massage" },
-        vi: { name: "Massage cổ và vai" },
-        ru: { name: "Массаж шеи и плеч" },
+        en: { name: 'Neck & shoulder massage' },
+        vi: { name: 'Massage cổ và vai' },
+        ru: { name: 'Массаж шеи и плеч' },
       },
     },
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: "back",
-      slug: "demo-seed-owner-back",
+      categorySlug: 'back',
+      slug: 'demo-seed-owner-back',
       sortOrder: 1,
       priceTiers: [
         [60, 420_000],
@@ -426,15 +424,15 @@ export async function seedDemoSpecialists(prisma) {
         [120, 740_000],
       ],
       locales: {
-        en: { name: "Back massage" },
-        vi: { name: "Massage lưng" },
-        ru: { name: "Массаж спины" },
+        en: { name: 'Back massage' },
+        vi: { name: 'Massage lưng' },
+        ru: { name: 'Массаж спины' },
       },
     },
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: "sports",
-      slug: "demo-seed-owner-sports",
+      categorySlug: 'sports',
+      slug: 'demo-seed-owner-sports',
       sortOrder: 2,
       priceTiers: [
         [60, 450_000],
@@ -442,15 +440,15 @@ export async function seedDemoSpecialists(prisma) {
         [120, 790_000],
       ],
       locales: {
-        en: { name: "Sports massage" },
-        vi: { name: "Massage thể thao" },
-        ru: { name: "Спортивный массаж" },
+        en: { name: 'Sports massage' },
+        vi: { name: 'Massage thể thao' },
+        ru: { name: 'Спортивный массаж' },
       },
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: "relaxing",
-      slug: "demo-seed-worker-relax",
+      categorySlug: 'relaxing',
+      slug: 'demo-seed-worker-relax',
       sortOrder: 0,
       priceTiers: [
         [60, 400_000],
@@ -458,15 +456,15 @@ export async function seedDemoSpecialists(prisma) {
         [120, 700_000],
       ],
       locales: {
-        en: { name: "Relaxing massage" },
-        vi: { name: "Massage thư giãn" },
-        ru: { name: "Расслабляющий массаж" },
+        en: { name: 'Relaxing massage' },
+        vi: { name: 'Massage thư giãn' },
+        ru: { name: 'Расслабляющий массаж' },
       },
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: "feet-reflexology",
-      slug: "demo-seed-worker-foot",
+      categorySlug: 'feet-reflexology',
+      slug: 'demo-seed-worker-foot',
       sortOrder: 1,
       priceTiers: [
         [60, 320_000],
@@ -474,15 +472,15 @@ export async function seedDemoSpecialists(prisma) {
         [120, 580_000],
       ],
       locales: {
-        en: { name: "Foot reflexology" },
-        vi: { name: "Phản xạ học bàn chân" },
-        ru: { name: "Рефлексология стоп" },
+        en: { name: 'Foot reflexology' },
+        vi: { name: 'Phản xạ học bàn chân' },
+        ru: { name: 'Рефлексология стоп' },
       },
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: "neck",
-      slug: "demo-seed-worker-neck",
+      categorySlug: 'neck',
+      slug: 'demo-seed-worker-neck',
       sortOrder: 2,
       priceTiers: [
         [30, 280_000],
@@ -490,9 +488,9 @@ export async function seedDemoSpecialists(prisma) {
         [60, 480_000],
       ],
       locales: {
-        en: { name: "Neck & shoulder massage" },
-        vi: { name: "Massage cổ và vai" },
-        ru: { name: "Массаж шеи и плеч" },
+        en: { name: 'Neck & shoulder massage' },
+        vi: { name: 'Massage cổ và vai' },
+        ru: { name: 'Массаж шеи и плеч' },
       },
     },
   ];
@@ -514,7 +512,7 @@ export async function seedDemoSpecialists(prisma) {
         sortOrder: row.sortOrder,
         isActive: true,
         locales: {
-          create: ["en", "vi", "ru"].map((locale) => ({
+          create: ['en', 'vi', 'ru'].map((locale) => ({
             locale,
             name: row.locales[locale].name,
           })),
@@ -523,7 +521,7 @@ export async function seedDemoSpecialists(prisma) {
           create: row.priceTiers.map(([durationMinutes, priceAmount]) => ({
             durationMinutes,
             priceAmount,
-            currency: "VND",
+            currency: 'VND',
           })),
         },
       },
@@ -535,47 +533,47 @@ export async function seedDemoSpecialists(prisma) {
 
   const extraSalonDefs = [
     {
-      slug: "demo-salon-seed-2",
-      name: "Салон «Морской бриз»",
-      description: "Сид: филиал у пляжа, команда из 5 мастеров.",
-      city: "Phú Quốc",
-      addressLine: "12 Vo Thi Sau, Duong Dong",
+      slug: 'demo-salon-seed-2',
+      name: 'Салон «Морской бриз»',
+      description: 'Сид: филиал у пляжа, команда из 5 мастеров.',
+      city: 'Phú Quốc',
+      addressLine: '12 Vo Thi Sau, Duong Dong',
       orgLat: 10.228,
       orgLng: 103.958,
     },
     {
-      slug: "demo-salon-seed-3",
-      name: "Студия «Лотос»",
-      description: "Сид: расслабляющий и тайский массаж.",
-      city: "Phú Quốc",
-      addressLine: "88 30/4, Duong Dong",
+      slug: 'demo-salon-seed-3',
+      name: 'Студия «Лотос»',
+      description: 'Сид: расслабляющий и тайский массаж.',
+      city: 'Phú Quốc',
+      addressLine: '88 30/4, Duong Dong',
       orgLat: 10.205,
       orgLng: 103.975,
     },
     {
-      slug: "demo-salon-seed-4",
-      name: "Центр «Ан Минь»",
-      description: "Сид: спорт и реабилитация.",
-      city: "Phú Quốc",
-      addressLine: "5 Tran Hung Dao, An Thoi",
+      slug: 'demo-salon-seed-4',
+      name: 'Центр «Ан Минь»',
+      description: 'Сид: спорт и реабилитация.',
+      city: 'Phú Quốc',
+      addressLine: '5 Tran Hung Dao, An Thoi',
       orgLat: 10.125,
       orgLng: 104.018,
     },
     {
-      slug: "demo-salon-seed-5",
-      name: "Спа «Золотой песок»",
-      description: "Сид: SPA и уход.",
-      city: "Phú Quốc",
-      addressLine: "200 Nguyen Trung Truc, Duong Dong",
+      slug: 'demo-salon-seed-5',
+      name: 'Спа «Золотой песок»',
+      description: 'Сид: SPA и уход.',
+      city: 'Phú Quốc',
+      addressLine: '200 Nguyen Trung Truc, Duong Dong',
       orgLat: 10.22,
       orgLng: 103.968,
     },
     {
-      slug: "demo-salon-seed-6",
-      name: "Массаж «Bạch Đằng»",
-      description: "Сид: кабинет у набережной, Phú Quốc.",
-      city: "Phú Quốc",
-      addressLine: "78 Bach Dang, Duong Dong",
+      slug: 'demo-salon-seed-6',
+      name: 'Массаж «Bạch Đằng»',
+      description: 'Сид: кабинет у набережной, Phú Quốc.',
+      city: 'Phú Quốc',
+      addressLine: '78 Bach Dang, Duong Dong',
       orgLat: 10.213,
       orgLng: 103.97,
     },
@@ -599,7 +597,7 @@ export async function seedDemoSpecialists(prisma) {
 
   /** Демо «Мастер 3» (лист / localhost): фиксированный id из витрины; иначе срабатывает флаг у demo.salon.worker2@. */
   await prisma.specialist.updateMany({
-    where: { id: "53436e5a-1499-4805-a3d2-95185fdf1a24" },
+    where: { id: '53436e5a-1499-4805-a3d2-95185fdf1a24' },
     data: { autoConfirmBookings: true },
   });
 
@@ -651,21 +649,21 @@ async function syncSpecialistRating(prisma, specialistId) {
 }
 
 const DEMO_ORG_REVIEW_COMMENTS = [
-  "Clean and calm space, easy to book online.",
-  "Warm welcome, the session felt unhurried.",
-  "Convenient location, will visit again.",
-  "Professional setup from start to finish.",
+  'Clean and calm space, easy to book online.',
+  'Warm welcome, the session felt unhurried.',
+  'Convenient location, will visit again.',
+  'Professional setup from start to finish.',
 ];
 
 const DEMO_SPEC_REVIEW_COMMENTS = [
-  "Skilled and punctual — great work on tension.",
-  "Clear communication, I felt very comfortable.",
-  "Attentive technique, noticeable relief after one visit.",
-  "Calm energy and strong hands, highly recommend.",
-  "Thorough and professional—exactly what I needed.",
-  "Respectful, on time, and very skilled.",
-  "I left relaxed; booking again next week.",
-  "Listened to my limits and adapted well.",
+  'Skilled and punctual — great work on tension.',
+  'Clear communication, I felt very comfortable.',
+  'Attentive technique, noticeable relief after one visit.',
+  'Calm energy and strong hands, highly recommend.',
+  'Thorough and professional—exactly what I needed.',
+  'Respectful, on time, and very skilled.',
+  'I left relaxed; booking again next week.',
+  'Listened to my limits and adapted well.',
 ];
 
 /**
@@ -680,7 +678,7 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
     return;
   }
   const orgs = await prisma.organization.findMany({
-    where: { slug: { startsWith: "demo-salon-seed" } },
+    where: { slug: { startsWith: 'demo-salon-seed' } },
     select: { id: true },
   });
   const orgIds = orgs.map((o) => o.id);
@@ -699,7 +697,10 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
     where: { organizationId: { in: orgIds }, authorUserId: { in: authorIds } },
   });
   await prisma.specialistReview.deleteMany({
-    where: { specialistId: { in: specialistIds }, authorUserId: { in: authorIds } },
+    where: {
+      specialistId: { in: specialistIds },
+      authorUserId: { in: authorIds },
+    },
   });
 
   for (let oi = 0; oi < orgs.length; oi++) {
@@ -707,7 +708,10 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
     for (let r = 0; r < 2; r++) {
       const author = authorUsers[(oi + r) % authorUsers.length];
       const rating = 4 + (r % 2);
-      const comment = DEMO_ORG_REVIEW_COMMENTS[(oi * 2 + r) % DEMO_ORG_REVIEW_COMMENTS.length];
+      const comment =
+        DEMO_ORG_REVIEW_COMMENTS[
+          (oi * 2 + r) % DEMO_ORG_REVIEW_COMMENTS.length
+        ];
       await prisma.organizationReview.create({
         data: {
           organizationId: org.id,
@@ -725,7 +729,9 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
       const author = authorUsers[(si + r) % authorUsers.length];
       const rating = 4 + (r % 2);
       const comment =
-        DEMO_SPEC_REVIEW_COMMENTS[(si * 2 + r) % DEMO_SPEC_REVIEW_COMMENTS.length];
+        DEMO_SPEC_REVIEW_COMMENTS[
+          (si * 2 + r) % DEMO_SPEC_REVIEW_COMMENTS.length
+        ];
       await prisma.specialistReview.create({
         data: {
           specialistId,
@@ -775,7 +781,7 @@ async function ensureEmployment(prisma, specialistId, organizationId, role) {
       specialistId,
       organizationId,
       role,
-      startDate: new Date("2020-01-01T00:00:00.000Z"),
+      startDate: new Date('2020-01-01T00:00:00.000Z'),
       isActive: true,
     },
   });
@@ -794,7 +800,7 @@ async function getOrgCategoryRows(prisma, organizationId, bySlug) {
   if (links.length > 0) {
     return links.map((l) => l.serviceCategory);
   }
-  const slugs = ["neck", "back", "sports", "relaxing", "feet-reflexology"];
+  const slugs = ['neck', 'back', 'sports', 'relaxing', 'feet-reflexology'];
   const rows = slugs.map((s) => bySlug[s]).filter(Boolean);
   for (const c of rows) {
     await prisma.organizationServiceCategory.upsert({
@@ -840,9 +846,9 @@ async function topUpOriginalSalon(prisma, ctx) {
   }
 
   const topUpEmails = [
-    "demo.salon.worker2@example.com",
-    "demo.salon.worker3@example.com",
-    "demo.salon.worker4@example.com",
+    'demo.salon.worker2@example.com',
+    'demo.salon.worker3@example.com',
+    'demo.salon.worker4@example.com',
   ].slice(0, need);
 
   const orgCategoryRows = await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
@@ -855,7 +861,7 @@ async function topUpOriginalSalon(prisma, ctx) {
         email,
         name: `Демо мастер ${specIndex + 1}`,
         passwordHash: ctx.passwordHash,
-        locale: "ru",
+        locale: 'ru',
         phone: `+8490123${String(8000 + specIndex).slice(-4)}`,
         avatarUrl: avatarForSeed(specIndex + 3),
       },
@@ -866,24 +872,23 @@ async function topUpOriginalSalon(prisma, ctx) {
       },
     });
 
-    const isDemoAutoConfirm =
-      email === "demo.salon.worker2@example.com";
+    const isDemoAutoConfirm = email === 'demo.salon.worker2@example.com';
 
     const specialist = await prisma.specialist.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
-        bio: "Мастер демо-салона (добавлен сидом).",
+        bio: 'Мастер демо-салона (добавлен сидом).',
         experienceYears: 3 + specIndex,
-        imageUrl: avatarForSeed(specIndex + 5).replace("w=128", "w=200"),
-        listingMetaLine: "~ near center | Phu Quoc",
+        imageUrl: avatarForSeed(specIndex + 5).replace('w=128', 'w=200'),
+        listingMetaLine: '~ near center | Phu Quoc',
         listingServicesLine: null,
         listedInDirectory: true,
         autoConfirmBookings: isDemoAutoConfirm,
       },
       update: {
         listedInDirectory: true,
-        listingMetaLine: "Dương Đông · Phú Quốc",
+        listingMetaLine: 'Dương Đông · Phú Quốc',
         autoConfirmBookings: isDemoAutoConfirm,
       },
     });
@@ -900,7 +905,7 @@ async function topUpOriginalSalon(prisma, ctx) {
       data: { activeOrganizationId: org.id },
     });
 
-    const pick = ["relaxing", "back", "neck"]
+    const pick = ['relaxing', 'back', 'neck']
       .map((s) => ctx.bySlug[s])
       .filter(Boolean);
     await prisma.specialistServiceCategory.deleteMany({
@@ -937,9 +942,14 @@ async function topUpOriginalSalon(prisma, ctx) {
       }
       const slug = `demo-seed-topup-w${specIndex}-${cat.slug}`;
       const catLocales = await prisma.serviceCategoryLocale.findMany({
-        where: { serviceCategoryId: cat.id, locale: { in: ["en", "vi", "ru"] } },
+        where: {
+          serviceCategoryId: cat.id,
+          locale: { in: ['en', 'vi', 'ru'] },
+        },
       });
-      const byLoc = Object.fromEntries(catLocales.map((l) => [l.locale, l.name]));
+      const byLoc = Object.fromEntries(
+        catLocales.map((l) => [l.locale, l.name]),
+      );
       const nameEn = byLoc.en ?? cat.name;
       await prisma.service.create({
         data: {
@@ -951,7 +961,7 @@ async function topUpOriginalSalon(prisma, ctx) {
           sortOrder: j,
           isActive: true,
           locales: {
-            create: ["en", "vi", "ru"].map((locale) => ({
+            create: ['en', 'vi', 'ru'].map((locale) => ({
               locale,
               name: byLoc[locale] ?? cat.name,
             })),
@@ -963,7 +973,7 @@ async function topUpOriginalSalon(prisma, ctx) {
             ].map(([durationMinutes, priceAmount]) => ({
               durationMinutes,
               priceAmount,
-              currency: "VND",
+              currency: 'VND',
             })),
           },
         },
@@ -977,7 +987,8 @@ async function topUpOriginalSalon(prisma, ctx) {
     where: { id: org.id },
     data: {
       listingServicesLine:
-        listingServicesLineFromCategories(orgCategoryRows) ?? org.listingServicesLine,
+        listingServicesLineFromCategories(orgCategoryRows) ??
+        org.listingServicesLine,
     },
   });
   await syncOrganizationRating(prisma, org.id);
@@ -1011,8 +1022,8 @@ async function upsertFullSalon(prisma, args) {
       email: ownerEmail,
       name: `Владелец «${def.name}»`,
       passwordHash,
-      locale: "ru",
-      phone: `+8490100${String(seedOffset).padStart(4, "0")}`,
+      locale: 'ru',
+      phone: `+8490100${String(seedOffset).padStart(4, '0')}`,
       avatarUrl: avatarForSeed(seedOffset),
     },
     update: {
@@ -1026,9 +1037,9 @@ async function upsertFullSalon(prisma, args) {
     where: { userId: ownerUser.id },
     create: {
       userId: ownerUser.id,
-      bio: "Владелец салона, ведёт приём.",
+      bio: 'Владелец салона, ведёт приём.',
       experienceYears: 12,
-      imageUrl: avatarForSeed(seedOffset + 1).replace("w=128", "w=200"),
+      imageUrl: avatarForSeed(seedOffset + 1).replace('w=128', 'w=200'),
       listingMetaLine: def.city,
       listingServicesLine: null,
       listedInDirectory: false,
@@ -1054,7 +1065,7 @@ async function upsertFullSalon(prisma, args) {
       latitude: def.orgLat,
       longitude: def.orgLng,
       imageUrl:
-        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop",
+        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
       listingMetaLine: `~ ${def.city}`,
       listingServicesLine: null,
       listingWorkdayStartMinute: workday.start,
@@ -1089,8 +1100,8 @@ async function upsertFullSalon(prisma, args) {
         email,
         name: `Мастер ${w} · ${def.name}`,
         passwordHash,
-        locale: "vi",
-        phone: `+8490200${String(seedOffset + w).padStart(4, "0")}`,
+        locale: 'vi',
+        phone: `+8490200${String(seedOffset + w).padStart(4, '0')}`,
         avatarUrl: avatarForSeed(seedOffset + w + 10),
       },
       update: {
@@ -1106,7 +1117,7 @@ async function upsertFullSalon(prisma, args) {
         userId: user.id,
         bio: `Мастер салона «${def.name}».`,
         experienceYears: 4 + w,
-        imageUrl: avatarForSeed(seedOffset + w + 20).replace("w=128", "w=200"),
+        imageUrl: avatarForSeed(seedOffset + w + 20).replace('w=128', 'w=200'),
         listingMetaLine: def.city,
         listingServicesLine: null,
         listedInDirectory: true,
@@ -1127,11 +1138,11 @@ async function upsertFullSalon(prisma, args) {
   }
 
   const orgCategorySlugs = [
-    "neck",
-    "back",
-    "sports",
-    "relaxing",
-    "feet-reflexology",
+    'neck',
+    'back',
+    'sports',
+    'relaxing',
+    'feet-reflexology',
   ];
   await prisma.organizationServiceCategory.deleteMany({
     where: { organizationId: org.id },
@@ -1160,7 +1171,7 @@ async function upsertFullSalon(prisma, args) {
     });
   }
 
-  const categoryRot = ["sports", "relaxing", "neck", "back", "thai"];
+  const categoryRot = ['sports', 'relaxing', 'neck', 'back', 'thai'];
 
   for (let i = 0; i < allSpecs.length; i++) {
     const spec = allSpecs[i];
@@ -1205,9 +1216,11 @@ async function upsertFullSalon(prisma, args) {
       }
       const svcSlug = `seed-${def.slug}-spec-${i}-cat-${c.slug}`;
       const catLocales = await prisma.serviceCategoryLocale.findMany({
-        where: { serviceCategoryId: c.id, locale: { in: ["en", "vi", "ru"] } },
+        where: { serviceCategoryId: c.id, locale: { in: ['en', 'vi', 'ru'] } },
       });
-      const byLoc = Object.fromEntries(catLocales.map((l) => [l.locale, l.name]));
+      const byLoc = Object.fromEntries(
+        catLocales.map((l) => [l.locale, l.name]),
+      );
       const nameEn = byLoc.en ?? c.name;
       await prisma.service.create({
         data: {
@@ -1219,7 +1232,7 @@ async function upsertFullSalon(prisma, args) {
           sortOrder: j,
           isActive: true,
           locales: {
-            create: ["en", "vi", "ru"].map((locale) => ({
+            create: ['en', 'vi', 'ru'].map((locale) => ({
               locale,
               name: byLoc[locale] ?? c.name,
             })),
@@ -1232,7 +1245,7 @@ async function upsertFullSalon(prisma, args) {
             ].map(([durationMinutes, priceAmount]) => ({
               durationMinutes,
               priceAmount,
-              currency: "VND",
+              currency: 'VND',
             })),
           },
         },

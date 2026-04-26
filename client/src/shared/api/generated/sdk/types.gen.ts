@@ -224,6 +224,10 @@ export type AuthRegisterData = {
         email: string;
         name: string;
         password: string;
+        /**
+         * Язык OTP-письма. До подтверждения email в профиль не сохраняется.
+         */
+        locale?: 'en' | 'ru' | 'vi';
     };
     path?: never;
     query?: never;
@@ -306,6 +310,10 @@ export type AuthResendVerificationData = {
     body: {
         email: string;
         password: string;
+        /**
+         * Язык письма с кодом (аккаунт ещё не подтверждён — только для этого письма).
+         */
+        locale?: 'en' | 'ru' | 'vi';
     };
     path?: never;
     query?: never;
@@ -518,6 +526,10 @@ export type UsersMeResponses = {
          * Путь `/v1/files/public/...` или абсолютный URL
          */
         avatarUrl: string | null;
+        /**
+         * Локаль интерфейса из клиента; для писем о бронированиях и т.п.
+         */
+        locale: 'en' | 'vi' | 'ru';
         bookingReminderEnabled: boolean;
         /**
          * За сколько минут до визита прислать push (только при включённом флаге).
@@ -535,6 +547,10 @@ export type UsersPatchMeData = {
          * Путь `/v1/files/public/...` или абсолютный http(s) URL; **null** — убрать аватар
          */
         avatarUrl?: string | unknown;
+        /**
+         * Как в префиксе пути клиента `/[locale]/...`
+         */
+        locale?: 'en' | 'vi' | 'ru';
         bookingReminderEnabled?: boolean;
         bookingReminderLeadMinutes?: 15 | 30 | 60;
     };
@@ -567,6 +583,10 @@ export type UsersPatchMeResponses = {
          * Путь `/v1/files/public/...` или абсолютный URL
          */
         avatarUrl: string | null;
+        /**
+         * Локаль интерфейса из клиента; для писем о бронированиях и т.п.
+         */
+        locale: 'en' | 'vi' | 'ru';
         bookingReminderEnabled: boolean;
         /**
          * За сколько минут до визита прислать push (только при включённом флаге).

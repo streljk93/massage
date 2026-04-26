@@ -76,14 +76,13 @@ model User {
   bookingReminderEnabled     Boolean @default(false)
   /// Допустимые значения: 15, 30, 60 (валидация в API).
   bookingReminderLeadMinutes Int     @default(30)
-  /// Подтверждение email: null до первой успешной верификации (регистрация по паролю).
+  /// Регистрация по паролю: дата проставляется при создании `User` (после OTP). Null — для будущих сценариев (напр. OAuth).
   emailVerifiedAt            DateTime?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  emailVerificationOtp EmailVerificationOtp?
   specialistProfile    Specialist?
   clientBookings    Booking[]              @relation("ClientBookings")
   bookingChanges    BookingStatusHistory[]
@@ -96,14 +95,16 @@ model User {
   preferenceProfile    UserPreferenceProfile?
 }
 
-/// Одноразовый код для подтверждения email при регистрации (заменяется при повторной отправке).
-model EmailVerificationOtp {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeHash  String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+/// Регистрация по email+паролю до подтверждения: `User` создаётся только после верного OTP.
+model PendingRegistration {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  codeHash     String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([expiresAt])
 }

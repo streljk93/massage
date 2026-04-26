@@ -9,6 +9,8 @@ export type UserRecord = {
   passwordHash: string | null;
   avatarUrl: string | null;
   emailVerifiedAt: Date | null;
+  /** Локаль UI из приложения (en / ru / vi); письма и подписи статусов опираются на неё. */
+  locale: string | null;
   bookingReminderEnabled: boolean;
   bookingReminderLeadMinutes: number;
 };
@@ -63,6 +65,7 @@ export class UserRepository {
     data: {
       name?: string;
       avatarUrl?: string | null;
+      locale?: string | null;
       bookingReminderEnabled?: boolean;
       bookingReminderLeadMinutes?: number;
     },
@@ -76,6 +79,7 @@ export class UserRepository {
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
+        ...(data.locale !== undefined ? { locale: data.locale } : {}),
         ...(data.bookingReminderEnabled !== undefined
           ? { bookingReminderEnabled: data.bookingReminderEnabled }
           : {}),

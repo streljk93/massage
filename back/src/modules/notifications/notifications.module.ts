@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MailModule } from '../../infrastructure/mail/mail.module';
 import { AuthModule } from '../auth/auth.module';
 import { PushNotificationsService } from './application/push-notifications.service';
 import { BookingPushContextRepository } from './infrastructure/booking-push-context.repository';
@@ -7,7 +8,7 @@ import { UserFcmTokenRepository } from './infrastructure/user-fcm-token.reposito
 import { PushTokensController } from './presentation/push-tokens.controller';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, MailModule],
   controllers: [PushTokensController],
   providers: [
     FcmAdminService,

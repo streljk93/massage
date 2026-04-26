@@ -111,6 +111,17 @@ export default () => ({
   mail: {
     from: process.env.MAIL_FROM?.trim() || 'Services <noreply@localhost>',
     resendApiKey: process.env.RESEND_API_KEY?.trim() ?? '',
+    /**
+     * Публичный URL фронта (как `CLIENT_ORIGIN`): картинки в письмах и кнопка «Мои записи».
+     * В dev при пустом env — `http://localhost:3000`, чтобы в MailHog подтягивался `/massage.png` из Next `public/`.
+     */
+    clientAppOrigin:
+      process.env.CLIENT_APP_ORIGIN?.trim() ||
+      process.env.CLIENT_ORIGIN?.trim() ||
+      (nodeEnv !== 'production' ? 'http://localhost:3000' : ''),
+    /** Путь к статике на фронте (файл в `client/public/`). */
+    reminderHeroImagePath:
+      process.env.MAIL_REMINDER_HERO_PATH?.trim() || '/massage.png',
     smtp: {
       host: process.env.SMTP_HOST?.trim() ?? '',
       port: positiveInt(process.env.SMTP_PORT, 587),

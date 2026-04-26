@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../../infrastructure/mail/mail.module';
 import { AuthService } from './application/auth.service';
-import { EmailVerificationOtpRepository } from './infrastructure/email-verification-otp.repository';
+import { PendingRegistrationRepository } from './infrastructure/pending-registration.repository';
 import { PasswordHasher } from './infrastructure/password-hasher';
 import { UserRepository } from './infrastructure/user.repository';
 import { AuthController } from './presentation/auth.controller';
@@ -25,7 +25,7 @@ import { AuthController } from './presentation/auth.controller';
     AuthService,
     PasswordHasher,
     UserRepository,
-    EmailVerificationOtpRepository,
+    PendingRegistrationRepository,
   ],
   exports: [AuthService, JwtModule, UserRepository],
 })

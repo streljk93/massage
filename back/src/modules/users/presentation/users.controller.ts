@@ -49,7 +49,7 @@ export class UsersController {
   @Patch('me')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Обновить профиль (имя, аватар)' })
+  @ApiOperation({ summary: 'Обновить профиль (имя, аватар, локаль UI)' })
   @ApiBody({ schema: patchMeRequestSchema })
   @ApiOkResponse({ schema: userProfileSchema })
   @ApiBadRequestResponse({ description: 'Ошибка валидации тела запроса' })

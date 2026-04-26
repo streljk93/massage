@@ -39,6 +39,7 @@ export default tseslint.config(
   {
     files: [
       'src/modules/notifications/infrastructure/user-fcm-token.repository.ts',
+      'src/modules/notifications/application/push-notifications.service.ts',
       'src/modules/directory/application/directory.service.ts',
     ],
     rules: {

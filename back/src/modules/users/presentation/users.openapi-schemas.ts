@@ -5,6 +5,7 @@ export const userProfileSchema = {
     'email',
     'name',
     'avatarUrl',
+    'locale',
     'bookingReminderEnabled',
     'bookingReminderLeadMinutes',
   ],
@@ -16,6 +17,13 @@ export const userProfileSchema = {
       type: 'string',
       nullable: true,
       description: 'Путь `/v1/files/public/...` или абсолютный URL',
+    },
+    locale: {
+      type: 'string',
+      nullable: true,
+      enum: ['en', 'vi', 'ru'],
+      description:
+        'Локаль интерфейса из клиента; для писем о бронированиях и т.п.',
     },
     bookingReminderEnabled: { type: 'boolean' },
     bookingReminderLeadMinutes: {
@@ -38,6 +46,11 @@ export const patchMeRequestSchema = {
         { type: 'string', minLength: 1, maxLength: 2048 },
         { type: 'null' },
       ],
+    },
+    locale: {
+      type: 'string',
+      enum: ['en', 'vi', 'ru'],
+      description: 'Как в префиксе пути клиента `/[locale]/...`',
     },
     bookingReminderEnabled: { type: 'boolean' },
     bookingReminderLeadMinutes: { type: 'integer', enum: [15, 30, 60] },

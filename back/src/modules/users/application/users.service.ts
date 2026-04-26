@@ -19,6 +19,7 @@ export class UsersService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      locale: user.locale,
       bookingReminderEnabled: user.bookingReminderEnabled,
       bookingReminderLeadMinutes: user.bookingReminderLeadMinutes,
     };
@@ -28,6 +29,7 @@ export class UsersService {
     const updated = await this.userRepository.updateProfile(userId, {
       name: body.name,
       avatarUrl: body.avatarUrl,
+      locale: body.locale,
       bookingReminderEnabled: body.bookingReminderEnabled,
       bookingReminderLeadMinutes: body.bookingReminderLeadMinutes,
     });
@@ -42,6 +44,7 @@ export class UsersService {
       email: updated.email,
       name: updated.name,
       avatarUrl: updated.avatarUrl,
+      locale: updated.locale,
       bookingReminderEnabled: updated.bookingReminderEnabled,
       bookingReminderLeadMinutes: updated.bookingReminderLeadMinutes,
     };

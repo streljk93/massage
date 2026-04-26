@@ -1,0 +1,71 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{title}}</mj-title>
+    <mj-preview>{{preview}}</mj-preview>
+    <mj-attributes>
+      <mj-all
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Helvetica, Arial, sans-serif"
+      />
+    </mj-attributes>
+    <mj-style>
+      .hero-img img {
+        height: 300px !important;
+        max-height: 300px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block !important;
+      }
+      .detail-line div {
+        color: #52525b !important;
+        font-size: 15px !important;
+        line-height: 22px !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f4f5">
+    <mj-section padding="24px 16px 32px 16px">
+      <mj-column
+        background-color="#ffffff"
+        border-radius="12px"
+        padding="0"
+      >
+        <mj-image
+          src="{{heroImageUrl}}"
+          alt=""
+          padding="0"
+          border="none"
+          border-radius="12px 12px 0 0"
+          fluid-on-mobile="true"
+          css-class="hero-img"
+          height="300px"
+        />
+        <mj-text
+          font-size="22px"
+          font-weight="700"
+          line-height="30px"
+          color="#18181b"
+          padding="28px 24px 8px 24px"
+        >
+          {{title}}
+        </mj-text>
+        <mj-text css-class="detail-line" padding="0 24px 14px 24px">
+          {{detailLineHtml}}
+        </mj-text>
+        <mj-button
+          href="{{ctaUrl}}"
+          background-color="#18181b"
+          color="#fafafa"
+          border-radius="8px"
+          font-size="15px"
+          font-weight="600"
+          inner-padding="14px 28px"
+          align="center"
+          padding="0 24px 28px 24px"
+        >
+          {{ctaLabel}}
+        </mj-button>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

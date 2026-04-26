@@ -52,7 +52,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Регистрация по email и паролю',
     description:
-      'Создаёт пользователя с неподтверждённым email; на адрес уходит 6-значный код. Токены выдаёт `POST /auth/verify-email`.',
+      'Запись в `User` не создаётся: сохраняется ожидание верификации и на email уходит 6-значный код. Учётная запись и токены — после `POST /auth/verify-email`.',
   })
   @ApiBody({ schema: authRegisterRequestSchema })
   @ApiCreatedResponse({ schema: authRegisterPendingResponseSchema })
@@ -86,7 +86,11 @@ export class AuthController {
   @Post('resend-verification')
   @HttpCode(204)
   @Throttle({ default: { ttl: 60_000, limit: 5 } })
-  @ApiOperation({ summary: 'Повторно отправить код подтверждения' })
+  @ApiOperation({
+    summary: 'Повторно отправить код подтверждения',
+    description:
+      'Только пока регистрация не завершена (`PendingRegistration`). Пароль — тот же, что при регистрации.',
+  })
   @ApiBody({ schema: authResendVerificationRequestSchema })
   @ApiNoContentResponse({ description: 'Код отправлен' })
   @ApiUnauthorizedResponse({ schema: authUnauthorizedSchema })

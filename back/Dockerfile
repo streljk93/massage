@@ -14,6 +14,8 @@ COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
+COPY scripts ./scripts
+COPY mail-templates ./mail-templates
 COPY src ./src
 RUN npx prisma generate && npm run build && npm prune --omit=dev
 
@@ -22,6 +24,7 @@ ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && adduser -S nest -u 1001 -G nodejs
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/mail-templates/dist ./mail-templates/dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/prisma ./prisma

@@ -2,10 +2,12 @@
 
 import { Check } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { usePathname, useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { routing } from "@/app/i18n/routing";
 import { cn, motion } from "@/shared/lib";
+import { createBrowserSdkClient, usersPatchMe } from "@/shared/api";
 import { ProfileSubpageShell } from "./profile-subpage-shell";
 
 export function ProfileLanguagePage() {
@@ -14,6 +16,8 @@ export function ProfileLanguagePage() {
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const accessToken = session?.accessToken;
 
   return (
     <ProfileSubpageShell title={t("title")}>
@@ -40,7 +44,15 @@ export function ProfileLanguagePage() {
                       : "text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                   )}
                   onClick={() => {
-                    router.replace(pathname, { locale: loc });
+                    void (async () => {
+                      if (accessToken) {
+                        const client = createBrowserSdkClient(accessToken, {
+                          locale: loc,
+                        });
+                        await usersPatchMe({ client, body: { locale: loc } });
+                      }
+                      router.replace(pathname, { locale: loc });
+                    })();
                   }}
                 >
                   <span className="min-w-0 flex-1">{tLocale(`language.${loc}`)}</span>

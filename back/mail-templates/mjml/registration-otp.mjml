@@ -1,0 +1,88 @@
+<mjml>
+  <mj-head>
+    <mj-title>{{emailTitle}}</mj-title>
+    <mj-preview>{{preview}}</mj-preview>
+    <mj-attributes>
+      <mj-all
+        font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, Helvetica, Arial, sans-serif"
+      />
+    </mj-attributes>
+    <mj-style>
+      .greeting div {
+        color: #52525b !important;
+        font-size: 16px !important;
+        line-height: 24px !important;
+      }
+      .hint div {
+        color: #a1a1aa !important;
+        font-size: 14px !important;
+        line-height: 22px !important;
+      }
+      td.code-block {
+        background-color: #fafafa !important;
+        border: 1px solid #e4e4e7 !important;
+        border-radius: 12px !important;
+      }
+      td.code-block div {
+        font-family: ui-monospace, 'SF Mono', 'Menlo', Monaco, Consolas, monospace !important;
+        font-size: 30px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.28em !important;
+        color: #18181b !important;
+        line-height: 1.35 !important;
+      }
+      .hero-img img {
+        height: 300px !important;
+        max-height: 300px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+        display: block !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#f4f4f5">
+    <mj-section padding="32px 16px 40px 16px">
+      <mj-column background-color="#ffffff" border-radius="12px" padding="0">
+        <mj-image
+          src="{{heroImageUrl}}"
+          alt=""
+          padding="0"
+          border="none"
+          border-radius="12px 12px 0 0"
+          fluid-on-mobile="true"
+          css-class="hero-img"
+          height="300px"
+        />
+        <mj-text
+          font-size="22px"
+          font-weight="700"
+          line-height="30px"
+          color="#18181b"
+          padding="36px 28px 8px 28px"
+        >
+          {{emailTitle}}
+        </mj-text>
+        <mj-text css-class="greeting" padding="0 28px 20px 28px">
+          {{greetingLine}}
+        </mj-text>
+        <mj-text
+          font-size="15px"
+          line-height="22px"
+          color="#52525b"
+          padding="0 28px 16px 28px"
+        >
+          {{instructionText}}
+        </mj-text>
+        <mj-text
+          css-class="code-block"
+          align="center"
+          padding="20px 28px 24px 28px"
+        >
+          {{code}}
+        </mj-text>
+        <mj-text css-class="hint" padding="8px 28px 40px 28px">{{footerText}}</mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

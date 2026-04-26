@@ -319,7 +319,7 @@
     },
     "/auth/register": {
       "post": {
-        "description": "Создаёт пользователя с неподтверждённым email; на адрес уходит 6-значный код. Токены выдаёт `POST /auth/verify-email`.",
+        "description": "Запись в `User` не создаётся: сохраняется ожидание верификации и на email уходит 6-значный код. Учётная запись и токены — после `POST /auth/verify-email`.",
         "operationId": "Auth_register",
         "parameters": [],
         "requestBody": {
@@ -349,6 +349,15 @@
                     "minLength": 8,
                     "maxLength": 256,
                     "format": "password"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ru",
+                      "vi"
+                    ],
+                    "description": "Язык OTP-письма. До подтверждения email в профиль не сохраняется."
                   }
                 }
               }
@@ -563,6 +572,7 @@
     },
     "/auth/resend-verification": {
       "post": {
+        "description": "Только пока регистрация не завершена (`PendingRegistration`). Пароль — тот же, что при регистрации.",
         "operationId": "Auth_resendVerification",
         "parameters": [],
         "requestBody": {
@@ -583,6 +593,15 @@
                   "password": {
                     "type": "string",
                     "format": "password"
+                  },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "ru",
+                      "vi"
+                    ],
+                    "description": "Язык письма с кодом (аккаунт ещё не подтверждён — только для этого письма)."
                   }
                 }
               }
@@ -1063,6 +1082,7 @@
                     "email",
                     "name",
                     "avatarUrl",
+                    "locale",
                     "bookingReminderEnabled",
                     "bookingReminderLeadMinutes"
                   ],
@@ -1082,6 +1102,16 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "en",
+                        "vi",
+                        "ru"
+                      ],
+                      "description": "Локаль интерфейса из клиента; для писем о бронированиях и т.п."
                     },
                     "bookingReminderEnabled": {
                       "type": "boolean"
@@ -1145,6 +1175,15 @@
                       }
                     ]
                   },
+                  "locale": {
+                    "type": "string",
+                    "enum": [
+                      "en",
+                      "vi",
+                      "ru"
+                    ],
+                    "description": "Как в префиксе пути клиента `/[locale]/...`"
+                  },
                   "bookingReminderEnabled": {
                     "type": "boolean"
                   },
@@ -1173,6 +1212,7 @@
                     "email",
                     "name",
                     "avatarUrl",
+                    "locale",
                     "bookingReminderEnabled",
                     "bookingReminderLeadMinutes"
                   ],
@@ -1192,6 +1232,16 @@
                       "type": "string",
                       "nullable": true,
                       "description": "Путь `/v1/files/public/...` или абсолютный URL"
+                    },
+                    "locale": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "en",
+                        "vi",
+                        "ru"
+                      ],
+                      "description": "Локаль интерфейса из клиента; для писем о бронированиях и т.п."
                     },
                     "bookingReminderEnabled": {
                       "type": "boolean"
@@ -1225,7 +1275,7 @@
             "access-token": []
           }
         ],
-        "summary": "Обновить профиль (имя, аватар)",
+        "summary": "Обновить профиль (имя, аватар, локаль UI)",
         "tags": [
           "users"
         ]

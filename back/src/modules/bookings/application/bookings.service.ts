@@ -286,7 +286,10 @@ export class BookingsService {
     });
 
     void this.pushNotifications.notifySpecialistNewBooking(booking.id);
-    /** Не уведомляем клиента о сразу `confirmed` (автоподтверждение) — пуш о подтверждении шлём только при ручном `pending` → `confirmed` у мастера. */
+    /**
+     * Уведомление о новой брони — только мастеру. Клиент получает пуш/письмо при смене статуса и т.д.
+     * При автоподтверждении отдельный FCM «подтверждение» не шлём — см. {@link PushNotificationsService.notifyClientBookingStatusChange}.
+     */
 
     return {
       id: booking.id,
@@ -317,7 +320,7 @@ export class BookingsService {
         const spRev = b.specialistReview;
         const visitReviewComplete = orgRev != null && spRev != null;
         const visitReviewExcerpt = visitReviewComplete
-          ? (spRev.comment?.trim() || orgRev.comment?.trim() || null)
+          ? spRev.comment?.trim() || orgRev.comment?.trim() || null
           : null;
         const visitReviewDisplayRating = visitReviewComplete
           ? Math.round(((orgRev.rating + spRev.rating) / 2) * 10) / 10
@@ -389,7 +392,10 @@ export class BookingsService {
         message: 'Only completed visits can be reviewed',
       });
     }
-    if (booking.organizationReview != null || booking.specialistReview != null) {
+    if (
+      booking.organizationReview != null ||
+      booking.specialistReview != null
+    ) {
       throw new ConflictException({
         code: 'BOOKING_REVIEW_EXISTS',
         message: 'This visit has already been reviewed',
