@@ -11,10 +11,13 @@ import {
 import {
   ArrowLeft,
   Building2,
+  CalendarOff,
+  Clock,
   Heart,
   Info,
   LocateFixed,
   MessageSquare,
+  PackageOpen,
   Phone,
   Star,
   Users,
@@ -34,6 +37,13 @@ import type {
   StaffBookableServiceRow,
 } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
@@ -993,9 +1003,16 @@ export function OrganizationProfilePage({
                   </div>
                 </section>
               ) : profile.specialists.length > 0 && salonBookableServiceOptions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("noServicesForSalon")}
-                </p>
+                <Empty className="items-stretch py-4">
+                  <EmptyHeader className="max-w-none">
+                    <EmptyMedia variant="icon">
+                      <PackageOpen aria-hidden />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-muted-foreground">
+                      {t("noServicesForSalon")}
+                    </EmptyTitle>
+                  </EmptyHeader>
+                </Empty>
               ) : null}
 
               {showBookingFlow && salonBookableServiceOptions.length > 0 ? (
@@ -1006,9 +1023,16 @@ export function OrganizationProfilePage({
                     </h2>
                     <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       {profile.calendarDays.length === 0 ? (
-                        <p className="px-1 text-sm text-muted-foreground">
-                          {t("noSlots")}
-                        </p>
+                        <Empty className="items-stretch px-1 py-3">
+                          <EmptyHeader className="max-w-none">
+                            <EmptyMedia variant="icon">
+                              <CalendarOff aria-hidden />
+                            </EmptyMedia>
+                            <EmptyDescription className="text-sm">
+                              {t("noSlots")}
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       ) : null}
                       {profile.calendarDays.map((d, i) => {
                         const selected = i === dayIndex;
@@ -1060,13 +1084,27 @@ export function OrganizationProfilePage({
                       {t("selectSlot")}
                     </h2>
                     {daySlots.length === 0 ? (
-                      <p className="px-1 text-sm text-muted-foreground">
-                        {t("noSlots")}
-                      </p>
+                      <Empty className="items-stretch px-1 py-3">
+                        <EmptyHeader className="max-w-none">
+                          <EmptyMedia variant="icon">
+                            <CalendarOff aria-hidden />
+                          </EmptyMedia>
+                          <EmptyDescription className="text-sm">
+                            {t("noSlots")}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
                     ) : filteredDaySlots.length === 0 ? (
-                      <p className="px-1 text-sm text-muted-foreground">
-                        {t("noSlotsForDuration")}
-                      </p>
+                      <Empty className="items-stretch px-1 py-3">
+                        <EmptyHeader className="max-w-none">
+                          <EmptyMedia variant="icon">
+                            <Clock aria-hidden />
+                          </EmptyMedia>
+                          <EmptyDescription className="text-sm">
+                            {t("noSlotsForDuration")}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
                     ) : (
                       <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {filteredDaySlots.map((time) => {

@@ -26,7 +26,15 @@ import {
   specialistsGetById,
 } from "@/shared/api";
 import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { cn, motion } from "@/shared/lib";
+import { Heart } from "lucide-react";
 import { useListingClock } from "@/shared/lib/use-listing-clock";
 import { slotGroupsFromSeed } from "@/widgets/home/lib/slot-groups-from-seed";
 import {
@@ -215,9 +223,17 @@ export function ProfileFavoritesPage() {
           <CursorPaginationDirectoryListSkeleton count={6} />
         : tab === "organizations" ?
           organizations.length === 0 ?
-            <p className="rounded-2xl border border-border/60 bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-              {t("emptyOrganizations")}
-            </p>
+            <Empty className="rounded-2xl py-6">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Heart aria-hidden />
+                </EmptyMedia>
+                <EmptyTitle>{t("emptyOrganizations")}</EmptyTitle>
+                <EmptyDescription className="max-w-xs">
+                  {t("emptyOrganizationsHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           : organizations.map((o) => {
               const card = organizationCardSeedFromApi(o, listingNow);
               return (
@@ -235,9 +251,17 @@ export function ProfileFavoritesPage() {
               );
             })
         : specialists.length === 0 ?
-          <p className="rounded-2xl border border-border/60 bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-            {t("emptySpecialists")}
-          </p>
+          <Empty className="rounded-2xl py-6">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Heart aria-hidden />
+              </EmptyMedia>
+              <EmptyTitle>{t("emptySpecialists")}</EmptyTitle>
+              <EmptyDescription className="max-w-xs">
+                {t("emptySpecialistsHint")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         : specialists.map((s) => {
             const card = specialistCardSeedFromApi(s, listingNow);
             return (

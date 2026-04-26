@@ -117,7 +117,7 @@ const linkCardClass = cn(
 );
 
 /**
- * «Ваши записи» на главной: только при JWT и если есть предстоящие брони
+ * «Ваши записи» на главной: только при JWT и если есть предстоящие визиты
  * в статусах `confirmed` и `in_progress`. Несколько записей — карусель {@link Slider}.
  */
 export function HomeCurrentBookingSection() {
@@ -186,7 +186,13 @@ export function HomeCurrentBookingSection() {
     );
   }, [bookings, format, loadBookings, tRoot]);
 
-  if (!bookings?.length) {
+  if (sessionStatus === "loading") {
+    return null;
+  }
+  if (!accessToken) {
+    return null;
+  }
+  if (bookings === undefined || bookings === null || bookings.length === 0) {
     return null;
   }
 

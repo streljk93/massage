@@ -1,4 +1,5 @@
--- Baseline: одна миграция, полная схема из `prisma/schema.prisma` (сжатые прежние миграции).
+-- Baseline: одна миграция, полная схема из `prisma/schema.prisma`
+-- (включая PendingRegistration вместо EmailVerificationOtp и дефолты напоминаний о визите).
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
@@ -33,8 +34,8 @@ CREATE TABLE "User" (
     "phone" TEXT,
     "avatarUrl" TEXT,
     "locale" TEXT,
-    "bookingReminderEnabled" BOOLEAN NOT NULL DEFAULT false,
-    "bookingReminderLeadMinutes" INTEGER NOT NULL DEFAULT 30,
+    "bookingReminderEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "bookingReminderLeadMinutes" INTEGER NOT NULL DEFAULT 60,
     "emailVerifiedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -44,14 +45,17 @@ CREATE TABLE "User" (
 );
 
 -- CreateTable
-CREATE TABLE "EmailVerificationOtp" (
+CREATE TABLE "PendingRegistration" (
     "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
     "codeHash" TEXT NOT NULL,
     "expiresAt" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "EmailVerificationOtp_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "PendingRegistration_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -411,10 +415,10 @@ CREATE INDEX "BookingStatusLocale_locale_idx" ON "BookingStatusLocale"("locale")
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "EmailVerificationOtp_userId_key" ON "EmailVerificationOtp"("userId");
+CREATE UNIQUE INDEX "PendingRegistration_email_key" ON "PendingRegistration"("email");
 
 -- CreateIndex
-CREATE INDEX "EmailVerificationOtp_expiresAt_idx" ON "EmailVerificationOtp"("expiresAt");
+CREATE INDEX "PendingRegistration_expiresAt_idx" ON "PendingRegistration"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserFcmToken_token_key" ON "UserFcmToken"("token");
@@ -565,9 +569,6 @@ CREATE INDEX "AdvertisementLocale_locale_idx" ON "AdvertisementLocale"("locale")
 
 -- CreateIndex
 CREATE UNIQUE INDEX "AdvertisementLocale_advertisementId_locale_key" ON "AdvertisementLocale"("advertisementId", "locale");
-
--- AddForeignKey
-ALTER TABLE "EmailVerificationOtp" ADD CONSTRAINT "EmailVerificationOtp_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "UserFcmToken" ADD CONSTRAINT "UserFcmToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

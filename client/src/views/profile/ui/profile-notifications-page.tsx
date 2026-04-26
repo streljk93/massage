@@ -37,8 +37,8 @@ export function ProfileNotificationsPage() {
   const accessToken = session?.accessToken;
 
   const [loadState, setLoadState] = useState<LoadState>("idle");
-  const [bookingEnabled, setBookingEnabled] = useState(false);
-  const [leadMinutes, setLeadMinutes] = useState<LeadMin>(30);
+  const [bookingEnabled, setBookingEnabled] = useState(true);
+  const [leadMinutes, setLeadMinutes] = useState<LeadMin>(60);
   const [on, setOn] = useState<Record<"promo" | "email", boolean>>({
     promo: false,
     email: true,
@@ -53,7 +53,7 @@ export function ProfileNotificationsPage() {
       startTransition(() => {
         setLoadState("demo");
         setBookingEnabled(true);
-        setLeadMinutes(30);
+        setLeadMinutes(60);
       });
       return;
     }
@@ -72,7 +72,7 @@ export function ProfileNotificationsPage() {
       const d = res.data;
       setBookingEnabled(d.bookingReminderEnabled);
       const l = d.bookingReminderLeadMinutes;
-      setLeadMinutes(l === 15 || l === 30 || l === 60 ? l : 30);
+      setLeadMinutes(l === 15 || l === 30 || l === 60 ? l : 60);
       setLoadState("ready");
     })();
     return () => {
@@ -97,7 +97,7 @@ export function ProfileNotificationsPage() {
       if (!res.error && res.data) {
         setBookingEnabled(res.data.bookingReminderEnabled);
         const l = res.data.bookingReminderLeadMinutes;
-        setLeadMinutes(l === 15 || l === 30 || l === 60 ? l : 30);
+        setLeadMinutes(l === 15 || l === 30 || l === 60 ? l : 60);
       }
     } finally {
       setSavingBooking(false);

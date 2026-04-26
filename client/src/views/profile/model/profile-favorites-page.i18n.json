@@ -3,24 +3,30 @@
     "en": {
       "profileFavorites": {
         "title": "Favorites",
-        "emptyOrganizations": "No favorite salons yet.",
-        "emptySpecialists": "No favorite specialists yet.",
+        "emptyOrganizations": "No favorite salons yet",
+        "emptyOrganizationsHint": "Tap the heart on a salon profile to save it here.",
+        "emptySpecialists": "No favorite specialists yet",
+        "emptySpecialistsHint": "Tap the heart on a specialist profile to save them here.",
         "loadError": "Could not load favorites. Try again later."
       }
     },
     "vi": {
       "profileFavorites": {
         "title": "Yêu thích",
-        "emptyOrganizations": "Chưa có salon yêu thích.",
-        "emptySpecialists": "Chưa có chuyên gia yêu thích.",
+        "emptyOrganizations": "Chưa có salon yêu thích",
+        "emptyOrganizationsHint": "Nhấn biểu tượng trái tim trên hồ sơ salon để lưu tại đây.",
+        "emptySpecialists": "Chưa có chuyên gia yêu thích",
+        "emptySpecialistsHint": "Nhấn biểu tượng trái tim trên hồ sơ chuyên gia để lưu tại đây.",
         "loadError": "Không tải được mục yêu thích. Thử lại sau."
       }
     },
     "ru": {
       "profileFavorites": {
         "title": "Избранное",
-        "emptyOrganizations": "Пока нет избранных салонов.",
-        "emptySpecialists": "Пока нет избранных мастеров.",
+        "emptyOrganizations": "Пока нет избранных салонов",
+        "emptyOrganizationsHint": "Нажмите сердечко в профиле салона, чтобы добавить сюда.",
+        "emptySpecialists": "Пока нет избранных мастеров",
+        "emptySpecialistsHint": "Нажмите сердечко в профиле мастера, чтобы добавить сюда.",
         "loadError": "Не удалось загрузить избранное. Попробуйте позже."
       }
     }

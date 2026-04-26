@@ -4,11 +4,13 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  CalendarOff,
   Clock,
   Heart,
   Info,
   LocateFixed,
   MessageSquare,
+  PackageOpen,
   Phone,
   Users,
 } from "lucide-react";
@@ -22,6 +24,13 @@ import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
 import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { HomeBottomNav } from "@/widgets/home";
 import { useUserGeolocation } from "@/widgets/search-map";
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
@@ -558,9 +567,16 @@ export function SpecialistProfilePage({
                 </h2>
                 <div className="space-y-2.5">
                   {profile.services.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noServices")}
-                    </p>
+                    <Empty className="items-stretch py-4">
+                      <EmptyHeader className="max-w-none">
+                        <EmptyMedia variant="icon">
+                          <PackageOpen aria-hidden />
+                        </EmptyMedia>
+                        <EmptyTitle className="text-muted-foreground">
+                          {t("noServices")}
+                        </EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
                   ) : null}
                   {profile.services.map((svc) => {
                     const selected = svc.id === serviceId;
@@ -597,9 +613,16 @@ export function SpecialistProfilePage({
                 </h2>
                 <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {profile.calendarDays.length === 0 ? (
-                    <p className="px-1 text-sm text-muted-foreground">
-                      {t("noSlots")}
-                    </p>
+                    <Empty className="items-stretch px-1 py-3">
+                      <EmptyHeader className="max-w-none">
+                        <EmptyMedia variant="icon">
+                          <CalendarOff aria-hidden />
+                        </EmptyMedia>
+                        <EmptyDescription className="text-sm">
+                          {t("noSlots")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   ) : null}
                   {profile.calendarDays.map((d, i) => {
                     const selected = i === dayIndex;
@@ -652,11 +675,27 @@ export function SpecialistProfilePage({
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {daySlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
+                    <Empty className="items-stretch py-3">
+                      <EmptyHeader className="max-w-none">
+                        <EmptyMedia variant="icon">
+                          <CalendarOff aria-hidden />
+                        </EmptyMedia>
+                        <EmptyDescription className="text-sm">
+                          {t("noSlots")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   ) : filteredDaySlots.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      {t("noSlotsForDuration")}
-                    </p>
+                    <Empty className="items-stretch py-3">
+                      <EmptyHeader className="max-w-none">
+                        <EmptyMedia variant="icon">
+                          <Clock aria-hidden />
+                        </EmptyMedia>
+                        <EmptyDescription className="text-sm">
+                          {t("noSlotsForDuration")}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   ) : (
                     filteredDaySlots.map((time) => {
                       const selected = time === effectiveSlot;

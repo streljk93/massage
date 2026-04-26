@@ -7,7 +7,8 @@
         "backAria": "Back to profile",
         "loadMore": "Load more",
         "loading": "Loading…",
-        "empty": "No reviews yet.",
+        "empty": "No reviews yet",
+        "emptyHint": "Reviews from clients will appear here.",
         "commentHeading": "Comment"
       }
     },
@@ -18,7 +19,8 @@
         "backAria": "Quay lại hồ sơ",
         "loadMore": "Tải thêm",
         "loading": "Đang tải…",
-        "empty": "Chưa có đánh giá.",
+        "empty": "Chưa có đánh giá",
+        "emptyHint": "Đánh giá từ khách hàng sẽ hiển thị tại đây.",
         "commentHeading": "Bình luận"
       }
     },
@@ -29,7 +31,8 @@
         "backAria": "Назад к профилю",
         "loadMore": "Показать ещё",
         "loading": "Загрузка…",
-        "empty": "Пока нет отзывов.",
+        "empty": "Пока нет отзывов",
+        "emptyHint": "Отзывы клиентов появятся здесь.",
         "commentHeading": "Комментарий"
       }
     }

@@ -11,6 +11,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { CalendarDays, History } from "lucide-react";
 import type { AppLocale } from "@/app/i18n/routing";
 import { Link, usePathname, useRouter } from "@/app/i18n/navigation";
 import {
@@ -49,6 +50,13 @@ import {
 import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
 import { BookingCancelDialog } from "./booking-cancel-dialog";
 import { BookingPendingCancelDialog } from "./booking-pending-cancel-dialog";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 
 /** Чуть дольше `--motion-duration-slow`, чтобы успели grid + fade на карточке. */
 const BOOKING_CANCEL_EXIT_MS = 360;
@@ -421,14 +429,14 @@ export function BookingsPage() {
   const mainContent = (() => {
     if (sessionStatus === "loading") {
       return (
-        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl bg-card px-4 py-8 text-center text-sm text-muted-foreground">
           {t("loading")}
         </p>
       );
     }
     if (!accessToken) {
       return (
-        <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl bg-card px-4 py-8 text-center text-sm text-muted-foreground">
           {t("signInToSee")}{" "}
           <Link
             href="/login"
@@ -441,14 +449,14 @@ export function BookingsPage() {
     }
     if (rows === null) {
       return (
-        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-2xl bg-card px-4 py-8 text-center text-sm text-muted-foreground">
           {t("loading")}
         </p>
       );
     }
     if (loadError) {
       return (
-        <p className="rounded-2xl border border-border/60 bg-card px-4 py-8 text-center text-sm text-destructive">
+        <p className="rounded-2xl bg-card px-4 py-8 text-center text-sm text-destructive">
           {t("loadError")}
         </p>
       );
@@ -507,9 +515,17 @@ export function BookingsPage() {
             {accessToken && rows !== null && !loadError ? (
               tab === "new" ? (
                 listCards.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-                    {t("emptyNew")}
-                  </p>
+                  <Empty className="rounded-2xl py-8">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <CalendarDays aria-hidden />
+                      </EmptyMedia>
+                      <EmptyTitle>{t("emptyNew")}</EmptyTitle>
+                      <EmptyDescription className="max-w-xs">
+                        {t("emptyNewHint")}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
                   listCards.map((row) => (
                     <BookingListCard
@@ -540,9 +556,17 @@ export function BookingsPage() {
                   ))
                 )
               ) : historyCards.length === 0 ? (
-                <p className="rounded-2xl border border-dashed border-border/60 bg-card px-4 py-8 text-center text-sm text-muted-foreground">
-                  {t("emptyHistory")}
-                </p>
+                <Empty className="rounded-2xl py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <History aria-hidden />
+                    </EmptyMedia>
+                    <EmptyTitle>{t("emptyHistory")}</EmptyTitle>
+                    <EmptyDescription className="max-w-xs">
+                      {t("emptyHistoryHint")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               ) : (
                 historyCards.map((row) => (
                   <BookingHistoryCard

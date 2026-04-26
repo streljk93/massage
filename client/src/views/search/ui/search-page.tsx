@@ -19,8 +19,10 @@ import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
   ArrowUpDown,
+  CalendarClock,
   Map as MapIcon,
   Search as SearchIcon,
+  SearchX,
   SlidersHorizontal,
 } from "lucide-react";
 import { OrganizationCard } from "@/entities/organizations";
@@ -35,6 +37,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/shadcn/dropdown-menu";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import {
   createBrowserSdkClient,
@@ -982,20 +991,34 @@ export function SearchPageClient({
           : tab === "organizations" ?
             <>
               {showSalonsEmptyFilterMessage ?
-                <div className="rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
-                  <p>{tSearch("noSalonsForFilters")}</p>
-                </div>
+                <Empty className="rounded-2xl bg-surface-light/50 py-4">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <SearchX aria-hidden />
+                    </EmptyMedia>
+                    <EmptyDescription className="max-w-md font-medium text-foreground">
+                      {tSearch("noSalonsForFilters")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               : null}
               {hasActiveSlotFilter &&
               !orgListLoading &&
               organizations.length > 0 &&
               displayOrganizations.length === 0 ?
-                <div className="space-y-2 rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
-                  <p>{tSearch("noSlotMatch")}</p>
-                  <p className="text-xs leading-relaxed">
-                    {tSearch("slotFilterClientNote")}
-                  </p>
-                </div>
+                <Empty className="rounded-2xl bg-surface-light/50 py-4">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <CalendarClock aria-hidden />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-muted-foreground">
+                      {tSearch("noSlotMatch")}
+                    </EmptyTitle>
+                    <EmptyDescription className="max-w-md text-xs leading-relaxed">
+                      {tSearch("slotFilterClientNote")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               : null}
               {displayOrganizations.map((o) => {
                 const card = organizationCardSeedFromApi(o, listingNow);
@@ -1026,20 +1049,34 @@ export function SearchPageClient({
             </>
           : <>
               {showSpecialistsEmptyFilterMessage ?
-                <div className="rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
-                  <p>{tSearch("noSpecialistsForFilters")}</p>
-                </div>
+                <Empty className="rounded-2xl bg-surface-light/50 py-4">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <SearchX aria-hidden />
+                    </EmptyMedia>
+                    <EmptyDescription className="max-w-md font-medium text-foreground">
+                      {tSearch("noSpecialistsForFilters")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               : null}
               {hasActiveSlotFilter &&
               !specListLoading &&
               specialists.length > 0 &&
               displaySpecialists.length === 0 ?
-                <div className="space-y-2 rounded-2xl border border-dashed border-border/50 bg-surface-light/50 px-4 py-3 text-sm text-muted-foreground">
-                  <p>{tSearch("noSlotMatch")}</p>
-                  <p className="text-xs leading-relaxed">
-                    {tSearch("slotFilterClientNote")}
-                  </p>
-                </div>
+                <Empty className="rounded-2xl bg-surface-light/50 py-4">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <CalendarClock aria-hidden />
+                    </EmptyMedia>
+                    <EmptyTitle className="text-muted-foreground">
+                      {tSearch("noSlotMatch")}
+                    </EmptyTitle>
+                    <EmptyDescription className="max-w-md text-xs leading-relaxed">
+                      {tSearch("slotFilterClientNote")}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               : null}
               {displaySpecialists.map((s) => {
                 const card = specialistCardSeedFromApi(s, listingNow);

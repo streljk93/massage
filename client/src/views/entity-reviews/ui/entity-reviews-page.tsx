@@ -11,6 +11,13 @@ import {
   specialistsListReviews,
 } from "@/shared/api";
 import { AppBackButton, Button } from "@/shared/ui";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { HomeBottomNav } from "@/widgets/home";
 import { cn } from "@/shared/lib";
 
@@ -113,9 +120,17 @@ export function EntityReviewsPage({
         </div>
 
         {items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {t("empty")}
-          </p>
+          <Empty className="py-8">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Star aria-hidden className="size-4" strokeWidth={1.75} />
+              </EmptyMedia>
+              <EmptyTitle>{t("empty")}</EmptyTitle>
+              <EmptyDescription className="max-w-xs">
+                {t("emptyHint")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           <ul className="flex flex-col gap-3">
             {items.map((r) => (

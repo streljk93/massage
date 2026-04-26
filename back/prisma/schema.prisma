@@ -73,9 +73,9 @@ model User {
   /// Предпочитаемая локаль UI (например vi, en, ru).
   locale       String?
   /// Push: напоминание клиенту о визите за N минут до `startsAt` (только `bookingReminderEnabled`).
-  bookingReminderEnabled     Boolean @default(false)
+  bookingReminderEnabled     Boolean @default(true)
   /// Допустимые значения: 15, 30, 60 (валидация в API).
-  bookingReminderLeadMinutes Int     @default(30)
+  bookingReminderLeadMinutes Int     @default(60)
   /// Регистрация по паролю: дата проставляется при создании `User` (после OTP). Null — для будущих сценариев (напр. OAuth).
   emailVerifiedAt            DateTime?
 

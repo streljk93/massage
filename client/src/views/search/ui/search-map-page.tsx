@@ -11,7 +11,7 @@ import {
 import { useSearchParams } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { Range, Root, Thumb, Track } from "@radix-ui/react-slider";
-import { LocateFixed, X } from "lucide-react";
+import { LocateFixed, MapPinOff, X } from "lucide-react";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import type {
   OrganizationsListResponse,
@@ -19,6 +19,12 @@ import type {
 } from "@/shared/api";
 import { HomeBottomNav } from "@/widgets/home";
 import { Button } from "@/shared/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+} from "@/shared/ui/shadcn/empty";
 import {
   SearchMapResultCard,
   useUserGeolocation,
@@ -332,12 +338,19 @@ function SearchMapInteractiveLayer({
               {`${tMap("applyRadius")} ${radiusReadout}`}
             </Button>
           : list.length === 0 ?
-            <p
-              className="rounded-2xl border border-white/20 bg-card/80 px-3 py-3 text-center text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-card/60"
+            <Empty
+              className="flex-none rounded-2xl bg-card/80 py-4 backdrop-blur-md supports-[backdrop-filter]:bg-card/60"
               role="status"
             >
-              {tMap("emptyResults")}
-            </p>
+              <EmptyHeader className="gap-1.5">
+                <EmptyMedia variant="icon" className="mb-0">
+                  <MapPinOff aria-hidden />
+                </EmptyMedia>
+                <EmptyDescription className="text-sm text-muted-foreground">
+                  {tMap("emptyResults")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           : activeCardIndex != null && selectedListItem != null ?
             <div className="w-full min-w-0">
               <SearchMapResultCard

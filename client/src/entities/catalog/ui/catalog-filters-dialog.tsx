@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { useTranslations } from "next-intl";
+import { Tags } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,13 @@ import {
   SelectValue,
 } from "@/shared/ui";
 import { PriceRangeSlider } from "@/shared/ui/price-range-slider";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/shared/ui/shadcn/empty";
 import { cn } from "@/shared/lib";
 
 /** Radix Select не принимает `value=""` у пункта — в сторе фильтра остаётся `""`. */
@@ -127,7 +135,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <div className="rounded-xl border border-border/30 bg-muted/25 px-3 py-3.5">
+            <div className="rounded-xl border border-border/30 bg-card px-3 py-3.5">
               <PriceRangeSlider
                 min={priceFilter.extent.min}
                 max={priceFilter.extent.max}
@@ -147,7 +155,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <div className="space-y-2 rounded-xl border border-border/30 bg-muted/25 px-3 py-3.5 text-sm text-foreground">
+            <div className="space-y-2 rounded-xl border border-border/30 bg-card px-3 py-3.5 text-sm text-foreground">
               <p className="font-medium leading-relaxed">
                 {t("priceReadOnlyVnd", {
                   min: readOnlyVndLine.min,
@@ -169,7 +177,7 @@ export function CatalogFiltersDialog({
             >
               {t("price")}
             </p>
-            <p className="rounded-xl border border-dashed border-border/45 bg-muted/20 px-3 py-3.5 text-sm leading-relaxed text-muted-foreground">
+            <p className="rounded-xl border border-border/25 bg-card px-3 py-3.5 text-sm leading-relaxed text-muted-foreground">
               {t("priceNoData")}
             </p>
           </div>
@@ -204,7 +212,7 @@ export function CatalogFiltersDialog({
                   <SelectTrigger
                     id={slotDaySelectId}
                     className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-background py-2 text-sm",
+                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-card py-2 text-sm",
                       "text-foreground",
                     )}
                     size="sm"
@@ -247,7 +255,7 @@ export function CatalogFiltersDialog({
                   <SelectTrigger
                     id={slotTimeSelectId}
                     className={cn(
-                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-background py-2 text-sm",
+                      "h-10 w-full min-w-0 rounded-xl border-border/45 bg-card py-2 text-sm",
                       "text-foreground",
                     )}
                     size="sm"
@@ -278,7 +286,7 @@ export function CatalogFiltersDialog({
               type="button"
               variant="secondary"
               tone="light"
-              className="h-11 w-full rounded-xl border border-border/50 bg-background text-sm font-medium shadow-none hover:bg-muted/60"
+              className="h-11 w-full rounded-xl border border-border/50 bg-card text-sm font-medium shadow-none hover:bg-muted/60"
               onClick={radiusMapFilter.onSelectOnMap}
             >
               {radiusMapFilter.isActive ?
@@ -294,12 +302,22 @@ export function CatalogFiltersDialog({
             {t("category")}
           </p>
           {categoryOptions.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border/45 bg-muted/20 px-3 py-4 text-center text-sm leading-relaxed text-muted-foreground">
-              {t("noCategories")}
-            </p>
+            <Empty className="rounded-xl border border-border/25 bg-card py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Tags aria-hidden />
+                </EmptyMedia>
+                <EmptyTitle className="text-muted-foreground">
+                  {t("noCategories")}
+                </EmptyTitle>
+                <EmptyDescription className="max-w-xs text-xs">
+                  {t("noCategoriesHint")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <div
-              className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/25 p-3"
+              className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-card p-3"
               role="group"
               aria-label={t("category")}
             >
@@ -319,7 +337,7 @@ export function CatalogFiltersDialog({
                       "active:scale-[0.98]",
                       isSelected
                         ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
-                        : "border-border/55 bg-background text-foreground shadow-sm shadow-black/[0.04] hover:border-primary/30 hover:bg-muted/50",
+                        : "border-border/55 bg-card text-foreground shadow-sm shadow-black/[0.04] hover:border-primary/30 hover:bg-muted/50",
                     )}
                   >
                     <span className="truncate">{shortName}</span>
@@ -341,7 +359,7 @@ export function CatalogFiltersDialog({
               type="button"
               variant="secondary"
               tone="light"
-              className="h-11 flex-1 rounded-full border border-border/50 bg-background font-medium shadow-none hover:bg-muted/60"
+              className="h-11 flex-1 rounded-full border border-border/50 bg-card font-medium shadow-none hover:bg-muted/60"
               onClick={onResetFilters}
             >
               {t("reset")}

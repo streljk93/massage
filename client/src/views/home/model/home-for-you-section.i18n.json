@@ -3,19 +3,25 @@
     "en": {
       "homeForYou": {
         "title": "Recommended",
-        "seeAll": "See all in search"
+        "seeAll": "See all in search",
+        "emptyTitle": "Nothing to recommend yet",
+        "emptyHint": "Try search to discover salons and specialists you might like."
       }
     },
     "vi": {
       "homeForYou": {
         "title": "Đề xuất",
-        "seeAll": "Xem tất cả ở tìm kiếm"
+        "seeAll": "Xem tất cả ở tìm kiếm",
+        "emptyTitle": "Chưa có gợi ý",
+        "emptyHint": "Hãy tìm kiếm để khám phá salon và chuyên gia phù hợp với bạn."
       }
     },
     "ru": {
       "homeForYou": {
         "title": "Рекомендуем",
-        "seeAll": "Смотреть в поиске"
+        "seeAll": "Смотреть в поиске",
+        "emptyTitle": "Пока нечего рекомендовать",
+        "emptyHint": "Загляните в поиск — там салоны и мастера, которые могут вам подойти."
       }
     }
   }
