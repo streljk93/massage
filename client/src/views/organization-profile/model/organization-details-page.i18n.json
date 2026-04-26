@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "organizationDetails": {
+        "title": "About",
+        "backAria": "Back to profile",
+        "aboutHeading": "About the salon",
+        "descriptionEmpty": "No description yet.",
+        "specialistsHeading": "Specialists",
+        "specialistProfileAria": "Open {name}'s profile"
+      }
+    },
+    "vi": {
+      "organizationDetails": {
+        "title": "Giới thiệu",
+        "backAria": "Quay lại hồ sơ",
+        "aboutHeading": "Về salon",
+        "descriptionEmpty": "Chưa có mô tả.",
+        "specialistsHeading": "Chuyên gia",
+        "specialistProfileAria": "Mở hồ sơ {name}"
+      }
+    },
+    "ru": {
+      "organizationDetails": {
+        "title": "Подробнее",
+        "backAria": "Назад к профилю",
+        "aboutHeading": "О салоне",
+        "descriptionEmpty": "Описание пока не заполнено.",
+        "specialistsHeading": "Специалисты",
+        "specialistProfileAria": "Открыть профиль: {name}"
+      }
+    }
+  }
+}

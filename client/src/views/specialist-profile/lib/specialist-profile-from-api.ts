@@ -62,5 +62,7 @@ export function specialistProfileFromApiDetail(
     timeSlotsByDay,
     slotCalendarDates,
     services: bookableServicesFromApi(detail),
+    phone: detail.phone ?? null,
+    activeWorkplace: detail.activeWorkplace ?? null,
   };
 }

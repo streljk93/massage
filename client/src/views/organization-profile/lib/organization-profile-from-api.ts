@@ -63,6 +63,7 @@ export function organizationProfileFromApiDetail(
     lat,
     lng,
     reviewsCount: detail.reviewsCount,
+    phone: detail.phone ?? null,
     addressLine,
     yearsInBusiness: detail.yearsInBusiness ?? 0,
     clientsCount: detail.clientsCount,

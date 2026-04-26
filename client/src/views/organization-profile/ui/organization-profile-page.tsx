@@ -56,6 +56,7 @@ import {
   resolveSlotLabelInDay,
 } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
+import { telHrefFromDisplayPhone } from "@/shared/lib/tel-href";
 import { notify } from "@/shared/lib/notifications";
 import {
   expandIntervalToListingOccupiedSlotKeys,
@@ -177,6 +178,7 @@ export function OrganizationProfilePage({
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
+  const organizationCallHref = telHrefFromDisplayPhone(profile.phone);
   useEffect(() => {
     trackOrganizationProfileView({
       accessToken: accessToken || undefined,
@@ -756,24 +758,40 @@ export function OrganizationProfilePage({
               >
                 <div className="flex items-center justify-between gap-2">
                   <Button
-                    type="button"
+                    asChild
                     variant="secondary"
                     tone="light"
                     className="h-11 gap-2 rounded-2xl border-0 bg-white/75 px-3 text-sm font-semibold text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
                   >
-                    <Info className="size-4 text-foreground" aria-hidden />
-                    {t("details")}
+                    <Link href={`/organizations/${profile.id}/details`}>
+                      <Info className="size-4 text-foreground" aria-hidden />
+                      {t("details")}
+                    </Link>
                   </Button>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      tone="light"
-                      className="size-11 shrink-0 rounded-full border-0 bg-white/75 p-0 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
-                      aria-label={t("callAria")}
-                    >
-                      <Phone className="size-[1.15rem]" aria-hidden />
-                    </Button>
+                    {organizationCallHref != null ? (
+                      <Button
+                        asChild
+                        variant="secondary"
+                        tone="light"
+                        className="size-11 shrink-0 rounded-full border-0 bg-white/75 p-0 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
+                      >
+                        <a href={organizationCallHref} aria-label={t("callAria")}>
+                          <Phone className="size-[1.15rem]" aria-hidden />
+                        </a>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        tone="light"
+                        disabled
+                        className="size-11 shrink-0 rounded-full border-0 bg-white/75 p-0 text-foreground shadow-sm backdrop-blur-sm hover:bg-white/88"
+                        aria-label={t("callAria")}
+                      >
+                        <Phone className="size-[1.15rem]" aria-hidden />
+                      </Button>
+                    )}
                     {/* TODO: чат — вернуть, когда будет готов */}
                     {/* <Button
                       type="button"

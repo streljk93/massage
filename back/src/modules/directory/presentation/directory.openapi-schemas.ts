@@ -130,6 +130,12 @@ export const specialistListItemSchema = {
       example: 'Ho Chi Minh City',
       description: 'Город активной организации мастера.',
     },
+    phone: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера.',
+    },
     imageUrl: { type: 'string', nullable: true, format: 'uri' },
     imageAlt: { type: 'string', nullable: true },
     metaLine: { type: 'string', example: '~ 1 km | ул. Нгуен Тхай Хок' },
@@ -160,6 +166,17 @@ export const specialistListItemSchema = {
     listingWorkdayEndMinute: {
       ...listingWorkdayMinutesSchema,
       example: 1320,
+    },
+    activeWorkplace: {
+      type: 'object',
+      nullable: true,
+      description:
+        'Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.',
+      required: ['id', 'name'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        name: { type: 'string', example: 'Phú Quốc Spa' },
+      },
     },
   },
 };

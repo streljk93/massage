@@ -10,6 +10,7 @@ export type OrganizationProfileData = {
   lat: number;
   lng: number;
   reviewsCount: number;
+  phone: string | null;
   addressLine: string;
   yearsInBusiness: number;
   /** Уникальные клиенты с бронью в `done` (см. API `clientsCount`). */

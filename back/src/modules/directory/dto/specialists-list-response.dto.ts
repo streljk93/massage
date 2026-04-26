@@ -34,6 +34,10 @@ export type SpecialistListItemDto = {
   /** Адрес приёма с точки зрения клиента — у текущей активной организации мастера. */
   addressLine: string | null;
   city: string | null;
+  /**
+   * Телефон для связи: сначала активный салон, иначе телефон пользователя-мастера.
+   */
+  phone: string | null;
   imageUrl: string | null;
   imageAlt: string | null;
   metaLine: string;
@@ -57,6 +61,13 @@ export type SpecialistListItemDto = {
    */
   listingWorkdayStartMinute: number;
   listingWorkdayEndMinute: number;
+  /**
+   * Текущее место приёма (`activeOrganization`). `null`, если мастер не привязан к салону.
+   */
+  activeWorkplace: {
+    id: string;
+    name: string;
+  } | null;
 };
 
 export type SpecialistsListResponseDto = {

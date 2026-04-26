@@ -41,10 +41,13 @@ const directoryServiceInclude = {
 
 const specialistActiveOrganizationInclude = {
   select: {
+    id: true,
+    name: true,
     addressLine: true,
     city: true,
     latitude: true,
     longitude: true,
+    phone: true,
     listingMetaLine: true,
     listingWorkdayStartMinute: true,
     listingWorkdayEndMinute: true,
@@ -61,7 +64,7 @@ function specialistIncludeForOrgEmployment() {
 
 function specialistListInclude() {
   return {
-    user: { select: { id: true, name: true } },
+    user: { select: { id: true, name: true, phone: true } },
     serviceCategories: serviceCategoryWithLocales,
     /** Услуги каталога с `specialistId` = этот мастер. */
     services: directoryServiceInclude,

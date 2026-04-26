@@ -1227,6 +1227,10 @@ export type SpecialistsListResponses = {
              * Город активной организации мастера.
              */
             city?: string | null;
+            /**
+             * Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера.
+             */
+            phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
             metaLine: string;
@@ -1270,6 +1274,13 @@ export type SpecialistsListResponses = {
              * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
              */
             listingWorkdayEndMinute: number;
+            /**
+             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             */
+            activeWorkplace?: {
+                id: string;
+                name: string;
+            } | null;
         }>;
         cursorPage: {
             /**
@@ -1391,6 +1402,10 @@ export type SpecialistsGetByIdResponses = {
          * Город активной организации мастера.
          */
         city?: string | null;
+        /**
+         * Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера.
+         */
+        phone?: string | null;
         imageUrl?: string | null;
         imageAlt?: string | null;
         metaLine: string;
@@ -1434,6 +1449,13 @@ export type SpecialistsGetByIdResponses = {
          * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
          */
         listingWorkdayEndMinute: number;
+        /**
+         * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+         */
+        activeWorkplace?: {
+            id: string;
+            name: string;
+        } | null;
     };
 };
 
@@ -1865,6 +1887,10 @@ export type PersonalizationGetRecommendationsResponses = {
              * Город активной организации мастера.
              */
             city?: string | null;
+            /**
+             * Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера.
+             */
+            phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
             metaLine: string;
@@ -1908,6 +1934,13 @@ export type PersonalizationGetRecommendationsResponses = {
              * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
              */
             listingWorkdayEndMinute: number;
+            /**
+             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             */
+            activeWorkplace?: {
+                id: string;
+                name: string;
+            } | null;
         }>;
         organizations: Array<{
             id: string;
@@ -2274,6 +2307,10 @@ export type FavoritesListSpecialistsListingResponses = {
              * Город активной организации мастера.
              */
             city?: string | null;
+            /**
+             * Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера.
+             */
+            phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
             metaLine: string;
@@ -2317,6 +2354,13 @@ export type FavoritesListSpecialistsListingResponses = {
              * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
              */
             listingWorkdayEndMinute: number;
+            /**
+             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             */
+            activeWorkplace?: {
+                id: string;
+                name: string;
+            } | null;
         }>;
     };
 };

@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "specialistDetails": {
+        "title": "About",
+        "backAria": "Back to profile",
+        "aboutHeading": "About",
+        "bioEmpty": "No description yet.",
+        "workplaceHeading": "Current workplace",
+        "workplaceOpenAria": "Open salon: {name}"
+      }
+    },
+    "vi": {
+      "specialistDetails": {
+        "title": "Giới thiệu",
+        "backAria": "Quay lại hồ sơ",
+        "aboutHeading": "Giới thiệu",
+        "bioEmpty": "Chưa có mô tả.",
+        "workplaceHeading": "Nơi làm việc",
+        "workplaceOpenAria": "Mở salon: {name}"
+      }
+    },
+    "ru": {
+      "specialistDetails": {
+        "title": "Подробнее",
+        "backAria": "Назад к профилю",
+        "aboutHeading": "О мастере",
+        "bioEmpty": "Описание пока не заполнено.",
+        "workplaceHeading": "Место работы",
+        "workplaceOpenAria": "Открыть салон: {name}"
+      }
+    }
+  }
+}

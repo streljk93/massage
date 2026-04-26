@@ -2742,6 +2742,11 @@
                             "example": "Ho Chi Minh City",
                             "description": "Город активной организации мастера."
                           },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера."
+                          },
                           "imageUrl": {
                             "type": "string",
                             "nullable": true,
@@ -2863,6 +2868,25 @@
                             "minimum": 0,
                             "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
                             "example": 1320
+                          },
+                          "activeWorkplace": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Phú Quốc Spa"
+                              }
+                            }
                           }
                         }
                       }
@@ -3135,6 +3159,11 @@
                       "example": "Ho Chi Minh City",
                       "description": "Город активной организации мастера."
                     },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера."
+                    },
                     "imageUrl": {
                       "type": "string",
                       "nullable": true,
@@ -3256,6 +3285,25 @@
                       "minimum": 0,
                       "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
                       "example": 1320
+                    },
+                    "activeWorkplace": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Phú Quốc Spa"
+                        }
+                      }
                     }
                   }
                 }
@@ -4420,6 +4468,11 @@
                             "example": "Ho Chi Minh City",
                             "description": "Город активной организации мастера."
                           },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера."
+                          },
                           "imageUrl": {
                             "type": "string",
                             "nullable": true,
@@ -4541,6 +4594,25 @@
                             "minimum": 0,
                             "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
                             "example": 1320
+                          },
+                          "activeWorkplace": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Phú Quốc Spa"
+                              }
+                            }
                           }
                         }
                       }
@@ -5609,6 +5681,11 @@
                             "example": "Ho Chi Minh City",
                             "description": "Город активной организации мастера."
                           },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Телефон для звонка клиенту: у активного салона или, если нет, у пользователя мастера."
+                          },
                           "imageUrl": {
                             "type": "string",
                             "nullable": true,
@@ -5730,6 +5807,25 @@
                             "minimum": 0,
                             "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
                             "example": 1320
+                          },
+                          "activeWorkplace": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Phú Quốc Spa"
+                              }
+                            }
                           }
                         }
                       }

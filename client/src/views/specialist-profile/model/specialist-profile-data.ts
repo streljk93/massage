@@ -1,5 +1,11 @@
 import type { BookableServiceOption } from "@/entities/services";
 
+/** Текущий салон приёма (`activeOrganization` в API). */
+export type SpecialistActiveWorkplace = {
+  id: string;
+  name: string;
+};
+
 export type SpecialistCalendarDay = {
   weekdayKey: "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
   dayOfMonth: number;
@@ -25,4 +31,8 @@ export type SpecialistProfileData = {
   /** yyyy-MM-dd витрины по каждому дню (индекс = `calendarDays`). */
   slotCalendarDates: string[];
   services: BookableServiceOption[];
+  /** Телефон салона или мастера (см. API). */
+  phone: string | null;
+  /** Активная организация для приёма; `null`, если не выбрана. */
+  activeWorkplace: SpecialistActiveWorkplace | null;
 };

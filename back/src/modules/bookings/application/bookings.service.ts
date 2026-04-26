@@ -10,6 +10,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { addMinutes, parseISO, subHours } from 'date-fns';
 import type { BookingStatus, Prisma } from '@prisma/client';
+import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
 import {
   BOOKING_START_TOLERANCE_MS,
   checkListingBookability,
@@ -186,31 +187,6 @@ export class BookingsService {
       });
     }
 
-    const endsAt = addMinutes(startsAt, body.durationMinutes);
-
-    const bookability = checkListingBookability(startsAt, endsAt);
-    if (!bookability.ok) {
-      throw new BadRequestException({
-        code: bookability.code,
-        message:
-          bookability.code === 'NOT_GRID_ALIGNED'
-            ? 'startsAt must align to a 30-minute grid in the listing timezone'
-            : 'Booking must fit within the default workday (08:00–22:00) in the listing timezone',
-      });
-    }
-
-    const overlap = await this.bookingsRepository.findActiveOverlap(
-      body.specialistId,
-      startsAt,
-      endsAt,
-    );
-    if (overlap) {
-      throw new BadRequestException({
-        code: 'SLOT_NOT_AVAILABLE',
-        message: 'This time overlaps an existing active booking',
-      });
-    }
-
     let organizationId = specialist.activeOrganizationId;
     if (!organizationId) {
       const employment =
@@ -225,18 +201,60 @@ export class BookingsService {
     }
 
     let graceMinutes = DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES;
+    let listingWorkday = normalizeDirectoryListingWorkdayBounds(
+      undefined,
+      undefined,
+    );
     if (organizationId) {
       const org = await this.prisma.organization.findFirst({
         where: { id: organizationId, deletedAt: null },
-        select: { bookingConfirmationGraceMinutes: true },
+        select: {
+          listingWorkdayStartMinute: true,
+          listingWorkdayEndMinute: true,
+          bookingConfirmationGraceMinutes: true,
+        },
       });
-      if (
-        org &&
-        Number.isFinite(org.bookingConfirmationGraceMinutes) &&
-        org.bookingConfirmationGraceMinutes > 0
-      ) {
-        graceMinutes = org.bookingConfirmationGraceMinutes;
+      if (org) {
+        listingWorkday = normalizeDirectoryListingWorkdayBounds(
+          org.listingWorkdayStartMinute,
+          org.listingWorkdayEndMinute,
+        );
+        if (
+          Number.isFinite(org.bookingConfirmationGraceMinutes) &&
+          org.bookingConfirmationGraceMinutes > 0
+        ) {
+          graceMinutes = org.bookingConfirmationGraceMinutes;
+        }
       }
+    }
+
+    const endsAt = addMinutes(startsAt, body.durationMinutes);
+
+    const bookability = checkListingBookability(
+      startsAt,
+      endsAt,
+      listingWorkday,
+    );
+    if (!bookability.ok) {
+      throw new BadRequestException({
+        code: bookability.code,
+        message:
+          bookability.code === 'NOT_GRID_ALIGNED'
+            ? 'startsAt must align to a 30-minute grid in the listing timezone'
+            : 'Booking must fit within the salon listing workday in the listing timezone',
+      });
+    }
+
+    const overlap = await this.bookingsRepository.findActiveOverlap(
+      body.specialistId,
+      startsAt,
+      endsAt,
+    );
+    if (overlap) {
+      throw new BadRequestException({
+        code: 'SLOT_NOT_AVAILABLE',
+        message: 'This time overlaps an existing active booking',
+      });
     }
 
     const serviceNameSnapshot = pickLocalizedServiceName(service, locale);

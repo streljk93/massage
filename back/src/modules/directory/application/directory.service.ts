@@ -200,6 +200,11 @@ function mapSpecialistRowToListItem(
     loc?.listingWorkdayStartMinute,
     loc?.listingWorkdayEndMinute,
   );
+  const phone =
+    loc?.phone?.trim() || s.user.phone?.trim() || null;
+  const activeWorkplace = loc
+    ? { id: loc.id, name: loc.name.trim() }
+    : null;
   return {
     id: s.id,
     userId: s.userId,
@@ -214,6 +219,7 @@ function mapSpecialistRowToListItem(
     longitude,
     addressLine,
     city,
+    phone,
     imageUrl: s.imageUrl,
     imageAlt: s.imageAlt,
     metaLine,
@@ -224,6 +230,7 @@ function mapSpecialistRowToListItem(
     autoConfirmBookings: s.autoConfirmBookings,
     listingWorkdayStartMinute: listingWd.startMinute,
     listingWorkdayEndMinute: listingWd.endMinute,
+    activeWorkplace,
   };
 }
 

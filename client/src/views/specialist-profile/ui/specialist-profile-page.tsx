@@ -4,7 +4,9 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Building2,
   CalendarOff,
+  ChevronRight,
   Clock,
   Heart,
   Info,
@@ -43,6 +45,7 @@ import {
   resolveSlotLabelInDay,
 } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
+import { telHrefFromDisplayPhone } from "@/shared/lib/tel-href";
 import { notify } from "@/shared/lib/notifications";
 import type { SpecialistProfileData } from "../model/specialist-profile-data";
 import { bookingStartsAtIsoUtc } from "../lib/booking-starts-at";
@@ -85,6 +88,7 @@ export function SpecialistProfilePage({
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
+  const specialistCallHref = telHrefFromDisplayPhone(profile.phone);
   useEffect(() => {
     trackSpecialistProfileView({
       accessToken: accessToken || undefined,
@@ -397,6 +401,35 @@ export function SpecialistProfilePage({
                   {profile.servicesLine}
                 </p>
               ) : null}
+              {profile.activeWorkplace ? (
+                <Link
+                  href={`/organizations/${profile.activeWorkplace.id}`}
+                  aria-label={t("workplaceOpenAria", {
+                    name: profile.activeWorkplace.name,
+                  })}
+                  className={cn(
+                    motion.interactivePressStrong,
+                    "flex max-w-full items-center gap-2 rounded-xl border border-border/50 bg-card/70 px-3 py-2.5 text-left shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  )}
+                >
+                  <Building2
+                    className="size-4 shrink-0 text-primary"
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 text-sm leading-snug">
+                    <span className="text-muted-foreground">
+                      {t("workplaceLabel")}
+                    </span>{" "}
+                    <span className="font-semibold text-foreground">
+                      {profile.activeWorkplace.name}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                </Link>
+              ) : null}
             </div>
 
             {/* Портрет: скругление + лёгкая маска снизу */}
@@ -420,24 +453,46 @@ export function SpecialistProfilePage({
             {/* Панель действий */}
             <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/25 px-3 py-2.5 sm:px-4">
               <Button
-                type="button"
+                asChild
                 variant="secondary"
                 tone="light"
                 className="h-10 gap-2 rounded-full border border-border/45 bg-card px-4 text-sm font-medium hover:bg-card"
               >
-                <Info className="size-4 text-primary" aria-hidden />
-                {t("details")}
+                <Link href={`/specialists/${profile.id}/details`}>
+                  <Info className="size-4 text-primary" aria-hidden />
+                  {t("details")}
+                </Link>
               </Button>
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  tone="light"
-                  className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
-                  aria-label={t("callAria")}
-                >
-                  <Phone className="size-[1.15rem] text-foreground" aria-hidden />
-                </Button>
+                {specialistCallHref != null ? (
+                  <Button
+                    asChild
+                    variant="secondary"
+                    tone="light"
+                    className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
+                  >
+                    <a href={specialistCallHref} aria-label={t("callAria")}>
+                      <Phone
+                        className="size-[1.15rem] text-foreground"
+                        aria-hidden
+                      />
+                    </a>
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    tone="light"
+                    disabled
+                    className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
+                    aria-label={t("callAria")}
+                  >
+                    <Phone
+                      className="size-[1.15rem] text-foreground"
+                      aria-hidden
+                    />
+                  </Button>
+                )}
                 {/* TODO: чат — вернуть, когда будет готов */}
                 {/* <Button
                   type="button"

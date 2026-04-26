@@ -41,14 +41,24 @@ export function isStartAlignedToListingGrid(startsAt: Date): boolean {
   );
 }
 
+/** Минуты с полуночи в `LISTING_DISPLAY_TZ` — как у витрины (`listingWorkday*` организации). */
+export type ListingBookabilityWorkdayMinutes = {
+  startMinute: number;
+  endMinute: number;
+};
+
 export type ListingBookabilityCheck =
   | { ok: true }
   | { ok: false; code: 'NOT_GRID_ALIGNED' | 'OUTSIDE_WORKDAY' };
 
-/** Услуга должна укладываться в дефолтный рабочий день одной календарной даты (витрина). */
+/**
+ * Услуга должна укладываться в рабочий день одной календарной даты (витрина).
+ * `workday` — границы из организации мастера; без него — {@link DEFAULT_WORKDAY}.
+ */
 export function checkListingBookability(
   startsAt: Date,
   endsAt: Date,
+  workday?: ListingBookabilityWorkdayMinutes,
 ): ListingBookabilityCheck {
   if (!isStartAlignedToListingGrid(startsAt)) {
     return { ok: false, code: 'NOT_GRID_ALIGNED' };
@@ -65,8 +75,9 @@ export function checkListingBookability(
   const startMin = zS.getHours() * 60 + zS.getMinutes();
   const endMin = zE.getHours() * 60 + zE.getMinutes();
   const minAllowed =
+    workday?.startMinute ??
     DEFAULT_WORKDAY.startHour * 60 + DEFAULT_WORKDAY.startMinute;
-  const maxEndMin = DEFAULT_WORKDAY.endHour * 60;
+  const maxEndMin = workday?.endMinute ?? DEFAULT_WORKDAY.endHour * 60;
   if (startMin < minAllowed || endMin > maxEndMin) {
     return { ok: false, code: 'OUTSIDE_WORKDAY' };
   }

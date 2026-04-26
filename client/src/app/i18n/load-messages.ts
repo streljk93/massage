@@ -33,8 +33,14 @@ import {
   profileThemePageI18n,
 } from "@/views/profile";
 import { entityReviewsPageI18n } from "@/views/entity-reviews";
-import { organizationProfilePageI18n } from "@/views/organization-profile";
-import { specialistProfilePageI18n } from "@/views/specialist-profile";
+import {
+  organizationDetailsPageI18n,
+  organizationProfilePageI18n,
+} from "@/views/organization-profile";
+import {
+  specialistDetailsPageI18n,
+  specialistProfilePageI18n,
+} from "@/views/specialist-profile";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
 import {
   homeBottomNavI18n,
@@ -79,8 +85,10 @@ const bundles: ColocatedI18nBundle[] = [
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,
+  specialistDetailsPageI18n,
   entityReviewsPageI18n,
   organizationProfilePageI18n,
+  organizationDetailsPageI18n,
   organizationCardI18n,
   specialistCardI18n,
 ];
