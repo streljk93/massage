@@ -3,6 +3,7 @@
     "en": {
       "businessAppNav": {
         "barLabel": "Business app navigation",
+        "drawerTitle": "Business area",
         "dashboard": "Dashboard",
         "bookings": "Bookings",
         "profile": "Profile"
@@ -11,6 +12,7 @@
     "vi": {
       "businessAppNav": {
         "barLabel": "Điều hướng khu vực doanh nghiệp",
+        "drawerTitle": "Khu vực doanh nghiệp",
         "dashboard": "Bảng điều khiển",
         "bookings": "Lịch hẹn",
         "profile": "Hồ sơ"
@@ -19,6 +21,7 @@
     "ru": {
       "businessAppNav": {
         "barLabel": "Навигация в кабинете для бизнеса",
+        "drawerTitle": "Бизнес-кабинет",
         "dashboard": "Панель",
         "bookings": "Записи",
         "profile": "Профиль"

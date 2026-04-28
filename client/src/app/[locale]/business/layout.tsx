@@ -5,7 +5,7 @@ type Props = {
 };
 
 /**
- * Кабинет бизнеса: каркас, полоса «онбординг не завершён» и нижняя навигация после полной настройки.
+ * Кабинет бизнеса: каркас, полоса «онбординг не завершён» и меню в шапке (дровер) после полной настройки.
  */
 export default function BusinessLayout({ children }: Props) {
   return <BusinessLayerChrome>{children}</BusinessLayerChrome>;

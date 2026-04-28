@@ -8,6 +8,8 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { Button, UserAvatar } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 import { localeFlagEmoji } from "@/shared/lib";
+import { BusinessCabinetNavDrawerTrigger } from "./business-cabinet-nav-drawer";
+import { useCabinetHeaderLeadRole } from "./business-cabinet-nav-context";
 
 function initialsFromUser(user: {
   name?: string | null;
@@ -21,9 +23,20 @@ function initialsFromUser(user: {
   return raw.slice(0, 2).toUpperCase();
 }
 
+/** Скелет под кнопку меню во время загрузки — та же метрика, без «назад». */
+function CabinetMenuLeadSkeleton() {
+  return (
+    <div
+      className="size-9 shrink-0 rounded-full border border-border/40 bg-muted/45 animate-pulse"
+      aria-hidden
+    />
+  );
+}
+
 export type BusinessScreenHeaderProps = {
   title: string;
   titleVariant?: "greeting" | "section";
+  /** Сохраняется для совместимости; заголовок страницы всегда в строке рядом с меню */
   showHeadline?: boolean;
   avatarAlt: string;
   avatarFallback: string;
@@ -31,7 +44,8 @@ export type BusinessScreenHeaderProps = {
 };
 
 /**
- * Шапка кабинета бизнеса: кнопка «обратно в приложение» на главную, без «Стать специалистом».
+ * Шапка кабинета: слева — меню (или скелет при загрузке) / для гостя «назад в приложение»,
+ * рядом — заголовок страницы. «Назад» для авторизованных только внутри дровера.
  */
 export function BusinessScreenHeader({
   title,
@@ -46,6 +60,7 @@ export function BusinessScreenHeader({
   const tLocale = useTranslations("locale");
   const locale = useLocale() as AppLocale;
   const { data: session, status } = useSession();
+  const leadRole = useCabinetHeaderLeadRole();
 
   const isAuthed = status === "authenticated" && !!session?.user;
   const profileHref = isAuthed ? "/profile" : "/login";
@@ -79,42 +94,55 @@ export function BusinessScreenHeader({
     }
   }
 
+  const inlineToolbarTitle =
+    titleVariant === "section" || showHeadline;
+
   return (
-    <header
-      className={cn("flex items-start justify-between gap-3", className)}
-    >
-      <div className={cn("min-w-0 flex-1", showHeadline && "space-y-1")}>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <Button
-            variant="secondary"
-            tone="light"
-            asChild
+    <header className={cn("flex items-center justify-between gap-3", className)}>
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center">
+          {leadRole === "menu" ? <BusinessCabinetNavDrawerTrigger /> : null}
+          {leadRole === "menuPending" ? <CabinetMenuLeadSkeleton /> : null}
+          {leadRole === "back" ? (
+            <Button
+              variant="secondary"
+              tone="light"
+              asChild
+              className={cn(
+                motion.interactivePress,
+                "h-9 min-h-9 max-h-9 shrink-0 gap-1.5 rounded-full border border-border/60 px-3 py-0 text-xs font-medium leading-none",
+              )}
+            >
+              <Link
+                href="/"
+                className="inline-flex h-full min-w-0 max-w-full items-center justify-center gap-1.5"
+                title={tBiz("backToAppAria")}
+              >
+                <ArrowLeft
+                  className="size-4 shrink-0 opacity-80"
+                  strokeWidth={2.25}
+                  aria-hidden
+                />
+                <span className="truncate">{tBiz("backToApp")}</span>
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+        {inlineToolbarTitle ? (
+          <h1
             className={cn(
-              motion.interactivePress,
-              "h-10 min-h-10 max-h-10 max-w-full shrink-0 gap-1.5 rounded-full border border-border/60 px-3 py-0 text-xs font-medium leading-none",
+              "min-w-0 flex-1 text-pretty font-heading font-bold tracking-tight text-foreground",
+              titleVariant === "greeting" &&
+                "text-base leading-snug sm:text-lg",
+              titleVariant === "section" &&
+                "text-xl leading-tight sm:text-2xl",
             )}
           >
-            <Link
-              href="/"
-              className="inline-flex h-full min-w-0 max-w-full items-center justify-center gap-1.5"
-              title={tBiz("backToAppAria")}
-            >
-              <ArrowLeft
-                className="size-4 shrink-0 opacity-80"
-                strokeWidth={2.25}
-                aria-hidden
-              />
-              <span className="truncate">{tBiz("backToApp")}</span>
-            </Link>
-          </Button>
-        </div>
-        {showHeadline ? (
-          <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {headline}
           </h1>
         ) : null}
       </div>
-      <div className="relative shrink-0 self-start">
+      <div className="relative shrink-0">
         <span
           className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
           role="img"

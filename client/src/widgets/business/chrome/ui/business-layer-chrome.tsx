@@ -12,7 +12,10 @@ import { createBrowserSdkClient, specialistsCabinetGetSpecialistOnboarding } fro
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
-import { BusinessAppBottomNav } from "./business-app-bottom-nav";
+import {
+  BusinessCabinetHeaderProvider,
+  type CabinetHeaderLeadRole,
+} from "./business-cabinet-nav-context";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
@@ -28,7 +31,7 @@ type BusinessLayerChromeProps = {
 
 /**
  * Кабинет бизнеса: при незавершённом онбординге — полоса с переходом в настройку;
- * нижняя навигация после `onboardingStep === 6`.
+ * боковое меню в шапке (дровер) после `onboardingStep === 6`.
  */
 export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
   const pathname = usePathname();
@@ -66,6 +69,25 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
       ? isSpecialistOnboardingComplete(onboard ?? null)
       : false;
 
+  const headerLead = useMemo((): CabinetHeaderLeadRole => {
+    if (status === "loading") {
+      return "menuPending";
+    }
+    if (status === "unauthenticated") {
+      return "back";
+    }
+    if (status === "authenticated") {
+      if (!accessToken) {
+        return "menuPending";
+      }
+      if (!isFetched) {
+        return "menuPending";
+      }
+      return "menu";
+    }
+    return "back";
+  }, [status, accessToken, isFetched]);
+
   const showIncompleteStrip =
     ready &&
     status === "authenticated" &&
@@ -80,39 +102,36 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
     return `/business/setup/${step}` as const;
   }, [onboard?.onboardingStep]);
 
-  const showMainNav = setupComplete;
-
   return (
-    <div className="flex min-h-screen flex-col bg-surface-light">
-      {showIncompleteStrip ? (
-        <div
-          className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center"
-          role="status"
-        >
-          <p className="text-pretty text-sm text-foreground/90">
-            {t("incompleteBanner")}
-          </p>
-          <Link
-            href={continueSetupHref}
-            className="mt-1 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
+    <BusinessCabinetHeaderProvider lead={headerLead}>
+      <div className="flex min-h-screen flex-col bg-surface-light">
+        {showIncompleteStrip ? (
+          <div
+            className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center"
+            role="status"
           >
-            {t("reminderCta")}
-          </Link>
-        </div>
-      ) : null}
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col",
-          showMainNav
-            ? "pb-[calc(4.25rem+env(safe-area-inset-bottom))]"
-            : isSetupPath(pathname)
+            <p className="text-pretty text-sm text-foreground/90">
+              {t("incompleteBanner")}
+            </p>
+            <Link
+              href={continueSetupHref}
+              className="mt-1 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {t("reminderCta")}
+            </Link>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col",
+            isSetupPath(pathname)
               ? "pb-0"
               : "pb-[max(1rem,env(safe-area-inset-bottom))]",
-        )}
-      >
-        {children}
+          )}
+        >
+          {children}
+        </div>
       </div>
-      {showMainNav ? <BusinessAppBottomNav /> : null}
-    </div>
+    </BusinessCabinetHeaderProvider>
   );
 }
