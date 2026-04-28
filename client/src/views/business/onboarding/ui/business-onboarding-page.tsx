@@ -1,7 +1,7 @@
 import { Building2, CircleCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { BusinessEmptyState } from "@/entities/business";
-import { BusinessScreenHeader } from "@/widgets/business/shell";
+import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { cn } from "@/shared/lib";
 
 export async function BusinessOnboardingPage() {

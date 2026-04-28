@@ -78,6 +78,17 @@ export type DevRecomputePreferenceProfileResponseSwaggerDto = {
     };
 };
 
+export type DevWorkplaceJoinReviewSwaggerDto = {
+    /**
+     * Идентификатор заявки (`SpecialistWorkplaceJoinRequest.id`), статус `pending`
+     */
+    requestId: string;
+    /**
+     * accept — принять в коллектив; reject — отклонить; block — отклонить и запретить повторные заявки мастера в эту организацию.
+     */
+    decision: 'accept' | 'reject' | 'block';
+};
+
 export type AddressSuggestionsData = {
     body?: never;
     path?: never;
@@ -784,16 +795,16 @@ export type UsersPatchMeResponses = {
 
 export type UsersPatchMeResponse = UsersPatchMeResponses[keyof UsersPatchMeResponses];
 
-export type UsersPatchSpecialistActiveOrganizationData = {
+export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
         organizationId: string;
     };
     path?: never;
     query?: never;
-    url: '/users/me/specialist/active-organization';
+    url: '/specialists/me/active-organization';
 };
 
-export type UsersPatchSpecialistActiveOrganizationErrors = {
+export type SpecialistsCabinetPatchSpecialistActiveOrganizationErrors = {
     /**
      * Нет активного членства в организации
      */
@@ -808,7 +819,7 @@ export type UsersPatchSpecialistActiveOrganizationErrors = {
     404: unknown;
 };
 
-export type UsersPatchSpecialistActiveOrganizationResponses = {
+export type SpecialistsCabinetPatchSpecialistActiveOrganizationResponses = {
     200: {
         activeOrganizationId: string;
         /**
@@ -818,23 +829,23 @@ export type UsersPatchSpecialistActiveOrganizationResponses = {
     };
 };
 
-export type UsersPatchSpecialistActiveOrganizationResponse = UsersPatchSpecialistActiveOrganizationResponses[keyof UsersPatchSpecialistActiveOrganizationResponses];
+export type SpecialistsCabinetPatchSpecialistActiveOrganizationResponse = SpecialistsCabinetPatchSpecialistActiveOrganizationResponses[keyof SpecialistsCabinetPatchSpecialistActiveOrganizationResponses];
 
-export type UsersPostEnsureSpecialistData = {
+export type SpecialistsCabinetPostEnsureSpecialistData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/users/me/specialist/ensure';
+    url: '/specialists/me/ensure';
 };
 
-export type UsersPostEnsureSpecialistErrors = {
+export type SpecialistsCabinetPostEnsureSpecialistErrors = {
     /**
      * Нет или невалидный access token
      */
     401: unknown;
 };
 
-export type UsersPostEnsureSpecialistResponses = {
+export type SpecialistsCabinetPostEnsureSpecialistResponses = {
     200: {
         /**
          * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
@@ -849,23 +860,23 @@ export type UsersPostEnsureSpecialistResponses = {
     };
 };
 
-export type UsersPostEnsureSpecialistResponse = UsersPostEnsureSpecialistResponses[keyof UsersPostEnsureSpecialistResponses];
+export type SpecialistsCabinetPostEnsureSpecialistResponse = SpecialistsCabinetPostEnsureSpecialistResponses[keyof SpecialistsCabinetPostEnsureSpecialistResponses];
 
-export type UsersGetSpecialistOnboardingData = {
+export type SpecialistsCabinetGetSpecialistOnboardingData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/users/me/specialist/onboarding';
+    url: '/specialists/me/onboarding';
 };
 
-export type UsersGetSpecialistOnboardingErrors = {
+export type SpecialistsCabinetGetSpecialistOnboardingErrors = {
     /**
      * Нет или невалидный access token
      */
     401: unknown;
 };
 
-export type UsersGetSpecialistOnboardingResponses = {
+export type SpecialistsCabinetGetSpecialistOnboardingResponses = {
     200: {
         /**
          * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
@@ -880,9 +891,9 @@ export type UsersGetSpecialistOnboardingResponses = {
     };
 };
 
-export type UsersGetSpecialistOnboardingResponse = UsersGetSpecialistOnboardingResponses[keyof UsersGetSpecialistOnboardingResponses];
+export type SpecialistsCabinetGetSpecialistOnboardingResponse = SpecialistsCabinetGetSpecialistOnboardingResponses[keyof SpecialistsCabinetGetSpecialistOnboardingResponses];
 
-export type UsersPatchSpecialistOnboardingProfileData = {
+export type SpecialistsCabinetPatchSpecialistProfileData = {
     body: {
         name?: string;
         phone?: string | unknown;
@@ -900,10 +911,10 @@ export type UsersPatchSpecialistOnboardingProfileData = {
     };
     path?: never;
     query?: never;
-    url: '/users/me/specialist/profile';
+    url: '/specialists/me/profile';
 };
 
-export type UsersPatchSpecialistOnboardingProfileErrors = {
+export type SpecialistsCabinetPatchSpecialistProfileErrors = {
     /**
      * Нет или невалидный access token
      */
@@ -914,7 +925,7 @@ export type UsersPatchSpecialistOnboardingProfileErrors = {
     404: unknown;
 };
 
-export type UsersPatchSpecialistOnboardingProfileResponses = {
+export type SpecialistsCabinetPatchSpecialistProfileResponses = {
     200: {
         /**
          * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
@@ -929,16 +940,16 @@ export type UsersPatchSpecialistOnboardingProfileResponses = {
     };
 };
 
-export type UsersPatchSpecialistOnboardingProfileResponse = UsersPatchSpecialistOnboardingProfileResponses[keyof UsersPatchSpecialistOnboardingProfileResponses];
+export type SpecialistsCabinetPatchSpecialistProfileResponse = SpecialistsCabinetPatchSpecialistProfileResponses[keyof SpecialistsCabinetPatchSpecialistProfileResponses];
 
-export type UsersPostSpecialistOnboardingCompleteData = {
+export type SpecialistsCabinetPostSpecialistOnboardingCompleteData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/users/me/specialist/onboarding/complete';
+    url: '/specialists/me/onboarding/complete';
 };
 
-export type UsersPostSpecialistOnboardingCompleteErrors = {
+export type SpecialistsCabinetPostSpecialistOnboardingCompleteErrors = {
     /**
      * Нет или невалидный access token
      */
@@ -953,7 +964,7 @@ export type UsersPostSpecialistOnboardingCompleteErrors = {
     409: unknown;
 };
 
-export type UsersPostSpecialistOnboardingCompleteResponses = {
+export type SpecialistsCabinetPostSpecialistOnboardingCompleteResponses = {
     200: {
         /**
          * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
@@ -968,219 +979,9 @@ export type UsersPostSpecialistOnboardingCompleteResponses = {
     };
 };
 
-export type UsersPostSpecialistOnboardingCompleteResponse = UsersPostSpecialistOnboardingCompleteResponses[keyof UsersPostSpecialistOnboardingCompleteResponses];
+export type SpecialistsCabinetPostSpecialistOnboardingCompleteResponse = SpecialistsCabinetPostSpecialistOnboardingCompleteResponses[keyof SpecialistsCabinetPostSpecialistOnboardingCompleteResponses];
 
-export type UsersPostJoinOnboardingOrganizationData = {
-    body: {
-        organizationId: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/users/me/specialist/onboarding/join-organization';
-};
-
-export type UsersPostJoinOnboardingOrganizationErrors = {
-    /**
-     * Нет или невалидный access token
-     */
-    401: unknown;
-    /**
-     * Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)
-     */
-    403: unknown;
-    /**
-     * Профиля специалиста или организации нет
-     */
-    404: unknown;
-    /**
-     * Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член организации (ALREADY_ORGANIZATION_MEMBER)
-     */
-    409: unknown;
-};
-
-export type UsersPostJoinOnboardingOrganizationResponses = {
-    200: {
-        /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
-         */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
-    };
-};
-
-export type UsersPostJoinOnboardingOrganizationResponse = UsersPostJoinOnboardingOrganizationResponses[keyof UsersPostJoinOnboardingOrganizationResponses];
-
-export type UsersGetWorkplaceJoinRequestsForOrganizationData = {
-    body?: never;
-    path?: never;
-    query?: {
-        status?: 'pending' | 'rejected' | 'blocked' | 'accepted' | 'withdrawn' | 'all';
-    };
-    url: '/users/me/organizations/{organizationId}/workplace-join-requests';
-};
-
-export type UsersGetWorkplaceJoinRequestsForOrganizationErrors = {
-    /**
-     * Невалидный query (status)
-     */
-    400: unknown;
-    /**
-     * Нет или невалидный access token
-     */
-    401: unknown;
-    /**
-     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
-     */
-    403: unknown;
-    /**
-     * Организация не найдена
-     */
-    404: unknown;
-};
-
-export type UsersGetWorkplaceJoinRequestsForOrganizationResponses = {
-    200: {
-        requests: Array<{
-            id: string;
-            specialistId: string;
-            organizationId: string;
-            status: 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'blocked';
-            createdAt: string;
-            updatedAt: string;
-            resolvedAt: string | null;
-            specialist: {
-                id: string;
-                userId: string;
-                user: {
-                    id: string;
-                    name: string;
-                    email: string;
-                };
-            };
-        }>;
-    };
-};
-
-export type UsersGetWorkplaceJoinRequestsForOrganizationResponse = UsersGetWorkplaceJoinRequestsForOrganizationResponses[keyof UsersGetWorkplaceJoinRequestsForOrganizationResponses];
-
-export type UsersPostReviewWorkplaceJoinRequestData = {
-    body: {
-        /**
-         * accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию.
-         */
-        decision: 'accept' | 'reject' | 'block';
-    };
-    path?: never;
-    query?: never;
-    url: '/users/me/organizations/{organizationId}/workplace-join-requests/{requestId}/review';
-};
-
-export type UsersPostReviewWorkplaceJoinRequestErrors = {
-    /**
-     * Невалидное тело (decision)
-     */
-    400: unknown;
-    /**
-     * Нет или невалидный access token
-     */
-    401: unknown;
-    /**
-     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
-     */
-    403: unknown;
-    /**
-     * Нет pending-заявки с этим id для организации (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)
-     */
-    404: unknown;
-};
-
-export type UsersPostReviewWorkplaceJoinRequestResponses = {
-    200: {
-        ok: boolean;
-        decision: 'accept' | 'reject' | 'block';
-    };
-};
-
-export type UsersPostReviewWorkplaceJoinRequestResponse = UsersPostReviewWorkplaceJoinRequestResponses[keyof UsersPostReviewWorkplaceJoinRequestResponses];
-
-export type UsersPostCreateOnboardingOrganizationData = {
-    /**
-     * Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь).
-     */
-    body: {
-        name: string;
-        /**
-         * Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно).
-         */
-        placeReference?: {
-            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
-            placeId: string;
-        };
-        addressLine?: string;
-        city?: string | null;
-        latitude?: number;
-        longitude?: number;
-        description?: string;
-        phone?: string | null;
-        email?: string | null;
-        website?: string | null;
-        yearsInBusiness?: number | null;
-        imageUrl?: string | null;
-        imageAlt?: string | null;
-        serviceCategoryIds: Array<string>;
-    };
-    path?: never;
-    query?: {
-        /**
-         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
-         */
-        locale?: 'en' | 'vi' | 'ru';
-    };
-    url: '/users/me/specialist/onboarding/create-organization';
-};
-
-export type UsersPostCreateOnboardingOrganizationErrors = {
-    /**
-     * Категории или валидация тела
-     */
-    400: unknown;
-    /**
-     * Нет или невалидный access token
-     */
-    401: unknown;
-    /**
-     * Профиля специалиста нет
-     */
-    404: unknown;
-    /**
-     * Уже выбрана организация
-     */
-    409: unknown;
-};
-
-export type UsersPostCreateOnboardingOrganizationResponses = {
-    200: {
-        /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
-         */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
-    };
-};
-
-export type UsersPostCreateOnboardingOrganizationResponse = UsersPostCreateOnboardingOrganizationResponses[keyof UsersPostCreateOnboardingOrganizationResponses];
-
-export type UsersPostSpecialistPersonalServiceData = {
+export type SpecialistsCabinetPostSpecialistPersonalServiceData = {
     body: {
         categoryId: string;
         description?: string;
@@ -1197,10 +998,10 @@ export type UsersPostSpecialistPersonalServiceData = {
          */
         locale?: 'en' | 'vi' | 'ru';
     };
-    url: '/users/me/specialist/services';
+    url: '/specialists/me/services';
 };
 
-export type UsersPostSpecialistPersonalServiceErrors = {
+export type SpecialistsCabinetPostSpecialistPersonalServiceErrors = {
     /**
      * Категория или валюта
      */
@@ -1215,13 +1016,13 @@ export type UsersPostSpecialistPersonalServiceErrors = {
     404: unknown;
 };
 
-export type UsersPostSpecialistPersonalServiceResponses = {
+export type SpecialistsCabinetPostSpecialistPersonalServiceResponses = {
     200: {
         serviceId: string;
     };
 };
 
-export type UsersPostSpecialistPersonalServiceResponse = UsersPostSpecialistPersonalServiceResponses[keyof UsersPostSpecialistPersonalServiceResponses];
+export type SpecialistsCabinetPostSpecialistPersonalServiceResponse = SpecialistsCabinetPostSpecialistPersonalServiceResponses[keyof SpecialistsCabinetPostSpecialistPersonalServiceResponses];
 
 export type BookingsListData = {
     body?: never;
@@ -1452,7 +1253,7 @@ export type SpecialistBookingsConfirmPendingData = {
         id: unknown;
     };
     query?: never;
-    url: '/specialist/bookings/{id}/confirm';
+    url: '/bookings/me/{id}/confirm';
 };
 
 export type SpecialistBookingsConfirmPendingErrors = {
@@ -1498,7 +1299,7 @@ export type SpecialistBookingsStartVisitData = {
         id: unknown;
     };
     query?: never;
-    url: '/specialist/bookings/{id}/start-visit';
+    url: '/bookings/me/{id}/start-visit';
 };
 
 export type SpecialistBookingsStartVisitErrors = {
@@ -1533,6 +1334,344 @@ export type SpecialistBookingsStartVisitResponses = {
 };
 
 export type SpecialistBookingsStartVisitResponse = SpecialistBookingsStartVisitResponses[keyof SpecialistBookingsStartVisitResponses];
+
+export type OrganizationsListData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Долгота центра круга (вместе с `radiusM`, `radiusLat`).
+         */
+        radiusLng?: unknown;
+        /**
+         * Широта центра круга (вместе с `radiusM`, `radiusLng`).
+         */
+        radiusLat?: unknown;
+        /**
+         * Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.
+         */
+        radiusM?: number;
+        /**
+         * Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).
+         */
+        categories?: unknown;
+        /**
+         * Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.
+         */
+        q?: unknown;
+        /**
+         * Slug большой категории (`MajorServiceCategory.slug`), напр. massage.
+         */
+        majorSlug?: unknown;
+        /**
+         * Размер страницы (1–100, по умолчанию 20).
+         */
+        limit?: number;
+        /**
+         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.
+         */
+        cursor?: unknown;
+        /**
+         * `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.
+         */
+        sort?: 'recommended' | 'popularity' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations';
+};
+
+export type OrganizationsListErrors = {
+    /**
+     * Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса
+     */
+    400: unknown;
+};
+
+export type OrganizationsListResponses = {
+    200: {
+        organizations: Array<{
+            id: string;
+            slug: string;
+            name: string;
+            description?: string | null;
+            city?: string | null;
+            addressLine: string | null;
+            phone: string | null;
+            yearsInBusiness: number | null;
+            latitude?: number | null;
+            longitude?: number | null;
+            ratingAverage: number;
+            rating: number;
+            reviewsCount: number;
+            imageUrl?: string | null;
+            imageAlt?: string | null;
+            metaLine: string;
+            servicesLine: string;
+            categories: Array<{
+                slug: string;
+                shortName: string;
+            }>;
+            /**
+             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             */
+            slotGroups: Array<{
+                /**
+                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
+                 */
+                calendarDate: string;
+                /**
+                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 */
+                times: Array<string>;
+            }>;
+            specialistOccupiedSlotKeys: Array<{
+                specialistId: string;
+                /**
+                 * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
+                 */
+                keys: Array<string>;
+            }>;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayStartMinute: number;
+            /**
+             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
+             */
+            listingWorkdayEndMinute: number;
+        }>;
+        cursorPage: {
+            /**
+             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
+             */
+            nextCursor: string | null;
+            /**
+             * Есть ли ещё элементы после текущей страницы.
+             */
+            hasMore: boolean;
+        };
+    };
+};
+
+export type OrganizationsListResponse = OrganizationsListResponses[keyof OrganizationsListResponses];
+
+export type OrganizationsCabinetPostCreateOrganizationData = {
+    /**
+     * Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь).
+     */
+    body: {
+        name: string;
+        /**
+         * Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно).
+         */
+        placeReference?: {
+            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+            placeId: string;
+        };
+        addressLine?: string;
+        city?: string | null;
+        latitude?: number;
+        longitude?: number;
+        description?: string;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        yearsInBusiness?: number | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        serviceCategoryIds: Array<string>;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations';
+};
+
+export type OrganizationsCabinetPostCreateOrganizationErrors = {
+    /**
+     * Категории или валидация тела
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+    /**
+     * Уже выбрана активная организация
+     */
+    409: unknown;
+};
+
+export type OrganizationsCabinetPostCreateOrganizationResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type OrganizationsCabinetPostCreateOrganizationResponse = OrganizationsCabinetPostCreateOrganizationResponses[keyof OrganizationsCabinetPostCreateOrganizationResponses];
+
+export type OrganizationsCabinetPostRequestWorkplaceJoinData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/workplace-requests';
+};
+
+export type OrganizationsCabinetPostRequestWorkplaceJoinErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)
+     */
+    403: unknown;
+    /**
+     * Профиля специалиста или организации нет
+     */
+    404: unknown;
+    /**
+     * Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член (ALREADY_ORGANIZATION_MEMBER)
+     */
+    409: unknown;
+};
+
+export type OrganizationsCabinetPostRequestWorkplaceJoinResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type OrganizationsCabinetPostRequestWorkplaceJoinResponse = OrganizationsCabinetPostRequestWorkplaceJoinResponses[keyof OrganizationsCabinetPostRequestWorkplaceJoinResponses];
+
+export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: {
+        status?: 'pending' | 'rejected' | 'blocked' | 'accepted' | 'withdrawn' | 'all';
+    };
+    url: '/organizations/{organizationId}/workplace-join-requests';
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors = {
+    /**
+     * Невалидный query (status)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses = {
+    200: {
+        requests: Array<{
+            id: string;
+            specialistId: string;
+            organizationId: string;
+            status: 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'blocked';
+            createdAt: string;
+            updatedAt: string;
+            resolvedAt: string | null;
+            specialist: {
+                id: string;
+                userId: string;
+                user: {
+                    id: string;
+                    name: string;
+                    email: string;
+                };
+            };
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponse = OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses[keyof OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses];
+
+export type OrganizationsCabinetPostReviewWorkplaceJoinRequestData = {
+    body: {
+        /**
+         * accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию.
+         */
+        decision: 'accept' | 'reject' | 'block';
+    };
+    path: {
+        requestId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review';
+};
+
+export type OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors = {
+    /**
+     * Невалидное тело (decision)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Нет pending-заявки (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses = {
+    200: {
+        ok: boolean;
+        decision: 'accept' | 'reject' | 'block';
+    };
+};
+
+export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponse = OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses[keyof OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses];
 
 export type CatalogGetMajorCategoriesData = {
     body?: never;
@@ -1995,129 +2134,6 @@ export type SpecialistsGetByIdResponses = {
 };
 
 export type SpecialistsGetByIdResponse = SpecialistsGetByIdResponses[keyof SpecialistsGetByIdResponses];
-
-export type OrganizationsListData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Долгота центра круга (вместе с `radiusM`, `radiusLat`).
-         */
-        radiusLng?: unknown;
-        /**
-         * Широта центра круга (вместе с `radiusM`, `radiusLng`).
-         */
-        radiusLat?: unknown;
-        /**
-         * Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.
-         */
-        radiusM?: number;
-        /**
-         * Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).
-         */
-        categories?: unknown;
-        /**
-         * Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.
-         */
-        q?: unknown;
-        /**
-         * Slug большой категории (`MajorServiceCategory.slug`), напр. massage.
-         */
-        majorSlug?: unknown;
-        /**
-         * Размер страницы (1–100, по умолчанию 20).
-         */
-        limit?: number;
-        /**
-         * Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.
-         */
-        cursor?: unknown;
-        /**
-         * `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.
-         */
-        sort?: 'recommended' | 'popularity' | 'newest' | 'price_asc' | 'price_desc' | 'rating';
-        /**
-         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
-         */
-        locale?: 'en' | 'vi' | 'ru';
-    };
-    url: '/organizations';
-};
-
-export type OrganizationsListErrors = {
-    /**
-     * Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса
-     */
-    400: unknown;
-};
-
-export type OrganizationsListResponses = {
-    200: {
-        organizations: Array<{
-            id: string;
-            slug: string;
-            name: string;
-            description?: string | null;
-            city?: string | null;
-            addressLine: string | null;
-            phone: string | null;
-            yearsInBusiness: number | null;
-            latitude?: number | null;
-            longitude?: number | null;
-            ratingAverage: number;
-            rating: number;
-            reviewsCount: number;
-            imageUrl?: string | null;
-            imageAlt?: string | null;
-            metaLine: string;
-            servicesLine: string;
-            categories: Array<{
-                slug: string;
-                shortName: string;
-            }>;
-            /**
-             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
-             */
-            slotGroups: Array<{
-                /**
-                 * Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются.
-                 */
-                calendarDate: string;
-                /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
-                 */
-                times: Array<string>;
-            }>;
-            specialistOccupiedSlotKeys: Array<{
-                specialistId: string;
-                /**
-                 * Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины.
-                 */
-                keys: Array<string>;
-            }>;
-            /**
-             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
-             */
-            listingWorkdayStartMinute: number;
-            /**
-             * Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).
-             */
-            listingWorkdayEndMinute: number;
-        }>;
-        cursorPage: {
-            /**
-             * Передать как `cursor` в следующем запросе, если `hasMore: true`.
-             */
-            nextCursor: string | null;
-            /**
-             * Есть ли ещё элементы после текущей страницы.
-             */
-            hasMore: boolean;
-        };
-    };
-};
-
-export type OrganizationsListResponse = OrganizationsListResponses[keyof OrganizationsListResponses];
 
 export type OrganizationsListReviewsData = {
     body?: never;
@@ -2668,6 +2684,25 @@ export type DevPersonalizationRecomputeProfileResponses = {
 };
 
 export type DevPersonalizationRecomputeProfileResponse = DevPersonalizationRecomputeProfileResponses[keyof DevPersonalizationRecomputeProfileResponses];
+
+export type DevWorkplaceJoinReviewPostReviewData = {
+    body: DevWorkplaceJoinReviewSwaggerDto;
+    path?: never;
+    query?: never;
+    url: '/dev/workplace-join-requests/review';
+};
+
+export type DevWorkplaceJoinReviewPostReviewResponses = {
+    /**
+     * Решение записано
+     */
+    200: {
+        ok?: boolean;
+        decision?: string;
+    };
+};
+
+export type DevWorkplaceJoinReviewPostReviewResponse = DevWorkplaceJoinReviewPostReviewResponses[keyof DevWorkplaceJoinReviewPostReviewResponses];
 
 export type FavoritesListData = {
     body?: never;

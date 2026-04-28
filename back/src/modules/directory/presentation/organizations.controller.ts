@@ -51,7 +51,7 @@ import {
 
 type AuthedOrGuest = Request & { user?: AuthenticatedUser };
 
-@ApiTags('organizations')
+@ApiTags('directory-organizations')
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly directoryService: DirectoryService) {}

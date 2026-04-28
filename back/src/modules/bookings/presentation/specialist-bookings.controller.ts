@@ -29,12 +29,12 @@ import {
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
 
-@ApiTags('bookings', 'specialist')
-@Controller('specialist/bookings')
+@ApiTags('bookings')
+@Controller('bookings')
 export class SpecialistBookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
-  @Post(':id/confirm')
+  @Post('me/:id/confirm')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
@@ -58,7 +58,7 @@ export class SpecialistBookingsController {
     return this.bookingsService.confirmPendingBySpecialist(req.user.id, id);
   }
 
-  @Post(':id/start-visit')
+  @Post('me/:id/start-visit')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')

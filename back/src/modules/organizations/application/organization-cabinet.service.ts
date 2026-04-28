@@ -12,290 +12,22 @@ import type { ApiLocale } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { AddressPersistenceService } from '../../address/application/address-persistence.service';
 import { AddressResolutionService } from '../../address/application/address-resolution.service';
-import { computeListedInDirectory } from '../domain/specialist-directory-flags';
-import type { CreateOnboardingOrganizationBody } from '../dto/specialist-onboarding-body.schema';
-import type { JoinOnboardingOrganizationBody } from '../dto/specialist-onboarding-body.schema';
-import type { PatchSpecialistOnboardingProfileBody } from '../dto/specialist-onboarding-body.schema';
+import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
+import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
+import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
 import type {
   WorkplaceJoinRequestListQuery,
   WorkplaceJoinRequestReviewBody,
 } from '../dto/workplace-join-request.schema';
 
-type OnboardingStep = 1 | 3 | 4 | 5 | 6;
-
 @Injectable()
-export class SpecialistOnboardingService {
+export class OrganizationCabinetService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly addressResolution: AddressResolutionService,
     private readonly addressPersistence: AddressPersistenceService,
+    private readonly specialistOnboarding: SpecialistOnboardingService,
   ) {}
-
-  private isProfileComplete(
-    user: { name: string; phone: string | null },
-    spec: { bio: string | null; experienceYears: number | null },
-  ): boolean {
-    if (!user.name?.trim() || !user.phone?.trim()) {
-      return false;
-    }
-    if (!spec.bio?.trim() || spec.experienceYears == null) {
-      return false;
-    }
-    return true;
-  }
-
-  private async countPersonalServices(specialistId: string): Promise<number> {
-    return this.prisma.service.count({
-      where: {
-        specialistId,
-        organizationId: null,
-        deletedAt: null,
-      },
-    });
-  }
-
-  private async resolveStep(
-    userId: string,
-  ): Promise<{ step: OnboardingStep; specialistId: string | null }> {
-    const spec = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-    });
-    if (!spec) {
-      return { step: 1, specialistId: null };
-    }
-    const user = await this.prisma.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { name: true, phone: true },
-    });
-    if (!user) {
-      return { step: 1, specialistId: null };
-    }
-    if (!this.isProfileComplete(user, spec)) {
-      return { step: 1, specialistId: spec.id };
-    }
-    const svcCount = await this.countPersonalServices(spec.id);
-    if (svcCount < 1) {
-      return { step: 3, specialistId: spec.id };
-    }
-    if (!spec.onboardingCompletedAt) {
-      if (spec.activeOrganizationId) {
-        return { step: 5, specialistId: spec.id };
-      }
-      const pendingJoin =
-        await this.prisma.specialistWorkplaceJoinRequest.findFirst({
-          where: {
-            specialistId: spec.id,
-            status: SpecialistWorkplaceJoinRequestStatus.pending,
-          },
-          orderBy: { updatedAt: 'desc' },
-        });
-      if (pendingJoin) {
-        return { step: 5, specialistId: spec.id };
-      }
-      return { step: 4, specialistId: spec.id };
-    }
-    return { step: 6, specialistId: spec.id };
-  }
-
-  private async mapOnboarding(
-    userId: string,
-  ): Promise<{
-    onboardingStep: OnboardingStep;
-    specialist: Record<string, unknown> | null;
-  }> {
-    const { step, specialistId } = await this.resolveStep(userId);
-    if (!specialistId) {
-      return { onboardingStep: step, specialist: null };
-    }
-    const [spec, user] = await Promise.all([
-      this.prisma.specialist.findFirst({
-        where: { id: specialistId, deletedAt: null },
-        include: { massageProfile: true },
-      }),
-      this.prisma.user.findFirst({
-        where: { id: userId, deletedAt: null },
-        select: { name: true, phone: true, email: true, avatarUrl: true },
-      }),
-    ]);
-    if (!spec || !user) {
-      return { onboardingStep: 1, specialist: null };
-    }
-    const pendingJoin =
-      await this.prisma.specialistWorkplaceJoinRequest.findFirst({
-        where: {
-          specialistId: spec.id,
-          status: SpecialistWorkplaceJoinRequestStatus.pending,
-        },
-        include: {
-          organization: { select: { id: true, name: true } },
-        },
-        orderBy: { updatedAt: 'desc' },
-      });
-    return {
-      onboardingStep: step,
-      specialist: {
-        id: spec.id,
-        userId: spec.userId,
-        bio: spec.bio,
-        experienceYears: spec.experienceYears,
-        imageUrl: spec.imageUrl,
-        imageAlt: spec.imageAlt,
-        massage: spec.massageProfile
-          ? {
-              pressureLevel: spec.massageProfile.pressureLevel,
-              pressureAdaptsToClient: spec.massageProfile.pressureAdaptsToClient,
-            }
-          : null,
-        activeOrganizationId: spec.activeOrganizationId,
-        onboardingCompletedAt: spec.onboardingCompletedAt,
-        userName: user.name,
-        userPhone: user.phone,
-        userEmail: user.email,
-        userAvatarUrl: user.avatarUrl,
-        pendingWorkplaceJoinRequest: pendingJoin
-          ? {
-              id: pendingJoin.id,
-              organizationId: pendingJoin.organizationId,
-              organizationName: pendingJoin.organization.name,
-            }
-          : null,
-      },
-    };
-  }
-
-  async getOnboarding(userId: string) {
-    return this.mapOnboarding(userId);
-  }
-
-  async ensureSpecialist(userId: string): Promise<void> {
-    const exists = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-    });
-    if (exists) {
-      return;
-    }
-    await this.prisma.specialist.create({
-      data: { userId },
-    });
-  }
-
-  async patchProfile(
-    userId: string,
-    body: PatchSpecialistOnboardingProfileBody,
-  ) {
-    const spec = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-    });
-    if (!spec) {
-      throw new NotFoundException({
-        code: 'SPECIALIST_PROFILE_NOT_FOUND',
-        message: 'Specialist profile not found for this user',
-      });
-    }
-    await this.prisma.$transaction(async (tx) => {
-      const userPatch: { name?: string; phone?: string | null } = {};
-      if (body.name != null) {
-        userPatch.name = body.name;
-      }
-      if (body.phone !== undefined) {
-        userPatch.phone = body.phone;
-      }
-      if (Object.keys(userPatch).length > 0) {
-        await tx.user.update({
-          where: { id: userId },
-          data: userPatch,
-        });
-      }
-      const specData: {
-        bio?: string;
-        experienceYears?: number;
-        imageUrl?: string | null;
-        imageAlt?: string | null;
-      } = {};
-      if (body.bio != null) {
-        specData.bio = body.bio;
-      }
-      if (body.experienceYears !== undefined) {
-        specData.experienceYears = body.experienceYears;
-      }
-      if (body.imageUrl !== undefined) {
-        specData.imageUrl = body.imageUrl;
-      }
-      if (body.imageAlt !== undefined) {
-        specData.imageAlt = body.imageAlt;
-      }
-      if (Object.keys(specData).length > 0) {
-        await tx.specialist.update({
-          where: { id: spec.id },
-          data: specData,
-        });
-      }
-      if (body.massage !== undefined) {
-        const m = body.massage;
-        if (
-          m.pressureLevel !== undefined ||
-          m.pressureAdaptsToClient !== undefined
-        ) {
-          const update: {
-            pressureLevel?: number;
-            pressureAdaptsToClient?: boolean;
-          } = {};
-          if (m.pressureLevel !== undefined) {
-            update.pressureLevel = m.pressureLevel;
-          }
-          if (m.pressureAdaptsToClient !== undefined) {
-            update.pressureAdaptsToClient = m.pressureAdaptsToClient;
-          }
-          await tx.specialistMassageProfile.upsert({
-            where: { specialistId: spec.id },
-            create: {
-              specialistId: spec.id,
-              ...update,
-            },
-            update,
-          });
-        }
-      }
-    });
-    return this.mapOnboarding(userId);
-  }
-
-  async completeOnboarding(userId: string) {
-    const { step, specialistId } = await this.resolveStep(userId);
-    if (!specialistId) {
-      throw new NotFoundException({
-        code: 'SPECIALIST_PROFILE_NOT_FOUND',
-        message: 'Specialist profile not found for this user',
-      });
-    }
-    if (step !== 5) {
-      throw new ConflictException({
-        code: 'ONBOARDING_NOT_READY',
-        message: 'Complete previous onboarding steps first',
-      });
-    }
-    const spec = await this.prisma.specialist.findFirst({
-      where: { id: specialistId, deletedAt: null },
-    });
-    if (!spec) {
-      throw new NotFoundException({
-        code: 'SPECIALIST_PROFILE_NOT_FOUND',
-        message: 'Specialist profile not found for this user',
-      });
-    }
-    const now = new Date();
-    await this.prisma.specialist.update({
-      where: { id: spec.id },
-      data: {
-        onboardingCompletedAt: now,
-        listedInDirectory: computeListedInDirectory({
-          onboardingCompletedAt: now,
-          activeOrganizationId: spec.activeOrganizationId,
-        }),
-      },
-    });
-    return this.mapOnboarding(userId);
-  }
 
   private async syncSpecialistListedInDirectory(
     tx: Prisma.TransactionClient,
@@ -318,9 +50,6 @@ export class SpecialistOnboardingService {
     }
   }
 
-  /**
-   * Принять мастера в организацию как `specialist`, выставить рабочее место.
-   */
   private async grantSpecialistMembershipAtOrganization(
     tx: Prisma.TransactionClient,
     specialistId: string,
@@ -358,9 +87,6 @@ export class SpecialistOnboardingService {
     await this.syncSpecialistListedInDirectory(tx, specialistId);
   }
 
-  /**
-   * Владелец `Organization.ownerUserId` или активный мастер с ролью owner/admin в этой организации.
-   */
   private async assertUserCanManageOrgWorkplaceJoinRequests(
     userId: string,
     organizationId: string,
@@ -413,12 +139,9 @@ export class SpecialistOnboardingService {
   }
 
   /**
-   * Онбординг: отправить заявку «хочу работать в этой организации» (без членства до подтверждения владельцем).
+   * Заявка мастера «хочу работать в этой организации» (без членства до решения owner/admin).
    */
-  async joinOrganization(
-    userId: string,
-    body: JoinOnboardingOrganizationBody,
-  ) {
+  async requestWorkplaceJoin(userId: string, organizationId: string) {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
     });
@@ -435,7 +158,7 @@ export class SpecialistOnboardingService {
       });
     }
     const org = await this.prisma.organization.findFirst({
-      where: { id: body.organizationId, deletedAt: null },
+      where: { id: organizationId, deletedAt: null },
     });
     if (!org) {
       throw new NotFoundException({
@@ -447,7 +170,7 @@ export class SpecialistOnboardingService {
       {
         where: {
           specialistId: specialist.id,
-          organizationId: body.organizationId,
+          organizationId,
           isActive: true,
         },
       },
@@ -463,7 +186,7 @@ export class SpecialistOnboardingService {
         where: {
           specialistId_organizationId: {
             specialistId: specialist.id,
-            organizationId: body.organizationId,
+            organizationId,
           },
         },
         select: { status: true },
@@ -490,12 +213,12 @@ export class SpecialistOnboardingService {
         where: {
           specialistId_organizationId: {
             specialistId: specialist.id,
-            organizationId: body.organizationId,
+            organizationId,
           },
         },
         create: {
           specialistId: specialist.id,
-          organizationId: body.organizationId,
+          organizationId,
           status: SpecialistWorkplaceJoinRequestStatus.pending,
         },
         update: {
@@ -504,7 +227,7 @@ export class SpecialistOnboardingService {
         },
       });
     });
-    return this.mapOnboarding(userId);
+    return this.specialistOnboarding.getOnboarding(userId);
   }
 
   async listWorkplaceJoinRequestsForOrganization(
@@ -550,19 +273,25 @@ export class SpecialistOnboardingService {
     };
   }
 
-  /**
-   * Решение по заявке: принять / отклонить / заблокировать повторные заявки от этого мастера.
-   */
   async reviewWorkplaceJoinRequest(
-    userId: string,
+    actingUserId: string | null,
     organizationId: string,
     requestId: string,
     body: WorkplaceJoinRequestReviewBody,
+    options?: { skipManagerAuth?: boolean },
   ) {
-    await this.assertUserCanManageOrgWorkplaceJoinRequests(
-      userId,
-      organizationId,
-    );
+    if (!options?.skipManagerAuth) {
+      if (actingUserId == null) {
+        throw new ForbiddenException({
+          code: 'UNAUTHORIZED_REVIEW',
+          message: 'Reviewer user id required',
+        });
+      }
+      await this.assertUserCanManageOrgWorkplaceJoinRequests(
+        actingUserId,
+        organizationId,
+      );
+    }
     const joinRow = await this.prisma.specialistWorkplaceJoinRequest.findFirst({
       where: {
         id: requestId,
@@ -634,6 +363,35 @@ export class SpecialistOnboardingService {
     return { ok: true as const, decision: body.decision };
   }
 
+  /**
+   * Dev-only: решение по заявке приходит с одним `requestId` (без organizationId в URL).
+   */
+  async reviewPendingWorkplaceJoinRequestForDev(
+    requestId: string,
+    body: WorkplaceJoinRequestReviewBody,
+  ) {
+    const pending = await this.prisma.specialistWorkplaceJoinRequest.findFirst({
+      where: {
+        id: requestId,
+        status: SpecialistWorkplaceJoinRequestStatus.pending,
+      },
+      select: { organizationId: true },
+    });
+    if (!pending) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_JOIN_REQUEST_NOT_FOUND',
+        message: 'Pending join request not found',
+      });
+    }
+    return this.reviewWorkplaceJoinRequest(
+      null,
+      pending.organizationId,
+      requestId,
+      body,
+      { skipManagerAuth: true },
+    );
+  }
+
   private slugifyOrganizationName(name: string): string {
     const base = name
       .trim()
@@ -647,12 +405,11 @@ export class SpecialistOnboardingService {
   }
 
   /**
-   * Онбординг: создать организацию (текущий пользователь = владелец), витринные подкатегории,
-   * трудоустройство `owner` и `activeOrganizationId` у специалиста.
+   * Создать салон: текущий пользователь — владелец в БД, мастер получает роль owner и активную организацию.
    */
-  async createOrganizationAndJoin(
+  async createOrganizationAsOwner(
     userId: string,
-    body: CreateOnboardingOrganizationBody,
+    body: CreateOrganizationBody,
     locale: ApiLocale,
   ) {
     const specialist = await this.prisma.specialist.findFirst({
@@ -810,6 +567,6 @@ export class SpecialistOnboardingService {
       }
     });
 
-    return this.mapOnboarding(userId);
+    return this.specialistOnboarding.getOnboarding(userId);
   }
 }

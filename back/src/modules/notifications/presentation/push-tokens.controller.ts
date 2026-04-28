@@ -34,7 +34,7 @@ import {
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
 
-@ApiTags('users')
+@ApiTags('notifications')
 @Controller('users')
 export class PushTokensController {
   constructor(private readonly push: PushNotificationsService) {}

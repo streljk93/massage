@@ -6,7 +6,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { ApiLocale } from '../../../common/i18n';
-import type { CreateSpecialistPersonalServiceBody } from '../dto/specialist-onboarding-body.schema';
+import type { CreateSpecialistPersonalServiceBody } from '../dto/specialist-body.schema';
 
 function makeServiceSlug(categorySlug: string, id: string): string {
   const base = categorySlug

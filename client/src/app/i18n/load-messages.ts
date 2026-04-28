@@ -52,7 +52,7 @@ import { addressMapPickerDialogI18n } from "@/widgets/address-map-picker";
 import {
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
-} from "@/widgets/business/shell";
+} from "@/widgets/business/chrome";
 import {
   homeBottomNavI18n,
   homeScreenHeaderI18n,

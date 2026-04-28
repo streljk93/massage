@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersGetSpecialistOnboardingData, UsersGetSpecialistOnboardingErrors, UsersGetSpecialistOnboardingResponses, UsersGetWorkplaceJoinRequestsForOrganizationData, UsersGetWorkplaceJoinRequestsForOrganizationErrors, UsersGetWorkplaceJoinRequestsForOrganizationResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses, UsersPatchSpecialistActiveOrganizationData, UsersPatchSpecialistActiveOrganizationErrors, UsersPatchSpecialistActiveOrganizationResponses, UsersPatchSpecialistOnboardingProfileData, UsersPatchSpecialistOnboardingProfileErrors, UsersPatchSpecialistOnboardingProfileResponses, UsersPostCreateOnboardingOrganizationData, UsersPostCreateOnboardingOrganizationErrors, UsersPostCreateOnboardingOrganizationResponses, UsersPostEnsureSpecialistData, UsersPostEnsureSpecialistErrors, UsersPostEnsureSpecialistResponses, UsersPostJoinOnboardingOrganizationData, UsersPostJoinOnboardingOrganizationErrors, UsersPostJoinOnboardingOrganizationResponses, UsersPostReviewWorkplaceJoinRequestData, UsersPostReviewWorkplaceJoinRequestErrors, UsersPostReviewWorkplaceJoinRequestResponses, UsersPostSpecialistOnboardingCompleteData, UsersPostSpecialistOnboardingCompleteErrors, UsersPostSpecialistOnboardingCompleteResponses, UsersPostSpecialistPersonalServiceData, UsersPostSpecialistPersonalServiceErrors, UsersPostSpecialistPersonalServiceResponses } from './types.gen';
+import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistPersonalServiceData, SpecialistsCabinetPostSpecialistPersonalServiceErrors, SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -242,9 +242,9 @@ export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Opti
 /**
  * Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.
  */
-export const usersPatchSpecialistActiveOrganization = <ThrowOnError extends boolean = false>(options: Options<UsersPatchSpecialistActiveOrganizationData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchSpecialistActiveOrganizationResponses, UsersPatchSpecialistActiveOrganizationErrors, ThrowOnError>({
+export const specialistsCabinetPatchSpecialistActiveOrganization = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistActiveOrganizationData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/active-organization',
+    url: '/specialists/me/active-organization',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -255,27 +255,27 @@ export const usersPatchSpecialistActiveOrganization = <ThrowOnError extends bool
 /**
  * Создать профиль специалиста, если ещё нет (без привязки к организации, не в витрине).
  */
-export const usersPostEnsureSpecialist = <ThrowOnError extends boolean = false>(options?: Options<UsersPostEnsureSpecialistData, ThrowOnError>) => (options?.client ?? client).post<UsersPostEnsureSpecialistResponses, UsersPostEnsureSpecialistErrors, ThrowOnError>({
+export const specialistsCabinetPostEnsureSpecialist = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetPostEnsureSpecialistData, ThrowOnError>) => (options?.client ?? client).post<SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostEnsureSpecialistErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/ensure',
+    url: '/specialists/me/ensure',
     ...options
 });
 
 /**
- * Состояние онбординга специалиста (шаги 1, 3, 4, 5, 6).
+ * Состояние онбординга мастера (карта шагов 1, 3, 4, 5, 6 для первого входа).
  */
-export const usersGetSpecialistOnboarding = <ThrowOnError extends boolean = false>(options?: Options<UsersGetSpecialistOnboardingData, ThrowOnError>) => (options?.client ?? client).get<UsersGetSpecialistOnboardingResponses, UsersGetSpecialistOnboardingErrors, ThrowOnError>({
+export const specialistsCabinetGetSpecialistOnboarding = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetGetSpecialistOnboardingData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetGetSpecialistOnboardingErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/onboarding',
+    url: '/specialists/me/onboarding',
     ...options
 });
 
 /**
- * Поля профиля мастера (онбординг): био, фото, опыт, сила, подстройка.
+ * Поля профиля мастера: био, фото, опыт, массаж и т.д.
  */
-export const usersPatchSpecialistOnboardingProfile = <ThrowOnError extends boolean = false>(options: Options<UsersPatchSpecialistOnboardingProfileData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchSpecialistOnboardingProfileResponses, UsersPatchSpecialistOnboardingProfileErrors, ThrowOnError>({
+export const specialistsCabinetPatchSpecialistProfile = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistProfileData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPatchSpecialistProfileErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/profile',
+    url: '/specialists/me/profile',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -286,68 +286,18 @@ export const usersPatchSpecialistOnboardingProfile = <ThrowOnError extends boole
 /**
  * Завершить онбординг (после шага 5). Витрина с адресом салона — когда место работы подтверждено или создан свой салон.
  */
-export const usersPostSpecialistOnboardingComplete = <ThrowOnError extends boolean = false>(options?: Options<UsersPostSpecialistOnboardingCompleteData, ThrowOnError>) => (options?.client ?? client).post<UsersPostSpecialistOnboardingCompleteResponses, UsersPostSpecialistOnboardingCompleteErrors, ThrowOnError>({
+export const specialistsCabinetPostSpecialistOnboardingComplete = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetPostSpecialistOnboardingCompleteData, ThrowOnError>) => (options?.client ?? client).post<SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/onboarding/complete',
+    url: '/specialists/me/onboarding/complete',
     ...options
-});
-
-/**
- * Онбординг: заявка на работу в выбранном салоне; членство и рабочее место — после решения владельца или админа салона.
- */
-export const usersPostJoinOnboardingOrganization = <ThrowOnError extends boolean = false>(options: Options<UsersPostJoinOnboardingOrganizationData, ThrowOnError>) => (options.client ?? client).post<UsersPostJoinOnboardingOrganizationResponses, UsersPostJoinOnboardingOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/onboarding/join-organization',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Заявки мастеров в салон: список для владельца организации или активного мастера с ролью owner/admin.
- *
- * По умолчанию отдаётся только status=pending; передайте status=all для всего.
- */
-export const usersGetWorkplaceJoinRequestsForOrganization = <ThrowOnError extends boolean = false>(options?: Options<UsersGetWorkplaceJoinRequestsForOrganizationData, ThrowOnError>) => (options?.client ?? client).get<UsersGetWorkplaceJoinRequestsForOrganizationResponses, UsersGetWorkplaceJoinRequestsForOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/organizations/{organizationId}/workplace-join-requests',
-    ...options
-});
-
-/**
- * Решение по заявке мастера: принять (трудоустройство), отклонить или заблокировать повторные заявки.
- */
-export const usersPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<UsersPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<UsersPostReviewWorkplaceJoinRequestResponses, UsersPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Онбординг: создать салон (текущий пользователь = владелец), локаль витрины, подкатегории, привязка как место приёма.
- */
-export const usersPostCreateOnboardingOrganization = <ThrowOnError extends boolean = false>(options: Options<UsersPostCreateOnboardingOrganizationData, ThrowOnError>) => (options.client ?? client).post<UsersPostCreateOnboardingOrganizationResponses, UsersPostCreateOnboardingOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/onboarding/create-organization',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
 });
 
 /**
  * Личная услуга мастера без организации (organizationId = null, specialistId = текущий).
  */
-export const usersPostSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<UsersPostSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).post<UsersPostSpecialistPersonalServiceResponses, UsersPostSpecialistPersonalServiceErrors, ThrowOnError>({
+export const specialistsCabinetPostSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPostSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).post<SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsCabinetPostSpecialistPersonalServiceErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/specialist/services',
+    url: '/specialists/me/services',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -418,7 +368,7 @@ export const bookingsCancel = <ThrowOnError extends boolean = false>(options: Op
  */
 export const specialistBookingsConfirmPending = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsConfirmPendingData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsConfirmPendingResponses, SpecialistBookingsConfirmPendingErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialist/bookings/{id}/confirm',
+    url: '/bookings/me/{id}/confirm',
     ...options
 });
 
@@ -429,8 +379,67 @@ export const specialistBookingsConfirmPending = <ThrowOnError extends boolean = 
  */
 export const specialistBookingsStartVisit = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsStartVisitData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsStartVisitResponses, SpecialistBookingsStartVisitErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialist/bookings/{id}/start-visit',
+    url: '/bookings/me/{id}/start-visit',
     ...options
+});
+
+/**
+ * Список организаций (курсорная пагинация)
+ *
+ * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
+ */
+export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations',
+    ...options
+});
+
+/**
+ * Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, место приёма.
+ *
+ * Требует Bearer. Публичный список салонов — `GET /organizations`; создание — `POST /organizations` с тем же префиксом ресурса. В ответе — актуальное состояние онбординга мастера.
+ */
+export const organizationsCabinetPostCreateOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostCreateOrganizationData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostCreateOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Подать заявку на работу в салоне; членство — после решения владельца или админа.
+ */
+export const organizationsCabinetPostRequestWorkplaceJoin = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostRequestWorkplaceJoinData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostRequestWorkplaceJoinErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-requests',
+    ...options
+});
+
+/**
+ * Заявки мастеров в салон (владелец организации или мастер owner/admin).
+ *
+ * По умолчанию только status=pending; передайте status=all для полного списка.
+ */
+export const organizationsCabinetGetWorkplaceJoinRequestsForOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-join-requests',
+    ...options
+});
+
+/**
+ * Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.
+ */
+export const organizationsCabinetPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
 
 /**
@@ -478,17 +487,6 @@ export const specialistsListReviews = <ThrowOnError extends boolean = false>(opt
  * Профиль мастера: те же поля, что в списке специалистов.
  */
 export const specialistsGetById = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsGetByIdData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsGetByIdResponses, SpecialistsGetByIdErrors, ThrowOnError>({ url: '/specialists/{id}', ...options });
-
-/**
- * Список организаций (курсорная пагинация)
- *
- * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
- */
-export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations',
-    ...options
-});
 
 /**
  * Отзывы о салоне
@@ -547,7 +545,7 @@ export const advertisingListByPlacement = <ThrowOnError extends boolean = false>
 /**
  * [Dev] Принудительно сменить статус брони по booking id
  *
- * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /specialist/bookings/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /bookings/me/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).
  */
 export const devBookingsSetStatus = <ThrowOnError extends boolean = false>(options: Options<DevBookingsSetStatusData, ThrowOnError>) => (options.client ?? client).post<DevBookingsSetStatusResponses, DevBookingsSetStatusErrors, ThrowOnError>({
     url: '/dev/bookings/set-status',
@@ -579,6 +577,20 @@ export const devFcmTestTestFcm = <ThrowOnError extends boolean = false>(options:
  */
 export const devPersonalizationRecomputeProfile = <ThrowOnError extends boolean = false>(options: Options<DevPersonalizationRecomputeProfileData, ThrowOnError>) => (options.client ?? client).post<DevPersonalizationRecomputeProfileResponses, DevPersonalizationRecomputeProfileErrors, ThrowOnError>({
     url: '/dev/personalization/recompute-profile',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * [Dev] Рассмотреть заявку на вступление по requestId
+ *
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе **404**. Тело: `requestId` + `decision` (`accept` | `reject` | `block`). `organizationId` из заявки подставляется автоматически; те же действия, что у кабинета, но без проверки прав владельца.
+ */
+export const devWorkplaceJoinReviewPostReview = <ThrowOnError extends boolean = false>(options: Options<DevWorkplaceJoinReviewPostReviewData, ThrowOnError>) => (options.client ?? client).post<DevWorkplaceJoinReviewPostReviewResponses, unknown, ThrowOnError>({
+    url: '/dev/workplace-join-requests/review',
     ...options,
     headers: {
         'Content-Type': 'application/json',

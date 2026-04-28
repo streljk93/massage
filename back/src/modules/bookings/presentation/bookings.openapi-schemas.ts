@@ -186,11 +186,11 @@ export const cancelBookingResponseSchema = {
   },
 };
 
-/** Ответ `POST /specialist/bookings/:id/confirm` — после ручного подтверждения мастером. */
+/** Ответ `POST /bookings/me/:id/confirm` — после ручного подтверждения мастером. */
 export const specialistConfirmBookingResponseSchema =
   createBookingResponseSchema;
 
-/** Ответ `POST /specialist/bookings/:id/start-visit` — начало приёма. */
+/** Ответ `POST /bookings/me/:id/start-visit` — начало приёма. */
 export const specialistStartVisitResponseSchema = {
   type: 'object',
   required: ['id', 'status', 'startsAt', 'endsAt'],

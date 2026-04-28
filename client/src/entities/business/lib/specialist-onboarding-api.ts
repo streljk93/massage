@@ -1,18 +1,18 @@
-import type { UsersGetSpecialistOnboardingResponse } from "@/shared/api/generated/sdk/types.gen";
+import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared/api/generated/sdk/types.gen";
 
 /**
- * Состояние онбординга с сервера (`GET /users/me/specialist/onboarding`).
+ * Состояние онбординга с сервера (`GET /specialists/me/onboarding`).
  * Шаг 6 — сценарий завершён, кабинет бизнеса открыт.
  */
 export function isSpecialistOnboardingComplete(
-  data: UsersGetSpecialistOnboardingResponse | null | undefined,
+  data: SpecialistsCabinetGetSpecialistOnboardingResponse | null | undefined,
 ): boolean {
   return data?.onboardingStep === 6;
 }
 
 /**
  * Какой UI-шаг визарда открывать по умолчанию, если в URL нет `?step=`
- * (серверный шаг из `GET /users/me/specialist/onboarding`).
+ * (серверный шаг из `GET /specialists/me/onboarding`).
  */
 export function defaultWizardStepForApiStep(apiStep: number): number {
   switch (apiStep) {

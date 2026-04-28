@@ -8,7 +8,7 @@ import {
   defaultWizardStepForApiStep,
   isSpecialistOnboardingComplete,
 } from "@/entities/business";
-import { createBrowserSdkClient, usersGetSpecialistOnboarding } from "@/shared/api";
+import { createBrowserSdkClient, specialistsCabinetGetSpecialistOnboarding } from "@/shared/api";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
@@ -22,7 +22,7 @@ function isSetupPath(pathname: string): boolean {
   );
 }
 
-type BusinessLayerShellProps = {
+type BusinessLayerChromeProps = {
   children: React.ReactNode;
 };
 
@@ -30,7 +30,7 @@ type BusinessLayerShellProps = {
  * Кабинет бизнеса: при незавершённом онбординге — полоса с переходом в настройку;
  * нижняя навигация после `onboardingStep === 6`.
  */
-export function BusinessLayerShell({ children }: BusinessLayerShellProps) {
+export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
   const pathname = usePathname();
   const locale = useLocale() as AppLocale;
   const t = useTranslations("businessOnboarding");
@@ -41,7 +41,7 @@ export function BusinessLayerShell({ children }: BusinessLayerShellProps) {
     queryKey: [...ONB_QK, accessToken, locale],
     enabled: status === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
-      const { data, error } = await usersGetSpecialistOnboarding({
+      const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
         client: createBrowserSdkClient(accessToken, { locale }),
       });
       if (error || !data) {
@@ -77,7 +77,7 @@ export function BusinessLayerShell({ children }: BusinessLayerShellProps) {
     const step = defaultWizardStepForApiStep(
       (onboard?.onboardingStep as number) ?? 1,
     );
-    return `/business/setup?step=${step}` as const;
+    return `/business/setup/${step}` as const;
   }, [onboard?.onboardingStep]);
 
   const showMainNav = setupComplete;

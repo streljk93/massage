@@ -1,7 +1,7 @@
 import { Inbox } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { BusinessEmptyState } from "@/entities/business";
-import { BusinessScreenHeader } from "@/widgets/business/shell";
+import { BusinessScreenHeader } from "@/widgets/business/chrome";
 
 export async function BusinessBookingsPage() {
   const t = await getTranslations("businessAppSubpages");

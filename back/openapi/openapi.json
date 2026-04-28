@@ -1527,7 +1527,7 @@
         ],
         "summary": "Сохранить FCM token (web push)",
         "tags": [
-          "users"
+          "notifications"
         ]
       },
       "delete": {
@@ -1567,7 +1567,7 @@
         ],
         "summary": "Удалить FCM token (отписка от push на этом устройстве)",
         "tags": [
-          "users"
+          "notifications"
         ]
       }
     },
@@ -1786,9 +1786,9 @@
         ]
       }
     },
-    "/users/me/specialist/active-organization": {
+    "/specialists/me/active-organization": {
       "patch": {
-        "operationId": "Users_patchSpecialistActiveOrganization",
+        "operationId": "SpecialistsCabinet_patchSpecialistActiveOrganization",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -1852,13 +1852,13 @@
         ],
         "summary": "Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
-    "/users/me/specialist/ensure": {
+    "/specialists/me/ensure": {
       "post": {
-        "operationId": "Users_postEnsureSpecialist",
+        "operationId": "SpecialistsCabinet_postEnsureSpecialist",
         "parameters": [],
         "responses": {
           "200": {
@@ -1905,13 +1905,13 @@
         ],
         "summary": "Создать профиль специалиста, если ещё нет (без привязки к организации, не в витрине).",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
-    "/users/me/specialist/onboarding": {
+    "/specialists/me/onboarding": {
       "get": {
-        "operationId": "Users_getSpecialistOnboarding",
+        "operationId": "SpecialistsCabinet_getSpecialistOnboarding",
         "parameters": [],
         "responses": {
           "200": {
@@ -1956,15 +1956,15 @@
             "access-token": []
           }
         ],
-        "summary": "Состояние онбординга специалиста (шаги 1, 3, 4, 5, 6).",
+        "summary": "Состояние онбординга мастера (карта шагов 1, 3, 4, 5, 6 для первого входа).",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
-    "/users/me/specialist/profile": {
+    "/specialists/me/profile": {
       "patch": {
-        "operationId": "Users_patchSpecialistOnboardingProfile",
+        "operationId": "SpecialistsCabinet_patchSpecialistProfile",
         "parameters": [],
         "requestBody": {
           "required": true,
@@ -2087,15 +2087,15 @@
             "access-token": []
           }
         ],
-        "summary": "Поля профиля мастера (онбординг): био, фото, опыт, сила, подстройка.",
+        "summary": "Поля профиля мастера: био, фото, опыт, массаж и т.д.",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
-    "/users/me/specialist/onboarding/complete": {
+    "/specialists/me/onboarding/complete": {
       "post": {
-        "operationId": "Users_postSpecialistOnboardingComplete",
+        "operationId": "SpecialistsCabinet_postSpecialistOnboardingComplete",
         "parameters": [],
         "responses": {
           "200": {
@@ -2148,517 +2148,13 @@
         ],
         "summary": "Завершить онбординг (после шага 5). Витрина с адресом салона — когда место работы подтверждено или создан свой салон.",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
-    "/users/me/specialist/onboarding/join-organization": {
+    "/specialists/me/services": {
       "post": {
-        "operationId": "Users_postJoinOnboardingOrganization",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "organizationId"
-                ],
-                "properties": {
-                  "organizationId": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "onboardingStep",
-                    "specialist"
-                  ],
-                  "properties": {
-                    "onboardingStep": {
-                      "type": "integer",
-                      "enum": [
-                        1,
-                        3,
-                        4,
-                        5,
-                        6
-                      ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Нет или невалидный access token"
-          },
-          "403": {
-            "description": "Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)"
-          },
-          "404": {
-            "description": "Профиля специалиста или организации нет"
-          },
-          "409": {
-            "description": "Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член организации (ALREADY_ORGANIZATION_MEMBER)"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Онбординг: заявка на работу в выбранном салоне; членство и рабочее место — после решения владельца или админа салона.",
-        "tags": [
-          "users"
-        ]
-      }
-    },
-    "/users/me/organizations/{organizationId}/workplace-join-requests": {
-      "get": {
-        "description": "По умолчанию отдаётся только status=pending; передайте status=all для всего.",
-        "operationId": "Users_getWorkplaceJoinRequestsForOrganization",
-        "parameters": [
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "enum": [
-                "pending",
-                "rejected",
-                "blocked",
-                "accepted",
-                "withdrawn",
-                "all"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "requests"
-                  ],
-                  "properties": {
-                    "requests": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "specialistId",
-                          "organizationId",
-                          "status",
-                          "createdAt",
-                          "updatedAt",
-                          "resolvedAt",
-                          "specialist"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "specialistId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "organizationId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "status": {
-                            "type": "string",
-                            "enum": [
-                              "pending",
-                              "accepted",
-                              "rejected",
-                              "withdrawn",
-                              "blocked"
-                            ]
-                          },
-                          "createdAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "updatedAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          },
-                          "resolvedAt": {
-                            "type": "string",
-                            "format": "date-time",
-                            "nullable": true
-                          },
-                          "specialist": {
-                            "type": "object",
-                            "required": [
-                              "id",
-                              "userId",
-                              "user"
-                            ],
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "userId": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "user": {
-                                "type": "object",
-                                "required": [
-                                  "id",
-                                  "name",
-                                  "email"
-                                ],
-                                "properties": {
-                                  "id": {
-                                    "type": "string",
-                                    "format": "uuid"
-                                  },
-                                  "name": {
-                                    "type": "string"
-                                  },
-                                  "email": {
-                                    "type": "string",
-                                    "format": "email"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Невалидный query (status)"
-          },
-          "401": {
-            "description": "Нет или невалидный access token"
-          },
-          "403": {
-            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
-          },
-          "404": {
-            "description": "Организация не найдена"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Заявки мастеров в салон: список для владельца организации или активного мастера с ролью owner/admin.",
-        "tags": [
-          "users"
-        ]
-      }
-    },
-    "/users/me/organizations/{organizationId}/workplace-join-requests/{requestId}/review": {
-      "post": {
-        "operationId": "Users_postReviewWorkplaceJoinRequest",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "decision"
-                ],
-                "properties": {
-                  "decision": {
-                    "type": "string",
-                    "enum": [
-                      "accept",
-                      "reject",
-                      "block"
-                    ],
-                    "description": "accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "ok",
-                    "decision"
-                  ],
-                  "properties": {
-                    "ok": {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    "decision": {
-                      "type": "string",
-                      "enum": [
-                        "accept",
-                        "reject",
-                        "block"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Невалидное тело (decision)"
-          },
-          "401": {
-            "description": "Нет или невалидный access token"
-          },
-          "403": {
-            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
-          },
-          "404": {
-            "description": "Нет pending-заявки с этим id для организации (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Решение по заявке мастера: принять (трудоустройство), отклонить или заблокировать повторные заявки.",
-        "tags": [
-          "users"
-        ]
-      }
-    },
-    "/users/me/specialist/onboarding/create-organization": {
-      "post": {
-        "operationId": "Users_postCreateOnboardingOrganization",
-        "parameters": [
-          {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
-            "schema": {
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "serviceCategoryIds"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 200
-                  },
-                  "placeReference": {
-                    "type": "object",
-                    "required": [
-                      "provider",
-                      "placeId"
-                    ],
-                    "properties": {
-                      "provider": {
-                        "type": "string",
-                        "enum": [
-                          "locationiq",
-                          "geoapify",
-                          "opencage",
-                          "nominatim"
-                        ]
-                      },
-                      "placeId": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 400
-                      }
-                    },
-                    "description": "Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно)."
-                  },
-                  "addressLine": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 500
-                  },
-                  "city": {
-                    "type": "string",
-                    "maxLength": 120,
-                    "nullable": true
-                  },
-                  "latitude": {
-                    "type": "number",
-                    "minimum": -90,
-                    "maximum": 90
-                  },
-                  "longitude": {
-                    "type": "number",
-                    "minimum": -180,
-                    "maximum": 180
-                  },
-                  "description": {
-                    "type": "string",
-                    "maxLength": 4000
-                  },
-                  "phone": {
-                    "type": "string",
-                    "maxLength": 32,
-                    "nullable": true
-                  },
-                  "email": {
-                    "type": "string",
-                    "maxLength": 254,
-                    "nullable": true
-                  },
-                  "website": {
-                    "type": "string",
-                    "maxLength": 2048,
-                    "nullable": true
-                  },
-                  "yearsInBusiness": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 80,
-                    "nullable": true
-                  },
-                  "imageUrl": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2048,
-                    "nullable": true
-                  },
-                  "imageAlt": {
-                    "type": "string",
-                    "maxLength": 500,
-                    "nullable": true
-                  },
-                  "serviceCategoryIds": {
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 40,
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    }
-                  }
-                },
-                "description": "Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь)."
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "onboardingStep",
-                    "specialist"
-                  ],
-                  "properties": {
-                    "onboardingStep": {
-                      "type": "integer",
-                      "enum": [
-                        1,
-                        3,
-                        4,
-                        5,
-                        6
-                      ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Категории или валидация тела"
-          },
-          "401": {
-            "description": "Нет или невалидный access token"
-          },
-          "404": {
-            "description": "Профиля специалиста нет"
-          },
-          "409": {
-            "description": "Уже выбрана организация"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Онбординг: создать салон (текущий пользователь = владелец), локаль витрины, подкатегории, привязка как место приёма.",
-        "tags": [
-          "users"
-        ]
-      }
-    },
-    "/users/me/specialist/services": {
-      "post": {
-        "operationId": "Users_postSpecialistPersonalService",
+        "operationId": "SpecialistsCabinet_postSpecialistPersonalService",
         "parameters": [
           {
             "name": "locale",
@@ -2764,7 +2260,7 @@
         ],
         "summary": "Личная услуга мастера без организации (organizationId = null, specialistId = текущий).",
         "tags": [
-          "users"
+          "cabinet-specialists"
         ]
       }
     },
@@ -3264,7 +2760,7 @@
         ]
       }
     },
-    "/specialist/bookings/{id}/confirm": {
+    "/bookings/me/{id}/confirm": {
       "post": {
         "description": "Переводит `pending` → `confirmed` для брони этого мастера, пишет историю, отправляет push клиенту. JWT — пользователь с профилем `Specialist`.",
         "operationId": "SpecialistBookings_confirmPending",
@@ -3343,12 +2839,11 @@
         ],
         "summary": "Подтвердить запись (специалист)",
         "tags": [
-          "bookings",
-          "specialist"
+          "bookings"
         ]
       }
     },
-    "/specialist/bookings/{id}/start-visit": {
+    "/bookings/me/{id}/start-visit": {
       "post": {
         "description": "Переводит `confirmed` → `in_progress` для брони этого мастера. Допустимо не раньше времени начала слота `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`, как при создании брони). Пишет историю, отправляет push клиенту.",
         "operationId": "SpecialistBookings_startVisit",
@@ -3420,8 +2915,854 @@
         ],
         "summary": "Начать приём (in_progress)",
         "tags": [
-          "bookings",
-          "specialist"
+          "bookings"
+        ]
+      }
+    },
+    "/organizations": {
+      "post": {
+        "description": "Требует Bearer. Публичный список салонов — `GET /organizations`; создание — `POST /organizations` с тем же префиксом ресурса. В ответе — актуальное состояние онбординга мастера.",
+        "operationId": "OrganizationsCabinet_postCreateOrganization",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "serviceCategoryIds"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "placeReference": {
+                    "type": "object",
+                    "required": [
+                      "provider",
+                      "placeId"
+                    ],
+                    "properties": {
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "locationiq",
+                          "geoapify",
+                          "opencage",
+                          "nominatim"
+                        ]
+                      },
+                      "placeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "description": "Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно)."
+                  },
+                  "addressLine": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "nullable": true
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "nullable": true
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "nullable": true
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "yearsInBusiness": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "imageAlt": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true
+                  },
+                  "serviceCategoryIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 40,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "description": "Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь)."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Категории или валидация тела"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          },
+          "409": {
+            "description": "Уже выбрана активная организация"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, место приёма.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      },
+      "get": {
+        "description": "Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.",
+        "operationId": "Organizations_list",
+        "parameters": [
+          {
+            "name": "radiusLng",
+            "required": false,
+            "in": "query",
+            "description": "Долгота центра круга (вместе с `radiusM`, `radiusLat`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusLat",
+            "required": false,
+            "in": "query",
+            "description": "Широта центра круга (вместе с `radiusM`, `radiusLng`).",
+            "schema": {}
+          },
+          {
+            "name": "radiusM",
+            "required": false,
+            "in": "query",
+            "description": "Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.",
+            "schema": {
+              "type": "integer",
+              "minimum": 50,
+              "maximum": 500000
+            }
+          },
+          {
+            "name": "categories",
+            "required": false,
+            "in": "query",
+            "description": "Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).",
+            "schema": {
+              "example": "neck,foot"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.",
+            "schema": {}
+          },
+          {
+            "name": "majorSlug",
+            "required": false,
+            "in": "query",
+            "description": "Slug большой категории (`MajorServiceCategory.slug`), напр. massage.",
+            "schema": {
+              "example": "massage"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Размер страницы (1–100, по умолчанию 20).",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.",
+            "schema": {}
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "recommended",
+                "popularity",
+                "newest",
+                "price_asc",
+                "price_desc",
+                "rating"
+              ]
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizations",
+                    "cursorPage"
+                  ],
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "ratingAverage",
+                          "rating",
+                          "reviewsCount",
+                          "addressLine",
+                          "phone",
+                          "yearsInBusiness",
+                          "metaLine",
+                          "servicesLine",
+                          "categories",
+                          "slotGroups",
+                          "specialistOccupiedSlotKeys",
+                          "listingWorkdayStartMinute",
+                          "listingWorkdayEndMinute"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "demo-salon-seed"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "phone": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "yearsInBusiness": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "latitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "longitude": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "ratingAverage": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "rating": {
+                            "type": "number",
+                            "example": 4.5
+                          },
+                          "reviewsCount": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uri"
+                          },
+                          "imageAlt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "metaLine": {
+                            "type": "string"
+                          },
+                          "servicesLine": {
+                            "type": "string"
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "slug",
+                                "shortName"
+                              ],
+                              "properties": {
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "Neck"
+                                }
+                              }
+                            }
+                          },
+                          "slotGroups": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "calendarDate",
+                                "times"
+                              ],
+                              "properties": {
+                                "calendarDate": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-04-23",
+                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
+                                },
+                                "times": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "example": "09:00"
+                                  },
+                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                }
+                              }
+                            },
+                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                          },
+                          "specialistOccupiedSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "specialistId",
+                                "keys"
+                              ],
+                              "properties": {
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "keys": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
+                                }
+                              }
+                            }
+                          },
+                          "listingWorkdayStartMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 480
+                          },
+                          "listingWorkdayEndMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
+                            "example": 1320
+                          }
+                        }
+                      }
+                    },
+                    "cursorPage": {
+                      "type": "object",
+                      "required": [
+                        "nextCursor",
+                        "hasMore"
+                      ],
+                      "properties": {
+                        "nextCursor": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
+                        },
+                        "hasMore": {
+                          "type": "boolean",
+                          "description": "Есть ли ещё элементы после текущей страницы."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Список организаций (курсорная пагинация)",
+        "tags": [
+          "directory-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/workplace-requests": {
+      "post": {
+        "operationId": "OrganizationsCabinet_postRequestWorkplaceJoin",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)"
+          },
+          "404": {
+            "description": "Профиля специалиста или организации нет"
+          },
+          "409": {
+            "description": "Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член (ALREADY_ORGANIZATION_MEMBER)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Подать заявку на работу в салоне; членство — после решения владельца или админа.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/workplace-join-requests": {
+      "get": {
+        "description": "По умолчанию только status=pending; передайте status=all для полного списка.",
+        "operationId": "OrganizationsCabinet_getWorkplaceJoinRequestsForOrganization",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "rejected",
+                "blocked",
+                "accepted",
+                "withdrawn",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "requests"
+                  ],
+                  "properties": {
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "specialistId",
+                          "organizationId",
+                          "status",
+                          "createdAt",
+                          "updatedAt",
+                          "resolvedAt",
+                          "specialist"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "rejected",
+                              "withdrawn",
+                              "blocked"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "resolvedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "specialist": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "userId",
+                              "user"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "userId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "user": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string",
+                                    "format": "email"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query (status)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Заявки мастеров в салон (владелец организации или мастер owner/admin).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/workplace-join-requests/{requestId}/review": {
+      "post": {
+        "operationId": "OrganizationsCabinet_postReviewWorkplaceJoinRequest",
+        "parameters": [
+          {
+            "name": "requestId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "accept",
+                      "reject",
+                      "block"
+                    ],
+                    "description": "accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "decision"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "decision": {
+                      "type": "string",
+                      "enum": [
+                        "accept",
+                        "reject",
+                        "block"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело (decision)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Нет pending-заявки (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.",
+        "tags": [
+          "cabinet-organizations"
         ]
       }
     },
@@ -4208,7 +4549,7 @@
         ],
         "summary": "Список специалистов (курсорная пагинация)",
         "tags": [
-          "specialists"
+          "directory-specialists"
         ]
       }
     },
@@ -4332,7 +4673,7 @@
         },
         "summary": "Отзывы о специалисте",
         "tags": [
-          "specialists"
+          "directory-specialists"
         ]
       }
     },
@@ -4597,336 +4938,7 @@
         },
         "summary": "Специалист по id",
         "tags": [
-          "specialists"
-        ]
-      }
-    },
-    "/organizations": {
-      "get": {
-        "description": "Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.",
-        "operationId": "Organizations_list",
-        "parameters": [
-          {
-            "name": "radiusLng",
-            "required": false,
-            "in": "query",
-            "description": "Долгота центра круга (вместе с `radiusM`, `radiusLat`).",
-            "schema": {}
-          },
-          {
-            "name": "radiusLat",
-            "required": false,
-            "in": "query",
-            "description": "Широта центра круга (вместе с `radiusM`, `radiusLng`).",
-            "schema": {}
-          },
-          {
-            "name": "radiusM",
-            "required": false,
-            "in": "query",
-            "description": "Вместе с `radiusLat` / `radiusLng`: радиус в метрах (WGS-84), фильтр на бэке.",
-            "schema": {
-              "type": "integer",
-              "minimum": 50,
-              "maximum": 500000
-            }
-          },
-          {
-            "name": "categories",
-            "required": false,
-            "in": "query",
-            "description": "Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).",
-            "schema": {
-              "example": "neck,foot"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Поиск по названию, slug, адресу, строкам витрины, локализованным полям, услугам и категориям.",
-            "schema": {}
-          },
-          {
-            "name": "majorSlug",
-            "required": false,
-            "in": "query",
-            "description": "Slug большой категории (`MajorServiceCategory.slug`), напр. massage.",
-            "schema": {
-              "example": "massage"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Размер страницы (1–100, по умолчанию 20).",
-            "schema": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 100
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Курсор (`cursorPage.nextCursor` с предыдущей страницы). Без параметра — первая страница. Должен соответствовать `sort` на том же списке.",
-            "schema": {}
-          },
-          {
-            "name": "sort",
-            "required": false,
-            "in": "query",
-            "description": "`popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`.",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "recommended",
-                "popularity",
-                "newest",
-                "price_asc",
-                "price_desc",
-                "rating"
-              ]
-            }
-          },
-          {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
-            "schema": {
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "organizations",
-                    "cursorPage"
-                  ],
-                  "properties": {
-                    "organizations": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "slug",
-                          "name",
-                          "ratingAverage",
-                          "rating",
-                          "reviewsCount",
-                          "addressLine",
-                          "phone",
-                          "yearsInBusiness",
-                          "metaLine",
-                          "servicesLine",
-                          "categories",
-                          "slotGroups",
-                          "specialistOccupiedSlotKeys",
-                          "listingWorkdayStartMinute",
-                          "listingWorkdayEndMinute"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "slug": {
-                            "type": "string",
-                            "example": "demo-salon-seed"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "city": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "addressLine": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "phone": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "yearsInBusiness": {
-                            "type": "integer",
-                            "nullable": true
-                          },
-                          "latitude": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "longitude": {
-                            "type": "number",
-                            "nullable": true
-                          },
-                          "ratingAverage": {
-                            "type": "number",
-                            "example": 4.5
-                          },
-                          "rating": {
-                            "type": "number",
-                            "example": 4.5
-                          },
-                          "reviewsCount": {
-                            "type": "integer",
-                            "example": 3
-                          },
-                          "imageUrl": {
-                            "type": "string",
-                            "nullable": true,
-                            "format": "uri"
-                          },
-                          "imageAlt": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "metaLine": {
-                            "type": "string"
-                          },
-                          "servicesLine": {
-                            "type": "string"
-                          },
-                          "categories": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "required": [
-                                "slug",
-                                "shortName"
-                              ],
-                              "properties": {
-                                "slug": {
-                                  "type": "string",
-                                  "example": "neck"
-                                },
-                                "shortName": {
-                                  "type": "string",
-                                  "example": "Neck"
-                                }
-                              }
-                            }
-                          },
-                          "slotGroups": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "required": [
-                                "calendarDate",
-                                "times"
-                              ],
-                              "properties": {
-                                "calendarDate": {
-                                  "type": "string",
-                                  "format": "date",
-                                  "example": "2026-04-23",
-                                  "description": "Календарный день витрины (Asia/Ho_Chi_Minh), yyyy-MM-dd. Прошлые дни не отдаются."
-                                },
-                                "times": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string",
-                                    "example": "09:00"
-                                  },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
-                                }
-                              }
-                            },
-                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
-                          },
-                          "specialistOccupiedSlotKeys": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "required": [
-                                "specialistId",
-                                "keys"
-                              ],
-                              "properties": {
-                                "specialistId": {
-                                  "type": "string",
-                                  "format": "uuid"
-                                },
-                                "keys": {
-                                  "type": "array",
-                                  "items": {
-                                    "type": "string"
-                                  },
-                                  "description": "Ключи занятых ячеек `yyyy-MM-dd|HH:mm` (Asia/Ho_Chi_Minh) для витрины."
-                                }
-                              }
-                            }
-                          },
-                          "listingWorkdayStartMinute": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
-                            "example": 480
-                          },
-                          "listingWorkdayEndMinute": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "description": "Минуты с полуночи (Asia/Ho_Chi_Minh). Начало приёма (включ.) и окончание (не включ. последний старт: end − 30 мин).",
-                            "example": 1320
-                          }
-                        }
-                      }
-                    },
-                    "cursorPage": {
-                      "type": "object",
-                      "required": [
-                        "nextCursor",
-                        "hasMore"
-                      ],
-                      "properties": {
-                        "nextCursor": {
-                          "type": "string",
-                          "nullable": true,
-                          "description": "Передать как `cursor` в следующем запросе, если `hasMore: true`."
-                        },
-                        "hasMore": {
-                          "type": "boolean",
-                          "description": "Есть ли ещё элементы после текущей страницы."
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Неверный формат locale, limit, cursor, sort, majorSlug, categories или радиуса"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Список организаций (курсорная пагинация)",
-        "tags": [
-          "organizations"
+          "directory-specialists"
         ]
       }
     },
@@ -5050,7 +5062,7 @@
         },
         "summary": "Отзывы о салоне",
         "tags": [
-          "organizations"
+          "directory-organizations"
         ]
       }
     },
@@ -5352,7 +5364,7 @@
         },
         "summary": "Организация по id",
         "tags": [
-          "organizations"
+          "directory-organizations"
         ]
       }
     },
@@ -6192,7 +6204,7 @@
     },
     "/dev/bookings/set-status": {
       "post": {
-        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /specialist/bookings/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).",
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе ответ 404. Достаточно `bookingId` + `status`. **Переходы валидируются** так же, как в проде (модуль `booking-status-transitions`); недопустимый переход — `400` с `BOOKING_INVALID_STATUS_TRANSITION`. Для цели `in_progress` дополнительно: не раньше `startsAt` брони (с тем же допуском по времени, что при `POST /bookings/me/:id/start-visit`) — иначе `BOOKING_TOO_EARLY_FOR_IN_PROGRESS`. Для перехода из `confirmed` в `no_show_by_client` / `no_show_by_master` — то же условие по `startsAt`; иначе `BOOKING_TOO_EARLY_FOR_NO_SHOW`. В истории `actorUserId` = null (как системная правка). Все коды `status` — в схеме тела (enum); **Examples** — целевые статусы (сработают только если текущий статус брони допускает такой переход).",
         "operationId": "DevBookings_setStatus",
         "parameters": [],
         "requestBody": {
@@ -6496,6 +6508,47 @@
           }
         },
         "summary": "[Dev] Пересчитать портрет персонализации по email",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/workplace-join-requests/review": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Иначе **404**. Тело: `requestId` + `decision` (`accept` | `reject` | `block`). `organizationId` из заявки подставляется автоматически; те же действия, что у кабинета, но без проверки прав владельца.",
+        "operationId": "DevWorkplaceJoinReview_postReview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevWorkplaceJoinReviewSwaggerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Решение записано",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "decision": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "[Dev] Рассмотреть заявку на вступление по requestId",
         "tags": [
           "dev"
         ]
@@ -7267,7 +7320,76 @@
     "version": "1.0",
     "contact": {}
   },
-  "tags": [],
+  "tags": [
+    {
+      "name": "health",
+      "description": "Служебная проверка работоспособности."
+    },
+    {
+      "name": "auth",
+      "description": "Вход, регистрация, OAuth, обновление и отзыв сессии, верификация email."
+    },
+    {
+      "name": "users",
+      "description": "Профиль текущего пользователя (аккаунт): имя, аватар, локаль, напоминания."
+    },
+    {
+      "name": "notifications",
+      "description": "Push: регистрация и отзыв FCM-токена для текущего пользователя."
+    },
+    {
+      "name": "address",
+      "description": "Подсказки адреса и канонизация (геокодеры на стороне сервера)."
+    },
+    {
+      "name": "catalog",
+      "description": "Иерархия рубрик / категорий услуг для форм и витрины."
+    },
+    {
+      "name": "directory",
+      "description": "Витрина: общие подсказки для фильтра каталога (без списков сущностей)."
+    },
+    {
+      "name": "directory-organizations",
+      "description": "Витрина: публичные списки и карточки организаций (салонов), отзывы в каталоге."
+    },
+    {
+      "name": "directory-specialists",
+      "description": "Витрина: публичные списки и карточки специалистов, отзывы в каталоге."
+    },
+    {
+      "name": "cabinet-organizations",
+      "description": "Кабинет владельца/админа организации: создание салона, рассмотрение заявок мастеров в коллектив."
+    },
+    {
+      "name": "cabinet-specialists",
+      "description": "Кабинет мастера: онбординг, профиль, личные услуги, смена активной организации."
+    },
+    {
+      "name": "bookings",
+      "description": "Записи: со стороны клиента (создание, список, отмена, отзывы) и действия мастера (`/bookings/me/...`)."
+    },
+    {
+      "name": "favorites",
+      "description": "Избранное пользователя (салоны и мастера)."
+    },
+    {
+      "name": "personalization",
+      "description": "Портрет пользователя и рекомендации (частично с опциональным JWT)."
+    },
+    {
+      "name": "advertising",
+      "description": "Рекламные вставки по размещению."
+    },
+    {
+      "name": "files",
+      "description": "Загрузка и выдача файлов (публичные и приватные)."
+    },
+    {
+      "name": "dev",
+      "description": "Только вне production: отладочные и тестовые сценарии (смена статуса брони, пересчёт персонализации, FCM и т.д.)."
+    }
+  ],
   "servers": [
     {
       "url": "/v1",
@@ -7432,6 +7554,31 @@
           "profile",
           "inputsConsidered",
           "readiness"
+        ]
+      },
+      "DevWorkplaceJoinReviewSwaggerDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Идентификатор заявки (`SpecialistWorkplaceJoinRequest.id`), статус `pending`",
+            "example": "33333333-3333-4333-8333-333333333333"
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "accept",
+              "reject",
+              "block"
+            ],
+            "description": "accept — принять в коллектив; reject — отклонить; block — отклонить и запретить повторные заявки мастера в эту организацию.",
+            "example": "accept"
+          }
+        },
+        "required": [
+          "requestId",
+          "decision"
         ]
       }
     }

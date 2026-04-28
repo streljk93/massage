@@ -52,7 +52,7 @@ import {
 
 type AuthedOrGuest = Request & { user?: AuthenticatedUser };
 
-@ApiTags('specialists')
+@ApiTags('directory-specialists')
 @Controller('specialists')
 export class SpecialistsController {
   constructor(private readonly directoryService: DirectoryService) {}

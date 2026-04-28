@@ -1,4 +1,4 @@
-import { BusinessLayerShell } from "@/widgets/business/shell";
+import { BusinessLayerChrome } from "@/widgets/business/chrome";
 
 type Props = {
   children: React.ReactNode;
@@ -8,5 +8,5 @@ type Props = {
  * Кабинет бизнеса: каркас, полоса «онбординг не завершён» и нижняя навигация после полной настройки.
  */
 export default function BusinessLayout({ children }: Props) {
-  return <BusinessLayerShell>{children}</BusinessLayerShell>;
+  return <BusinessLayerChrome>{children}</BusinessLayerChrome>;
 }

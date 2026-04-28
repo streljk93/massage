@@ -2,6 +2,107 @@ import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { BOOKING_STATUS_SWAGGER_ENUM_DESCRIPTIONS } from '../modules/bookings/domain/booking-status-all-ordered';
 
+/** Порядок секций в Swagger UI и краткие описания категорий (глобальный `tags` в OpenAPI 3). */
+const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
+  readonly name: string;
+  readonly description: string;
+}[] = [
+  {
+    name: 'health',
+    description: 'Служебная проверка работоспособности.',
+  },
+  {
+    name: 'auth',
+    description: 'Вход, регистрация, OAuth, обновление и отзыв сессии, верификация email.',
+  },
+  {
+    name: 'users',
+    description: 'Профиль текущего пользователя (аккаунт): имя, аватар, локаль, напоминания.',
+  },
+  {
+    name: 'notifications',
+    description: 'Push: регистрация и отзыв FCM-токена для текущего пользователя.',
+  },
+  {
+    name: 'address',
+    description: 'Подсказки адреса и канонизация (геокодеры на стороне сервера).',
+  },
+  {
+    name: 'catalog',
+    description: 'Иерархия рубрик / категорий услуг для форм и витрины.',
+  },
+  {
+    name: 'directory',
+    description: 'Витрина: общие подсказки для фильтра каталога (без списков сущностей).',
+  },
+  {
+    name: 'directory-organizations',
+    description:
+      'Витрина: публичные списки и карточки организаций (салонов), отзывы в каталоге.',
+  },
+  {
+    name: 'directory-specialists',
+    description:
+      'Витрина: публичные списки и карточки специалистов, отзывы в каталоге.',
+  },
+  {
+    name: 'cabinet-organizations',
+    description:
+      'Кабинет владельца/админа организации: создание салона, рассмотрение заявок мастеров в коллектив.',
+  },
+  {
+    name: 'cabinet-specialists',
+    description:
+      'Кабинет мастера: онбординг, профиль, личные услуги, смена активной организации.',
+  },
+  {
+    name: 'bookings',
+    description:
+      'Записи: со стороны клиента (создание, список, отмена, отзывы) и действия мастера (`/bookings/me/...`).',
+  },
+  {
+    name: 'favorites',
+    description: 'Избранное пользователя (салоны и мастера).',
+  },
+  {
+    name: 'personalization',
+    description: 'Портрет пользователя и рекомендации (частично с опциональным JWT).',
+  },
+  {
+    name: 'advertising',
+    description: 'Рекламные вставки по размещению.',
+  },
+  {
+    name: 'files',
+    description: 'Загрузка и выдача файлов (публичные и приватные).',
+  },
+  {
+    name: 'dev',
+    description:
+      'Только вне production: отладочные и тестовые сценарии (смена статуса брони, пересчёт персонализации, FCM и т.д.).',
+  },
+] as const;
+
+function applyOrderedSwaggerTags(
+  document: ReturnType<typeof SwaggerModule.createDocument>,
+): void {
+  const declared = new Map(
+    SWAGGER_TAG_ORDER_AND_DESCRIPTIONS.map((t) => [t.name, t.description]),
+  );
+  const existing = document.tags ?? [];
+  const extras = existing.filter((t) => !declared.has(t.name));
+  document.tags = [
+    ...SWAGGER_TAG_ORDER_AND_DESCRIPTIONS.map((t) => ({
+      name: t.name,
+      description: t.description,
+    })),
+    ...extras.map((t) => ({
+      name: t.name,
+      description: t.description ?? '',
+    })),
+  ];
+}
+
 export function createOpenApiDocument(app: INestApplication) {
   const config = new DocumentBuilder()
     .setTitle('Services App API')
@@ -40,6 +141,8 @@ export function createOpenApiDocument(app: INestApplication) {
       ...BOOKING_STATUS_SWAGGER_ENUM_DESCRIPTIONS,
     ];
   }
+
+  applyOrderedSwaggerTags(document);
 
   return document;
 }

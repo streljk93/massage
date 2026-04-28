@@ -18,6 +18,8 @@ import { FilesModule } from './modules/files/files.module';
 import { AddressModule } from './modules/address/address.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { SpecialistsModule } from './modules/specialists/specialists.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -46,6 +48,8 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     NotificationsModule,
     UsersModule,
+    SpecialistsModule,
+    OrganizationsModule,
     CatalogModule,
     DirectoryModule,
     PersonalizationModule,
