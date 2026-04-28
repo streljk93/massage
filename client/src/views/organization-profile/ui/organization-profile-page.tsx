@@ -88,7 +88,6 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
   return pick.bookableServices.map(
     (b): BookableServiceOption => ({
       id: b.id,
-      title: b.name,
       categoryShortName: b.categoryShortName,
       durationMinutes: b.durationMinutes,
       priceVndByDuration: b.priceVndByDuration,
@@ -97,15 +96,14 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
 }
 
 /**
- * Одна «логическая» услуга в салоне: имя + категория (без цен/минут — они у мастеров различаются).
- * По полному совпадению цен/длительностей других мастеров в списке не было бы.
+ * Одна позиция в меню = подкатегория (локализованный shortName), без кастомного названия услуги.
  */
 function serviceMenuKeyFromOption(s: BookableServiceOption): string {
-  return `${s.title.trim()}\x1e${s.categoryShortName.trim()}`;
+  return s.categoryShortName.trim() || s.id;
 }
 
 function serviceMenuKeyFromStaff(b: StaffBookableServiceRow): string {
-  return `${b.name.trim()}\x1e${b.categoryShortName.trim()}`;
+  return b.categoryShortName.trim() || b.id;
 }
 
 function findStaffRowForMenuAnchor(
@@ -294,7 +292,6 @@ export function OrganizationProfilePage({
     }
     return {
       id: selectedServiceRow.id,
-      title: selectedServiceRow.name,
       categoryShortName: selectedServiceRow.categoryShortName,
       durationMinutes: selectedServiceRow.durationMinutes,
       priceVndByDuration: selectedServiceRow.priceVndByDuration,
@@ -959,7 +956,6 @@ export function OrganizationProfilePage({
                           service={svc}
                           selected={selected}
                           selectedDurationMinutes={dur}
-                          serviceName={svc.title}
                           formatPrice={priceText}
                           formatDurationMinutes={(m) =>
                             t("durationMin", { n: m })

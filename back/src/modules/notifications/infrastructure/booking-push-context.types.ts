@@ -11,7 +11,7 @@ export type BookingNotificationOrganizationSnapshot = {
 
 /** Контекст брони для FCM мастеру (снимок клиента + специалист). */
 export type BookingPushContext = {
-  serviceNameSnapshot: string | null;
+  categoryShortNameSnapshot: string | null;
   clientName: string;
   specialistUserId: string;
   /** Email специалиста (User.email) — дублирование пуша письмом. */
@@ -35,8 +35,8 @@ export type ClientBookingReminderContext = {
   clientUserId: string;
   /** Email клиента (User.email). */
   clientEmail: string;
-  /** Пустая строка, если снимка названия услуги нет — подпись подставляет слой уведомлений по локали. */
-  serviceName: string;
+  /** Пустая строка, если снимка подкатегории нет — подставляет слой уведомлений по локали. */
+  categoryShortName: string;
   specialistName: string;
   startsAt: Date;
   endsAt: Date;

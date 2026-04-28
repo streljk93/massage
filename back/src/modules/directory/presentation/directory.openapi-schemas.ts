@@ -52,16 +52,9 @@ const specialistOccupiedSlotKeysEntrySchema = {
 
 const specialistBookableServiceSchema = {
   type: 'object',
-  required: [
-    'id',
-    'name',
-    'categoryShortName',
-    'durationMinutes',
-    'priceVndByDuration',
-  ],
+  required: ['id', 'categoryShortName', 'durationMinutes', 'priceVndByDuration'],
   properties: {
     id: { type: 'string', format: 'uuid' },
-    name: { type: 'string', example: 'Relaxing massage' },
     categoryShortName: {
       type: 'string',
       example: 'Body massage',

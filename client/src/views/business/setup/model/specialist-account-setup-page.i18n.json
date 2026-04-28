@@ -1,0 +1,31 @@
+{
+  "messages": {
+    "en": {
+      "specialistAccountSetup": {
+        "title": "Specialist account setup",
+        "emptyBlockTitle": "Steps coming next",
+        "emptyHint": "Organization, services, and hours will appear here as we add each step. For now, confirm when you’re ready to open the full business tools.",
+        "completeCta": "Finish setup and open dashboard",
+        "completeNote": "You can always change these settings later. This only unlocks the rest of the business area on this device until we sync with your account on the server."
+      }
+    },
+    "vi": {
+      "specialistAccountSetup": {
+        "title": "Thiết lập tài khoản chuyên viên",
+        "emptyBlockTitle": "Các bước tiếp theo",
+        "emptyHint": "Tổ chức, dịch vụ và giờ làm sẽ hiện ở đây theo từng bước. Hiện tại hãy xác nhận khi sẵn sàng mở đầy đủ công cụ doanh nghiệp.",
+        "completeCta": "Hoàn tất và mở bảng điều khiển",
+        "completeNote": "Bạn vẫn đổi cài đặt sau. Thao tác này chỉ mở phần còn lại của khu vực doanh nghiệp trên thiết bị này cho đến khi đồng bộ với máy chủ."
+      }
+    },
+    "ru": {
+      "specialistAccountSetup": {
+        "title": "Настройка аккаунта специалиста",
+        "emptyBlockTitle": "Дальше по шагам",
+        "emptyHint": "Организация, услуги и часы появятся здесь по мере готовности шагов. Пока отметьте готовность, чтобы открыть остальные инструменты кабинета.",
+        "completeCta": "Завершить настройку и открыть панель",
+        "completeNote": "Позже всё можно изменить. Сейчас это лишь открывает остальную бизнес-зону в этом браузере; позже привяжем к серверу."
+      }
+    }
+  }
+}

@@ -227,7 +227,7 @@ export class PushNotificationsService {
         return;
       }
       const loc = localeFromSavedUserProfile(ctx.clientLocale);
-      const serviceDisplay = this.displayServiceName(ctx.serviceName, loc);
+      const serviceDisplay = this.displayServiceName(ctx.categoryShortName, loc);
       const timeLabel = this.formatLocalAppointmentTime(ctx.startsAt, loc);
       const { title, body } = this.clientBookingStatusCopy(loc, toStatus, {
         service: serviceDisplay,
@@ -244,7 +244,7 @@ export class PushNotificationsService {
             type: 'booking_status',
             toStatus: String(toStatus),
             timeLabel,
-            serviceName: serviceDisplay,
+            categoryShortName: serviceDisplay,
             specialistName: ctx.specialistName,
           },
           { webLink },
@@ -307,7 +307,7 @@ export class PushNotificationsService {
       const loc = ctx.recipientLocale;
       const copy = SPECIALIST_BOOKING_NOTIFY_COPY[loc];
       const serviceDisplay = this.displayServiceName(
-        ctx.serviceNameSnapshot?.trim() ?? '',
+        ctx.categoryShortNameSnapshot?.trim() ?? '',
         loc,
       );
       const title = copy.newBookingTitle;
@@ -380,7 +380,7 @@ export class PushNotificationsService {
         return;
       }
       const loc = localeFromSavedUserProfile(ctx.clientLocale);
-      const serviceDisplay = this.displayServiceName(ctx.serviceName, loc);
+      const serviceDisplay = this.displayServiceName(ctx.categoryShortName, loc);
       const timeLabel = this.formatLocalAppointmentTime(ctx.startsAt, loc);
       const { title, body } = this.clientReminderCopy(loc, {
         service: serviceDisplay,
@@ -396,7 +396,7 @@ export class PushNotificationsService {
             bookingId: String(bookingId),
             type: 'booking_client_reminder',
             timeLabel,
-            serviceName: serviceDisplay,
+            categoryShortName: serviceDisplay,
             specialistName: ctx.specialistName,
           },
           { webLink },
@@ -552,7 +552,7 @@ export class PushNotificationsService {
       const loc = ctx.recipientLocale;
       const copy = SPECIALIST_BOOKING_NOTIFY_COPY[loc];
       const serviceDisplay = this.displayServiceName(
-        ctx.serviceNameSnapshot?.trim() ?? '',
+        ctx.categoryShortNameSnapshot?.trim() ?? '',
         loc,
       );
       const title = copy.cancelledByClientTitle;

@@ -21,6 +21,8 @@ const authFieldClass =
 
 export type RegisterPageProps = {
   oauth: OAuthEnvFlags;
+  /** Куда вести после успешного входа (тот же путь для email и OAuth). */
+  postSignInPath?: string;
 };
 
 type Step = "form" | "otp";
@@ -42,7 +44,10 @@ function readErrCode(data: unknown): string | undefined {
   return undefined;
 }
 
-export function RegisterPage({ oauth }: RegisterPageProps) {
+export function RegisterPage({
+  oauth,
+  postSignInPath = "/",
+}: RegisterPageProps) {
   const t = useTranslations("authRegister");
   const appLocale = useLocale();
   const router = useRouter();
@@ -153,7 +158,7 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
         return;
       }
       if (sign?.ok) {
-        router.push("/");
+        router.push(postSignInPath);
         router.refresh();
       }
     } catch {
@@ -298,7 +303,11 @@ export function RegisterPage({ oauth }: RegisterPageProps) {
               >
                 {t("submit")}
               </Button>
-              <AuthSocialCircles oauth={oauth} namespace="authRegister" />
+              <AuthSocialCircles
+                oauth={oauth}
+                namespace="authRegister"
+                postSignInPath={postSignInPath}
+              />
             </div>
           </form>
         ) : (

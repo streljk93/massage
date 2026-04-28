@@ -68,7 +68,7 @@ type ApiBooking = {
   specialistName: string;
   organizationName: string | null;
   specialistImageUrl?: string | null;
-  serviceName: string;
+  categoryShortName: string;
   amount: number | null;
   currency: string;
   startsAt: string;
@@ -324,11 +324,11 @@ export function BookingsPage() {
       const serviceLine =
         row.amount != null
           ? formatBookingServiceLineClient(tRoot, format, {
-              serviceLabel: row.serviceName,
+              serviceLabel: row.categoryShortName,
               amount: row.amount,
               currency: row.currency,
             })
-          : row.serviceName;
+          : row.categoryShortName;
 
       const isActiveSlot =
         row.status === "confirmed" || row.status === "in_progress";
@@ -382,11 +382,11 @@ export function BookingsPage() {
       const serviceLine =
         row.amount != null
           ? formatBookingServiceLineClient(tRoot, format, {
-              serviceLabel: row.serviceName,
+              serviceLabel: row.categoryShortName,
               amount: row.amount,
               currency: row.currency,
             })
-          : row.serviceName;
+          : row.categoryShortName;
 
       const systemNote = bookingHistorySystemNote(
         row.status,

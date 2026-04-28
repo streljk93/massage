@@ -1,0 +1,52 @@
+{
+  "messages": {
+    "en": {
+      "businessOnboarding": {
+        "title": "Business home",
+        "welcomeLead": "You’re in the right place. When you’re set up, this screen becomes your home base — bookings, team, and how clients find you in search.",
+        "emptyTitle": "No workspace yet",
+        "emptyHint": "Connect an organization or create one. Then you’ll set services, hours, and how your listing looks — we’ll walk you through it.",
+        "hintsTitle": "What you can do next",
+        "hint1": "Create or join a salon, studio, or team profile",
+        "hint2": "Add what you offer and when you’re available",
+        "hint3": "See how you appear to clients in search before you go live",
+        "reminderService": "Add your services to appear correctly in search.",
+        "reminderOrg": "Link or create a workplace so clients know where to find you.",
+        "reminderCta": "Continue setup",
+        "incompleteBanner": "Specialist onboarding isn’t finished yet. You can continue later from here."
+      }
+    },
+    "vi": {
+      "businessOnboarding": {
+        "title": "Trang chủ doanh nghiệp",
+        "welcomeLead": "Bạn đang ở đúng chỗ. Khi thiết lập xong, màn hình này là nơi gom lịch hẹn, nhóm và cách khách tìm thấy bạn trên ứng dụng.",
+        "emptyTitle": "Chưa có không gian làm việc",
+        "emptyHint": "Kết nối hoặc tạo tổ chức. Sau đó bạn sẽ thêm dịch vụ, giờ mở và cách hồ sơ hiển thị — chúng tôi sẽ dẫn từng bước.",
+        "hintsTitle": "Gợi ý bước tiếp theo",
+        "hint1": "Tạo hoặc tham gia hồ sơ tiệm, studio hoặc nhóm",
+        "hint2": "Thêm dịch vụ bạn cung cấp và thời gian rảnh",
+        "hint3": "Xem trước cách khách tìm thấy bạn trước khi công khai",
+        "reminderService": "Thêm dịch vụ để hiển thị đúng trên tìm kiếm.",
+        "reminderOrg": "Gắn hoặc tạo nơi làm việc để khách biết tìm bạn ở đâu.",
+        "reminderCta": "Tiếp tục thiết lập",
+        "incompleteBanner": "Thiết lập chuyên viên chưa xong. Bạn có thể tiếp tục sau từ đây."
+      }
+    },
+    "ru": {
+      "businessOnboarding": {
+        "title": "Кабинет бизнеса",
+        "welcomeLead": "Вы в нужном разделе. Когда всё настроите, эта страница станет «домом»: записи, команда и то, как вас видят в поиске.",
+        "emptyTitle": "Пока нет рабочего пространства",
+        "emptyHint": "Подключите или создайте организацию — дальше настроим услуги, часы приёма и витрину. Мы подскажем шаги.",
+        "hintsTitle": "Что можно сделать дальше",
+        "hint1": "Создать или присоединиться к салону, студии или команде",
+        "hint2": "Добавить услуги и свободные слоты",
+        "hint3": "Проверить, как вас увидит клиент в поиске",
+        "reminderService": "Добавьте услуги, чтобы вас корректно видели в поиске.",
+        "reminderOrg": "Укажите или создайте место работы, чтобы клиенты понимали, куда вас искать.",
+        "reminderCta": "Продолжить настройку",
+        "incompleteBanner": "Настройка профиля мастера ещё не завершена. Можно продолжить позже отсюда."
+      }
+    }
+  }
+}

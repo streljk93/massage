@@ -57,6 +57,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Radix Collapsible: только height; без fill-mode both — убирает скачок при пересчёте Radix */
+  --animate-collapsible-down: collapsible-down 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-collapsible-up: collapsible-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /**
@@ -224,4 +228,22 @@
 
 .dark {
   --destructive: oklch(0.704 0.191 22.216);
+}
+
+@keyframes collapsible-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
 }

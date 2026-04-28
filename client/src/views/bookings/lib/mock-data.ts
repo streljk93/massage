@@ -5,7 +5,7 @@ export type BookingsPageMockItem = {
   status: BookingListStatus;
   pendingTime?: string;
   providerName: string;
-  serviceNameKey: "booking.demoFootMassage";
+  categoryShortNameKey: "booking.demoFootMassage";
   amount: number;
   currency: string;
   dateLabelKey: "booking.today";
@@ -16,7 +16,7 @@ export type BookingsPageMockItem = {
 export type BookingsHistoryMockItem = {
   id: string;
   providerName: string;
-  serviceNameKey: "booking.demoFootMassage";
+  categoryShortNameKey: "booking.demoFootMassage";
   amount: number;
   currency: string;
   /** Дата визита для строки (как в макете). */
@@ -34,7 +34,7 @@ export const bookingsNewMock: BookingsPageMockItem[] = [
     status: "pending",
     pendingTime: "14:32",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateLabelKey: "booking.today",
@@ -46,7 +46,7 @@ export const bookingsNewMock: BookingsPageMockItem[] = [
     id: "2",
     status: "confirmed",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateLabelKey: "booking.today",
@@ -58,7 +58,7 @@ export const bookingsNewMock: BookingsPageMockItem[] = [
     id: "3",
     status: "expired",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateLabelKey: "booking.today",
@@ -70,7 +70,7 @@ export const bookingsNewMock: BookingsPageMockItem[] = [
     id: "4",
     status: "rejected",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateLabelKey: "booking.today",
@@ -85,7 +85,7 @@ export const bookingsHistoryMock: BookingsHistoryMockItem[] = [
   {
     id: "h1",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateDisplay: "24.08.2024",
@@ -97,7 +97,7 @@ export const bookingsHistoryMock: BookingsHistoryMockItem[] = [
   {
     id: "h2",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateDisplay: "18.08.2024",
@@ -111,7 +111,7 @@ export const bookingsHistoryMock: BookingsHistoryMockItem[] = [
   {
     id: "h3",
     providerName: "Nha Trang",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 500_000,
     currency: "VND",
     dateDisplay: "10.08.2024",
@@ -125,7 +125,7 @@ export const bookingsHistoryMock: BookingsHistoryMockItem[] = [
   {
     id: "h4",
     providerName: "Da Lat Spa",
-    serviceNameKey: "booking.demoFootMassage",
+    categoryShortNameKey: "booking.demoFootMassage",
     amount: 450_000,
     currency: "VND",
     dateDisplay: "02.08.2024",

@@ -82,9 +82,15 @@ function GoogleGlyph({ className }: { className?: string }) {
 export type AuthSocialCirclesProps = {
   oauth: OAuthEnvFlags;
   namespace: "authLogin" | "authRegister";
+  /** Куда вести после успешного OAuth (логин и регистрация). */
+  postSignInPath?: string;
 };
 
-export function AuthSocialCircles({ oauth, namespace }: AuthSocialCirclesProps) {
+export function AuthSocialCircles({
+  oauth,
+  namespace,
+  postSignInPath = "/",
+}: AuthSocialCirclesProps) {
   const t = useTranslations(namespace);
   const appLocale = useLocale();
   const router = useRouter();
@@ -94,9 +100,9 @@ export function AuthSocialCircles({ oauth, namespace }: AuthSocialCirclesProps) 
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID?.trim() ?? "";
 
   const afterSignIn = useCallback(() => {
-    router.push("/");
+    router.push(postSignInPath);
     router.refresh();
-  }, [router]);
+  }, [postSignInPath, router]);
 
   const runOauth = useCallback(
     async (body: Parameters<typeof signInViaBackendOauth>[0]) => {

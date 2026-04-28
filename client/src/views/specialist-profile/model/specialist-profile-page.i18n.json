@@ -7,8 +7,6 @@
         "callAria": "Call",
         "messageAria": "Message",
         "favoriteAria": "Add to favorites",
-        "workplaceLabel": "Works at",
-        "workplaceOpenAria": "Open salon: {name}",
         "stats": {
           "experienceValue": "{years} Years",
           "experienceLabel": "Experience",
@@ -47,8 +45,6 @@
         "callAria": "Gọi điện",
         "messageAria": "Nhắn tin",
         "favoriteAria": "Thêm vào yêu thích",
-        "workplaceLabel": "Làm việc tại",
-        "workplaceOpenAria": "Mở salon: {name}",
         "stats": {
           "experienceValue": "{years} năm",
           "experienceLabel": "Kinh nghiệm",
@@ -87,8 +83,6 @@
         "callAria": "Позвонить",
         "messageAria": "Написать",
         "favoriteAria": "В избранное",
-        "workplaceLabel": "Работает в",
-        "workplaceOpenAria": "Открыть салон: {name}",
         "stats": {
           "experienceValue": "{years} лет",
           "experienceLabel": "Опыт",

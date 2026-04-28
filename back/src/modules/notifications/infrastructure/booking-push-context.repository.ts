@@ -47,10 +47,12 @@ function formatAddressLine(
 function toOrgSnapshot(
   org: {
     name: string;
-    addressLine: string | null;
-    city: string | null;
-    latitude: number | null;
-    longitude: number | null;
+    address: {
+      addressLine: string | null;
+      city: string | null;
+      latitude: number | null;
+      longitude: number | null;
+    } | null;
     locales: { locale: string; name: string }[];
   } | null,
   loc: 'en' | 'ru' | 'vi',
@@ -58,20 +60,25 @@ function toOrgSnapshot(
   if (!org) {
     return null;
   }
+  const a = org.address;
   return {
     displayName: pickOrgDisplayName(org, loc),
-    addressText: formatAddressLine(org.addressLine, org.city),
-    latitude: org.latitude,
-    longitude: org.longitude,
+    addressText: formatAddressLine(a?.addressLine ?? null, a?.city ?? null),
+    latitude: a?.latitude ?? null,
+    longitude: a?.longitude ?? null,
   };
 }
 
 const orgSelect = {
   name: true,
-  addressLine: true,
-  city: true,
-  latitude: true,
-  longitude: true,
+  address: {
+    select: {
+      addressLine: true,
+      city: true,
+      latitude: true,
+      longitude: true,
+    },
+  },
   locales: { select: { locale: true, name: true } },
 } as const;
 
@@ -93,7 +100,7 @@ export class BookingPushContextRepository implements BookingPushContextReader {
     const row = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
       select: {
-        serviceNameSnapshot: true,
+        categoryShortNameSnapshot: true,
         startsAt: true,
         endsAt: true,
         status: true,
@@ -121,7 +128,7 @@ export class BookingPushContextRepository implements BookingPushContextReader {
       recipientLocale,
     );
     return {
-      serviceNameSnapshot: row.serviceNameSnapshot,
+      categoryShortNameSnapshot: row.categoryShortNameSnapshot,
       clientName: row.client.name,
       specialistUserId: row.specialist.userId,
       specialistEmail: row.specialist.user.email,
@@ -144,7 +151,7 @@ export class BookingPushContextRepository implements BookingPushContextReader {
     const row = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
       select: {
-        serviceNameSnapshot: true,
+        categoryShortNameSnapshot: true,
         startsAt: true,
         endsAt: true,
         status: true,
@@ -164,7 +171,7 @@ export class BookingPushContextRepository implements BookingPushContextReader {
     return {
       clientUserId: row.client.id,
       clientEmail: row.client.email,
-      serviceName: row.serviceNameSnapshot?.trim() ?? '',
+      categoryShortName: row.categoryShortNameSnapshot?.trim() ?? '',
       specialistName: row.specialist.user.name,
       startsAt: row.startsAt,
       endsAt: row.endsAt,

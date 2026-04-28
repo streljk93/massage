@@ -78,6 +78,140 @@ export type DevRecomputePreferenceProfileResponseSwaggerDto = {
     };
 };
 
+export type AddressSuggestionsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+        query: unknown;
+    };
+    url: '/address/suggestions';
+};
+
+export type AddressSuggestionsErrors = {
+    /**
+     * Query слишком короткий или пустой
+     */
+    400: unknown;
+    401: unknown;
+    429: unknown;
+    /**
+     * Ни один провайдер адреса не сконфигурирован
+     */
+    503: unknown;
+};
+
+export type AddressSuggestionsResponses = {
+    200: {
+        suggestions: Array<{
+            placeId: string;
+            mainText: string;
+            secondaryText: string;
+            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+            /**
+             * Опционально: канонический адрес сразу (как у /resolve), чтобы не дублировать запрос
+             */
+            resolved?: {
+                addressLine: string;
+                city: string | null;
+                latitude: number;
+                longitude: number;
+                sourceProvider: string;
+                sourceReference: string;
+            };
+        }>;
+    };
+};
+
+export type AddressSuggestionsResponse = AddressSuggestionsResponses[keyof AddressSuggestionsResponses];
+
+export type AddressResolveData = {
+    body: {
+        provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+        placeId: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/address/resolve';
+};
+
+export type AddressResolveErrors = {
+    /**
+     * Неизвестный provider или place id
+     */
+    400: unknown;
+    401: unknown;
+    /**
+     * Место не найдено у поставщика
+     */
+    404: unknown;
+    429: unknown;
+    503: unknown;
+};
+
+export type AddressResolveResponses = {
+    200: {
+        resolved: {
+            addressLine: string;
+            city: string | null;
+            latitude: number;
+            longitude: number;
+            sourceProvider: string;
+            sourceReference: string;
+        };
+    };
+};
+
+export type AddressResolveResponse = AddressResolveResponses[keyof AddressResolveResponses];
+
+export type AddressReverseData = {
+    body: {
+        latitude: number;
+        longitude: number;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/address/reverse';
+};
+
+export type AddressReverseErrors = {
+    /**
+     * Невалидные координаты или адрес не найден
+     */
+    400: unknown;
+    401: unknown;
+    429: unknown;
+    503: unknown;
+};
+
+export type AddressReverseResponses = {
+    200: {
+        resolved: {
+            addressLine: string;
+            city: string | null;
+            latitude: number;
+            longitude: number;
+            sourceProvider: string;
+            sourceReference: string;
+        };
+    };
+};
+
+export type AddressReverseResponse = AddressReverseResponses[keyof AddressReverseResponses];
+
 export type HealthGetHealthData = {
     body?: never;
     path?: never;
@@ -686,6 +820,409 @@ export type UsersPatchSpecialistActiveOrganizationResponses = {
 
 export type UsersPatchSpecialistActiveOrganizationResponse = UsersPatchSpecialistActiveOrganizationResponses[keyof UsersPatchSpecialistActiveOrganizationResponses];
 
+export type UsersPostEnsureSpecialistData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/ensure';
+};
+
+export type UsersPostEnsureSpecialistErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type UsersPostEnsureSpecialistResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersPostEnsureSpecialistResponse = UsersPostEnsureSpecialistResponses[keyof UsersPostEnsureSpecialistResponses];
+
+export type UsersGetSpecialistOnboardingData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/onboarding';
+};
+
+export type UsersGetSpecialistOnboardingErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type UsersGetSpecialistOnboardingResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersGetSpecialistOnboardingResponse = UsersGetSpecialistOnboardingResponses[keyof UsersGetSpecialistOnboardingResponses];
+
+export type UsersPatchSpecialistOnboardingProfileData = {
+    body: {
+        name?: string;
+        phone?: string | unknown;
+        bio?: string;
+        experienceYears?: number;
+        imageUrl?: string | unknown;
+        imageAlt?: string | unknown;
+        /**
+         * Параметры вертикали «массаж»; поля с другой крупной категории — отдельные объекты.
+         */
+        massage?: {
+            pressureLevel?: number;
+            pressureAdaptsToClient?: boolean;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/profile';
+};
+
+export type UsersPatchSpecialistOnboardingProfileErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+};
+
+export type UsersPatchSpecialistOnboardingProfileResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersPatchSpecialistOnboardingProfileResponse = UsersPatchSpecialistOnboardingProfileResponses[keyof UsersPatchSpecialistOnboardingProfileResponses];
+
+export type UsersPostSpecialistOnboardingCompleteData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/onboarding/complete';
+};
+
+export type UsersPostSpecialistOnboardingCompleteErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+    /**
+     * Профиль, услуги или организация не готовы
+     */
+    409: unknown;
+};
+
+export type UsersPostSpecialistOnboardingCompleteResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersPostSpecialistOnboardingCompleteResponse = UsersPostSpecialistOnboardingCompleteResponses[keyof UsersPostSpecialistOnboardingCompleteResponses];
+
+export type UsersPostJoinOnboardingOrganizationData = {
+    body: {
+        organizationId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/specialist/onboarding/join-organization';
+};
+
+export type UsersPostJoinOnboardingOrganizationErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)
+     */
+    403: unknown;
+    /**
+     * Профиля специалиста или организации нет
+     */
+    404: unknown;
+    /**
+     * Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член организации (ALREADY_ORGANIZATION_MEMBER)
+     */
+    409: unknown;
+};
+
+export type UsersPostJoinOnboardingOrganizationResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersPostJoinOnboardingOrganizationResponse = UsersPostJoinOnboardingOrganizationResponses[keyof UsersPostJoinOnboardingOrganizationResponses];
+
+export type UsersGetWorkplaceJoinRequestsForOrganizationData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: 'pending' | 'rejected' | 'blocked' | 'accepted' | 'withdrawn' | 'all';
+    };
+    url: '/users/me/organizations/{organizationId}/workplace-join-requests';
+};
+
+export type UsersGetWorkplaceJoinRequestsForOrganizationErrors = {
+    /**
+     * Невалидный query (status)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type UsersGetWorkplaceJoinRequestsForOrganizationResponses = {
+    200: {
+        requests: Array<{
+            id: string;
+            specialistId: string;
+            organizationId: string;
+            status: 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'blocked';
+            createdAt: string;
+            updatedAt: string;
+            resolvedAt: string | null;
+            specialist: {
+                id: string;
+                userId: string;
+                user: {
+                    id: string;
+                    name: string;
+                    email: string;
+                };
+            };
+        }>;
+    };
+};
+
+export type UsersGetWorkplaceJoinRequestsForOrganizationResponse = UsersGetWorkplaceJoinRequestsForOrganizationResponses[keyof UsersGetWorkplaceJoinRequestsForOrganizationResponses];
+
+export type UsersPostReviewWorkplaceJoinRequestData = {
+    body: {
+        /**
+         * accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию.
+         */
+        decision: 'accept' | 'reject' | 'block';
+    };
+    path?: never;
+    query?: never;
+    url: '/users/me/organizations/{organizationId}/workplace-join-requests/{requestId}/review';
+};
+
+export type UsersPostReviewWorkplaceJoinRequestErrors = {
+    /**
+     * Невалидное тело (decision)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Нет pending-заявки с этим id для организации (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)
+     */
+    404: unknown;
+};
+
+export type UsersPostReviewWorkplaceJoinRequestResponses = {
+    200: {
+        ok: boolean;
+        decision: 'accept' | 'reject' | 'block';
+    };
+};
+
+export type UsersPostReviewWorkplaceJoinRequestResponse = UsersPostReviewWorkplaceJoinRequestResponses[keyof UsersPostReviewWorkplaceJoinRequestResponses];
+
+export type UsersPostCreateOnboardingOrganizationData = {
+    /**
+     * Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь).
+     */
+    body: {
+        name: string;
+        /**
+         * Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно).
+         */
+        placeReference?: {
+            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+            placeId: string;
+        };
+        addressLine?: string;
+        city?: string | null;
+        latitude?: number;
+        longitude?: number;
+        description?: string;
+        phone?: string | null;
+        email?: string | null;
+        website?: string | null;
+        yearsInBusiness?: number | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        serviceCategoryIds: Array<string>;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/users/me/specialist/onboarding/create-organization';
+};
+
+export type UsersPostCreateOnboardingOrganizationErrors = {
+    /**
+     * Категории или валидация тела
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+    /**
+     * Уже выбрана организация
+     */
+    409: unknown;
+};
+
+export type UsersPostCreateOnboardingOrganizationResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type UsersPostCreateOnboardingOrganizationResponse = UsersPostCreateOnboardingOrganizationResponses[keyof UsersPostCreateOnboardingOrganizationResponses];
+
+export type UsersPostSpecialistPersonalServiceData = {
+    body: {
+        categoryId: string;
+        description?: string;
+        priceOptions: Array<{
+            durationMinutes: number;
+            priceAmount: number;
+            currency?: string;
+        }>;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/users/me/specialist/services';
+};
+
+export type UsersPostSpecialistPersonalServiceErrors = {
+    /**
+     * Категория или валюта
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+};
+
+export type UsersPostSpecialistPersonalServiceResponses = {
+    200: {
+        serviceId: string;
+    };
+};
+
+export type UsersPostSpecialistPersonalServiceResponse = UsersPostSpecialistPersonalServiceResponses[keyof UsersPostSpecialistPersonalServiceResponses];
+
 export type BookingsListData = {
     body?: never;
     path?: never;
@@ -732,7 +1269,7 @@ export type BookingsListResponses = {
              */
             organizationName: string | null;
             specialistImageUrl?: string | null;
-            serviceName: string;
+            categoryShortName: string;
             amount: number | null;
             currency: string;
             startsAt: string;
@@ -1254,7 +1791,6 @@ export type SpecialistsListResponses = {
             }>;
             bookableServices: Array<{
                 id: string;
-                name: string;
                 /**
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
@@ -1429,7 +1965,6 @@ export type SpecialistsGetByIdResponses = {
         }>;
         bookableServices: Array<{
             id: string;
-            name: string;
             /**
              * Локализованный shortName подкатегории каталога (`Service.category`).
              */
@@ -1725,7 +2260,6 @@ export type OrganizationsGetByIdResponses = {
             imageUrl?: string | null;
             bookableServices: Array<{
                 id: string;
-                name: string;
                 /**
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
@@ -1914,7 +2448,6 @@ export type PersonalizationGetRecommendationsResponses = {
             }>;
             bookableServices: Array<{
                 id: string;
-                name: string;
                 /**
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
@@ -2334,7 +2867,6 @@ export type FavoritesListSpecialistsListingResponses = {
             }>;
             bookableServices: Array<{
                 id: string;
-                name: string;
                 /**
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */

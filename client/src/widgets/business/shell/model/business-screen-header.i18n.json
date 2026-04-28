@@ -1,0 +1,22 @@
+{
+  "messages": {
+    "en": {
+      "businessScreenHeader": {
+        "backToApp": "Back to the app",
+        "backToAppAria": "Return to the main app as a client"
+      }
+    },
+    "vi": {
+      "businessScreenHeader": {
+        "backToApp": "Quay lại ứng dụng",
+        "backToAppAria": "Về ứng dụng chính với tư cách khách"
+      }
+    },
+    "ru": {
+      "businessScreenHeader": {
+        "backToApp": "Обратно в приложение",
+        "backToAppAria": "Вернуться в основное приложение (режим клиента)"
+      }
+    }
+  }
+}

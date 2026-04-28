@@ -24,7 +24,7 @@ function isBookingStatusKey(s: string): boolean {
 }
 
 /**
- * Текст из `data` FCM + локаль UI (`next-intl`). Поля `timeLabel`, `serviceName`, `specialistName`
+ * Текст из `data` FCM + локаль UI (`next-intl`). Поля `timeLabel`, `categoryShortName`, `specialistName`
  * шлёт бэкенд в `data` вместе с `type` / `toStatus`.
  */
 export function fcmInAppToastFromData(
@@ -39,7 +39,7 @@ export function fcmInAppToastFromData(
     data.type === "booking_status" &&
     data.toStatus &&
     data.timeLabel &&
-    data.serviceName !== undefined &&
+    data.categoryShortName !== undefined &&
     data.specialistName !== undefined &&
     isBookingStatusKey(data.toStatus)
   ) {
@@ -47,7 +47,7 @@ export function fcmInAppToastFromData(
     const bodyPrefix = t(`toStatus.${data.toStatus}.bodyPrefix`);
     const line = t("detailLine", {
       timeLabel: data.timeLabel,
-      serviceName: data.serviceName,
+      categoryShortName: data.categoryShortName,
       specialistName: data.specialistName,
     });
     const body = bodyPrefix ? `${bodyPrefix} — ${line}` : line;
@@ -56,14 +56,14 @@ export function fcmInAppToastFromData(
   if (
     data.type === "booking_client_reminder" &&
     data.timeLabel &&
-    data.serviceName &&
+    data.categoryShortName &&
     data.specialistName
   ) {
     return {
       title: t("reminder.title"),
       body: t("detailLine", {
         timeLabel: data.timeLabel,
-        serviceName: data.serviceName,
+        categoryShortName: data.categoryShortName,
         specialistName: data.specialistName,
       }),
     };

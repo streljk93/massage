@@ -40,7 +40,12 @@ export class FavoritesRepository {
       return new Set();
     }
     const rows = await this.prisma.specialist.findMany({
-      where: { id: { in: ids }, deletedAt: null },
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        listedInDirectory: true,
+        activeOrganizationId: { not: null },
+      },
       select: { id: true },
     });
     return new Set(rows.map((r) => r.id));

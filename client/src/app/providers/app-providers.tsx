@@ -10,8 +10,8 @@ import { ConfirmActionHost } from "@/shared/ui/confirm-action-host";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
 import { FavoritesSyncOnAuth } from "@/features/favorites-sync";
 import { SyncUserLocaleWithApp } from "@/features/user-locale-sync";
-import { FcmTokenSync } from "@/features/push-notifications";
-import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
+// import { FcmTokenSync } from "@/features/push-notifications";
+// import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
 import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
 
 const NotificationToaster = dynamic(
@@ -35,7 +35,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <ThemePreferenceProvider>
         <FavoritesSyncOnAuth />
         <SyncUserLocaleWithApp />
-        {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null}
+        {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
         <NotificationToaster />
         <ConfirmActionHost />
         <PortraitOrientationLock />

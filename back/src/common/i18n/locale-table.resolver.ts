@@ -54,9 +54,13 @@ export type OrganizationLocaleListShape = {
   slug: string;
   name: string;
   description: string | null;
-  city: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  /** Координаты и строки — из `Address`, не локализуются. */
+  address: {
+    addressLine: string | null;
+    city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  } | null;
   ratingAverage: number;
   reviewsCount: number;
   imageUrl: string | null;
@@ -68,10 +72,25 @@ export type OrganizationLocaleListShape = {
   }[];
 };
 
+/** Плоское представление витринных полей организации после `pickLocalized…` (без `locales`). */
+export type PickedOrganizationListLocaleFields = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  ratingAverage: number;
+  reviewsCount: number;
+  imageUrl: string | null;
+  imageAlt: string | null;
+};
+
 export function pickLocalizedOrganizationListItem(
   row: OrganizationLocaleListShape,
   locale: ApiLocale,
-): Omit<OrganizationLocaleListShape, 'locales'> {
+): PickedOrganizationListLocaleFields {
   const tr = row.locales.find((l) => l.locale === locale);
   if (tr) {
     return {
@@ -79,9 +98,9 @@ export function pickLocalizedOrganizationListItem(
       slug: row.slug,
       name: tr.name,
       description: tr.description ?? row.description,
-      city: row.city,
-      latitude: row.latitude,
-      longitude: row.longitude,
+      city: row.address?.city ?? null,
+      latitude: row.address?.latitude ?? null,
+      longitude: row.address?.longitude ?? null,
       ratingAverage: row.ratingAverage,
       reviewsCount: row.reviewsCount,
       imageUrl: row.imageUrl,
@@ -95,9 +114,9 @@ export function pickLocalizedOrganizationListItem(
       slug: row.slug,
       name: en.name,
       description: en.description ?? row.description,
-      city: row.city,
-      latitude: row.latitude,
-      longitude: row.longitude,
+      city: row.address?.city ?? null,
+      latitude: row.address?.latitude ?? null,
+      longitude: row.address?.longitude ?? null,
       ratingAverage: row.ratingAverage,
       reviewsCount: row.reviewsCount,
       imageUrl: row.imageUrl,
@@ -109,32 +128,14 @@ export function pickLocalizedOrganizationListItem(
     slug: row.slug,
     name: row.name,
     description: row.description,
-    city: row.city,
-    latitude: row.latitude,
-    longitude: row.longitude,
+    city: row.address?.city ?? null,
+    latitude: row.address?.latitude ?? null,
+    longitude: row.address?.longitude ?? null,
     ratingAverage: row.ratingAverage,
     reviewsCount: row.reviewsCount,
     imageUrl: row.imageUrl,
     imageAlt: row.imageAlt,
   };
-}
-
-/** Услуга организации с `ServiceLocale` для витрины. */
-export type ServiceLocaleShape = {
-  name: string;
-  locales: { locale: string; name: string }[];
-};
-
-export function pickLocalizedServiceName(
-  service: ServiceLocaleShape,
-  locale: ApiLocale,
-): string {
-  return resolveLocalizedString(
-    locale,
-    service.locales ?? [],
-    (l) => l.name,
-    service.name,
-  );
 }
 
 export function pickLocalizedServiceCategoryFields(

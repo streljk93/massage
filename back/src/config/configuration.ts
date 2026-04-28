@@ -1,3 +1,5 @@
+import { DEFAULT_ADDRESS_PROVIDER_ORDER } from '../modules/address/domain/address-providers.const';
+
 const nodeEnv = process.env.NODE_ENV ?? 'development';
 
 function positiveInt(raw: string | undefined, fallback: number): number {
@@ -137,6 +139,45 @@ export default () => ({
       secure: process.env.SMTP_SECURE === 'true',
       user: process.env.SMTP_USER?.trim() ?? '',
       pass: process.env.SMTP_PASS?.trim() ?? '',
+    },
+  },
+  /**
+   * Адреса / геокодинг (см. `modules/address`).
+   * Порядок цепочки: `ADDRESS_PROVIDER_ORDER` в env (если задан); иначе {@link DEFAULT_ADDRESS_PROVIDER_ORDER} — один дефолт в коде, без дублирования строки здесь.
+   */
+  address: {
+    providerOrder: (() => {
+      const raw =
+        process.env.ADDRESS_PROVIDER_ORDER?.trim() ??
+        DEFAULT_ADDRESS_PROVIDER_ORDER.join(',');
+      return raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    })(),
+    /** Таймаут HTTP к одному провайдеру (мс); после — fallback на следующий. */
+    requestTimeoutMs: positiveInt(process.env.ADDRESS_GEOCODE_TIMEOUT_MS, 3500),
+    locationiq: {
+      apiKey: process.env.LOCATIONIQ_API_KEY?.trim() ?? '',
+    },
+    opencage: {
+      apiKey: process.env.OPENCAGE_API_KEY?.trim() ?? '',
+    },
+    geoapify: {
+      apiKey: process.env.GEOAPIFY_API_KEY?.trim() ?? '',
+    },
+    nominatim: {
+      baseUrl: (
+        process.env.ADDRESS_NOMINATIM_BASE_URL?.trim() ||
+        'https://nominatim.openstreetmap.org'
+      ).replace(/\/$/, ''),
+      userAgent: (() => {
+        const u = process.env.ADDRESS_NOMINATIM_USER_AGENT?.trim();
+        if (u) {
+          return u;
+        }
+        return 'ServicesApp/1.0 (address module; Nominatim; configure ADDRESS_NOMINATIM_USER_AGENT in production)';
+      })(),
     },
   },
 });

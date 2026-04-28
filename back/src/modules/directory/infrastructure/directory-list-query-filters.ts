@@ -33,31 +33,18 @@ function specialistTextSearchWhere(
     OR: [
       { user: { name: { contains: q, mode: 'insensitive' } } },
       { bio: { contains: q, mode: 'insensitive' } },
-      { listingMetaLine: { contains: q, mode: 'insensitive' } },
-      { listingServicesLine: { contains: q, mode: 'insensitive' } },
       {
         activeOrganization: {
-          OR: [
-            { addressLine: { contains: q, mode: 'insensitive' } },
-            { city: { contains: q, mode: 'insensitive' } },
-            { listingMetaLine: { contains: q, mode: 'insensitive' } },
-            { name: { contains: q, mode: 'insensitive' } },
-          ],
-        },
-      },
-      {
-        services: {
-          some: {
-            deletedAt: null,
-            isActive: true,
-            specialistId: { not: null },
+          is: {
             OR: [
               { name: { contains: q, mode: 'insensitive' } },
               {
-                locales: {
-                  some: {
-                    locale: { in: locs },
-                    name: { contains: q, mode: 'insensitive' },
+                address: {
+                  is: {
+                    OR: [
+                      { addressLine: { contains: q, mode: 'insensitive' } },
+                      { city: { contains: q, mode: 'insensitive' } },
+                    ],
                   },
                 },
               },
@@ -171,15 +158,12 @@ function organizationTextSearchWhere(
   q: string,
   locale: ApiLocale,
 ): Prisma.OrganizationWhereInput {
-  const locs = searchLocaleIn();
   return {
     OR: [
       { name: { contains: q, mode: 'insensitive' } },
       { slug: { contains: q, mode: 'insensitive' } },
-      { listingMetaLine: { contains: q, mode: 'insensitive' } },
-      { listingServicesLine: { contains: q, mode: 'insensitive' } },
-      { addressLine: { contains: q, mode: 'insensitive' } },
-      { city: { contains: q, mode: 'insensitive' } },
+      { address: { is: { addressLine: { contains: q, mode: 'insensitive' } } } },
+      { address: { is: { city: { contains: q, mode: 'insensitive' } } } },
       {
         locales: {
           some: {
@@ -187,25 +171,6 @@ function organizationTextSearchWhere(
             OR: [
               { name: { contains: q, mode: 'insensitive' } },
               { description: { contains: q, mode: 'insensitive' } },
-            ],
-          },
-        },
-      },
-      {
-        services: {
-          some: {
-            deletedAt: null,
-            isActive: true,
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              {
-                locales: {
-                  some: {
-                    locale: { in: locs },
-                    name: { contains: q, mode: 'insensitive' },
-                  },
-                },
-              },
             ],
           },
         },

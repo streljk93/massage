@@ -17,6 +17,12 @@ import {
   bookingsPageI18n,
   visitRatePageI18n,
 } from "@/views/bookings";
+import { businessAppSubpagesI18n } from "@/views/business/subpages";
+import { businessOnboardingPageI18n } from "@/views/business/onboarding";
+import {
+  specialistAccountSetupPageI18n,
+  specialistOnboardingWizardI18n,
+} from "@/views/business/setup";
 import { becomeSpecialistPageI18n } from "@/views/become-specialist";
 import { homeForYouSectionI18n, homePageI18n } from "@/views/home";
 import {
@@ -42,6 +48,11 @@ import {
   specialistProfilePageI18n,
 } from "@/views/specialist-profile";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
+import { addressMapPickerDialogI18n } from "@/widgets/address-map-picker";
+import {
+  businessAppBottomNavI18n,
+  businessScreenHeaderI18n,
+} from "@/widgets/business/shell";
 import {
   homeBottomNavI18n,
   homeScreenHeaderI18n,
@@ -55,11 +66,18 @@ const bundles: ColocatedI18nBundle[] = [
   apiErrorToastI18n,
   comingSoonI18n,
   fcmInAppI18n,
+  addressMapPickerDialogI18n,
   availabilitySlotStripI18n,
   homeBottomNavI18n,
   homeScreenHeaderI18n,
+  businessAppBottomNavI18n,
+  businessScreenHeaderI18n,
   homePageI18n,
   homeForYouSectionI18n,
+  businessOnboardingPageI18n,
+  specialistAccountSetupPageI18n,
+  specialistOnboardingWizardI18n,
+  businessAppSubpagesI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,

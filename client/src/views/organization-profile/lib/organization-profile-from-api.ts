@@ -28,7 +28,6 @@ export function organizationProfileFromApiDetail(
     metaLine: s.metaLine,
     bookableServices: (s.bookableServices ?? []).map((b) => ({
       id: b.id,
-      name: b.name,
       categoryShortName: b.categoryShortName,
       durationMinutes: b.durationMinutes as readonly number[],
       priceVndByDuration: b.priceVndByDuration as readonly number[],

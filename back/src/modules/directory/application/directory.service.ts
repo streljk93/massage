@@ -29,7 +29,6 @@ import type { ApiLocale } from '../../../common/i18n';
 import {
   pickLocalizedOrganizationListItem,
   pickLocalizedServiceCategoryFields,
-  pickLocalizedServiceName,
   type CategoryLocaleShape,
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
@@ -145,13 +144,11 @@ function mapServiceRowsToBookable(
     if (vndOpts.length === 0) {
       continue;
     }
-    const name = pickLocalizedServiceName(svc, locale);
     const categoryShortName = svc.category
       ? pickLocalizedServiceCategoryFields(svc.category, locale).shortName
       : '';
     out.push({
       id: svc.id,
-      name,
       categoryShortName,
       durationMinutes: vndOpts.map((p) => p.durationMinutes),
       priceVndByDuration: vndOpts.map((p) => p.priceAmount),
@@ -178,24 +175,21 @@ function mapSpecialistRowToListItem(
   const slotGroups = buildListingSlotGroupsFromOccupiedKeys(occupiedKeys, now);
 
   const loc = s.activeOrganization;
-  const addressLine = loc?.addressLine ?? null;
-  const city = loc?.city ?? null;
-  const latitude = loc?.latitude ?? null;
-  const longitude = loc?.longitude ?? null;
+  const addr = loc?.address;
+  const addressLine = addr?.addressLine ?? null;
+  const city = addr?.city ?? null;
+  const latitude = addr?.latitude ?? null;
+  const longitude = addr?.longitude ?? null;
 
   const categoriesLine = joinLocalizedCategoryShortNames(
     s.serviceCategories,
     locale,
   );
   const metaLine =
-    s.listingMetaLine?.trim() ||
-    loc?.listingMetaLine?.trim() ||
-    [addressLine, city].filter(Boolean).join(', ') ||
+    [addressLine, city].filter((x) => x?.trim()).join(', ') ||
     s.bio?.trim() ||
     '';
-  // `listingServicesLine` — денормализация (часто en из сида); для витрины важнее
-  // локализованная склейка по M2M `serviceCategories`, если она есть.
-  const servicesLine = categoriesLine || s.listingServicesLine?.trim() || '';
+  const servicesLine = categoriesLine || '';
   const listingWd = normalizeDirectoryListingWorkdayBounds(
     loc?.listingWorkdayStartMinute,
     loc?.listingWorkdayEndMinute,
@@ -259,12 +253,10 @@ function mapOrganizationRowToListItem(
     o.serviceCategories,
     locale,
   );
-  const metaLine = o.listingMetaLine?.trim() || localized.city?.trim() || '';
+  const metaLine =
+    [o.address?.addressLine, localized.city].filter((x) => x?.trim()).join(', ') || '';
   const servicesLine =
-    categoriesLine ||
-    o.listingServicesLine?.trim() ||
-    localized.description?.trim() ||
-    '';
+    categoriesLine || localized.description?.trim() || '';
   const orgWd = normalizeDirectoryListingWorkdayBounds(
     o.listingWorkdayStartMinute,
     o.listingWorkdayEndMinute,
@@ -275,7 +267,7 @@ function mapOrganizationRowToListItem(
     name: localized.name,
     description: localized.description,
     city: localized.city,
-    addressLine: o.addressLine,
+    addressLine: o.address?.addressLine ?? null,
     phone: o.phone,
     yearsInBusiness: o.yearsInBusiness,
     latitude: localized.latitude,
@@ -303,10 +295,7 @@ function mapSpecialistToStaffMember(
   occupiedKeys: Set<string>,
 ): OrganizationStaffMemberDto {
   const metaLine =
-    organizationMetaLine.trim() ||
-    s.listingMetaLine?.trim() ||
-    s.bio?.trim() ||
-    '';
+    organizationMetaLine.trim() || s.bio?.trim() || '';
   return {
     id: s.id,
     userId: s.userId,
@@ -698,7 +687,9 @@ export class DirectoryService {
     id: string,
   ): Promise<SpecialistListItemDto | null> {
     const now = new Date();
-    const row = await this.directoryRepository.findSpecialistById(id);
+    const row = await this.directoryRepository.findPublicDirectorySpecialistById(
+      id,
+    );
     if (!row) {
       return null;
     }
@@ -846,6 +837,9 @@ export class DirectoryService {
     for (const id of ids) {
       const s = byId.get(id);
       if (!s) {
+        continue;
+      }
+      if (!s.listedInDirectory || s.activeOrganizationId == null) {
         continue;
       }
       out.push(

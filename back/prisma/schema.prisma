@@ -50,6 +50,16 @@ enum OrganizationMembershipRole {
   specialist
 }
 
+/// Заявка мастера на работу в существующем салоне (онбординг / смена места).
+enum SpecialistWorkplaceJoinRequestStatus {
+  pending
+  withdrawn
+  accepted
+  rejected
+  /// Салон запретил этому мастеру новые заявки в эту организацию.
+  blocked
+}
+
 /// Цель избранного клиента: салон или мастер (витрина).
 enum FavoriteTargetKind {
   organization
@@ -268,6 +278,28 @@ model ServiceCategoryLocale {
   @@index([locale])
 }
 
+/// Физический адрес (геокод, витрина); ссылка с `Organization.addressId`.
+model Address {
+  id               String   @id @default(uuid())
+  /// Строка адреса для отображения.
+  addressLine      String?
+  /// Город / населённый пункт.
+  city             String?
+  latitude         Float?
+  longitude        Float?
+  /// Напр. `google_places` или `manual` при вводе без справочника.
+  sourceProvider   String?
+  /// Внешний id места (place id) при `sourceProvider` из справочника.
+  sourceReference String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organizations Organization[]
+
+  @@index([city])
+  @@index([latitude, longitude])
+}
+
 /// Организация (салон, парикмахерская и т.д.); в UI часто «салон массажа».
 model Organization {
   id   String @id @default(uuid())
@@ -279,22 +311,18 @@ model Organization {
   ownerUserId String?
   ownerUser   User?   @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
 
+  /// Адрес салона: отдельная сущность.
+  addressId String?
+  address   Address?  @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
   description     String?
   phone           String?
   email           String?
   website         String?
-  addressLine     String?
-  city            String?
-  latitude        Float?
-  longitude       Float?
   imageUrl        String?
   imageAlt        String?
   yearsInBusiness Int?
 
-  /// Витрина главной/поиска: подпись под рейтингом (расстояние, адрес и т.п.).
-  listingMetaLine String?
-  /// Витрина: вторая строка услуг/форматов для карточки.
-  listingServicesLine String?
   /// Минуты с полуночи (Asia/Ho_Chi_Minh) — начало приёма; сетка 30 мин (например 480=8:00, 540=9:00, 600=10:00).
   listingWorkdayStartMinute Int @default(480)
   /// Окончание приёма (например 1260=21:00, 1320=22:00, 1380=23:00; последний старт = end − 30 мин).
@@ -319,9 +347,10 @@ model Organization {
   specialistsActiveWorkplace Specialist[] @relation("SpecialistActiveOrganization")
   locales               OrganizationLocale[]
   serviceCategories     OrganizationServiceCategory[]
+  workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
 
   @@index([ownerUserId])
-  @@index([city])
+  @@index([addressId])
 }
 
 /// Локализованные название и описание организации (витрина / SEO на разных языках).
@@ -386,23 +415,24 @@ model Specialist {
 
   bio             String?
   experienceYears Int?
-  /// Подпись вида «1.5k +» для демо/UI.
-  clientsLabel    String?
 
   ratingAverage Float @default(0)
   reviewsCount  Int   @default(0)
   imageUrl      String?
   imageAlt      String?
 
+  /// Параметры, специфичные для вертикали «массаж» (сила нажима и т.д.); другие крупные категории — отдельные 1:1.
+  massageProfile SpecialistMassageProfile?
+
   /// Текущее место приёма (адрес и гео для витрины берутся от этой организации).
   activeOrganizationId String?
   activeOrganization   Organization? @relation("SpecialistActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 
-  listingMetaLine     String?
-  listingServicesLine String?
-
   /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.
-  listedInDirectory Boolean @default(true)
+  listedInDirectory Boolean @default(false)
+
+  /// Завершён сценарий первичной настройки (финальный экран); витрина — только вместе с `activeOrganizationId` и флагом listed.
+  onboardingCompletedAt DateTime?
 
   /// Записи сразу в `confirmed` (без ожидания ручного подтверждения мастером / без pending).
   autoConfirmBookings Boolean @default(false)
@@ -412,12 +442,27 @@ model Specialist {
   deletedAt DateTime?
 
   employments         SpecialistOrganizationEmployment[]
+  workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
   services            Service[]
   bookings            Booking[]
   reviews             SpecialistReview[]
   serviceCategories   SpecialistServiceCategory[]
 
   @@index([activeOrganizationId])
+}
+
+/// Профиль мастера в вертикали «массаж» (онбординг / витрина), чтобы не тащить отраслевые поля в `Specialist`.
+model SpecialistMassageProfile {
+  specialistId String     @id
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  /// Сила нажима (шкала 1–5); null — ещё не задано в онбординге.
+  pressureLevel Int?
+  /// Подстраивать силу под пожелания клиента.
+  pressureAdaptsToClient Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 /// Выбранные подкатегории каталога у специалиста.
@@ -457,11 +502,30 @@ model SpecialistOrganizationEmployment {
   @@index([role])
 }
 
-/// Услуга в каталоге организации (и привязка к категории).
+/// Заявка специалиста на приём в организацию (без автоматического членства).
+model SpecialistWorkplaceJoinRequest {
+  id             String @id @default(uuid())
+  specialistId   String
+  organizationId String
+  status         SpecialistWorkplaceJoinRequestStatus @default(pending)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+
+  specialist   Specialist   @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([specialistId, organizationId])
+  @@index([specialistId, status])
+  @@index([organizationId, status])
+}
+
+/// Услуга в каталоге организации или личная услуга мастера (`organizationId` = null).
 model Service {
   id             String @id @default(uuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   categoryId String
   category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -469,7 +533,7 @@ model Service {
   specialistId String?
   specialist   Specialist? @relation(fields: [specialistId], references: [id], onDelete: SetNull)
 
-  name        String
+  /// Стабильный ключ в пределах организации / личного каталога; отображаемое имя — у `ServiceCategory`.
   slug        String
   description String?
   sortOrder   Int     @default(0)
@@ -481,28 +545,12 @@ model Service {
 
   priceOptions ServicePriceOption[]
   bookings     Booking[]
-  locales      ServiceLocale[]
 
-  @@unique([organizationId, slug])
+  /// Уникальность `(organizationId, slug)` и `(specialistId, slug)` при `organizationId IS NULL` задаётся частичными индексами в SQL-миграции.
+  @@index([organizationId, slug])
+  @@index([specialistId, slug])
   @@index([categoryId])
   @@index([specialistId])
-}
-
-/// Локализованные название и описание услуги в каталоге организации.
-model ServiceLocale {
-  id        String  @id @default(uuid())
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  locale      String
-  name        String
-  description String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([serviceId, locale])
-  @@index([locale])
 }
 
 /// Варианты длительности и цены для услуги.
@@ -562,8 +610,8 @@ model Booking {
   serviceId String?
   service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
 
-  /// Снимок на момент записи (если услугу удалили из каталога).
-  serviceNameSnapshot String?
+  /// Локализованный `shortName` подкатегории на момент записи.
+  categoryShortNameSnapshot String?
   durationMinutes     Int
   priceAmountSnapshot Int?
   currencySnapshot    String? @default("VND")

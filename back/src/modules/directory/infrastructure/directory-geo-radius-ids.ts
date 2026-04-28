@@ -16,20 +16,21 @@ export async function findOrganizationIdsWithinRadiusMeters(
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT o."id"::text AS "id"
     FROM "Organization" o
+    INNER JOIN "Address" a ON a."id" = o."addressId"
     WHERE o."deletedAt" IS NULL
-      AND o."latitude" IS NOT NULL
-      AND o."longitude" IS NOT NULL
-      AND NOT (o."latitude" = 0 AND o."longitude" = 0)
+      AND a."latitude" IS NOT NULL
+      AND a."longitude" IS NOT NULL
+      AND NOT (a."latitude" = 0 AND a."longitude" = 0)
       AND (
         ${R_EARTH_M}::double precision * acos(
           LEAST(1.0::double precision, GREATEST(-1.0::double precision,
             cos(radians(${centerLat}::double precision))
-            * cos(radians(o."latitude"::double precision))
+            * cos(radians(a."latitude"::double precision))
             * cos(
-              radians(o."longitude"::double precision) - radians(${centerLng}::double precision)
+              radians(a."longitude"::double precision) - radians(${centerLng}::double precision)
             )
             + sin(radians(${centerLat}::double precision))
-            * sin(radians(o."latitude"::double precision))
+            * sin(radians(a."latitude"::double precision))
           ))
         )
       ) <= ${radiusM}::double precision
@@ -50,22 +51,23 @@ export async function findSpecialistIdsWithinRadiusMeters(
     SELECT s."id"::text AS "id"
     FROM "Specialist" s
     INNER JOIN "Organization" o ON o."id" = s."activeOrganizationId"
+    INNER JOIN "Address" a ON a."id" = o."addressId"
     WHERE s."deletedAt" IS NULL
       AND s."listedInDirectory" = true
       AND o."deletedAt" IS NULL
-      AND o."latitude" IS NOT NULL
-      AND o."longitude" IS NOT NULL
-      AND NOT (o."latitude" = 0 AND o."longitude" = 0)
+      AND a."latitude" IS NOT NULL
+      AND a."longitude" IS NOT NULL
+      AND NOT (a."latitude" = 0 AND a."longitude" = 0)
       AND (
         ${R_EARTH_M}::double precision * acos(
           LEAST(1.0::double precision, GREATEST(-1.0::double precision,
             cos(radians(${centerLat}::double precision))
-            * cos(radians(o."latitude"::double precision))
+            * cos(radians(a."latitude"::double precision))
             * cos(
-              radians(o."longitude"::double precision) - radians(${centerLng}::double precision)
+              radians(a."longitude"::double precision) - radians(${centerLng}::double precision)
             )
             + sin(radians(${centerLat}::double precision))
-            * sin(radians(o."latitude"::double precision))
+            * sin(radians(a."latitude"::double precision))
           ))
         )
       ) <= ${radiusM}::double precision

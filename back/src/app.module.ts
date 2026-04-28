@@ -15,6 +15,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { DirectoryModule } from './modules/directory/directory.module';
 import { PersonalizationModule } from './modules/personalization/personalization.module';
 import { FilesModule } from './modules/files/files.module';
+import { AddressModule } from './modules/address/address.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UsersModule } from './modules/users/users.module';
@@ -38,6 +39,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
+    AddressModule,
     StorageModule,
     HealthModule,
     FilesModule,

@@ -1,10 +1,12 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
+import { auth } from "@/auth";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { PROSPECTIVE_SPECIALIST_EMAIL } from "../lib/onboarding-contact";
 import { BecomeSpecialistLandingBody } from "./become-specialist-landing-blocks";
 
 export async function BecomeSpecialistPage() {
+  const session = await auth();
   const t = await getTranslations("becomeSpecialist");
   const tSlots = await getTranslations("slots");
   const locale = (await getLocale()) as AppLocale;
@@ -23,6 +25,7 @@ export async function BecomeSpecialistPage() {
             avatarFallback="SV"
           />
           <BecomeSpecialistLandingBody
+            isAuthed={Boolean(session?.user)}
             locale={locale}
             listingNow={listingNow}
             t={(key) => t(key as never)}

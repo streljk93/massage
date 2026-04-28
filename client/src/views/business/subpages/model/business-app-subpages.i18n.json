@@ -1,0 +1,40 @@
+{
+  "messages": {
+    "en": {
+      "businessAppSubpages": {
+        "bookingsTitle": "Bookings",
+        "bookingsIntro": "Guest visits tied to your business will show up here, newest first. Nothing to worry about if it’s quiet at the start.",
+        "emptyBookingsTitle": "No visits yet",
+        "emptyBookingsHint": "When someone books you through the app, the request and details will land here. You can confirm, reschedule, or mark the visit as done — we’ll add reminders so nothing slips through.",
+        "profileTitle": "Business profile",
+        "profileIntro": "A clear profile helps clients trust you before they book. You can take your time; nothing is public until you’re ready.",
+        "emptyProfileTitle": "Profile not filled in yet",
+        "emptyProfileHint": "Here you’ll add your team, organization, public listing, and the basics clients see in search. We’ll only show what you choose, when you’re ready to go live."
+      }
+    },
+    "vi": {
+      "businessAppSubpages": {
+        "bookingsTitle": "Lịch hẹn",
+        "bookingsIntro": "Các lịch của khách gắn với doanh nghiệp sẽ hiện ở đây, mới nhất trước. Lúc mới bắt đầu mà còn trống là bình thường.",
+        "emptyBookingsTitle": "Chưa có lịch hẹn",
+        "emptyBookingsHint": "Khi ai đó đặt qua app, yêu cầu và chi tiết sẽ ở đây. Bạn có thể xác nhận, đổi lịch hoặc kết thúc buổi — sẽ có nhắc việc để không bỏ sót.",
+        "profileTitle": "Hồ sơ doanh nghiệp",
+        "profileIntro": "Hồ sơ rõ ràng giúp khách yên tâm trước khi đặt. Bạn cứ từ từ; chưa công khai nếu bạn chưa muốn.",
+        "emptyProfileTitle": "Hồ sơ chưa hoàn tất",
+        "emptyProfileHint": "Tại đây bạn thêm nhóm, tổ chức, hồ sơ công khai và thông tin khách thấy trên tìm kiếm. Chỉ hiển thị phần bạn chọn khi sẵn sàng."
+      }
+    },
+    "ru": {
+      "businessAppSubpages": {
+        "bookingsTitle": "Записи",
+        "bookingsIntro": "Визиты гостей по вашему бизнесу появятся здесь, сначала ближайшие. Пусто в начале — нормально.",
+        "emptyBookingsTitle": "Пока нет визитов",
+        "emptyBookingsHint": "Когда клиент запишется через приложение, заявка и детали окажутся здесь: можно подтвердить, перенести или завершить визит. Напоминания настроим, чтобы ничего не потерялось.",
+        "profileTitle": "Профиль бизнеса",
+        "profileIntro": "Понятный профиль помогает доверию до записи. Можно заполнять не спеша — в поиске видно только то, что вы сами включите.",
+        "emptyProfileTitle": "Профиль ещё пуст",
+        "emptyProfileHint": "Здесь будут команда, организация, витрина и то, что видят клиенты в поиске. Публикуем только с вашего согласия."
+      }
+    }
+  }
+}

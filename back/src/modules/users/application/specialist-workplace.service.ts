@@ -8,6 +8,7 @@ import { BookingsRepository } from '../../bookings/infrastructure/bookings.repos
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
+import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 
 @Injectable()
 export class SpecialistWorkplaceService {
@@ -72,6 +73,21 @@ export class SpecialistWorkplaceService {
         where: { id: specialist.id },
         data: { activeOrganizationId: body.organizationId },
       });
+      const fresh = await tx.specialist.findFirst({
+        where: { id: specialist.id },
+        select: { onboardingCompletedAt: true, activeOrganizationId: true },
+      });
+      if (fresh) {
+        await tx.specialist.update({
+          where: { id: specialist.id },
+          data: {
+            listedInDirectory: computeListedInDirectory({
+              onboardingCompletedAt: fresh.onboardingCompletedAt,
+              activeOrganizationId: fresh.activeOrganizationId,
+            }),
+          },
+        });
+      }
       if (!previousOrgId) {
         return [] as Awaited<
           ReturnType<BookingsRepository['cancelActiveBookingsAtOrganization']>

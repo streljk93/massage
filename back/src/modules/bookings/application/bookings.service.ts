@@ -20,7 +20,8 @@ import {
   buildBookingStatusLabelMap,
   parseApiLocale,
   pickBookingStatusLabel,
-  pickLocalizedServiceName,
+  pickLocalizedServiceCategoryFields,
+  type CategoryLocaleShape,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
@@ -166,7 +167,7 @@ export class BookingsService {
       },
       include: {
         priceOptions: true,
-        locales: true,
+        category: { include: { locales: true } },
       },
     });
     if (!service) {
@@ -257,7 +258,10 @@ export class BookingsService {
       });
     }
 
-    const serviceNameSnapshot = pickLocalizedServiceName(service, locale);
+    const categoryShortNameSnapshot = pickLocalizedServiceCategoryFields(
+      service.category as CategoryLocaleShape,
+      locale,
+    ).shortName;
 
     const shouldAutoConfirm = specialist.autoConfirmBookings;
     const pendingExpiresAt = shouldAutoConfirm
@@ -271,7 +275,7 @@ export class BookingsService {
           specialistId: body.specialistId,
           organizationId,
           serviceId: service.id,
-          serviceNameSnapshot,
+          categoryShortNameSnapshot,
           durationMinutes: body.durationMinutes,
           priceAmountSnapshot: priceOpt.priceAmount,
           currencySnapshot: priceOpt.currency ?? 'VND',
@@ -352,7 +356,7 @@ export class BookingsService {
           specialistName: b.specialist.user.name,
           organizationName: b.organization?.name ?? null,
           specialistImageUrl: b.specialist.imageUrl,
-          serviceName: b.serviceNameSnapshot ?? '—',
+          categoryShortName: b.categoryShortNameSnapshot ?? '—',
           amount: b.priceAmountSnapshot,
           currency: b.currencySnapshot ?? 'VND',
           startsAt: b.startsAt.toISOString(),

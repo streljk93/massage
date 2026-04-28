@@ -5,7 +5,6 @@ import type { DirectoryCategoryTagDto } from './directory-category-tag.dto';
 /** Услуги мастера из каталога (`Service` + `ServicePriceOption` по длительности). */
 export type SpecialistBookableServiceDto = {
   id: string;
-  name: string;
   /** Подкатегория каталога (локализованный `shortName` для `?locale=`). */
   categoryShortName: string;
   durationMinutes: number[];

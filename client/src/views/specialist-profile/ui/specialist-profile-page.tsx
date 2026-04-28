@@ -4,9 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  Building2,
   CalendarOff,
-  ChevronRight,
   Clock,
   Heart,
   Info,
@@ -401,35 +399,6 @@ export function SpecialistProfilePage({
                   {profile.servicesLine}
                 </p>
               ) : null}
-              {profile.activeWorkplace ? (
-                <Link
-                  href={`/organizations/${profile.activeWorkplace.id}`}
-                  aria-label={t("workplaceOpenAria", {
-                    name: profile.activeWorkplace.name,
-                  })}
-                  className={cn(
-                    motion.interactivePressStrong,
-                    "flex max-w-full items-center gap-2 rounded-xl border border-border/50 bg-card/70 px-3 py-2.5 text-left shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  )}
-                >
-                  <Building2
-                    className="size-4 shrink-0 text-primary"
-                    aria-hidden
-                  />
-                  <span className="min-w-0 flex-1 text-sm leading-snug">
-                    <span className="text-muted-foreground">
-                      {t("workplaceLabel")}
-                    </span>{" "}
-                    <span className="font-semibold text-foreground">
-                      {profile.activeWorkplace.name}
-                    </span>
-                  </span>
-                  <ChevronRight
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                </Link>
-              ) : null}
             </div>
 
             {/* Портрет: скругление + лёгкая маска снизу */}
@@ -643,7 +612,6 @@ export function SpecialistProfilePage({
                         service={svc}
                         selected={selected}
                         selectedDurationMinutes={dur}
-                        serviceName={svc.title}
                         formatPrice={priceText}
                         formatDurationMinutes={(m) =>
                           t("durationMin", { n: m })

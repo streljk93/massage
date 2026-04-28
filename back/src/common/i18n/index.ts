@@ -11,7 +11,6 @@ export {
   pickLocalizedMajorName,
   pickLocalizedOrganizationListItem,
   pickLocalizedServiceCategoryFields,
-  pickLocalizedServiceName,
   resolveLocalizedString,
 } from './locale-table.resolver';
 export {
@@ -21,7 +20,7 @@ export {
 export type {
   CategoryLocaleShape,
   OrganizationLocaleListShape,
-  ServiceLocaleShape,
+  PickedOrganizationListLocaleFields,
 } from './locale-table.resolver';
 export {
   OptionalRequestLocale,

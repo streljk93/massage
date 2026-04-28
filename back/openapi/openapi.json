@@ -1,6 +1,382 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/address/suggestions": {
+      "get": {
+        "description": "Сервер идёт по цепочке геокодеров (см. `back/.env.example`: LocationIQ, Geoapify, OpenCage, Nominatim). Клиент не зовёт внешние API напрямую.",
+        "operationId": "Address_suggestions",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "suggestions"
+                  ],
+                  "properties": {
+                    "suggestions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "placeId",
+                          "mainText",
+                          "secondaryText",
+                          "provider"
+                        ],
+                        "properties": {
+                          "placeId": {
+                            "type": "string"
+                          },
+                          "mainText": {
+                            "type": "string"
+                          },
+                          "secondaryText": {
+                            "type": "string"
+                          },
+                          "provider": {
+                            "type": "string",
+                            "enum": [
+                              "locationiq",
+                              "geoapify",
+                              "opencage",
+                              "nominatim"
+                            ]
+                          },
+                          "resolved": {
+                            "type": "object",
+                            "required": [
+                              "addressLine",
+                              "city",
+                              "latitude",
+                              "longitude",
+                              "sourceProvider",
+                              "sourceReference"
+                            ],
+                            "properties": {
+                              "addressLine": {
+                                "type": "string"
+                              },
+                              "city": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "latitude": {
+                                "type": "number"
+                              },
+                              "longitude": {
+                                "type": "number"
+                              },
+                              "sourceProvider": {
+                                "type": "string"
+                              },
+                              "sourceReference": {
+                                "type": "string"
+                              }
+                            },
+                            "description": "Опционально: канонический адрес сразу (как у /resolve), чтобы не дублировать запрос"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query слишком короткий или пустой"
+          },
+          "401": {
+            "description": ""
+          },
+          "429": {
+            "description": ""
+          },
+          "503": {
+            "description": "Ни один провайдер адреса не сконфигурирован"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Подсказки по адресу (внешний сервис на стороне API)",
+        "tags": [
+          "address"
+        ]
+      }
+    },
+    "/address/resolve": {
+      "post": {
+        "operationId": "Address_resolve",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "placeId"
+                ],
+                "properties": {
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "locationiq",
+                      "geoapify",
+                      "opencage",
+                      "nominatim"
+                    ]
+                  },
+                  "placeId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "resolved"
+                  ],
+                  "properties": {
+                    "resolved": {
+                      "type": "object",
+                      "required": [
+                        "addressLine",
+                        "city",
+                        "latitude",
+                        "longitude",
+                        "sourceProvider",
+                        "sourceReference"
+                      ],
+                      "properties": {
+                        "addressLine": {
+                          "type": "string"
+                        },
+                        "city": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "latitude": {
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "type": "number"
+                        },
+                        "sourceProvider": {
+                          "type": "string"
+                        },
+                        "sourceReference": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неизвестный provider или place id"
+          },
+          "401": {
+            "description": ""
+          },
+          "404": {
+            "description": "Место не найдено у поставщика"
+          },
+          "429": {
+            "description": ""
+          },
+          "503": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Разрешить place id поставщика в канонический адрес (координаты + строки для БД)",
+        "tags": [
+          "address"
+        ]
+      }
+    },
+    "/address/reverse": {
+      "post": {
+        "description": "Сервер проходит по тому же порядку провайдеров, что и подсказки, пока один не вернёт адрес.",
+        "operationId": "Address_reverse",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "latitude",
+                  "longitude"
+                ],
+                "properties": {
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "resolved"
+                  ],
+                  "properties": {
+                    "resolved": {
+                      "type": "object",
+                      "required": [
+                        "addressLine",
+                        "city",
+                        "latitude",
+                        "longitude",
+                        "sourceProvider",
+                        "sourceReference"
+                      ],
+                      "properties": {
+                        "addressLine": {
+                          "type": "string"
+                        },
+                        "city": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "latitude": {
+                          "type": "number"
+                        },
+                        "longitude": {
+                          "type": "number"
+                        },
+                        "sourceProvider": {
+                          "type": "string"
+                        },
+                        "sourceReference": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидные координаты или адрес не найден"
+          },
+          "401": {
+            "description": ""
+          },
+          "429": {
+            "description": ""
+          },
+          "503": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Обратное геокодирование (координаты → канонический адрес)",
+        "tags": [
+          "address"
+        ]
+      }
+    },
     "/health": {
       "get": {
         "operationId": "Health_getHealth",
@@ -1480,6 +1856,918 @@
         ]
       }
     },
+    "/users/me/specialist/ensure": {
+      "post": {
+        "operationId": "Users_postEnsureSpecialist",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать профиль специалиста, если ещё нет (без привязки к организации, не в витрине).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/onboarding": {
+      "get": {
+        "operationId": "Users_getSpecialistOnboarding",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Состояние онбординга специалиста (шаги 1, 3, 4, 5, 6).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/profile": {
+      "patch": {
+        "operationId": "Users_patchSpecialistOnboardingProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "phone": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "bio": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "experienceYears": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80
+                  },
+                  "imageUrl": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "imageAlt": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "massage": {
+                    "type": "object",
+                    "description": "Параметры вертикали «массаж»; поля с другой крупной категории — отдельные объекты.",
+                    "properties": {
+                      "pressureLevel": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "pressureAdaptsToClient": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Поля профиля мастера (онбординг): био, фото, опыт, сила, подстройка.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/onboarding/complete": {
+      "post": {
+        "operationId": "Users_postSpecialistOnboardingComplete",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          },
+          "409": {
+            "description": "Профиль, услуги или организация не готовы"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Завершить онбординг (после шага 5). Витрина с адресом салона — когда место работы подтверждено или создан свой салон.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/onboarding/join-organization": {
+      "post": {
+        "operationId": "Users_postJoinOnboardingOrganization",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organizationId"
+                ],
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Организация заблокировала заявки от этого мастера (WORKPLACE_JOIN_BLOCKED)"
+          },
+          "404": {
+            "description": "Профиля специалиста или организации нет"
+          },
+          "409": {
+            "description": "Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член организации (ALREADY_ORGANIZATION_MEMBER)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Онбординг: заявка на работу в выбранном салоне; членство и рабочее место — после решения владельца или админа салона.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/organizations/{organizationId}/workplace-join-requests": {
+      "get": {
+        "description": "По умолчанию отдаётся только status=pending; передайте status=all для всего.",
+        "operationId": "Users_getWorkplaceJoinRequestsForOrganization",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "rejected",
+                "blocked",
+                "accepted",
+                "withdrawn",
+                "all"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "requests"
+                  ],
+                  "properties": {
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "specialistId",
+                          "organizationId",
+                          "status",
+                          "createdAt",
+                          "updatedAt",
+                          "resolvedAt",
+                          "specialist"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "rejected",
+                              "withdrawn",
+                              "blocked"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "resolvedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "specialist": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "userId",
+                              "user"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "userId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "user": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "email"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "email": {
+                                    "type": "string",
+                                    "format": "email"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query (status)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Заявки мастеров в салон: список для владельца организации или активного мастера с ролью owner/admin.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/organizations/{organizationId}/workplace-join-requests/{requestId}/review": {
+      "post": {
+        "operationId": "Users_postReviewWorkplaceJoinRequest",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "accept",
+                      "reject",
+                      "block"
+                    ],
+                    "description": "accept — трудоустройство; reject — отклонить; block — отклонить и запретить новые заявки этого мастера в эту организацию."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "decision"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    },
+                    "decision": {
+                      "type": "string",
+                      "enum": [
+                        "accept",
+                        "reject",
+                        "block"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело (decision)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Нет pending-заявки с этим id для организации (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Решение по заявке мастера: принять (трудоустройство), отклонить или заблокировать повторные заявки.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/onboarding/create-organization": {
+      "post": {
+        "operationId": "Users_postCreateOnboardingOrganization",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "serviceCategoryIds"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "placeReference": {
+                    "type": "object",
+                    "required": [
+                      "provider",
+                      "placeId"
+                    ],
+                    "properties": {
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "locationiq",
+                          "geoapify",
+                          "opencage",
+                          "nominatim"
+                        ]
+                      },
+                      "placeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "description": "Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно)."
+                  },
+                  "addressLine": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "nullable": true
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "nullable": true
+                  },
+                  "email": {
+                    "type": "string",
+                    "maxLength": 254,
+                    "nullable": true
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "yearsInBusiness": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "imageAlt": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true
+                  },
+                  "serviceCategoryIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 40,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "description": "Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь)."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Категории или валидация тела"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          },
+          "409": {
+            "description": "Уже выбрана организация"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Онбординг: создать салон (текущий пользователь = владелец), локаль витрины, подкатегории, привязка как место приёма.",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/users/me/specialist/services": {
+      "post": {
+        "operationId": "Users_postSpecialistPersonalService",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "categoryId",
+                  "priceOptions"
+                ],
+                "properties": {
+                  "categoryId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "priceOptions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "durationMinutes",
+                        "priceAmount"
+                      ],
+                      "properties": {
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 15,
+                          "maximum": 1440
+                        },
+                        "priceAmount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "currency": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 3
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "serviceId"
+                  ],
+                  "properties": {
+                    "serviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Категория или валюта"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Личная услуга мастера без организации (organizationId = null, specialistId = текущий).",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/bookings": {
       "post": {
         "description": "Создаёт бронь: обычно `pending` (ожидание мастера) с `pendingExpiresAt`, либо сразу `confirmed`, если у мастера включено авто‑подтверждение. Требуется JWT клиента. `startsAt` — ISO 8601.",
@@ -1665,7 +2953,7 @@
                           "specialistId",
                           "specialistName",
                           "organizationName",
-                          "serviceName",
+                          "categoryShortName",
                           "amount",
                           "currency",
                           "startsAt",
@@ -1715,7 +3003,7 @@
                             "nullable": true,
                             "format": "uri"
                           },
-                          "serviceName": {
+                          "categoryShortName": {
                             "type": "string"
                           },
                           "amount": {
@@ -2817,7 +4105,6 @@
                               "type": "object",
                               "required": [
                                 "id",
-                                "name",
                                 "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
@@ -2826,10 +4113,6 @@
                                 "id": {
                                   "type": "string",
                                   "format": "uuid"
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "example": "Relaxing massage"
                                 },
                                 "categoryShortName": {
                                   "type": "string",
@@ -3234,7 +4517,6 @@
                         "type": "object",
                         "required": [
                           "id",
-                          "name",
                           "categoryShortName",
                           "durationMinutes",
                           "priceVndByDuration"
@@ -3243,10 +4525,6 @@
                           "id": {
                             "type": "string",
                             "format": "uuid"
-                          },
-                          "name": {
-                            "type": "string",
-                            "example": "Relaxing massage"
                           },
                           "categoryShortName": {
                             "type": "string",
@@ -4014,7 +5292,6 @@
                               "type": "object",
                               "required": [
                                 "id",
-                                "name",
                                 "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
@@ -4023,10 +5300,6 @@
                                 "id": {
                                   "type": "string",
                                   "format": "uuid"
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "example": "Relaxing massage"
                                 },
                                 "categoryShortName": {
                                   "type": "string",
@@ -4543,7 +5816,6 @@
                               "type": "object",
                               "required": [
                                 "id",
-                                "name",
                                 "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
@@ -4552,10 +5824,6 @@
                                 "id": {
                                   "type": "string",
                                   "format": "uuid"
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "example": "Relaxing massage"
                                 },
                                 "categoryShortName": {
                                   "type": "string",
@@ -5756,7 +7024,6 @@
                               "type": "object",
                               "required": [
                                 "id",
-                                "name",
                                 "categoryShortName",
                                 "durationMinutes",
                                 "priceVndByDuration"
@@ -5765,10 +7032,6 @@
                                 "id": {
                                   "type": "string",
                                   "format": "uuid"
-                                },
-                                "name": {
-                                  "type": "string",
-                                  "example": "Relaxing massage"
                                 },
                                 "categoryShortName": {
                                   "type": "string",

@@ -21,6 +21,10 @@ import {
   type LandingSpecialistSlideSeed,
 } from "../lib/landing-partners-seed";
 
+/** Единая точка регистрации; в бизнес-слой — сначала настройка аккаунта на `/business/setup`. */
+const REGISTRATION_FOR_BUSINESS_HREF = "/registration?next=/business/setup" as const;
+const BUSINESS_ONBOARDING_HREF = "/business/setup" as const;
+
 type Translate = (key: string) => string;
 
 function partnerField(
@@ -184,6 +188,7 @@ function SalonRow({ row, t }: { row: LandingSalonRowSeed; t: Translate }) {
 }
 
 export function BecomeSpecialistLandingBody({
+  isAuthed,
   locale,
   listingNow,
   t,
@@ -191,6 +196,7 @@ export function BecomeSpecialistLandingBody({
   mailtoHref,
   contactEmail,
 }: {
+  isAuthed: boolean;
   locale: AppLocale;
   listingNow: Date;
   t: Translate;
@@ -266,9 +272,11 @@ export function BecomeSpecialistLandingBody({
             className="h-12 w-full rounded-full text-base font-semibold shadow-none"
             asChild
           >
-            <Link href="/registration">
+            <Link
+              href={isAuthed ? BUSINESS_ONBOARDING_HREF : REGISTRATION_FOR_BUSINESS_HREF}
+            >
               <UserPlus className="mr-2 size-5 shrink-0" aria-hidden />
-              {t("heroCta")}
+              {isAuthed ? t("configureSpecialistProfileCta") : t("registrationCta")}
             </Link>
           </Button>
           <p className="text-center text-xs leading-relaxed text-muted-foreground">
@@ -398,7 +406,11 @@ export function BecomeSpecialistLandingBody({
             className="h-12 w-full rounded-full text-base font-semibold sm:w-auto sm:min-w-[13rem] sm:px-10"
             asChild
           >
-            <Link href="/registration">{t("bannerCta")}</Link>
+            <Link
+              href={isAuthed ? BUSINESS_ONBOARDING_HREF : REGISTRATION_FOR_BUSINESS_HREF}
+            >
+              {isAuthed ? t("configureSpecialistProfileCta") : t("registrationCta")}
+            </Link>
           </Button>
         </div>
       </section>

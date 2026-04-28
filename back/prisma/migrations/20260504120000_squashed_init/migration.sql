@@ -1,5 +1,5 @@
--- Squashed migration: полная схема из `prisma/schema.prisma` (в т.ч. `UserOAuthAccount`, `OAuthProvider` = `google` only).
--- Заменяет прежние миграции `20260426…`–`20260429…`. Для уже существующей БД с ними — отдельный план (squash history / reset dev), для пустой — `migrate deploy`.
+-- Squashed init: полная схема из `prisma/schema.prisma` (одна миграция вместо цепочки).
+-- После смены истории: `prisma migrate reset` (dev) или пересоздание БД + `prisma migrate deploy`.
 
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
@@ -178,24 +178,34 @@ CREATE TABLE "ServiceCategoryLocale" (
 );
 
 -- CreateTable
+CREATE TABLE "Address" (
+    "id" TEXT NOT NULL,
+    "addressLine" TEXT,
+    "city" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "sourceProvider" TEXT,
+    "sourceReference" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Address_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Organization" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "ownerUserId" TEXT,
+    "addressId" TEXT,
     "description" TEXT,
     "phone" TEXT,
     "email" TEXT,
     "website" TEXT,
-    "addressLine" TEXT,
-    "city" TEXT,
-    "latitude" DOUBLE PRECISION,
-    "longitude" DOUBLE PRECISION,
     "imageUrl" TEXT,
     "imageAlt" TEXT,
     "yearsInBusiness" INTEGER,
-    "listingMetaLine" TEXT,
-    "listingServicesLine" TEXT,
     "listingWorkdayStartMinute" INTEGER NOT NULL DEFAULT 480,
     "listingWorkdayEndMinute" INTEGER NOT NULL DEFAULT 1320,
     "ratingAverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -251,21 +261,30 @@ CREATE TABLE "Specialist" (
     "userId" TEXT NOT NULL,
     "bio" TEXT,
     "experienceYears" INTEGER,
-    "clientsLabel" TEXT,
     "ratingAverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "reviewsCount" INTEGER NOT NULL DEFAULT 0,
     "imageUrl" TEXT,
     "imageAlt" TEXT,
     "activeOrganizationId" TEXT,
-    "listingMetaLine" TEXT,
-    "listingServicesLine" TEXT,
-    "listedInDirectory" BOOLEAN NOT NULL DEFAULT true,
+    "listedInDirectory" BOOLEAN NOT NULL DEFAULT false,
+    "onboardingCompletedAt" TIMESTAMP(3),
     "autoConfirmBookings" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "Specialist_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SpecialistMassageProfile" (
+    "specialistId" TEXT NOT NULL,
+    "pressureLevel" INTEGER,
+    "pressureAdaptsToClient" BOOLEAN,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SpecialistMassageProfile_pkey" PRIMARY KEY ("specialistId")
 );
 
 -- CreateTable
@@ -295,10 +314,9 @@ CREATE TABLE "SpecialistOrganizationEmployment" (
 -- CreateTable
 CREATE TABLE "Service" (
     "id" TEXT NOT NULL,
-    "organizationId" TEXT NOT NULL,
+    "organizationId" TEXT,
     "categoryId" TEXT NOT NULL,
     "specialistId" TEXT,
-    "name" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "description" TEXT,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -308,19 +326,6 @@ CREATE TABLE "Service" (
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "Service_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ServiceLocale" (
-    "id" TEXT NOT NULL,
-    "serviceId" TEXT NOT NULL,
-    "locale" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "ServiceLocale_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -358,7 +363,7 @@ CREATE TABLE "Booking" (
     "specialistId" TEXT NOT NULL,
     "organizationId" TEXT,
     "serviceId" TEXT,
-    "serviceNameSnapshot" TEXT,
+    "categoryShortNameSnapshot" TEXT,
     "durationMinutes" INTEGER NOT NULL,
     "priceAmountSnapshot" INTEGER,
     "currencySnapshot" TEXT DEFAULT 'VND',
@@ -487,7 +492,13 @@ CREATE UNIQUE INDEX "Organization_slug_key" ON "Organization"("slug");
 CREATE INDEX "Organization_ownerUserId_idx" ON "Organization"("ownerUserId");
 
 -- CreateIndex
-CREATE INDEX "Organization_city_idx" ON "Organization"("city");
+CREATE INDEX "Organization_addressId_idx" ON "Organization"("addressId");
+
+-- CreateIndex
+CREATE INDEX "Address_city_idx" ON "Address"("city");
+
+-- CreateIndex
+CREATE INDEX "Address_latitude_longitude_idx" ON "Address"("latitude", "longitude");
 
 -- CreateIndex
 CREATE INDEX "OrganizationLocale_locale_idx" ON "OrganizationLocale"("locale");
@@ -529,19 +540,16 @@ CREATE INDEX "SpecialistOrganizationEmployment_isActive_idx" ON "SpecialistOrgan
 CREATE INDEX "SpecialistOrganizationEmployment_role_idx" ON "SpecialistOrganizationEmployment"("role");
 
 -- CreateIndex
+CREATE INDEX "Service_organizationId_slug_idx" ON "Service"("organizationId", "slug");
+
+-- CreateIndex
+CREATE INDEX "Service_specialistId_slug_idx" ON "Service"("specialistId", "slug");
+
+-- CreateIndex
 CREATE INDEX "Service_categoryId_idx" ON "Service"("categoryId");
 
 -- CreateIndex
 CREATE INDEX "Service_specialistId_idx" ON "Service"("specialistId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Service_organizationId_slug_key" ON "Service"("organizationId", "slug");
-
--- CreateIndex
-CREATE INDEX "ServiceLocale_locale_idx" ON "ServiceLocale"("locale");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ServiceLocale_serviceId_locale_key" ON "ServiceLocale"("serviceId", "locale");
 
 -- CreateIndex
 CREATE INDEX "ServicePriceOption_serviceId_idx" ON "ServicePriceOption"("serviceId");
@@ -619,6 +627,9 @@ ALTER TABLE "ServiceCategoryLocale" ADD CONSTRAINT "ServiceCategoryLocale_servic
 ALTER TABLE "Organization" ADD CONSTRAINT "Organization_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Organization" ADD CONSTRAINT "Organization_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "OrganizationLocale" ADD CONSTRAINT "OrganizationLocale_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -643,6 +654,9 @@ ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_userId_fkey" FOREIGN KEY ("u
 ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_activeOrganizationId_fkey" FOREIGN KEY ("activeOrganizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "SpecialistMassageProfile" ADD CONSTRAINT "SpecialistMassageProfile_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "SpecialistServiceCategory" ADD CONSTRAINT "SpecialistServiceCategory_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -662,9 +676,6 @@ ALTER TABLE "Service" ADD CONSTRAINT "Service_categoryId_fkey" FOREIGN KEY ("cat
 
 -- AddForeignKey
 ALTER TABLE "Service" ADD CONSTRAINT "Service_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ServiceLocale" ADD CONSTRAINT "ServiceLocale_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ServicePriceOption" ADD CONSTRAINT "ServicePriceOption_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;

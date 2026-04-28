@@ -29,7 +29,7 @@ type ApiBooking = {
   status: string;
   specialistName: string;
   specialistImageUrl?: string | null;
-  serviceName: string;
+  categoryShortName: string;
   amount: number | null;
   currency: string;
   startsAt: string;
@@ -91,11 +91,11 @@ function apiBookingToCardProps(
   const serviceLine =
     booking.amount != null
       ? formatBookingServiceLineClient(tRoot, format, {
-          serviceLabel: booking.serviceName,
+          serviceLabel: booking.categoryShortName,
           amount: booking.amount,
           currency: booking.currency,
         })
-      : booking.serviceName;
+      : booking.categoryShortName;
 
   return {
     specialistName: booking.specialistName,

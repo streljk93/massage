@@ -1,0 +1,49 @@
+{
+  "messages": {
+    "en": {
+      "addressMapPicker": {
+        "title": "Address on map",
+        "searchPlaceholder": "Start typing an address…",
+        "confirm": "Use this location",
+        "cancel": "Cancel",
+        "loading": "Resolving address…",
+        "reverseError": "Could not resolve this location. Try search, move the pin, or try again.",
+        "resolveError": "Could not load that suggestion. Pick another or tap the map.",
+        "searchLoading": "Searching…",
+        "searchEmpty": "No suggestions. Type more or pick a point on the map.",
+        "locateMeLabel": "My location",
+        "closeLabel": "Close"
+      }
+    },
+    "vi": {
+      "addressMapPicker": {
+        "title": "Địa chỉ trên bản đồ",
+        "searchPlaceholder": "Bắt đầu gõ địa chỉ…",
+        "confirm": "Dùng vị trí này",
+        "cancel": "Hủy",
+        "loading": "Đang tra địa chỉ…",
+        "reverseError": "Không tra được vị trí này. Thử tìm, di chuyển ghim hoặc thử lại.",
+        "resolveError": "Không tải được gợi ý. Chọn gợi ý khác hoặc chạm bản đồ.",
+        "searchLoading": "Đang tìm…",
+        "searchEmpty": "Chưa có gợi ý. Gõ thêm hoặc chọn điểm trên bản đồ.",
+        "locateMeLabel": "Vị trí của tôi",
+        "closeLabel": "Đóng"
+      }
+    },
+    "ru": {
+      "addressMapPicker": {
+        "title": "Адрес на карте",
+        "searchPlaceholder": "Начните вводить адрес…",
+        "confirm": "Использовать эту точку",
+        "cancel": "Отмена",
+        "loading": "Определяем адрес…",
+        "reverseError": "Не удалось определить адрес. Попробуйте поиск, сдвиньте метку или повторите.",
+        "resolveError": "Не удалось загрузить подсказку. Выберите другую или нажмите на карту.",
+        "searchLoading": "Поиск…",
+        "searchEmpty": "Нет подсказок. Введите больше или укажите точку на карте.",
+        "locateMeLabel": "Моё местоположение",
+        "closeLabel": "Закрыть"
+      }
+    }
+  }
+}

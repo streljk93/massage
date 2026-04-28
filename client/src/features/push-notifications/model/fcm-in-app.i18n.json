@@ -2,7 +2,7 @@
   "messages": {
     "en": {
       "fcmInApp": {
-        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "detailLine": "{timeLabel} · {categoryShortName} · {specialistName}",
         "genericMessageTitle": "Message",
         "reminder": {
           "title": "Upcoming visit"
@@ -57,7 +57,7 @@
     },
     "vi": {
       "fcmInApp": {
-        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "detailLine": "{timeLabel} · {categoryShortName} · {specialistName}",
         "genericMessageTitle": "Thông báo",
         "reminder": {
           "title": "Sắp đến giờ hẹn"
@@ -112,7 +112,7 @@
     },
     "ru": {
       "fcmInApp": {
-        "detailLine": "{timeLabel} · {serviceName} · {specialistName}",
+        "detailLine": "{timeLabel} · {categoryShortName} · {specialistName}",
         "genericMessageTitle": "Сообщение",
         "reminder": {
           "title": "Скоро визит"

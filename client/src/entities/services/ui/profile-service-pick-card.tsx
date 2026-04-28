@@ -10,26 +10,28 @@ export type ProfileServicePickCardProps = {
   service: BookableServiceOption;
   selected: boolean;
   selectedDurationMinutes: number;
-  /** Уже переведённое имя услуги */
-  serviceName: string;
   formatPrice: (vnd: number) => string;
   formatDurationMinutes: (minutes: number) => string;
   onSelectService: () => void;
   onSelectDuration: (minutes: number) => void;
 };
 
+function serviceDisplayLabel(service: BookableServiceOption): string {
+  return service.categoryShortName?.trim() || "";
+}
+
 /** Карточка выбора услуги на экранах профиля специалиста / организации. */
 export function ProfileServicePickCard({
   service,
   selected,
   selectedDurationMinutes,
-  serviceName,
   formatPrice,
   formatDurationMinutes,
   onSelectService,
   onSelectDuration,
 }: ProfileServicePickCardProps) {
   const displayPrice = priceForDuration(service, selectedDurationMinutes);
+  const lineLabel = serviceDisplayLabel(service);
 
   return (
     <div
@@ -40,16 +42,13 @@ export function ProfileServicePickCard({
           : "border-border/60 bg-card hover:border-border",
       )}
     >
-      {service.categoryShortName ? (
-        <p className="mb-2 text-xs text-muted-foreground">{service.categoryShortName}</p>
-      ) : null}
       <button
         type="button"
         className="flex w-full items-start justify-between gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={onSelectService}
       >
         <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground">
-          {serviceName}
+          {lineLabel}
         </p>
         <div className="flex shrink-0 items-center gap-3">
           <span className="text-sm font-semibold tabular-nums text-foreground">

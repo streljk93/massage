@@ -1,5 +1,11 @@
 export { AppBackButton, type AppBackButtonProps } from "./app-back-button";
 export { Button, type ButtonProps, type ButtonTone } from "./button";
+export { Checkbox } from "./shadcn/checkbox";
+export {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./shadcn/collapsible";
 export {
   Select,
   SelectContent,
@@ -25,6 +31,11 @@ export { Separator } from "./shadcn/separator";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";
 export { Input, type InputProps } from "./input";
+export {
+  SearchAutocomplete,
+  type SearchAutocompleteItem,
+  type SearchAutocompleteProps,
+} from "./search-autocomplete";
 export {
   Avatar,
   AvatarImage,

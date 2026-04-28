@@ -34,21 +34,23 @@ const directoryServiceInclude = {
   orderBy: { sortOrder: 'asc' as const },
   include: {
     priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
-    locales: true,
     category: { include: { locales: true } },
   },
 } satisfies Prisma.ServiceFindManyArgs;
+
+const directoryAddressForListSelect = {
+  addressLine: true,
+  city: true,
+  latitude: true,
+  longitude: true,
+} as const;
 
 const specialistActiveOrganizationInclude = {
   select: {
     id: true,
     name: true,
-    addressLine: true,
-    city: true,
-    latitude: true,
-    longitude: true,
+    address: { select: directoryAddressForListSelect },
     phone: true,
-    listingMetaLine: true,
     listingWorkdayStartMinute: true,
     listingWorkdayEndMinute: true,
   },
@@ -76,6 +78,7 @@ function organizationListInclude() {
   return {
     locales: true,
     serviceCategories: serviceCategoryWithLocales,
+    address: { select: directoryAddressForListSelect },
     specialistEmployments: {
       where: { isActive: true },
       include: {
@@ -293,7 +296,11 @@ export class DirectoryRepository {
     radius: DirectoryListRadiusFilter | null,
   ): Promise<Prisma.SpecialistWhereInput[] | null> {
     const andParts: Prisma.SpecialistWhereInput[] = [
-      { deletedAt: null, listedInDirectory: true },
+      {
+        deletedAt: null,
+        listedInDirectory: true,
+        activeOrganizationId: { not: null },
+      },
     ];
     if (radius != null) {
       const inRadius = await findSpecialistIdsWithinRadiusMeters(
@@ -723,6 +730,19 @@ export class DirectoryRepository {
     });
   }
 
+  /** Витрина: только мастер, участвующий в каталоге (место приёма + флаг). */
+  findPublicDirectorySpecialistById(id: string): Promise<SpecialistListRow | null> {
+    return this.prisma.specialist.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        listedInDirectory: true,
+        activeOrganizationId: { not: null },
+      },
+      include: specialistListInclude(),
+    });
+  }
+
   findSpecialistsByIds(ids: string[]): Promise<SpecialistListRow[]> {
     if (ids.length === 0) {
       return Promise.resolve([]);
@@ -878,7 +898,12 @@ export class DirectoryRepository {
 
   findActiveSpecialistId(id: string): Promise<{ id: string } | null> {
     return this.prisma.specialist.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        listedInDirectory: true,
+        activeOrganizationId: { not: null },
+      },
       select: { id: true },
     });
   }
