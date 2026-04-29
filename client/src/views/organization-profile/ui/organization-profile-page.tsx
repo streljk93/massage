@@ -844,21 +844,24 @@ export function OrganizationProfilePage({
                     {profile.name}
                   </h1>
                   <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-semibold text-white">
-                    <span className="inline-flex items-center gap-1">
-                      <Star
-                        className="size-3.5 fill-amber-300 text-amber-300"
-                        strokeWidth={0}
-                        aria-hidden
-                      />
-                      <span className="tabular-nums">
-                        {profile.rating.toFixed(1)}
+                    {profile.rating > 0 ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Star
+                          className="size-3.5 fill-amber-300 text-amber-300"
+                          strokeWidth={0}
+                          aria-hidden
+                        />
+                        <span className="tabular-nums">
+                          {profile.rating.toFixed(1)}
+                        </span>
                       </span>
-                    </span>
+                    ) : null}
                     <Link
                       href={`/organizations/${profile.id}/reviews`}
                       className="text-white/85 underline-offset-2 hover:underline"
                     >
-                      ({format.number(profile.reviewsCount)} {t("reviewsWord")})
+                      ({format.number(profile.reviewsCount)}{" "}
+                      {t("reviewsWord")})
                     </Link>
                   </p>
                   <p className="text-xs font-semibold leading-snug text-white/90">

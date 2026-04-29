@@ -8,6 +8,9 @@ export type RatingProps = {
 };
 
 export function Rating({ value, max = 5, className }: RatingProps) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
   const clamped = Math.min(max, Math.max(0, value));
   const full = Math.floor(clamped);
   const hasHalf = clamped - full >= 0.5 && full < max;

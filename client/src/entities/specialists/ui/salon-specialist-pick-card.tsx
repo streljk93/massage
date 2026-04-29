@@ -94,15 +94,19 @@ export function SalonSpecialistPickCard({
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5 p-2.5 pr-3 pb-2">
         <div className="flex items-start justify-between gap-1.5">
-          <div className="flex min-w-0 items-center gap-1">
-            <Star
-              className="size-3.5 shrink-0 fill-amber-400 text-amber-400"
-              strokeWidth={0}
-              aria-hidden
-            />
-            <span className="text-xs font-semibold tabular-nums text-foreground">
-              {pick.rating.toFixed(1)}
-            </span>
+          <div className="flex min-w-0 flex-1 items-center gap-1">
+            {pick.rating > 0 ? (
+              <>
+                <Star
+                  className="size-3.5 shrink-0 fill-amber-400 text-amber-400"
+                  strokeWidth={0}
+                  aria-hidden
+                />
+                <span className="text-xs font-semibold tabular-nums text-foreground">
+                  {pick.rating.toFixed(1)}
+                </span>
+              </>
+            ) : null}
           </div>
           <UserRound
             className="size-4 shrink-0 text-muted-foreground"
