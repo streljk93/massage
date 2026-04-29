@@ -21,15 +21,27 @@ export class ModerationEnqueueService {
   /**
    * После успешного создания организации: job в BullMQ (если очередь поднята), иначе
    * сразу `moderateNewOrganizationProfile` в процессе (`MODERATION_QUEUE_ENABLED=false` или нет Redis).
+   * Если очередь сконфигурирована, но `queue.add` упал (Redis недоступен и т.п.) — синхронный fallback.
    */
   async enqueueOrganizationProfileModeration(
     organizationId: string,
   ): Promise<void> {
     if (this.queue) {
-      await this.queue.add(CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE, {
-        organizationId,
-      });
-      return;
+      try {
+        await this.queue.add(CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE, {
+          organizationId,
+        });
+        return;
+      } catch (err: unknown) {
+        const cause = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `Не удалось добавить job в очередь BullMQ (модерация профиля салона, org=${organizationId}); выполняем moderateNewOrganizationProfile в этом процессе. Причина: ${cause}`,
+        );
+        await this.contentModeration.moderateNewOrganizationProfile(
+          organizationId,
+        );
+        return;
+      }
     }
     await this.contentModeration.moderateNewOrganizationProfile(organizationId);
     if (
