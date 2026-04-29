@@ -63,6 +63,7 @@ export type OrganizationLocaleListShape = {
   } | null;
   ratingAverage: number;
   reviewsCount: number;
+  /** Обложка карточки: первое изображение галереи витрины по `sortOrder` (не колонка в БД). */
   imageUrl: string | null;
   imageAlt: string | null;
   locales: {

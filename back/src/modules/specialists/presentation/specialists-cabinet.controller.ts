@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -15,6 +18,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -40,9 +44,12 @@ import {
 import {
   createSpecialistPersonalServiceRequestSchema,
   createSpecialistPersonalServiceResponseSchema,
+  deleteSpecialistPersonalServiceResponseSchema,
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
   patchSpecialistProfileRequestSchema,
+  specialistMyOrganizationsResponseSchema,
+  specialistMyWorkplaceJoinRequestsResponseSchema,
   specialistOnboardingResponseSchema,
 } from './specialists.openapi-schemas';
 
@@ -61,6 +68,34 @@ export class SpecialistsCabinetController {
     private readonly specialistOnboardingService: SpecialistOnboardingService,
     private readonly specialistPersonalCatalogService: SpecialistPersonalCatalogService,
   ) {}
+
+  @Get('me/organizations')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.',
+  })
+  @ApiOkResponse({ schema: specialistMyOrganizationsResponseSchema })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getSpecialistMyOrganizations(@Req() req: AuthedRequest) {
+    return this.specialistWorkplaceService.listMyOrganizations(req.user.id);
+  }
+
+  @Get('me/workplace-join-requests')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Заявки текущего мастера на вступление в организации (отправленные из кабинета).',
+  })
+  @ApiOkResponse({ schema: specialistMyWorkplaceJoinRequestsResponseSchema })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getSpecialistMyWorkplaceJoinRequests(@Req() req: AuthedRequest) {
+    return this.specialistWorkplaceService.listMyWorkplaceJoinRequests(
+      req.user.id,
+    );
+  }
 
   @Patch('me/active-organization')
   @UseGuards(JwtAccessGuard)
@@ -119,7 +154,9 @@ export class SpecialistsCabinetController {
   @Patch('me/profile')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Поля профиля мастера: био, фото, опыт, массаж и т.д.' })
+  @ApiOperation({
+    summary: 'Поля профиля мастера: био, фото, опыт, массаж и т.д.',
+  })
   @ApiBody({ schema: patchSpecialistProfileRequestSchema })
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
@@ -172,6 +209,33 @@ export class SpecialistsCabinetController {
       req.user.id,
       body,
       locale,
+    );
+  }
+
+  @Delete('me/services/:serviceId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Удалить личную услугу мастера (soft delete). Услуга должна быть с organizationId = null.',
+  })
+  @ApiParam({
+    name: 'serviceId',
+    format: 'uuid',
+    description: 'Идентификатор услуги из POST /specialists/me/services',
+  })
+  @ApiOkResponse({ schema: deleteSpecialistPersonalServiceResponseSchema })
+  @ApiNotFoundResponse({
+    description: 'Профиля мастера нет, услуга не найдена или не личная',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async deleteSpecialistPersonalService(
+    @Req() req: AuthedRequest,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+  ) {
+    return this.specialistPersonalCatalogService.deletePersonalService(
+      req.user.id,
+      serviceId,
     );
   }
 }

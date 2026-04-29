@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -27,7 +28,7 @@ function initialsFromUser(user: {
 function CabinetMenuLeadSkeleton() {
   return (
     <div
-      className="size-9 shrink-0 rounded-full border border-border/40 bg-muted/45 animate-pulse"
+      className="h-[40px] w-[40px] min-h-[40px] min-w-[40px] max-h-[40px] max-w-[40px] shrink-0 rounded-full border border-border/40 bg-muted/45 animate-pulse"
       aria-hidden
     />
   );
@@ -41,6 +42,15 @@ export type BusinessScreenHeaderProps = {
   avatarAlt: string;
   avatarFallback: string;
   className?: string;
+  /** Строка под тулбаром: кнопки и действия страницы */
+  actions?: ReactNode;
+  /**
+   * Слева вместо меню кабинета / скелета — компактная кнопка «назад» (только иконка, размер как у аватара `lg`).
+   */
+  cabinetBack?: {
+    href: string;
+    ariaLabel: string;
+  };
 };
 
 /**
@@ -54,6 +64,8 @@ export function BusinessScreenHeader({
   avatarAlt,
   avatarFallback,
   className,
+  actions,
+  cabinetBack,
 }: BusinessScreenHeaderProps) {
   const tBiz = useTranslations("businessScreenHeader");
   const tHome = useTranslations("homeScreenHeader");
@@ -97,75 +109,112 @@ export function BusinessScreenHeader({
   const inlineToolbarTitle =
     titleVariant === "section" || showHeadline;
 
+  const lead = cabinetBack ?
+    "cabinetBack" as const
+  : leadRole;
+
   return (
-    <header className={cn("flex items-center justify-between gap-3", className)}>
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-        <div className="flex shrink-0 items-center">
-          {leadRole === "menu" ? <BusinessCabinetNavDrawerTrigger /> : null}
-          {leadRole === "menuPending" ? <CabinetMenuLeadSkeleton /> : null}
-          {leadRole === "back" ? (
-            <Button
-              variant="secondary"
-              tone="light"
-              asChild
+    <div className={cn("flex flex-col gap-3", className)}>
+      <header className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          {lead !== "none" ? (
+            <div className="flex shrink-0 items-center">
+              {lead === "cabinetBack" && cabinetBack ? (
+                <Button
+                  variant="secondary"
+                  tone="light"
+                  asChild
+                  className={cn(
+                    motion.interactivePress,
+                    "h-[40px] w-[40px] min-h-[40px] min-w-[40px] max-h-[40px] max-w-[40px] shrink-0 rounded-full border border-border/40 bg-surface-light/90 p-0 shadow-none",
+                  )}
+                >
+                  <Link
+                    href={cabinetBack.href}
+                    className="inline-flex size-full items-center justify-center"
+                    aria-label={cabinetBack.ariaLabel}
+                    title={cabinetBack.ariaLabel}
+                  >
+                    <ArrowLeft
+                      className="size-[1.15rem] shrink-0 text-muted-foreground"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                  </Link>
+                </Button>
+              ) : null}
+              {lead === "menu" ? <BusinessCabinetNavDrawerTrigger /> : null}
+              {lead === "menuPending" ? <CabinetMenuLeadSkeleton /> : null}
+              {lead === "back" ? (
+                <Button
+                  variant="secondary"
+                  tone="light"
+                  asChild
+                  className={cn(
+                    motion.interactivePress,
+                    "h-9 min-h-9 max-h-9 shrink-0 gap-1.5 rounded-full border border-border/60 px-3 py-0 text-xs font-medium leading-none",
+                  )}
+                >
+                  <Link
+                    href="/"
+                    className="inline-flex h-full min-w-0 max-w-full items-center justify-center gap-1.5"
+                    title={tBiz("backToAppAria")}
+                  >
+                    <ArrowLeft
+                      className="size-4 shrink-0 opacity-80"
+                      strokeWidth={2.25}
+                      aria-hidden
+                    />
+                    <span className="truncate">{tBiz("backToApp")}</span>
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {inlineToolbarTitle ? (
+            <h1
               className={cn(
-                motion.interactivePress,
-                "h-9 min-h-9 max-h-9 shrink-0 gap-1.5 rounded-full border border-border/60 px-3 py-0 text-xs font-medium leading-none",
+                "min-w-0 flex-1 text-pretty font-heading font-bold tracking-tight text-foreground",
+                titleVariant === "greeting" &&
+                  "text-base leading-snug sm:text-lg",
+                titleVariant === "section" &&
+                  "text-xl leading-tight sm:text-2xl",
               )}
             >
-              <Link
-                href="/"
-                className="inline-flex h-full min-w-0 max-w-full items-center justify-center gap-1.5"
-                title={tBiz("backToAppAria")}
-              >
-                <ArrowLeft
-                  className="size-4 shrink-0 opacity-80"
-                  strokeWidth={2.25}
-                  aria-hidden
-                />
-                <span className="truncate">{tBiz("backToApp")}</span>
-              </Link>
-            </Button>
+              {headline}
+            </h1>
           ) : null}
         </div>
-        {inlineToolbarTitle ? (
-          <h1
+        <div className="relative shrink-0">
+          <span
+            className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
+            role="img"
+            aria-label={tLocale(`language.${locale}`)}
+          >
+            {localeFlagEmoji[locale]}
+          </span>
+          <Link
+            href={profileHref}
+            aria-label={avatarAria}
             className={cn(
-              "min-w-0 flex-1 text-pretty font-heading font-bold tracking-tight text-foreground",
-              titleVariant === "greeting" &&
-                "text-base leading-snug sm:text-lg",
-              titleVariant === "section" &&
-                "text-xl leading-tight sm:text-2xl",
+              motion.interactivePressStrong,
+              "relative z-0 block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
             )}
           >
-            {headline}
-          </h1>
-        ) : null}
-      </div>
-      <div className="relative shrink-0">
-        <span
-          className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
-          role="img"
-          aria-label={tLocale(`language.${locale}`)}
-        >
-          {localeFlagEmoji[locale]}
-        </span>
-        <Link
-          href={profileHref}
-          aria-label={avatarAria}
-          className={cn(
-            motion.interactivePressStrong,
-            "relative z-0 block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-          )}
-        >
-          <UserAvatar
-            src={displaySrc}
-            alt={displayAlt}
-            fallback={displayFallback}
-            size="lg"
-          />
-        </Link>
-      </div>
-    </header>
+            <UserAvatar
+              src={displaySrc}
+              alt={displayAlt}
+              fallback={displayFallback}
+              size="lg"
+            />
+          </Link>
+        </div>
+      </header>
+      {actions ?
+        <div className="flex w-full min-w-0 flex-col items-end gap-2 border-t border-border/15 pt-3">
+          {actions}
+        </div>
+      : null}
+    </div>
   );
 }

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { BookingStatus, Prisma } from '@prisma/client';
+import {
+  BookingStatus,
+  GalleryMediaKind,
+  GalleryOwnerKind,
+  Prisma,
+} from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import {
@@ -7,11 +12,19 @@ import {
   findSpecialistIdsWithinRadiusMeters,
 } from './directory-geo-radius-ids';
 import {
-  organizationListFiltersWhere,
+  organizationNonCategoryTextSearchWhere,
   specialistListFiltersWhere,
   type OrganizationListApiFilters,
   type SpecialistListApiFilters,
 } from './directory-list-query-filters';
+import {
+  queryDistinctStorefrontOrganizationServiceCategoryIds,
+  queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecialists,
+  queryOrganizationIdsMatchingStorefrontCategoryTextSearch,
+  queryOrganizationIdsMatchingVitrineCategoryConstraints,
+  queryOrganizationStorefrontCategoryPairs,
+  vitrineCategoryCoverageExists,
+} from './organization-vitrine-category-coverage';
 import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
 import type { DirectoryListSort } from '../../../common/pagination/directory-list-sort';
 import type {
@@ -327,6 +340,7 @@ export class DirectoryRepository {
     filters: OrganizationListApiFilters | null,
     radius: DirectoryListRadiusFilter | null,
   ): Promise<Prisma.OrganizationWhereInput[] | null> {
+    let radiusIds: string[] | null = null;
     const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
     if (radius != null) {
       const inRadius = await findOrganizationIdsWithinRadiusMeters(
@@ -338,15 +352,67 @@ export class DirectoryRepository {
       if (inRadius.length === 0) {
         return null;
       }
-      andParts.push({ id: { in: inRadius } });
+      radiusIds = inRadius;
     }
-    if (filters != null) {
-      const fw = organizationListFiltersWhere(filters);
-      if (Object.keys(fw).length > 0) {
-        andParts.push(fw);
+    const workplaceOrgIds =
+      await queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecialists(
+        this.prisma,
+        radiusIds,
+      );
+    if (workplaceOrgIds.length === 0) {
+      return null;
+    }
+    andParts.push({ id: { in: workplaceOrgIds } });
+    if (filters == null) {
+      return andParts;
+    }
+    const hasCat =
+      (filters.majorCategorySlug != null && filters.majorCategorySlug !== '') ||
+      filters.categorySlugs.length > 0;
+    const q = filters.q?.trim() ?? '';
+
+    if (hasCat) {
+      const ids = await queryOrganizationIdsMatchingVitrineCategoryConstraints(
+        this.prisma,
+        {
+          majorCategorySlug: filters.majorCategorySlug,
+          categorySlugs: filters.categorySlugs,
+          restrictToOrganizationIds: radiusIds,
+        },
+      );
+      if (ids.length === 0) {
+        return null;
       }
+      andParts.push({ id: { in: ids } });
     }
+
+    if (q.length > 0) {
+      const catHitIds =
+        await queryOrganizationIdsMatchingStorefrontCategoryTextSearch(
+          this.prisma,
+          q,
+          filters.locale,
+          null,
+        );
+      const nonCat = organizationNonCategoryTextSearchWhere(q, filters.locale);
+      const branches = [
+        ...(Array.isArray(nonCat.OR) ? nonCat.OR : []),
+        { id: { in: catHitIds } },
+      ];
+      andParts.push({ OR: branches });
+    }
+
     return andParts;
+  }
+
+  /** Подкатегории OSC, которые реально показываются на витрине (есть мастер с услугой VND). */
+  findOrganizationStorefrontCategoryIdMap(
+    organizationIds: string[],
+  ): Promise<Map<string, Set<string>>> {
+    return queryOrganizationStorefrontCategoryPairs(
+      this.prisma,
+      organizationIds,
+    );
   }
 
   /**
@@ -523,6 +589,7 @@ export class DirectoryRepository {
             INNER JOIN "ServiceCategory" sc ON sc.id = osc."serviceCategoryId"
             WHERE osc."organizationId"::text IN (${Prisma.join(ids)})
               AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
+              AND ${vitrineCategoryCoverageExists()}
             GROUP BY osc."organizationId"
           `,
         );
@@ -548,14 +615,21 @@ export class DirectoryRepository {
         { orgId: string; mp: number | null }[]
       >(
         Prisma.sql`
-          SELECT sv."organizationId"::text AS "orgId", MIN(po."priceAmount")::int AS mp
-          FROM "Service" sv
-          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id
-          WHERE sv."organizationId"::text IN (${Prisma.join(ids)})
+          SELECT e."organizationId"::text AS "orgId", MIN(po."priceAmount")::int AS mp
+          FROM "SpecialistOrganizationEmployment" e
+          INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
+          INNER JOIN "Service" sv ON sv."specialistId" = e."specialistId"
             AND sv."deletedAt" IS NULL
             AND sv."isActive" = true
-            AND po."currency" = 'VND'
-          GROUP BY sv."organizationId"
+            AND (sv."organizationId" IS NULL OR sv."organizationId" = e."organizationId")
+          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id AND po."currency" = 'VND'
+          WHERE e."isActive" = true
+            AND e."organizationId"::text IN (${Prisma.join(ids)})
+            AND sp."listedInDirectory" = true
+            AND sp."deletedAt" IS NULL
+            AND sp."activeOrganizationId" IS NOT NULL
+            AND sp."activeOrganizationId" = e."organizationId"
+          GROUP BY e."organizationId"
         `,
       );
       const minPrice = new Map<string, number | null>();
@@ -706,19 +780,61 @@ export class DirectoryRepository {
     });
   }
 
-  findOrganizationById(id: string): Promise<OrganizationListRow | null> {
+  async findOrganizationById(id: string): Promise<OrganizationListRow | null> {
+    const eligible =
+      await queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecialists(
+        this.prisma,
+        [id],
+      );
+    if (eligible.length === 0) {
+      return null;
+    }
     return this.prisma.organization.findFirst({
       where: { id, deletedAt: null },
       include: organizationListInclude(),
     });
   }
 
-  findOrganizationsByIds(ids: string[]): Promise<OrganizationListRow[]> {
+  /**
+   * Публичное чтение витринной галереи организации (без авторизации).
+   */
+  async findOrganizationVitrineGalleryItemsPublic(
+    organizationId: string,
+  ): Promise<Array<{ url: string; alt: string | null }>> {
+    const gallery = await this.prisma.gallery.findUnique({
+      where: {
+        ownerKind_ownerId: {
+          ownerKind: GalleryOwnerKind.organization,
+          ownerId: organizationId,
+        },
+      },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          select: { url: true, alt: true },
+        },
+      },
+    });
+    if (!gallery) {
+      return [];
+    }
+    return gallery.items.map((it) => ({ url: it.url, alt: it.alt }));
+  }
+
+  async findOrganizationsByIds(ids: string[]): Promise<OrganizationListRow[]> {
     if (ids.length === 0) {
       return Promise.resolve([]);
     }
+    const eligible =
+      await queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecialists(
+        this.prisma,
+        ids,
+      );
+    if (eligible.length === 0) {
+      return Promise.resolve([]);
+    }
     return this.prisma.organization.findMany({
-      where: { id: { in: ids }, deletedAt: null },
+      where: { id: { in: eligible }, deletedAt: null },
       include: organizationListInclude(),
     });
   }
@@ -731,7 +847,9 @@ export class DirectoryRepository {
   }
 
   /** Витрина: только мастер, участвующий в каталоге (место приёма + флаг). */
-  findPublicDirectorySpecialistById(id: string): Promise<SpecialistListRow | null> {
+  findPublicDirectorySpecialistById(
+    id: string,
+  ): Promise<SpecialistListRow | null> {
     return this.prisma.specialist.findFirst({
       where: {
         id,
@@ -768,12 +886,7 @@ export class DirectoryRepository {
    * Подкатегории, проставленные у неудалённых организаций (витрина салонов).
    */
   findDistinctServiceCategoryIdsForListingOrganizations(): Promise<string[]> {
-    return this.prisma.$queryRaw<{ serviceCategoryId: string }[]>`
-        SELECT DISTINCT osc."serviceCategoryId"
-        FROM "OrganizationServiceCategory" osc
-        INNER JOIN "Organization" o ON o.id = osc."organizationId"
-        WHERE o."deletedAt" IS NULL
-      `.then((rows) => rows.map((r) => r.serviceCategoryId));
+    return queryDistinctStorefrontOrganizationServiceCategoryIds(this.prisma);
   }
 
   findServiceCategoriesByIds(ids: string[]) {
@@ -827,19 +940,19 @@ export class DirectoryRepository {
         (MAX(po."priceAmount"))::int AS "max"
       FROM "ServicePriceOption" po
       INNER JOIN "Service" s ON s.id = po."serviceId"
-      INNER JOIN "Organization" o ON o.id = s."organizationId"
-      INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
       INNER JOIN "SpecialistOrganizationEmployment" e
         ON e."specialistId" = s."specialistId"
-        AND e."organizationId" = s."organizationId"
         AND e."isActive" = true
+        AND (s."organizationId" IS NULL OR s."organizationId" = e."organizationId")
+      INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
       WHERE po."currency" = 'VND'
         AND s."deletedAt" IS NULL
         AND s."isActive" = true
         AND s."specialistId" IS NOT NULL
-        AND o."deletedAt" IS NULL
         AND sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
+        AND sp."activeOrganizationId" IS NOT NULL
+        AND sp."activeOrganizationId" = e."organizationId"
     `;
     const r = rows[0];
     return { min: r?.min ?? null, max: r?.max ?? null };
@@ -1004,5 +1117,50 @@ export class DirectoryRepository {
       createdAt: r.createdAt,
       authorName: r.author.name,
     }));
+  }
+
+  /**
+   * Для витрины организации: первое изображение в галерее по `sortOrder` (обложка в списках).
+   */
+  async findStorefrontImageFieldsForOrganizationIds(
+    ids: string[],
+  ): Promise<
+    Map<string, { imageUrl: string | null; imageAlt: string | null }>
+  > {
+    const out = new Map<
+      string,
+      { imageUrl: string | null; imageAlt: string | null }
+    >();
+    for (const id of ids) {
+      out.set(id, { imageUrl: null, imageAlt: null });
+    }
+    if (ids.length === 0) {
+      return out;
+    }
+    const galleries = await this.prisma.gallery.findMany({
+      where: {
+        ownerKind: GalleryOwnerKind.organization,
+        ownerId: { in: ids },
+      },
+      include: {
+        items: {
+          orderBy: { sortOrder: 'asc' },
+          take: 1,
+          select: { url: true, alt: true, kind: true },
+        },
+      },
+    });
+    for (const g of galleries) {
+      const first = g.items[0];
+      if (first?.kind === GalleryMediaKind.image) {
+        out.set(g.ownerId, {
+          imageUrl: first.url,
+          imageAlt: first.alt ?? null,
+        });
+      } else {
+        out.set(g.ownerId, { imageUrl: null, imageAlt: null });
+      }
+    }
+    return out;
   }
 }

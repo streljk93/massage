@@ -1786,6 +1786,187 @@
         ]
       }
     },
+    "/specialists/me/organizations": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistMyOrganizations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizations",
+                    "activeOrganizationId"
+                  ],
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "role",
+                          "isActiveWorkplace"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "specialist"
+                            ],
+                            "description": "Роль мастера в этой организации."
+                          },
+                          "isActiveWorkplace": {
+                            "type": "boolean",
+                            "description": "Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины."
+                          }
+                        }
+                      }
+                    },
+                    "activeOrganizationId": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Текущая активная организация мастера; null — только личный приём / не выбрано."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/workplace-join-requests": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistMyWorkplaceJoinRequests",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "requests"
+                  ],
+                  "properties": {
+                    "requests": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "status",
+                          "createdAt",
+                          "updatedAt",
+                          "resolvedAt",
+                          "organization"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "rejected",
+                              "withdrawn",
+                              "blocked"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "resolvedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "organization": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Заявки текущего мастера на вступление в организации (отправленные из кабинета).",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
     "/specialists/me/active-organization": {
       "patch": {
         "operationId": "SpecialistsCabinet_patchSpecialistActiveOrganization",
@@ -2259,6 +2440,60 @@
           }
         ],
         "summary": "Личная услуга мастера без организации (organizationId = null, specialistId = текущий).",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/services/{serviceId}": {
+      "delete": {
+        "operationId": "SpecialistsCabinet_deleteSpecialistPersonalService",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "required": true,
+            "in": "path",
+            "description": "Идентификатор услуги из POST /specialists/me/services",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля мастера нет, услуга не найдена или не личная"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить личную услугу мастера (soft delete). Услуга должна быть с organizationId = null.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2919,9 +3154,110 @@
         ]
       }
     },
+    "/organizations/workplace-search": {
+      "get": {
+        "description": "Пустой `q` — первые `limit` активных салонов по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).",
+        "operationId": "OrganizationsCabinet_getWorkplaceOrganizationSearch",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "1–50, по умолчанию 30.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Строка поиска (до 200 символов).",
+            "schema": {}
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizations"
+                  ],
+                  "properties": {
+                    "organizations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "addressLine",
+                          "city"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "addressLine": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "city": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный limit"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Поиск салона для заявки на место работы (без фильтров публичной витрины).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
     "/organizations": {
       "post": {
-        "description": "Требует Bearer. Публичный список салонов — `GET /organizations`; создание — `POST /organizations` с тем же префиксом ресурса. В ответе — актуальное состояние онбординга мастера.",
+        "description": "Требует Bearer. Если у мастера уже выбрано активное место приёма, оно не меняется; новый салон создаётся как дополнительное владение. Публичный список салонов — `GET /organizations`. В ответе — актуальное состояние онбординга мастера.",
         "operationId": "OrganizationsCabinet_postCreateOrganization",
         "parameters": [
           {
@@ -3006,17 +3342,20 @@
                   "phone": {
                     "type": "string",
                     "maxLength": 32,
-                    "nullable": true
+                    "nullable": true,
+                    "description": "Вьетнам E.164: +84 и 8–12 цифр национального номера (как в профиле мастера). Пусто — не указывать."
                   },
                   "email": {
                     "type": "string",
+                    "format": "email",
                     "maxLength": 254,
                     "nullable": true
                   },
                   "website": {
                     "type": "string",
                     "maxLength": 2048,
-                    "nullable": true
+                    "nullable": true,
+                    "description": "URL сайта; допустимо без схемы — сервер добавит https://."
                   },
                   "yearsInBusiness": {
                     "type": "integer",
@@ -3034,6 +3373,16 @@
                     "type": "string",
                     "maxLength": 500,
                     "nullable": true
+                  },
+                  "galleryImageUrls": {
+                    "type": "array",
+                    "maxItems": 24,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2048
+                    },
+                    "description": "URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются."
                   },
                   "serviceCategoryIds": {
                     "type": "array",
@@ -3092,9 +3441,6 @@
           },
           "404": {
             "description": "Профиля специалиста нет"
-          },
-          "409": {
-            "description": "Уже выбрана активная организация"
           }
         },
         "security": [
@@ -3102,7 +3448,7 @@
             "access-token": []
           }
         ],
-        "summary": "Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, место приёма.",
+        "summary": "Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, членство owner.",
         "tags": [
           "cabinet-organizations"
         ]
@@ -3763,6 +4109,180 @@
         "summary": "Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.",
         "tags": [
           "cabinet-organizations"
+        ]
+      }
+    },
+    "/galleries/by-owner/organization/{organizationId}": {
+      "get": {
+        "description": "Возвращает `galleryId` и элементы в порядке `sortOrder` для последующего PATCH `/galleries/{galleryId}/items/order`.",
+        "operationId": "GalleryCabinet_getOrganizationVitrineGallery",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "galleryId",
+                    "items"
+                  ],
+                  "properties": {
+                    "galleryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "url",
+                          "kind",
+                          "sortOrder"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "alt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "image",
+                              "video"
+                            ]
+                          },
+                          "sortOrder": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Галерея витрины организации (кабинет)",
+        "tags": [
+          "galleries"
+        ]
+      }
+    },
+    "/galleries/{galleryId}/items/order": {
+      "patch": {
+        "description": "Обновляет sortOrder у элементов; первый в списке становится «главным» кадром (для витрины организации — это обложка в каталоге).",
+        "operationId": "GalleryCabinet_patchItemsOrder",
+        "parameters": [
+          {
+            "name": "galleryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "orderedItemIds"
+                ],
+                "properties": {
+                  "orderedItemIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Все id элементов этой галереи в желаемом порядке отображения (меньший индекс — раньше в карусели)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный набор id (GALLERY_ORDER_MISMATCH и др.)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Галерея не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Задать порядок элементов галереи",
+        "tags": [
+          "galleries"
         ]
       }
     },
@@ -5111,7 +5631,8 @@
                     "listingWorkdayStartMinute",
                     "listingWorkdayEndMinute",
                     "staff",
-                    "clientsCount"
+                    "clientsCount",
+                    "vitrineGalleryItems"
                   ],
                   "properties": {
                     "id": {
@@ -5349,6 +5870,28 @@
                       "type": "integer",
                       "minimum": 0,
                       "description": "Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне."
+                    },
+                    "vitrineGalleryItems": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "url"
+                        ],
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "format": "uri",
+                            "description": "URL медиа (как сохранено в галерее)."
+                          },
+                          "alt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Подпись к фото (если задана в кабинете)."
+                          }
+                        }
+                      },
+                      "description": "Фото витрины салона (порядок как в кабинете). Пустой массив, если галерея не создана."
                     }
                   }
                 }

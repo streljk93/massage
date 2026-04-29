@@ -55,6 +55,13 @@ export type SliderProps = {
   dotsAriaLabel?: string;
   /** Вызывается при смене активного слайда (скролл или программная прокрутка). */
   onActiveIndexChange?: (index: number) => void;
+  /**
+   * Доп. классы для контейнера точек в режиме `dotsPlacement="overlay"`
+   * (по умолчанию `bottom-2`; можно задать, например, `bottom-40 z-20`).
+   */
+  dotsOverlayContainerClassName?: string;
+  /** Точки на фото/видео: светлые, для тёмного фона шапки профиля. */
+  dotsOverlayVariant?: "default" | "onMedia";
 };
 
 export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
@@ -69,6 +76,8 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     dotsPlacement = "below",
     dotsAriaLabel,
     onActiveIndexChange,
+    dotsOverlayContainerClassName,
+    dotsOverlayVariant = "default",
   },
   ref,
 ) {
@@ -212,9 +221,13 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
         dotsPlacement === "overlay"
           ? cn(
               "h-1.5",
-              i === active
-                ? "w-4 bg-foreground"
-                : "w-1.5 bg-muted-foreground/40",
+              dotsOverlayVariant === "onMedia"
+                ? i === active
+                  ? "w-4 bg-white"
+                  : "w-1.5 bg-white/40"
+                : i === active
+                  ? "w-4 bg-foreground"
+                  : "w-1.5 bg-muted-foreground/40",
             )
           : cn(
               "h-1.5 w-1.5",
@@ -229,11 +242,21 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
     showDots && slides.length > 1 ? (
       dotsPlacement === "overlay" ? (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-3"
+          className={cn(
+            "pointer-events-none absolute inset-x-0 bottom-2 z-10 flex justify-center px-3",
+            dotsOverlayContainerClassName,
+          )}
           role="tablist"
           aria-label={dotsAriaLabel}
         >
-          <div className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-border/35 bg-card/80 px-2 py-1 backdrop-blur-sm">
+          <div
+            className={cn(
+              "pointer-events-auto flex items-center gap-1.5 rounded-full px-2 py-1 backdrop-blur-sm",
+              dotsOverlayVariant === "onMedia"
+                ? "border border-white/35 bg-black/40"
+                : "border border-border/35 bg-card/80",
+            )}
+          >
             {dotButtons}
           </div>
         </div>
@@ -250,11 +273,16 @@ export const Slider = forwardRef<SliderHandle, SliderProps>(function Slider(
 
   return (
     <div className={cn("w-full", className)}>
-      <div className={cn(dotsPlacement === "overlay" && "relative")}>
+      <div
+        className={cn(
+          "h-full min-h-0",
+          dotsPlacement === "overlay" && "relative",
+        )}
+      >
         <div
           ref={scrollerRef}
           className={cn(
-            "flex min-w-0 touch-pan-x snap-x snap-mandatory items-stretch overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
+            "flex h-full min-h-0 min-w-0 touch-pan-x snap-x snap-mandatory items-stretch overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]",
             trackGapClassName,
             dotsPlacement === "below" && "pb-1",
             "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",

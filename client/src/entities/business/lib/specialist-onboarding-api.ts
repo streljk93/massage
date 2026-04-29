@@ -10,6 +10,13 @@ export function isSpecialistOnboardingComplete(
   return data?.onboardingStep === 6;
 }
 
+/** У пользователя уже создан профиль специалиста (ответ API: `specialist !== null`). */
+export function hasSpecialistAccount(
+  data: SpecialistsCabinetGetSpecialistOnboardingResponse | null | undefined,
+): boolean {
+  return data?.specialist != null;
+}
+
 /**
  * Какой UI-шаг визарда открывать по умолчанию, если в URL нет `?step=`
  * (серверный шаг из `GET /specialists/me/onboarding`).

@@ -358,10 +358,32 @@ export const directoryReviewsListResponseSchema = {
   },
 };
 
+const organizationVitrineGalleryItemSchema = {
+  type: 'object',
+  required: ['url'],
+  properties: {
+    url: {
+      type: 'string',
+      format: 'uri',
+      description: 'URL медиа (как сохранено в галерее).',
+    },
+    alt: {
+      type: 'string',
+      nullable: true,
+      description: 'Подпись к фото (если задана в кабинете).',
+    },
+  },
+};
+
 /** Ответ GET /organizations/:id — карточка салона + мастера. */
 export const organizationDetailResponseSchema = {
   type: 'object',
-  required: [...organizationListItemSchema.required, 'staff', 'clientsCount'],
+  required: [
+    ...organizationListItemSchema.required,
+    'staff',
+    'clientsCount',
+    'vitrineGalleryItems',
+  ],
   properties: {
     ...organizationListItemSchema.properties,
     staff: {
@@ -373,6 +395,12 @@ export const organizationDetailResponseSchema = {
       minimum: 0,
       description:
         'Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне.',
+    },
+    vitrineGalleryItems: {
+      type: 'array',
+      items: organizationVitrineGalleryItemSchema,
+      description:
+        'Фото витрины салона (порядок как в кабинете). Пустой массив, если галерея не создана.',
     },
   },
 };

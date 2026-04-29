@@ -20,12 +20,35 @@ export const createOrganizationRequestSchema = {
     latitude: { type: 'number', minimum: -90, maximum: 90 },
     longitude: { type: 'number', minimum: -180, maximum: 180 },
     description: { type: 'string', maxLength: 4000 },
-    phone: { type: 'string', maxLength: 32, nullable: true },
-    email: { type: 'string', maxLength: 254, nullable: true },
-    website: { type: 'string', maxLength: 2048, nullable: true },
+    phone: {
+      type: 'string',
+      maxLength: 32,
+      nullable: true,
+      description:
+        'Вьетнам E.164: +84 и 8–12 цифр национального номера (как в профиле мастера). Пусто — не указывать.',
+    },
+    email: {
+      type: 'string',
+      format: 'email',
+      maxLength: 254,
+      nullable: true,
+    },
+    website: {
+      type: 'string',
+      maxLength: 2048,
+      nullable: true,
+      description: 'URL сайта; допустимо без схемы — сервер добавит https://.',
+    },
     yearsInBusiness: { type: 'integer', minimum: 0, maximum: 80, nullable: true },
     imageUrl: { type: 'string', minLength: 1, maxLength: 2048, nullable: true },
     imageAlt: { type: 'string', maxLength: 500, nullable: true },
+    galleryImageUrls: {
+      type: 'array',
+      maxItems: 24,
+      items: { type: 'string', minLength: 1, maxLength: 2048 },
+      description:
+        'URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются.',
+    },
     serviceCategoryIds: {
       type: 'array',
       minItems: 1,
@@ -114,6 +137,26 @@ export const workplaceJoinRequestListResponseSchema = {
               },
             },
           },
+        },
+      },
+    },
+  },
+};
+
+export const workplaceOrganizationSearchResponseSchema = {
+  type: 'object',
+  required: ['organizations'],
+  properties: {
+    organizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'name', 'addressLine', 'city'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          addressLine: { type: 'string', nullable: true },
+          city: { type: 'string', nullable: true },
         },
       },
     },

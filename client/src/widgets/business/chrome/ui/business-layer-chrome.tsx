@@ -70,6 +70,13 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
       : false;
 
   const headerLead = useMemo((): CabinetHeaderLeadRole => {
+    // Визард настройки — вне каркаса кабинета: без бургера и дровера
+    if (isSetupPath(pathname)) {
+      if (status === "unauthenticated") {
+        return "back";
+      }
+      return "none";
+    }
     if (status === "loading") {
       return "menuPending";
     }
@@ -86,7 +93,7 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
       return "menu";
     }
     return "back";
-  }, [status, accessToken, isFetched]);
+  }, [pathname, status, accessToken, isFetched]);
 
   const showIncompleteStrip =
     ready &&

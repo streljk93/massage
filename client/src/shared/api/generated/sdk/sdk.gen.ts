@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistPersonalServiceData, SpecialistsCabinetPostSpecialistPersonalServiceErrors, SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
+import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, GalleryCabinetGetOrganizationVitrineGalleryData, GalleryCabinetGetOrganizationVitrineGalleryErrors, GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetPatchItemsOrderData, GalleryCabinetPatchItemsOrderErrors, GalleryCabinetPatchItemsOrderResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetGetWorkplaceOrganizationSearchData, OrganizationsCabinetGetWorkplaceOrganizationSearchErrors, OrganizationsCabinetGetWorkplaceOrganizationSearchResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetDeleteSpecialistPersonalServiceData, SpecialistsCabinetDeleteSpecialistPersonalServiceErrors, SpecialistsCabinetDeleteSpecialistPersonalServiceResponses, SpecialistsCabinetGetSpecialistMyOrganizationsData, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistPersonalServiceData, SpecialistsCabinetPostSpecialistPersonalServiceErrors, SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -240,6 +240,24 @@ export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.
+ */
+export const specialistsCabinetGetSpecialistMyOrganizations = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetGetSpecialistMyOrganizationsData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/organizations',
+    ...options
+});
+
+/**
+ * Заявки текущего мастера на вступление в организации (отправленные из кабинета).
+ */
+export const specialistsCabinetGetSpecialistMyWorkplaceJoinRequests = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/workplace-join-requests',
+    ...options
+});
+
+/**
  * Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.
  */
 export const specialistsCabinetPatchSpecialistActiveOrganization = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistActiveOrganizationData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, ThrowOnError>({
@@ -303,6 +321,15 @@ export const specialistsCabinetPostSpecialistPersonalService = <ThrowOnError ext
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Удалить личную услугу мастера (soft delete). Услуга должна быть с organizationId = null.
+ */
+export const specialistsCabinetDeleteSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetDeleteSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).delete<SpecialistsCabinetDeleteSpecialistPersonalServiceResponses, SpecialistsCabinetDeleteSpecialistPersonalServiceErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/services/{serviceId}',
+    ...options
 });
 
 /**
@@ -384,6 +411,17 @@ export const specialistBookingsStartVisit = <ThrowOnError extends boolean = fals
 });
 
 /**
+ * Поиск салона для заявки на место работы (без фильтров публичной витрины).
+ *
+ * Пустой `q` — первые `limit` активных салонов по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).
+ */
+export const organizationsCabinetGetWorkplaceOrganizationSearch = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsCabinetGetWorkplaceOrganizationSearchData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsCabinetGetWorkplaceOrganizationSearchResponses, OrganizationsCabinetGetWorkplaceOrganizationSearchErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/workplace-search',
+    ...options
+});
+
+/**
  * Список организаций (курсорная пагинация)
  *
  * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
@@ -395,9 +433,9 @@ export const organizationsList = <ThrowOnError extends boolean = false>(options?
 });
 
 /**
- * Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, место приёма.
+ * Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, членство owner.
  *
- * Требует Bearer. Публичный список салонов — `GET /organizations`; создание — `POST /organizations` с тем же префиксом ресурса. В ответе — актуальное состояние онбординга мастера.
+ * Требует Bearer. Если у мастера уже выбрано активное место приёма, оно не меняется; новый салон создаётся как дополнительное владение. Публичный список салонов — `GET /organizations`. В ответе — актуальное состояние онбординга мастера.
  */
 export const organizationsCabinetPostCreateOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostCreateOrganizationData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostCreateOrganizationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -435,6 +473,32 @@ export const organizationsCabinetGetWorkplaceJoinRequestsForOrganization = <Thro
 export const organizationsCabinetPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Галерея витрины организации (кабинет)
+ *
+ * Возвращает `galleryId` и элементы в порядке `sortOrder` для последующего PATCH `/galleries/{galleryId}/items/order`.
+ */
+export const galleryCabinetGetOrganizationVitrineGallery = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetGetOrganizationVitrineGalleryData, ThrowOnError>) => (options.client ?? client).get<GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetGetOrganizationVitrineGalleryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/galleries/by-owner/organization/{organizationId}',
+    ...options
+});
+
+/**
+ * Задать порядок элементов галереи
+ *
+ * Обновляет sortOrder у элементов; первый в списке становится «главным» кадром (для витрины организации — это обложка в каталоге).
+ */
+export const galleryCabinetPatchItemsOrder = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetPatchItemsOrderData, ThrowOnError>) => (options.client ?? client).patch<GalleryCabinetPatchItemsOrderResponses, GalleryCabinetPatchItemsOrderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/galleries/{galleryId}/items/order',
     ...options,
     headers: {
         'Content-Type': 'application/json',

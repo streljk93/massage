@@ -1,4 +1,9 @@
 export { AppBackButton, type AppBackButtonProps } from "./app-back-button";
+export {
+  FullScreenPhotoGallery,
+  type FullScreenPhotoGalleryItem,
+  type FullScreenPhotoGalleryProps,
+} from "./full-screen-photo-gallery";
 export { Button, type ButtonProps, type ButtonTone } from "./button";
 export { Checkbox } from "./shadcn/checkbox";
 export {
@@ -44,9 +49,15 @@ export {
   type UserAvatarProps,
 } from "./avatar";
 export {
-  AvatarPhotoDropzone,
-  type AvatarPhotoDropzoneProps,
-} from "./avatar-photo-dropzone";
+  collectImageFilesFromList,
+  ORG_SALON_GALLERY_MAX_FILES,
+  ImageMediaDropzone,
+  pickFirstImageFile,
+  type ImageMediaDropzoneMultipleProps,
+  type ImageMediaDropzoneProps,
+  type ImageMediaDropzoneSingleProps,
+  type ImageMediaGalleryItem,
+} from "./image-media-dropzone";
 export { Tag, tagVariants, type TagProps } from "./tag";
 export { default as availabilitySlotStripI18n } from "./availability-slot-strip.i18n.json";
 export {

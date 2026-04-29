@@ -68,6 +68,7 @@ import {
   shortestDurationThatIncludesSlot,
 } from "@/views/specialist-profile/lib/filter-slots-for-duration";
 import type { OrganizationProfileData } from "../model/organization-profile-data";
+import { OrganizationVitrineGalleryCarousel } from "./organization-vitrine-gallery-carousel";
 import { trackOrganizationProfileView } from "@/shared/lib/personalization/personalization-track";
 
 const SearchResultsLeafletMap = dynamic(
@@ -214,6 +215,13 @@ export function OrganizationProfilePage({
     ],
     [profile],
   );
+
+  const heroGalleryItems = useMemo(() => {
+    if (profile.vitrineGallery.length > 0) {
+      return profile.vitrineGallery;
+    }
+    return [{ src: profile.imageSrc, alt: profile.imageAlt }];
+  }, [profile]);
 
   const [selectedServiceMenuKey, setSelectedServiceMenuKey] = useState(() => {
     const merged = mergeSalonBookableOptions(profile.specialists);
@@ -723,12 +731,21 @@ export function OrganizationProfilePage({
 
         <div className="relative z-10 mx-auto w-full max-w-lg">
           <div className="relative aspect-[375/460] min-h-[16.5rem] w-full overflow-hidden sm:aspect-[375/503] sm:min-h-[18rem]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={profile.imageSrc}
-              alt={profile.imageAlt}
-              className="absolute inset-0 size-full object-cover"
-            />
+            <div className="absolute inset-0">
+              <OrganizationVitrineGalleryCarousel
+                items={heroGalleryItems}
+                className="h-full min-h-0"
+                slideClassName="h-full min-h-0"
+                showDots={false}
+                sliderAriaLabel={t("gallerySliderAria")}
+                openFullscreenLabel={t("galleryOpenFullscreenAria")}
+                fullscreenTitle={t("galleryFullscreenTitle")}
+                fullscreenCloseLabel={t("galleryFullscreenCloseAria")}
+                formatPhotoProgress={(current, total) =>
+                  t("galleryFullscreenProgress", { current, total })
+                }
+              />
+            </div>
             <div
               className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/10"
               aria-hidden

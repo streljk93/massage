@@ -4,12 +4,14 @@ import { useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
 import { AddressMapPickerDialog } from "@/widgets/address-map-picker";
 import {
-  AvatarPhotoDropzone,
+  ImageMediaDropzone,
+  ORG_SALON_GALLERY_MAX_FILES,
   Button,
   Checkbox,
   Input,
   SearchAutocomplete,
 } from "@/shared/ui";
+import { OrgContactFields } from "@/views/business/ui/org-contact-fields";
 import { useSpecialistOnboardingCatalogCategories } from "../../lib/use-specialist-onboarding-catalog-categories";
 import { useSpecialistOnboarding } from "../specialist-onboarding-context";
 
@@ -50,9 +52,9 @@ export default function SpecialistOnboardingStepWorkplace() {
     setNewOrgCategoryIds,
     setNewOrgAddrQ,
     setNewOrgPlacePicked,
-    pendingOrgPhotoFile,
-    pendingOrgPhotoObjectUrl,
-    setPendingOrgPhotoFile,
+    pendingOrgGallery,
+    addPendingOrgGalleryFiles,
+    removePendingOrgGalleryItem,
     orgAddressMapOpen,
     setOrgAddressMapOpen,
     orgAddressMapNonce,
@@ -90,7 +92,7 @@ export default function SpecialistOnboardingStepWorkplace() {
           selectedId={orgPicked}
           listOpen={orgSuggestOpen}
           onListOpenChange={setOrgSuggestOpen}
-          minQueryLength={2}
+          minQueryLength={0}
           inputId="org-workplace-combobox"
           listboxId="org-workplace-listbox"
           inputLabelledBy="org-search-label"
@@ -131,16 +133,25 @@ export default function SpecialistOnboardingStepWorkplace() {
           <p className="text-pretty text-sm text-muted-foreground">{t("orgFormHint")}</p>
           <div className="space-y-2">
             <span className="text-sm font-medium text-foreground">{t("orgPhoto")}</span>
-            <AvatarPhotoDropzone
+            <p className="text-pretty text-xs text-muted-foreground">{t("orgPhotosMultiHint")}</p>
+            <ImageMediaDropzone
+              selectionMode="multiple"
               disabled={createOrgSubmitting}
+              items={pendingOrgGallery.map((x) => ({
+                id: x.id,
+                previewUrl: x.previewUrl,
+                name: x.file.name,
+              }))}
+              onAdd={addPendingOrgGalleryFiles}
+              onRemove={removePendingOrgGalleryItem}
+              maxFiles={ORG_SALON_GALLERY_MAX_FILES}
               title={t("uploadPhoto")}
               hint={t("uploadHint")}
+              titleWhenHasItems={t("changePhoto")}
+              hintWhenHasItems={t("orgPhotosAddMoreHint")}
               dropzoneAriaLabel={t("orgPhoto")}
-              previewUrl={pendingOrgPhotoObjectUrl}
-              fileLabel={pendingOrgPhotoFile?.name ?? null}
-              titleWithPreview={t("changePhoto")}
-              hintWithPreview={t("photoReplaceHint")}
-              onFileChosen={(file) => setPendingOrgPhotoFile(file)}
+              addMoreAriaLabel={t("orgAddMorePhotosAria")}
+              removeItemAriaLabel={(name) => t("orgPhotoRemoveAria", { name })}
             />
           </div>
           <div className="space-y-1.5">
@@ -187,41 +198,16 @@ export default function SpecialistOnboardingStepWorkplace() {
               </div>
             ) : null}
           </div>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium">{t("orgFormPhone")}</span>
-            <Input
-              className="h-12 min-h-12 rounded-2xl border-0 bg-muted/50"
-              value={newOrgPhone}
-              disabled={createOrgSubmitting}
-              onChange={(e) => setNewOrgPhone(e.target.value)}
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium">{t("orgFormEmail")}</span>
-            <Input
-              className="h-12 min-h-12 rounded-2xl border-0 bg-muted/50"
-              value={newOrgEmail}
-              disabled={createOrgSubmitting}
-              onChange={(e) => setNewOrgEmail(e.target.value)}
-              type="email"
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-sm font-medium">{t("orgFormWebsite")}</span>
-            <Input
-              className="h-12 min-h-12 rounded-2xl border-0 bg-muted/50"
-              value={newOrgWebsite}
-              disabled={createOrgSubmitting}
-              onChange={(e) => setNewOrgWebsite(e.target.value)}
-              type="url"
-              inputMode="url"
-              placeholder="https://"
-            />
-          </div>
+          <OrgContactFields
+            phoneLocal={newOrgPhone}
+            setPhoneLocal={setNewOrgPhone}
+            email={newOrgEmail}
+            setEmail={setNewOrgEmail}
+            website={newOrgWebsite}
+            setWebsite={setNewOrgWebsite}
+            disabled={createOrgSubmitting}
+            t={t}
+          />
           <div className="space-y-1.5">
             <span className="text-sm font-medium">{t("orgFormYears")}</span>
             <Input

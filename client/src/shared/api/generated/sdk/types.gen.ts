@@ -795,6 +795,76 @@ export type UsersPatchMeResponses = {
 
 export type UsersPatchMeResponse = UsersPatchMeResponses[keyof UsersPatchMeResponses];
 
+export type SpecialistsCabinetGetSpecialistMyOrganizationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/specialists/me/organizations';
+};
+
+export type SpecialistsCabinetGetSpecialistMyOrganizationsErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
+    200: {
+        organizations: Array<{
+            id: string;
+            name: string;
+            /**
+             * Роль мастера в этой организации.
+             */
+            role: 'owner' | 'admin' | 'specialist';
+            /**
+             * Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.
+             */
+            isActiveWorkplace: boolean;
+        }>;
+        /**
+         * Текущая активная организация мастера; null — только личный приём / не выбрано.
+         */
+        activeOrganizationId: string | unknown;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistMyOrganizationsResponse = SpecialistsCabinetGetSpecialistMyOrganizationsResponses[keyof SpecialistsCabinetGetSpecialistMyOrganizationsResponses];
+
+export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/specialists/me/workplace-join-requests';
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses = {
+    200: {
+        requests: Array<{
+            id: string;
+            organizationId: string;
+            status: 'pending' | 'accepted' | 'rejected' | 'withdrawn' | 'blocked';
+            createdAt: string;
+            updatedAt: string;
+            resolvedAt: string | null;
+            organization: {
+                id: string;
+                name: string;
+            };
+        }>;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponse = SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses[keyof SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses];
+
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
         organizationId: string;
@@ -1023,6 +1093,37 @@ export type SpecialistsCabinetPostSpecialistPersonalServiceResponses = {
 };
 
 export type SpecialistsCabinetPostSpecialistPersonalServiceResponse = SpecialistsCabinetPostSpecialistPersonalServiceResponses[keyof SpecialistsCabinetPostSpecialistPersonalServiceResponses];
+
+export type SpecialistsCabinetDeleteSpecialistPersonalServiceData = {
+    body?: never;
+    path: {
+        /**
+         * Идентификатор услуги из POST /specialists/me/services
+         */
+        serviceId: unknown;
+    };
+    query?: never;
+    url: '/specialists/me/services/{serviceId}';
+};
+
+export type SpecialistsCabinetDeleteSpecialistPersonalServiceErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля мастера нет, услуга не найдена или не личная
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetDeleteSpecialistPersonalServiceResponses = {
+    200: {
+        ok: true;
+    };
+};
+
+export type SpecialistsCabinetDeleteSpecialistPersonalServiceResponse = SpecialistsCabinetDeleteSpecialistPersonalServiceResponses[keyof SpecialistsCabinetDeleteSpecialistPersonalServiceResponses];
 
 export type BookingsListData = {
     body?: never;
@@ -1335,6 +1436,50 @@ export type SpecialistBookingsStartVisitResponses = {
 
 export type SpecialistBookingsStartVisitResponse = SpecialistBookingsStartVisitResponses[keyof SpecialistBookingsStartVisitResponses];
 
+export type OrganizationsCabinetGetWorkplaceOrganizationSearchData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * 1–50, по умолчанию 30.
+         */
+        limit?: number;
+        /**
+         * Строка поиска (до 200 символов).
+         */
+        q?: unknown;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/workplace-search';
+};
+
+export type OrganizationsCabinetGetWorkplaceOrganizationSearchErrors = {
+    /**
+     * Неверный limit
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type OrganizationsCabinetGetWorkplaceOrganizationSearchResponses = {
+    200: {
+        organizations: Array<{
+            id: string;
+            name: string;
+            addressLine: string | null;
+            city: string | null;
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetWorkplaceOrganizationSearchResponse = OrganizationsCabinetGetWorkplaceOrganizationSearchResponses[keyof OrganizationsCabinetGetWorkplaceOrganizationSearchResponses];
+
 export type OrganizationsListData = {
     body?: never;
     path?: never;
@@ -1476,12 +1621,22 @@ export type OrganizationsCabinetPostCreateOrganizationData = {
         latitude?: number;
         longitude?: number;
         description?: string;
+        /**
+         * Вьетнам E.164: +84 и 8–12 цифр национального номера (как в профиле мастера). Пусто — не указывать.
+         */
         phone?: string | null;
         email?: string | null;
+        /**
+         * URL сайта; допустимо без схемы — сервер добавит https://.
+         */
         website?: string | null;
         yearsInBusiness?: number | null;
         imageUrl?: string | null;
         imageAlt?: string | null;
+        /**
+         * URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются.
+         */
+        galleryImageUrls?: Array<string>;
         serviceCategoryIds: Array<string>;
     };
     path?: never;
@@ -1507,10 +1662,6 @@ export type OrganizationsCabinetPostCreateOrganizationErrors = {
      * Профиля специалиста нет
      */
     404: unknown;
-    /**
-     * Уже выбрана активная организация
-     */
-    409: unknown;
 };
 
 export type OrganizationsCabinetPostCreateOrganizationResponses = {
@@ -1672,6 +1823,86 @@ export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses = {
 };
 
 export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponse = OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses[keyof OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses];
+
+export type GalleryCabinetGetOrganizationVitrineGalleryData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/galleries/by-owner/organization/{organizationId}';
+};
+
+export type GalleryCabinetGetOrganizationVitrineGalleryErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type GalleryCabinetGetOrganizationVitrineGalleryResponses = {
+    200: {
+        galleryId: string | null;
+        items: Array<{
+            id: string;
+            url: string;
+            alt?: string | null;
+            kind: 'image' | 'video';
+            sortOrder: number;
+        }>;
+    };
+};
+
+export type GalleryCabinetGetOrganizationVitrineGalleryResponse = GalleryCabinetGetOrganizationVitrineGalleryResponses[keyof GalleryCabinetGetOrganizationVitrineGalleryResponses];
+
+export type GalleryCabinetPatchItemsOrderData = {
+    body: {
+        /**
+         * Все id элементов этой галереи в желаемом порядке отображения (меньший индекс — раньше в карусели).
+         */
+        orderedItemIds: Array<string>;
+    };
+    path: {
+        galleryId: unknown;
+    };
+    query?: never;
+    url: '/galleries/{galleryId}/items/order';
+};
+
+export type GalleryCabinetPatchItemsOrderErrors = {
+    /**
+     * Неверный набор id (GALLERY_ORDER_MISMATCH и др.)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Галерея не найдена
+     */
+    404: unknown;
+};
+
+export type GalleryCabinetPatchItemsOrderResponses = {
+    200: {
+        ok: boolean;
+    };
+};
+
+export type GalleryCabinetPatchItemsOrderResponse = GalleryCabinetPatchItemsOrderResponses[keyof GalleryCabinetPatchItemsOrderResponses];
 
 export type CatalogGetMajorCategoriesData = {
     body?: never;
@@ -2292,6 +2523,19 @@ export type OrganizationsGetByIdResponses = {
          * Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне.
          */
         clientsCount: number;
+        /**
+         * Фото витрины салона (порядок как в кабинете). Пустой массив, если галерея не создана.
+         */
+        vitrineGalleryItems: Array<{
+            /**
+             * URL медиа (как сохранено в галерее).
+             */
+            url: string;
+            /**
+             * Подпись к фото (если задана в кабинете).
+             */
+            alt?: string | null;
+        }>;
     };
 };
 

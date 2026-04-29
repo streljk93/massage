@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { AvatarPhotoDropzone, Input } from "@/shared/ui";
+import { ImageMediaDropzone, Input } from "@/shared/ui";
 import {
   InputGroup,
   InputGroupAddon,
@@ -39,7 +39,7 @@ export default function SpecialistOnboardingStepProfile() {
       </p>
       <div className="space-y-2">
         <span className="text-sm font-medium">{t("photoLabel")}</span>
-        <AvatarPhotoDropzone
+        <ImageMediaDropzone
           disabled={profileSaving}
           title={t("uploadPhoto")}
           hint={t("uploadHint")}

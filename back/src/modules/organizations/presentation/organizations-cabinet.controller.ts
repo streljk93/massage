@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -31,6 +32,7 @@ import {
   RequestLocale,
   type ApiLocale,
 } from '../../../common/i18n';
+import { parseListSearchQ } from '../../../common/pagination/directory-list-search-query.parse';
 import { OrganizationCabinetService } from '../application/organization-cabinet.service';
 import { createOrganizationBodySchema, type CreateOrganizationBody } from '../dto/create-organization-body.schema';
 import {
@@ -44,6 +46,7 @@ import {
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
   workplaceJoinRequestReviewResponseSchema,
+  workplaceOrganizationSearchResponseSchema,
 } from './organizations-cabinet.openapi-schemas';
 import { specialistOnboardingResponseSchema } from '../../specialists/presentation/specialists.openapi-schemas';
 
@@ -54,20 +57,67 @@ type AuthedRequest = Request & { user: AuthenticatedUser };
 export class OrganizationsCabinetController {
   constructor(private readonly organizationCabinet: OrganizationCabinetService) {}
 
+  @Get('workplace-search')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Поиск салона для заявки на место работы (без фильтров публичной витрины).',
+    description:
+      'Пустой `q` — первые `limit` активных салонов по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Строка поиска (до 200 символов).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '1–50, по умолчанию 30.',
+    schema: { type: 'integer', minimum: 1, maximum: 50 },
+  })
+  @ApiOkResponse({ schema: workplaceOrganizationSearchResponseSchema })
+  @ApiBadRequestResponse({ description: 'Неверный limit' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getWorkplaceOrganizationSearch(
+    @RequestLocale() locale: ApiLocale,
+    @Query('q') qRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    let limit = 30;
+    if (limitRaw !== undefined && limitRaw !== '') {
+      const n = Number.parseInt(limitRaw, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 50) {
+        throw new BadRequestException({
+          code: 'INVALID_LIMIT',
+          message: 'limit must be an integer from 1 to 50',
+        });
+      }
+      limit = n;
+    }
+    const q = parseListSearchQ(qRaw);
+    return this.organizationCabinet.searchOrganizationsForWorkplaceJoin(
+      locale,
+      q,
+      limit,
+    );
+  }
+
   @Post()
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, место приёма.',
+      'Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, членство owner.',
     description:
-      'Требует Bearer. Публичный список салонов — `GET /organizations`; создание — `POST /organizations` с тем же префиксом ресурса. В ответе — актуальное состояние онбординга мастера.',
+      'Требует Bearer. Если у мастера уже выбрано активное место приёма, оно не меняется; новый салон создаётся как дополнительное владение. Публичный список салонов — `GET /organizations`. В ответе — актуальное состояние онбординга мастера.',
   })
   @ApiLocaleQueryDocs()
   @ApiBody({ schema: createOrganizationRequestSchema })
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiBadRequestResponse({ description: 'Категории или валидация тела' })
-  @ApiConflictResponse({ description: 'Уже выбрана активная организация' })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async postCreateOrganization(

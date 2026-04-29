@@ -53,6 +53,11 @@ export function organizationProfileFromApiDetail(
   const { calendarDays, timeSlotsByDay, slotCalendarDates } =
     availabilityFromDirectorySlotGroups(freeGroups);
 
+  const vitrineGallery = (detail.vitrineGalleryItems ?? []).map((it) => ({
+    src: resolveDirectoryImageSrc(it.url),
+    alt: it.alt?.trim() || detail.name,
+  }));
+
   return {
     id: detail.id,
     name: detail.name,
@@ -70,5 +75,6 @@ export function organizationProfileFromApiDetail(
     timeSlotsByDay,
     slotCalendarDates,
     specialists,
+    vitrineGallery,
   };
 }

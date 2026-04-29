@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -23,20 +24,20 @@ import {
   isSpecialistOnboardingComplete,
   maxUiStepAllowed,
 } from "@/entities/business";
-import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared/api/generated/sdk/types.gen";
 import {
   createBrowserSdkClient,
   filesUploadPublic,
+  organizationsCabinetGetWorkplaceOrganizationSearch,
   organizationsCabinetPostCreateOrganization,
   organizationsCabinetPostRequestWorkplaceJoin,
-  organizationsList,
   specialistsCabinetGetSpecialistOnboarding,
   specialistsCabinetPatchSpecialistProfile,
   specialistsCabinetPostEnsureSpecialist,
   specialistsCabinetPostSpecialistOnboardingComplete,
   specialistsCabinetPostSpecialistPersonalService,
 } from "@/shared/api";
+import { validateOrgContactForSubmit } from "@/views/business/lib/organization-contact-form";
 import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import type { ExperienceKey } from "../lib/specialist-onboarding-utils";
 import {
@@ -51,8 +52,15 @@ import {
   yearsToKey,
   type SvcForm,
 } from "../lib/specialist-onboarding-utils";
+import { ORG_SALON_GALLERY_MAX_FILES } from "@/shared/ui";
 
 export const ONB_QK = ["specialistOnboarding"] as const;
+
+export type PendingOrgGalleryItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
 
 export type SpecialistOnboardingSpec = {
   bio?: string | null;
@@ -145,9 +153,9 @@ export type SpecialistOnboardingContextValue = {
   setNewOrgYears: (v: string) => void;
   newOrgCategoryIds: Set<string>;
   setNewOrgCategoryIds: Dispatch<SetStateAction<Set<string>>>;
-  pendingOrgPhotoFile: File | null;
-  setPendingOrgPhotoFile: (v: File | null) => void;
-  pendingOrgPhotoObjectUrl: string | null;
+  pendingOrgGallery: PendingOrgGalleryItem[];
+  addPendingOrgGalleryFiles: (files: File[]) => void;
+  removePendingOrgGalleryItem: (id: string) => void;
   createOrgSubmitting: boolean;
   workplaceSubmitting: boolean;
   introSubmitting: boolean;
@@ -242,6 +250,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [newOrgPlacePicked, setNewOrgPlacePicked] = useState<string | null>(null);
   const [orgAddressMapOpen, setOrgAddressMapOpen] = useState(false);
   const [orgAddressMapNonce, setOrgAddressMapNonce] = useState(0);
+  /** Национальные цифры Вьетнама без +84 (как в шаге профиля). */
   const [newOrgPhone, setNewOrgPhone] = useState("");
   const [newOrgEmail, setNewOrgEmail] = useState("");
   const [newOrgWebsite, setNewOrgWebsite] = useState("");
@@ -250,10 +259,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [newOrgCategoryIds, setNewOrgCategoryIds] = useState<Set<string>>(
     new Set(),
   );
-  const [pendingOrgPhotoFile, setPendingOrgPhotoFile] = useState<File | null>(null);
-  const [pendingOrgPhotoObjectUrl, setPendingOrgPhotoObjectUrl] = useState<
-    string | null
-  >(null);
+  const [pendingOrgGallery, setPendingOrgGallery] = useState<PendingOrgGalleryItem[]>([]);
+  const pendingOrgGalleryRef = useRef<PendingOrgGalleryItem[]>([]);
+  useEffect(() => {
+    pendingOrgGalleryRef.current = pendingOrgGallery;
+  }, [pendingOrgGallery]);
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
   const [workplaceSubmitting, setWorkplaceSubmitting] = useState(false);
   const [introSubmitting, setIntroSubmitting] = useState(false);
@@ -261,7 +271,10 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [doneSubmitting, setDoneSubmitting] = useState(false);
 
   const resetCreateSalonForm = useCallback(() => {
-    setPendingOrgPhotoFile(null);
+    setPendingOrgGallery((prev) => {
+      prev.forEach((x) => URL.revokeObjectURL(x.previewUrl));
+      return [];
+    });
     setNewOrgName("");
     setNewOrgAddrQ("");
     setNewOrgPlacePicked(null);
@@ -272,6 +285,44 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setNewOrgDescription("");
     setNewOrgYears("");
     setNewOrgCategoryIds(new Set());
+  }, []);
+
+  const addPendingOrgGalleryFiles = useCallback((files: File[]) => {
+    setPendingOrgGallery((prev) => {
+      const room = ORG_SALON_GALLERY_MAX_FILES - prev.length;
+      if (room <= 0) {
+        return prev;
+      }
+      const imageFiles = files.filter((f) => f.type.startsWith("image/")).slice(0, room);
+      if (imageFiles.length === 0) {
+        return prev;
+      }
+      const next = [...prev];
+      for (const file of imageFiles) {
+        next.push({
+          id: crypto.randomUUID(),
+          file,
+          previewUrl: URL.createObjectURL(file),
+        });
+      }
+      return next;
+    });
+  }, []);
+
+  const removePendingOrgGalleryItem = useCallback((id: string) => {
+    setPendingOrgGallery((prev) => {
+      const item = prev.find((x) => x.id === id);
+      if (item) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter((x) => x.id !== id);
+    });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      pendingOrgGalleryRef.current.forEach((x) => URL.revokeObjectURL(x.previewUrl));
+    };
   }, []);
 
   useEffect(() => {
@@ -302,18 +353,6 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       URL.revokeObjectURL(url);
     };
   }, [pendingPhotoFile]);
-
-  useEffect(() => {
-    if (!pendingOrgPhotoFile) {
-      setPendingOrgPhotoObjectUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(pendingOrgPhotoFile);
-    setPendingOrgPhotoObjectUrl(url);
-    return () => {
-      URL.revokeObjectURL(url);
-    };
-  }, [pendingOrgPhotoFile]);
 
   const maxUi = maxUiStepAllowed((apiStep as 1 | 3 | 4 | 5 | 6) ?? 1);
 
@@ -519,19 +558,14 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       return;
     }
     const q = orgQ.trim();
-    if (q.length < 2) {
-      setOrgHits([]);
-      return;
-    }
     setOrgPending(true);
     const tmr = setTimeout(() => {
       void (async () => {
-        const { data, error } = await organizationsList({
+        const { data, error } = await organizationsCabinetGetWorkplaceOrganizationSearch({
           client: sdk,
           query: {
-            q,
-            majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
-            limit: 8,
+            ...(q ? { q } : {}),
+            limit: 30,
             locale,
           },
         });
@@ -606,21 +640,35 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       setFormError(t("vErrCreateOrgCategories"));
       return;
     }
+    const contact = validateOrgContactForSubmit({
+      phoneLocalDigits: newOrgPhone,
+      email: newOrgEmail,
+      website: newOrgWebsite,
+    });
+    if (!contact.ok) {
+      setFormError(t(contact.errorKey));
+      return;
+    }
     setFormError(null);
     setCreateOrgSubmitting(true);
     let imageUrl: string | undefined;
-    if (pendingOrgPhotoFile) {
+    const galleryUrls: string[] = [];
+    for (const item of pendingOrgGallery) {
       const up = await filesUploadPublic({
         client: sdk,
-        body: { file: pendingOrgPhotoFile },
+        body: { file: item.file },
       });
       if (up.error || !up.data?.url) {
         setFormError(t("vErrPhoto"));
         setCreateOrgSubmitting(false);
         return;
       }
-      imageUrl = up.data.url;
+      galleryUrls.push(up.data.url);
     }
+    if (galleryUrls.length > 0) {
+      imageUrl = galleryUrls[0];
+    }
+    const galleryImageUrls = galleryUrls.length > 1 ? galleryUrls.slice(1) : undefined;
     const yearsRaw = newOrgYears.trim();
     const yearsParsed =
       yearsRaw === ""
@@ -641,12 +689,15 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
             placeId: placeRef.placeId,
           },
           description: newOrgDescription.trim() || undefined,
-          phone: newOrgPhone.trim() || null,
-          email: newOrgEmail.trim() || null,
-          website: newOrgWebsite.trim() || null,
+          phone: contact.value.phone,
+          email: contact.value.email,
+          website: contact.value.website,
           yearsInBusiness: yearsParsed,
           imageUrl: imageUrl ?? null,
           imageAlt: imageUrl != null ? newOrgName.trim() : null,
+          ...(galleryImageUrls != null && galleryImageUrls.length > 0 ?
+            { galleryImageUrls }
+          : {}),
           serviceCategoryIds: Array.from(newOrgCategoryIds),
         },
       });
@@ -792,9 +843,9 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setNewOrgYears,
     newOrgCategoryIds,
     setNewOrgCategoryIds,
-    pendingOrgPhotoFile,
-    setPendingOrgPhotoFile,
-    pendingOrgPhotoObjectUrl,
+    pendingOrgGallery,
+    addPendingOrgGalleryFiles,
+    removePendingOrgGalleryItem,
     createOrgSubmitting,
     workplaceSubmitting,
     introSubmitting,

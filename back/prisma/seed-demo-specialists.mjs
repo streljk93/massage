@@ -30,6 +30,50 @@ const LISTING_WORKDAY_PRESETS = [
 
 const DEMO_PASSWORD = 'Demo123456!';
 
+const DEMO_ORG_COVER_IMAGE_URL =
+  'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop';
+
+/**
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} organizationId
+ * @param {string} coverImageUrl
+ */
+async function ensureOrganizationShowcaseGallery(
+  prisma,
+  organizationId,
+  coverImageUrl,
+) {
+  let g = await prisma.gallery.findUnique({
+    where: {
+      ownerKind_ownerId: {
+        ownerKind: 'organization',
+        ownerId: organizationId,
+      },
+    },
+  });
+  if (!g) {
+    g = await prisma.gallery.create({
+      data: {
+        ownerKind: 'organization',
+        ownerId: organizationId,
+      },
+    });
+  }
+  const count = await prisma.galleryItem.count({
+    where: { galleryId: g.id },
+  });
+  if (count === 0) {
+    await prisma.galleryItem.create({
+      data: {
+        galleryId: g.id,
+        url: coverImageUrl,
+        kind: 'image',
+        sortOrder: 0,
+      },
+    });
+  }
+}
+
 /** Сила/подстройка (витрина + онбординг); для мастеров в каталоге с местом — дата «завершил настройку». */
 const DEMO_SPECIALIST_PRESSURE_LEVEL = 3;
 const DEMO_SPECIALIST_PRESSURE_ADAPTS = true;
@@ -273,8 +317,6 @@ export async function seedDemoSpecialists(prisma) {
       phone: '+842838220001',
       email: 'hello@demo-salon-seed.example.com',
       yearsInBusiness: 8,
-      imageUrl:
-        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
       listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
       listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
     },
@@ -285,8 +327,6 @@ export async function seedDemoSpecialists(prisma) {
       phone: '+842838220001',
       email: 'hello@demo-salon-seed.example.com',
       yearsInBusiness: 8,
-      imageUrl:
-        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
       listingWorkdayStartMinute: LISTING_WORKDAY_PRESETS[0].start,
       listingWorkdayEndMinute: LISTING_WORKDAY_PRESETS[0].end,
     },
@@ -297,6 +337,11 @@ export async function seedDemoSpecialists(prisma) {
     latitude: ORG_LAT,
     longitude: ORG_LNG,
   });
+  await ensureOrganizationShowcaseGallery(
+    prisma,
+    org.id,
+    DEMO_ORG_COVER_IMAGE_URL,
+  );
 
   await ensureEmployment(
     prisma,
@@ -1026,8 +1071,6 @@ async function upsertFullSalon(prisma, args) {
       phone: `+8428382${String(2000 + seedOffset).slice(-4)}`,
       email: `hello@${def.slug}.example.com`,
       yearsInBusiness: 5,
-      imageUrl:
-        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=200&h=200&fit=crop',
       listingWorkdayStartMinute: workday.start,
       listingWorkdayEndMinute: workday.end,
     },
@@ -1045,6 +1088,11 @@ async function upsertFullSalon(prisma, args) {
     latitude: def.orgLat,
     longitude: def.orgLng,
   });
+  await ensureOrganizationShowcaseGallery(
+    prisma,
+    org.id,
+    DEMO_ORG_COVER_IMAGE_URL,
+  );
 
   await ensureEmployment(
     prisma,

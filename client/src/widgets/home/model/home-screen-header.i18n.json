@@ -6,7 +6,8 @@
         "avatarLinkLoginAria": "Sign in",
         "guestWelcome": "Welcome",
         "welcomeWithName": "Welcome, {name}",
-        "becomeSpecialistLink": "Become a specialist"
+        "becomeSpecialistLink": "Become a specialist",
+        "businessCabinetLink": "Go to business cabinet"
       },
       "locale": {
         "switchAria": "Choose language",
@@ -23,7 +24,8 @@
         "avatarLinkLoginAria": "Đăng nhập",
         "guestWelcome": "Xin chào",
         "welcomeWithName": "Xin chào, {name}",
-        "becomeSpecialistLink": "Trở thành chuyên viên"
+        "becomeSpecialistLink": "Trở thành chuyên viên",
+        "businessCabinetLink": "Đi tới khu vực doanh nghiệp"
       },
       "locale": {
         "switchAria": "Chọn ngôn ngữ",
@@ -40,7 +42,8 @@
         "avatarLinkLoginAria": "Вход",
         "guestWelcome": "Добро пожаловать",
         "welcomeWithName": "Добро пожаловать, {name}",
-        "becomeSpecialistLink": "Стать специалистом"
+        "becomeSpecialistLink": "Стать специалистом",
+        "businessCabinetLink": "Перейти в бизнес-кабинет"
       },
       "locale": {
         "switchAria": "Выбор языка",

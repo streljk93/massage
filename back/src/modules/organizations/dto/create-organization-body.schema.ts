@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+function trimmedOrNull(v: string | null | undefined): string | null {
+  if (v == null) {
+    return null;
+  }
+  const t = String(v).trim();
+  return t.length > 0 ? t : null;
+}
+
 const placeReferenceBodySchema = z
   .object({
     provider: z.enum([
@@ -26,12 +34,15 @@ export const createOrganizationBodySchema = z
     latitude: z.number().finite().min(-90).max(90).optional(),
     longitude: z.number().finite().min(-180).max(180).optional(),
     description: z.string().max(4000).optional(),
+    /** Вьетнам E.164: `+84` и 8–12 цифр национальной части (как у профиля мастера). Пусто/null — нет телефона салона. */
     phone: z.string().max(32).optional().nullable(),
     email: z.string().max(254).optional().nullable(),
     website: z.string().max(2048).optional().nullable(),
     yearsInBusiness: z.number().int().min(0).max(80).optional().nullable(),
     imageUrl: z.string().min(1).max(2048).optional().nullable(),
     imageAlt: z.string().max(500).optional().nullable(),
+    /** Дополнительные фото витрины (первая «обложка» — `imageUrl`, если задан, иначе первый URL здесь). */
+    galleryImageUrls: z.array(z.string().min(1).max(2048)).max(24).optional(),
     /** Подкатегории витрины (каталог) — не меньше одной, все должны существовать и быть активны. */
     serviceCategoryIds: z.array(z.string().uuid()).min(1).max(40),
   })
@@ -51,6 +62,61 @@ export const createOrganizationBodySchema = z
         path: ['addressLine'],
       });
     }
+  })
+  .superRefine((data, ctx) => {
+    const phone =
+      data.phone == null ? '' : String(data.phone).trim().replace(/\s/g, '');
+    if (phone.length > 0 && !/^\+84\d{8,12}$/.test(phone)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          'phone must be Vietnam E.164 (+84 and 8–12 national digits) or empty',
+        path: ['phone'],
+      });
+    }
+    const email = trimmedOrNull(data.email);
+    if (email != null && !z.string().email().safeParse(email).success) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid email',
+        path: ['email'],
+      });
+    }
+    const website = trimmedOrNull(data.website);
+    if (website != null) {
+      const withScheme = /^https?:\/\//i.test(website)
+        ? website
+        : `https://${website}`;
+      try {
+        const u = new URL(withScheme);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+          throw new Error('protocol');
+        }
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Invalid website URL',
+          path: ['website'],
+        });
+      }
+    }
+  })
+  .transform((data) => {
+    const phoneRaw =
+      data.phone == null ? null : String(data.phone).trim().replace(/\s/g, '');
+    const phone = phoneRaw && phoneRaw.length > 0 ? phoneRaw : null;
+    const email = trimmedOrNull(data.email)?.toLowerCase() ?? null;
+    const webRaw = trimmedOrNull(data.website);
+    const website =
+      webRaw == null ? null
+      : /^https?:\/\//i.test(webRaw) ? webRaw
+      : `https://${webRaw}`;
+    return {
+      ...data,
+      phone,
+      email,
+      website,
+    };
   });
 
 export type CreateOrganizationBody = z.infer<typeof createOrganizationBodySchema>;

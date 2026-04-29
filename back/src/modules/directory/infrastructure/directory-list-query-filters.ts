@@ -1,12 +1,6 @@
 import type { Prisma } from '@prisma/client';
 import type { ApiLocale } from '../../../common/i18n';
 
-const SEARCH_LOCALES: ApiLocale[] = ['en', 'vi', 'ru'];
-
-function searchLocaleIn(): ApiLocale[] {
-  return SEARCH_LOCALES;
-}
-
 export type SpecialistListApiFilters = {
   /** `MajorServiceCategory.slug`; только мастера с подкатегориями в этой вертикали. */
   majorCategorySlug: string | null;
@@ -28,7 +22,6 @@ function specialistTextSearchWhere(
   q: string,
   locale: ApiLocale,
 ): Prisma.SpecialistWhereInput {
-  const locs = searchLocaleIn();
   return {
     OR: [
       { user: { name: { contains: q, mode: 'insensitive' } } },
@@ -154,7 +147,11 @@ export function specialistListFiltersWhere(
   return { AND: and };
 }
 
-function organizationTextSearchWhere(
+/**
+ * Текстовый поиск по полям организации без совпадения по подкатегориям.
+ * Совпадение по подкатегориям в каталоге салонов — отдельно (только «витринные» OSC с покрытием мастером).
+ */
+export function organizationNonCategoryTextSearchWhere(
   q: string,
   locale: ApiLocale,
 ): Prisma.OrganizationWhereInput {
@@ -162,7 +159,9 @@ function organizationTextSearchWhere(
     OR: [
       { name: { contains: q, mode: 'insensitive' } },
       { slug: { contains: q, mode: 'insensitive' } },
-      { address: { is: { addressLine: { contains: q, mode: 'insensitive' } } } },
+      {
+        address: { is: { addressLine: { contains: q, mode: 'insensitive' } } },
+      },
       { address: { is: { city: { contains: q, mode: 'insensitive' } } } },
       {
         locales: {
@@ -175,79 +174,6 @@ function organizationTextSearchWhere(
           },
         },
       },
-      {
-        serviceCategories: {
-          some: {
-            serviceCategory: {
-              OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { shortName: { contains: q, mode: 'insensitive' } },
-                { slug: { contains: q, mode: 'insensitive' } },
-                {
-                  locales: {
-                    some: {
-                      locale: { in: [locale, 'en'] },
-                      OR: [
-                        { name: { contains: q, mode: 'insensitive' } },
-                        { shortName: { contains: q, mode: 'insensitive' } },
-                      ],
-                    },
-                  },
-                },
-              ],
-            },
-          },
-        },
-      },
     ],
   };
-}
-
-/** Доп. условия к списку организаций (AND к базе + курсору). */
-export function organizationListFiltersWhere(
-  f: OrganizationListApiFilters,
-): Prisma.OrganizationWhereInput {
-  const and: Prisma.OrganizationWhereInput[] = [];
-
-  if (f.majorCategorySlug) {
-    and.push({
-      serviceCategories: {
-        some: {
-          serviceCategory: {
-            deletedAt: null,
-            isActive: true,
-            majorServiceCategory: {
-              slug: f.majorCategorySlug,
-              deletedAt: null,
-              isActive: true,
-            },
-          },
-        },
-      },
-    });
-  }
-
-  if (f.categorySlugs.length > 0) {
-    and.push({
-      serviceCategories: {
-        some: {
-          serviceCategory: {
-            slug: { in: f.categorySlugs },
-            deletedAt: null,
-            isActive: true,
-          },
-        },
-      },
-    });
-  }
-
-  const q = f.q?.trim();
-  if (q) {
-    and.push(organizationTextSearchWhere(q, f.locale));
-  }
-
-  if (and.length === 0) {
-    return {};
-  }
-  return { AND: and };
 }

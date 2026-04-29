@@ -5,16 +5,25 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrganizationMembershipRole, SpecialistWorkplaceJoinRequestStatus } from '@prisma/client';
+import {
+  GalleryMediaKind,
+  GalleryOwnerKind,
+  OrganizationMembershipRole,
+  SpecialistWorkplaceJoinRequestStatus,
+} from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { ApiLocale } from '../../../common/i18n';
+import { pickLocalizedOrganizationListItem } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { organizationNonCategoryTextSearchWhere } from '../../directory/infrastructure/directory-list-query-filters';
 import { AddressPersistenceService } from '../../address/application/address-persistence.service';
 import { AddressResolutionService } from '../../address/application/address-resolution.service';
+import { GalleryService } from '../../gallery/application/gallery.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
+import type { WorkplaceOrganizationSearchResponseDto } from '../dto/workplace-organization-search.dto';
 import type {
   WorkplaceJoinRequestListQuery,
   WorkplaceJoinRequestReviewBody,
@@ -26,6 +35,7 @@ export class OrganizationCabinetService {
     private readonly prisma: PrismaService,
     private readonly addressResolution: AddressResolutionService,
     private readonly addressPersistence: AddressPersistenceService,
+    private readonly gallery: GalleryService,
     private readonly specialistOnboarding: SpecialistOnboardingService,
   ) {}
 
@@ -230,6 +240,68 @@ export class OrganizationCabinetService {
     return this.specialistOnboarding.getOnboarding(userId);
   }
 
+  /**
+   * Салоны для выбора места работы (заявка в штат). Без правил публичной витрины —
+   * иначе новые салоны и салоны без мастеров в каталоге не находятся в поиске.
+   */
+  async searchOrganizationsForWorkplaceJoin(
+    locale: ApiLocale,
+    q: string | null,
+    limit: number,
+  ): Promise<WorkplaceOrganizationSearchResponseDto> {
+    const take = Math.min(Math.max(limit, 1), 50);
+    const where: Prisma.OrganizationWhereInput = { deletedAt: null };
+    if (q) {
+      where.AND = [organizationNonCategoryTextSearchWhere(q, locale)];
+    }
+    const rows = await this.prisma.organization.findMany({
+      where,
+      take,
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        ratingAverage: true,
+        reviewsCount: true,
+        address: {
+          select: {
+            addressLine: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+        locales: { orderBy: { locale: 'asc' } },
+      },
+    });
+    const organizations = rows.map((row) => {
+      const picked = pickLocalizedOrganizationListItem(
+        {
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          description: row.description ?? null,
+          address: row.address,
+          ratingAverage: row.ratingAverage,
+          reviewsCount: row.reviewsCount,
+          imageUrl: null,
+          imageAlt: null,
+          locales: row.locales,
+        },
+        locale,
+      );
+      return {
+        id: picked.id,
+        name: picked.name,
+        addressLine: row.address?.addressLine ?? null,
+        city: picked.city,
+      };
+    });
+    return { organizations };
+  }
+
   async listWorkplaceJoinRequestsForOrganization(
     userId: string,
     organizationId: string,
@@ -405,7 +477,9 @@ export class OrganizationCabinetService {
   }
 
   /**
-   * Создать салон: текущий пользователь — владелец в БД, мастер получает роль owner и активную организацию.
+   * Создать салон: текущий пользователь — владелец в БД (`Organization.ownerUserId`),
+   * мастер получает роль owner в новой организации.
+   * Если активное место приёма уже выбрано, оно не меняется — новый салон доступен как владение до переключения вручную.
    */
   async createOrganizationAsOwner(
     userId: string,
@@ -421,12 +495,7 @@ export class OrganizationCabinetService {
         message: 'Specialist profile not found for this user',
       });
     }
-    if (specialist.activeOrganizationId != null) {
-      throw new ConflictException({
-        code: 'WORKPLACE_ALREADY_SET',
-        message: 'Active organization is already set',
-      });
-    }
+    const hadActiveWorkplace = specialist.activeOrganizationId != null;
     const categories = await this.prisma.serviceCategory.findMany({
       where: {
         id: { in: body.serviceCategoryIds },
@@ -481,16 +550,18 @@ export class OrganizationCabinetService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.specialistWorkplaceJoinRequest.updateMany({
-        where: {
-          specialistId: specialist.id,
-          status: SpecialistWorkplaceJoinRequestStatus.pending,
-        },
-        data: {
-          status: SpecialistWorkplaceJoinRequestStatus.withdrawn,
-          resolvedAt: new Date(),
-        },
-      });
+      if (!hadActiveWorkplace) {
+        await tx.specialistWorkplaceJoinRequest.updateMany({
+          where: {
+            specialistId: specialist.id,
+            status: SpecialistWorkplaceJoinRequestStatus.pending,
+          },
+          data: {
+            status: SpecialistWorkplaceJoinRequestStatus.withdrawn,
+            resolvedAt: new Date(),
+          },
+        });
+      }
       const addr = await this.addressPersistence.createInTransaction(tx, {
         addressLine,
         city: cityForDb,
@@ -499,6 +570,33 @@ export class OrganizationCabinetService {
         sourceProvider,
         sourceReference,
       });
+      const gallerySeed: Array<{
+        url: string;
+        alt: string | null;
+        kind: GalleryMediaKind;
+      }> = [];
+      const primaryUrl = norm(body.imageUrl);
+      if (primaryUrl) {
+        gallerySeed.push({
+          url: primaryUrl,
+          alt: norm(body.imageAlt),
+          kind: GalleryMediaKind.image,
+        });
+      }
+      for (const raw of body.galleryImageUrls ?? []) {
+        const u = raw.trim();
+        if (u.length === 0) {
+          continue;
+        }
+        if (gallerySeed.some((row) => row.url === u)) {
+          continue;
+        }
+        gallerySeed.push({
+          url: u,
+          alt: null,
+          kind: GalleryMediaKind.image,
+        });
+      }
       await tx.organization.create({
         data: {
           id: orgId,
@@ -510,8 +608,6 @@ export class OrganizationCabinetService {
           email: norm(body.email),
           website: norm(body.website),
           addressId: addr.id,
-          imageUrl: body.imageUrl ?? null,
-          imageAlt: norm(body.imageAlt),
           yearsInBusiness: body.yearsInBusiness ?? null,
         },
       });
@@ -524,6 +620,16 @@ export class OrganizationCabinetService {
           description: norm(body.description),
         },
       });
+
+      if (gallerySeed.length > 0) {
+        const gallery = await tx.gallery.create({
+          data: {
+            ownerKind: GalleryOwnerKind.organization,
+            ownerId: orgId,
+          },
+        });
+        await this.gallery.seedItemsInTransaction(tx, gallery.id, gallerySeed);
+      }
 
       for (const catId of body.serviceCategoryIds) {
         await tx.organizationServiceCategory.create({
@@ -545,10 +651,12 @@ export class OrganizationCabinetService {
         },
       });
 
-      await tx.specialist.update({
-        where: { id: specialist.id },
-        data: { activeOrganizationId: orgId },
-      });
+      if (!hadActiveWorkplace) {
+        await tx.specialist.update({
+          where: { id: specialist.id },
+          data: { activeOrganizationId: orgId },
+        });
+      }
 
       const fresh = await tx.specialist.findFirst({
         where: { id: specialist.id },

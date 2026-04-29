@@ -117,6 +117,18 @@ function joinLocalizedCategoryShortNames(
   return [...new Set(names)].join(', ');
 }
 
+/** Мастер на карточке салона: витрина + текущее место приёма = этот салон. */
+function isVitrineStaffAtOrganization(
+  e: OrganizationListRow['specialistEmployments'][number],
+  organizationId: string,
+): boolean {
+  return (
+    e.isActive &&
+    e.specialist.listedInDirectory &&
+    e.specialist.activeOrganizationId === organizationId
+  );
+}
+
 function mapDirectoryCategoryTags(
   links: { serviceCategory: CategoryLocaleShape }[],
   locale: ApiLocale,
@@ -194,11 +206,8 @@ function mapSpecialistRowToListItem(
     loc?.listingWorkdayStartMinute,
     loc?.listingWorkdayEndMinute,
   );
-  const phone =
-    loc?.phone?.trim() || s.user.phone?.trim() || null;
-  const activeWorkplace = loc
-    ? { id: loc.id, name: loc.name.trim() }
-    : null;
+  const phone = loc?.phone?.trim() || s.user.phone?.trim() || null;
+  const activeWorkplace = loc ? { id: loc.id, name: loc.name.trim() } : null;
   return {
     id: s.id,
     userId: s.userId,
@@ -233,14 +242,21 @@ function mapOrganizationRowToListItem(
   locale: ApiLocale,
   _now: Date,
   occupiedMap: Map<string, Set<string>>,
+  storefront: { imageUrl: string | null; imageAlt: string | null },
+  /** Подмножество OSC с покрытием мастером — только они на витрине. */
+  storefrontCategoryIds: Set<string>,
 ): OrganizationListItemDto {
   const localized = pickLocalizedOrganizationListItem(
-    o as unknown as OrganizationLocaleListShape,
+    {
+      ...(o as unknown as OrganizationLocaleListShape),
+      imageUrl: storefront.imageUrl,
+      imageAlt: storefront.imageAlt,
+    },
     locale,
   );
   const specialistOccupiedSlotKeys: SpecialistOccupiedSlotKeysEntryDto[] =
     o.specialistEmployments
-      .filter((e) => e.specialist.listedInDirectory)
+      .filter((e) => isVitrineStaffAtOrganization(e, o.id))
       .map((e) => e.specialist.id)
       .map((specialistId) => ({
         specialistId,
@@ -249,14 +265,15 @@ function mapOrganizationRowToListItem(
         ),
       }));
 
-  const categoriesLine = joinLocalizedCategoryShortNames(
-    o.serviceCategories,
-    locale,
+  const vitrineLinks = o.serviceCategories.filter((l) =>
+    storefrontCategoryIds.has(l.serviceCategoryId),
   );
+  const categoriesLine = joinLocalizedCategoryShortNames(vitrineLinks, locale);
   const metaLine =
-    [o.address?.addressLine, localized.city].filter((x) => x?.trim()).join(', ') || '';
-  const servicesLine =
-    categoriesLine || localized.description?.trim() || '';
+    [o.address?.addressLine, localized.city]
+      .filter((x) => x?.trim())
+      .join(', ') || '';
+  const servicesLine = categoriesLine || localized.description?.trim() || '';
   const orgWd = normalizeDirectoryListingWorkdayBounds(
     o.listingWorkdayStartMinute,
     o.listingWorkdayEndMinute,
@@ -279,7 +296,7 @@ function mapOrganizationRowToListItem(
     imageAlt: localized.imageAlt,
     metaLine,
     servicesLine,
-    categories: mapDirectoryCategoryTags(o.serviceCategories, locale),
+    categories: mapDirectoryCategoryTags(vitrineLinks, locale),
     slotGroups: [],
     specialistOccupiedSlotKeys,
     listingWorkdayStartMinute: orgWd.startMinute,
@@ -294,8 +311,7 @@ function mapSpecialistToStaffMember(
   organizationMetaLine: string,
   occupiedKeys: Set<string>,
 ): OrganizationStaffMemberDto {
-  const metaLine =
-    organizationMetaLine.trim() || s.bio?.trim() || '';
+  const metaLine = organizationMetaLine.trim() || s.bio?.trim() || '';
   return {
     id: s.id,
     userId: s.userId,
@@ -654,7 +670,7 @@ export class DirectoryService {
     const specialistIds = new Set<string>();
     for (const o of slice) {
       for (const e of o.specialistEmployments) {
-        if (e.isActive && e.specialist.listedInDirectory) {
+        if (isVitrineStaffAtOrganization(e, o.id)) {
           specialistIds.add(e.specialist.id);
         }
       }
@@ -674,9 +690,27 @@ export class DirectoryService {
             last,
           )
         : null;
+    const storefrontByOrg =
+      await this.directoryRepository.findStorefrontImageFieldsForOrganizationIds(
+        slice.map((o) => o.id),
+      );
+    const storefrontCategoriesByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+        slice.map((o) => o.id),
+      );
     return {
       organizations: slice.map((o) =>
-        mapOrganizationRowToListItem(o, locale, now, occupiedBySpecialist),
+        mapOrganizationRowToListItem(
+          o,
+          locale,
+          now,
+          occupiedBySpecialist,
+          storefrontByOrg.get(o.id) ?? {
+            imageUrl: null,
+            imageAlt: null,
+          },
+          storefrontCategoriesByOrg.get(o.id) ?? new Set<string>(),
+        ),
       ),
       cursorPage: { nextCursor, hasMore },
     };
@@ -687,9 +721,8 @@ export class DirectoryService {
     id: string,
   ): Promise<SpecialistListItemDto | null> {
     const now = new Date();
-    const row = await this.directoryRepository.findPublicDirectorySpecialistById(
-      id,
-    );
+    const row =
+      await this.directoryRepository.findPublicDirectorySpecialistById(id);
     if (!row) {
       return null;
     }
@@ -721,23 +754,37 @@ export class DirectoryService {
       return null;
     }
     const specialistIds = row.specialistEmployments
-      .filter((e) => e.isActive && e.specialist.listedInDirectory)
+      .filter((e) => isVitrineStaffAtOrganization(e, row.id))
       .map((e) => e.specialist.id);
     const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
       specialistIds,
       now,
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
+    const storefrontByOrg =
+      await this.directoryRepository.findStorefrontImageFieldsForOrganizationIds(
+        [id],
+      );
+    const storefrontCategoriesByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap([
+        id,
+      ]);
+    const storefront = storefrontByOrg.get(id) ?? {
+      imageUrl: null,
+      imageAlt: null,
+    };
     const base = mapOrganizationRowToListItem(
       row,
       locale,
       now,
       occupiedBySpecialist,
+      storefront,
+      storefrontCategoriesByOrg.get(id) ?? new Set<string>(),
     );
     // Только мастера, доступные для записи (как в каталоге). Владелец «без приёма»
     // (listedInDirectory: false) остаётся в employment, но не показывается в блоке сотрудников.
     const staff: OrganizationStaffMemberDto[] = row.specialistEmployments
-      .filter((e) => e.isActive && e.specialist.listedInDirectory)
+      .filter((e) => isVitrineStaffAtOrganization(e, row.id))
       .map((e) =>
         mapSpecialistToStaffMember(
           e.specialist,
@@ -750,10 +797,15 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsForOrganization(
         id,
       );
+    const vitrineGalleryItems =
+      await this.directoryRepository.findOrganizationVitrineGalleryItemsPublic(
+        id,
+      );
     return {
       ...base,
       staff,
       clientsCount,
+      vitrineGalleryItems,
     };
   }
 
@@ -783,7 +835,7 @@ export class DirectoryService {
         continue;
       }
       for (const e of o.specialistEmployments) {
-        if (e.isActive && e.specialist.listedInDirectory) {
+        if (isVitrineStaffAtOrganization(e, o.id)) {
           specialistIds.add(e.specialist.id);
         }
       }
@@ -793,6 +845,14 @@ export class DirectoryService {
       now,
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
+    const storefrontByOrg =
+      await this.directoryRepository.findStorefrontImageFieldsForOrganizationIds(
+        ids,
+      );
+    const storefrontCategoriesByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+        ids,
+      );
     const out: OrganizationListItemDto[] = [];
     for (const id of ids) {
       const o = byId.get(id);
@@ -800,7 +860,17 @@ export class DirectoryService {
         continue;
       }
       out.push(
-        mapOrganizationRowToListItem(o, locale, now, occupiedBySpecialist),
+        mapOrganizationRowToListItem(
+          o,
+          locale,
+          now,
+          occupiedBySpecialist,
+          storefrontByOrg.get(id) ?? {
+            imageUrl: null,
+            imageAlt: null,
+          },
+          storefrontCategoriesByOrg.get(id) ?? new Set<string>(),
+        ),
       );
     }
     return out;

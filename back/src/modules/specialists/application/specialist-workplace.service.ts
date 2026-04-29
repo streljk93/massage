@@ -9,6 +9,7 @@ import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
+import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
 
 @Injectable()
 export class SpecialistWorkplaceService {
@@ -17,6 +18,88 @@ export class SpecialistWorkplaceService {
     private readonly bookingsRepository: BookingsRepository,
     private readonly pushNotifications: PushNotificationsService,
   ) {}
+
+  /**
+   * Активные членства мастера в организациях (текущие места работы в истории трудоустройства).
+   */
+  async listMyOrganizations(userId: string): Promise<{
+    organizations: Array<{
+      id: string;
+      name: string;
+      role: string;
+      isActiveWorkplace: boolean;
+    }>;
+    activeOrganizationId: string | null;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
+    });
+    if (!specialist) {
+      return { organizations: [], activeOrganizationId: null };
+    }
+    const employments =
+      await this.prisma.specialistOrganizationEmployment.findMany({
+        where: { specialistId: specialist.id, isActive: true },
+        include: {
+          organization: {
+            select: { id: true, name: true },
+          },
+        },
+        orderBy: { startDate: 'desc' },
+      });
+    return {
+      organizations: employments.map((e) => ({
+        id: e.organization.id,
+        name: e.organization.name,
+        role: e.role,
+        isActiveWorkplace:
+          specialist.activeOrganizationId === e.organization.id,
+      })),
+      activeOrganizationId: specialist.activeOrganizationId,
+    };
+  }
+
+  /**
+   * Заявки мастера на вступление в организации (все статусы, от новых к старым).
+   */
+  async listMyWorkplaceJoinRequests(userId: string): Promise<{
+    requests: Array<{
+      id: string;
+      organizationId: string;
+      status: string;
+      createdAt: Date;
+      updatedAt: Date;
+      resolvedAt: Date | null;
+      organization: { id: string; name: string };
+    }>;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      return { requests: [] };
+    }
+    const rows = await this.prisma.specialistWorkplaceJoinRequest.findMany({
+      where: { specialistId: specialist.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organization: { select: { id: true, name: true } },
+      },
+    });
+    return {
+      requests: rows.map((r) => ({
+        id: r.id,
+        organizationId: r.organizationId,
+        status: r.status,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        resolvedAt: r.resolvedAt,
+        organization: r.organization,
+      })),
+    };
+  }
 
   async setActiveOrganization(
     userId: string,
@@ -108,6 +191,11 @@ export class SpecialistWorkplaceService {
         row.toStatus,
       );
     }
+
+    await syncOrganizationServiceCategoriesFromSpecialistServices(
+      this.prisma,
+      body.organizationId,
+    );
 
     return {
       activeOrganizationId: body.organizationId,

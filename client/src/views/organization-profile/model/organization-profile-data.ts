@@ -19,4 +19,6 @@ export type OrganizationProfileData = {
   timeSlotsByDay: string[][];
   slotCalendarDates: string[];
   specialists: SalonSpecialistPick[];
+  /** Фото витрины (порядок как в API). Пусто — в шапке только обложка `imageSrc`. */
+  vitrineGallery: { src: string; alt: string }[];
 };

@@ -319,8 +319,6 @@ model Organization {
   phone           String?
   email           String?
   website         String?
-  imageUrl        String?
-  imageAlt        String?
   yearsInBusiness Int?
 
   /// Минуты с полуночи (Asia/Ho_Chi_Minh) — начало приёма; сетка 30 мин (например 480=8:00, 540=9:00, 600=10:00).
@@ -351,6 +349,45 @@ model Organization {
 
   @@index([ownerUserId])
   @@index([addressId])
+}
+
+/// Область привязки галереи (расширяется: главная, новости и т.д.).
+enum GalleryOwnerKind {
+  organization
+}
+
+/// Тип элемента галереи (видео — на будущее).
+enum GalleryMediaKind {
+  image
+  video
+}
+
+/// Переиспользуемая галерея медиа; владелец задаётся парой `ownerKind` + `ownerId`.
+model Gallery {
+  id        String           @id @default(uuid())
+  ownerKind GalleryOwnerKind
+  ownerId   String
+  createdAt DateTime         @default(now())
+  items     GalleryItem[]
+
+  @@unique([ownerKind, ownerId])
+  @@index([ownerId])
+}
+
+/// Элемент галереи; порядок отображения — `sortOrder` (меньше = раньше в слайдере / первая «обложка» для витрины организации).
+model GalleryItem {
+  id        String   @id @default(uuid())
+  galleryId String
+  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  url       String
+  alt       String?
+  kind      GalleryMediaKind @default(image)
+  sortOrder Int              @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([galleryId, sortOrder])
 }
 
 /// Локализованные название и описание организации (витрина / SEO на разных языках).

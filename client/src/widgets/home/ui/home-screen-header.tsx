@@ -4,9 +4,15 @@ import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
+import { hasSpecialistAccount } from "@/entities/business";
 import { UserAvatar } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 import { localeFlagEmoji } from "../lib/locale-flag";
+import { createBrowserSdkClient, specialistsCabinetGetSpecialistOnboarding } from "@/shared/api";
+import { useQuery } from "@tanstack/react-query";
+import { BusinessCabinetEntryLink } from "./business-cabinet-entry-link";
+
+const SPECIALIST_ONBOARDING_QUERY_KEY = ["specialistOnboarding"] as const;
 
 function initialsFromUser(user: {
   name?: string | null;
@@ -47,8 +53,30 @@ export function HomeScreenHeader({
   const tLocale = useTranslations("locale");
   const locale = useLocale() as AppLocale;
   const { data: session, status } = useSession();
+  const accessToken = session?.accessToken ?? "";
 
   const isAuthed = status === "authenticated" && !!session?.user;
+
+  const { data: specialistOnboarding, isFetched: onboardingFetched } = useQuery({
+    queryKey: [...SPECIALIST_ONBOARDING_QUERY_KEY, accessToken, locale],
+    staleTime: 60_000,
+    enabled:
+      status === "authenticated" && accessToken.length > 0,
+    queryFn: async () => {
+      const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
+        client: createBrowserSdkClient(accessToken, { locale }),
+      });
+      if (error || !data) {
+        throw new Error("specialist onboarding");
+      }
+      return data;
+    },
+  });
+
+  const specialistAccountExists =
+    onboardingFetched &&
+    specialistOnboarding != null &&
+    hasSpecialistAccount(specialistOnboarding);
   const profileHref = isAuthed ? "/profile" : "/login";
   const avatarAria = isAuthed
     ? tHeader("avatarLinkAria")
@@ -82,6 +110,15 @@ export function HomeScreenHeader({
     }
   }
 
+  const headerNavLinkClass = cn(
+    motion.interactivePress,
+    "shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline",
+  );
+
+  const specialistNavLinkBusy =
+    status === "loading" ||
+    (!!accessToken && isAuthed && !onboardingFetched);
+
   return (
     <header
       className={cn("flex items-start justify-between gap-3", className)}
@@ -90,15 +127,22 @@ export function HomeScreenHeader({
         className={cn("min-w-0 flex-1", showHeadline && "space-y-1")}
       >
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <Link
-            href="/become-specialist"
-            className={cn(
-              motion.interactivePress,
-              "shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline",
-            )}
-          >
-            {tHeader("becomeSpecialistLink")}
-          </Link>
+          {specialistNavLinkBusy ? (
+            <span
+              role="status"
+              aria-busy="true"
+              className="inline-block h-9 w-[9rem] max-w-[70vw] shrink-0 rounded-full bg-neutral-950/10 animate-pulse dark:bg-white/10"
+            />
+          ) : specialistAccountExists ? (
+            <BusinessCabinetEntryLink
+              variant="headerChip"
+              label={tHeader("businessCabinetLink")}
+            />
+          ) : (
+            <Link href="/become-specialist" className={headerNavLinkClass}>
+              {tHeader("becomeSpecialistLink")}
+            </Link>
+          )}
         </div>
         {showHeadline ? (
           <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">

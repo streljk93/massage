@@ -39,11 +39,90 @@ export const patchSpecialistActiveOrganizationResponseSchema = {
   },
 };
 
+export const specialistMyWorkplaceJoinRequestsResponseSchema = {
+  type: 'object',
+  required: ['requests'],
+  properties: {
+    requests: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: [
+          'id',
+          'organizationId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'resolvedAt',
+          'organization',
+        ],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          organizationId: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['pending', 'accepted', 'rejected', 'withdrawn', 'blocked'],
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+          resolvedAt: { type: 'string', format: 'date-time', nullable: true },
+          organization: {
+            type: 'object',
+            required: ['id', 'name'],
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              name: { type: 'string' },
+            },
+          },
+        },
+      },
+    },
+  },
+};
+
+export const specialistMyOrganizationsResponseSchema = {
+  type: 'object',
+  required: ['organizations', 'activeOrganizationId'],
+  properties: {
+    organizations: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'name', 'role', 'isActiveWorkplace'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          role: {
+            type: 'string',
+            enum: ['owner', 'admin', 'specialist'],
+            description: 'Роль мастера в этой организации.',
+          },
+          isActiveWorkplace: {
+            type: 'boolean',
+            description:
+              'Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.',
+          },
+        },
+      },
+    },
+    activeOrganizationId: {
+      oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
+      description:
+        'Текущая активная организация мастера; null — только личный приём / не выбрано.',
+    },
+  },
+};
+
 export const patchSpecialistProfileRequestSchema = {
   type: 'object',
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 120 },
-    phone: { oneOf: [{ type: 'string', minLength: 1, maxLength: 32 }, { type: 'null' }] },
+    phone: {
+      oneOf: [
+        { type: 'string', minLength: 1, maxLength: 32 },
+        { type: 'null' },
+      ],
+    },
     bio: { type: 'string', minLength: 1, maxLength: 4000 },
     experienceYears: { type: 'integer', minimum: 0, maximum: 80 },
     imageUrl: { oneOf: [{ type: 'string', minLength: 1 }, { type: 'null' }] },
@@ -88,5 +167,13 @@ export const createSpecialistPersonalServiceResponseSchema = {
   required: ['serviceId'],
   properties: {
     serviceId: { type: 'string', format: 'uuid' },
+  },
+};
+
+export const deleteSpecialistPersonalServiceResponseSchema = {
+  type: 'object',
+  required: ['ok'],
+  properties: {
+    ok: { type: 'boolean', enum: [true] },
   },
 };

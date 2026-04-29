@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
 import type { ApiLocale } from '../../../common/i18n';
 import type { CreateSpecialistPersonalServiceBody } from '../dto/specialist-body.schema';
 
@@ -26,8 +27,10 @@ export class SpecialistPersonalCatalogService {
     body: CreateSpecialistPersonalServiceBody,
     _locale: ApiLocale,
   ): Promise<{ serviceId: string }> {
+    void _locale;
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
     });
     if (!specialist) {
       throw new NotFoundException({
@@ -85,8 +88,82 @@ export class SpecialistPersonalCatalogService {
         },
         update: {},
       });
+      if (specialist.activeOrganizationId != null) {
+        await syncOrganizationServiceCategoriesFromSpecialistServices(
+          tx,
+          specialist.activeOrganizationId,
+        );
+      }
       return id;
     });
     return { serviceId: serviceId };
+  }
+
+  /**
+   * Мягкое удаление личной услуги (`organizationId` = null). Услуги каталога салона — не трогаем.
+   */
+  async deletePersonalService(
+    userId: string,
+    serviceId: string,
+  ): Promise<{ ok: true }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const svc = await tx.service.findFirst({
+        where: {
+          id: serviceId,
+          specialistId: specialist.id,
+          organizationId: null,
+          deletedAt: null,
+        },
+        select: { id: true, categoryId: true },
+      });
+      if (!svc) {
+        throw new NotFoundException({
+          code: 'SERVICE_NOT_FOUND',
+          message: 'Personal service not found or already deleted',
+        });
+      }
+
+      await tx.service.update({
+        where: { id: svc.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const remaining = await tx.service.count({
+        where: {
+          specialistId: specialist.id,
+          categoryId: svc.categoryId,
+          organizationId: null,
+          deletedAt: null,
+        },
+      });
+      if (remaining === 0) {
+        await tx.specialistServiceCategory.deleteMany({
+          where: {
+            specialistId: specialist.id,
+            serviceCategoryId: svc.categoryId,
+          },
+        });
+      }
+
+      if (specialist.activeOrganizationId != null) {
+        await syncOrganizationServiceCategoriesFromSpecialistServices(
+          tx,
+          specialist.activeOrganizationId,
+        );
+      }
+    });
+
+    return { ok: true as const };
   }
 }

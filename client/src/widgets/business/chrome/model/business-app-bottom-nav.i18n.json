@@ -5,6 +5,9 @@
         "barLabel": "Business app navigation",
         "drawerTitle": "Business area",
         "dashboard": "Dashboard",
+        "organizations": "My organizations",
+        "organizationsSubmenuExpandAria": "Expand organization shortcuts",
+        "organizationsSubmenuCollapseAria": "Collapse organization shortcuts",
         "bookings": "Bookings",
         "profile": "Profile"
       }
@@ -14,6 +17,9 @@
         "barLabel": "Điều hướng khu vực doanh nghiệp",
         "drawerTitle": "Khu vực doanh nghiệp",
         "dashboard": "Bảng điều khiển",
+        "organizations": "Tổ chức của tôi",
+        "organizationsSubmenuExpandAria": "Mở các lối tắt tổ chức",
+        "organizationsSubmenuCollapseAria": "Thu gọn các lối tắt tổ chức",
         "bookings": "Lịch hẹn",
         "profile": "Hồ sơ"
       }
@@ -23,6 +29,9 @@
         "barLabel": "Навигация в кабинете для бизнеса",
         "drawerTitle": "Бизнес-кабинет",
         "dashboard": "Панель",
+        "organizations": "Мои организации",
+        "organizationsSubmenuExpandAria": "Показать пункты организаций",
+        "organizationsSubmenuCollapseAria": "Скрыть пункты организаций",
         "bookings": "Записи",
         "profile": "Профиль"
       }

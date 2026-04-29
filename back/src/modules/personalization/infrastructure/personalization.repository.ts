@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type Prisma as PrismaType } from '@prisma/client';
 import { subDays } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { queryOrganizationStorefrontCategoryPairs } from '../../directory/infrastructure/organization-vitrine-category-coverage';
 @Injectable()
 export class PersonalizationRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -83,7 +84,7 @@ export class PersonalizationRepository {
     const orgIds = favs
       .filter((f) => f.targetKind === 'organization')
       .map((f) => f.targetId);
-    const [fromSpec, fromOrg] = await Promise.all([
+    const [fromSpec, fromOrg, storefrontOrgCategories] = await Promise.all([
       specIds.length > 0
         ? this.prisma.specialistServiceCategory.findMany({
             where: { specialistId: { in: specIds } },
@@ -96,13 +97,19 @@ export class PersonalizationRepository {
             include: { serviceCategory: { select: { slug: true } } },
           })
         : Promise.resolve([]),
+      orgIds.length > 0
+        ? queryOrganizationStorefrontCategoryPairs(this.prisma, orgIds)
+        : Promise.resolve(new Map<string, Set<string>>()),
     ]);
     const set = new Set<string>();
     for (const r of fromSpec) {
       set.add(r.serviceCategory.slug);
     }
     for (const r of fromOrg) {
-      set.add(r.serviceCategory.slug);
+      const visible = storefrontOrgCategories.get(r.organizationId);
+      if (visible?.has(r.serviceCategoryId)) {
+        set.add(r.serviceCategory.slug);
+      }
     }
     return [...set];
   }

@@ -1,6 +1,12 @@
 import type { OrganizationListItemDto } from './organizations-list-response.dto';
 import type { SpecialistBookableServiceDto } from './specialists-list-response.dto';
 
+/** Элемент витринной галереи салона (порядок как в кабинете). */
+export type OrganizationVitrineGalleryItemDto = {
+  url: string;
+  alt: string | null;
+};
+
 /** Мастер салона для экрана организации. */
 export type OrganizationStaffMemberDto = {
   id: string;
@@ -24,4 +30,6 @@ export type OrganizationDetailResponseDto = OrganizationListItemDto & {
    * Уникальные пользователи с хотя бы одной бронью в статусе `done` у этого салона.
    */
   clientsCount: number;
+  /** Фото витрины (пусто, если галерея не создана). */
+  vitrineGalleryItems: OrganizationVitrineGalleryItemDto[];
 };
