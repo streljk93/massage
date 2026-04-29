@@ -63,5 +63,12 @@ export function specialistProfileFromApiDetail(
     services: bookableServicesFromApi(detail),
     phone: detail.phone ?? null,
     activeWorkplace: detail.activeWorkplace ?? null,
+    ...(detail.activeWorkplacePublicationModerationStatus !== undefined &&
+    detail.activeWorkplacePublicationModerationStatus !== "approved"
+      ? {
+          workplacePublicationModerationStatus:
+            detail.activeWorkplacePublicationModerationStatus,
+        }
+      : {}),
   };
 }

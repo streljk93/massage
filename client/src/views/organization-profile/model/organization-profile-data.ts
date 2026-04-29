@@ -21,4 +21,6 @@ export type OrganizationProfileData = {
   specialists: SalonSpecialistPick[];
   /** Фото витрины (порядок как в API). Пусто — в шапке только обложка `imageSrc`. */
   vitrineGallery: { src: string; alt: string }[];
+  /** Только для владельца до публикации во витрине. */
+  publicationModerationStatus?: "approved" | "pending_review" | "rejected";
 };

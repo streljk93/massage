@@ -52,7 +52,12 @@ const specialistOccupiedSlotKeysEntrySchema = {
 
 const specialistBookableServiceSchema = {
   type: 'object',
-  required: ['id', 'categoryShortName', 'durationMinutes', 'priceVndByDuration'],
+  required: [
+    'id',
+    'categoryShortName',
+    'durationMinutes',
+    'priceVndByDuration',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     categoryShortName: {
@@ -171,6 +176,12 @@ export const specialistListItemSchema = {
         name: { type: 'string', example: 'Phú Quốc Spa' },
       },
     },
+    activeWorkplacePublicationModerationStatus: {
+      type: 'string',
+      enum: ['approved', 'pending_review', 'rejected'],
+      description:
+        'Только у самого мастера при незавершённой модерации активного салона.',
+    },
   },
 };
 
@@ -231,6 +242,8 @@ export const organizationListItemSchema = {
     city: { type: 'string', nullable: true },
     addressLine: { type: 'string', nullable: true },
     phone: { type: 'string', nullable: true },
+    email: { type: 'string', nullable: true },
+    website: { type: 'string', nullable: true },
     yearsInBusiness: { type: 'integer', nullable: true },
     latitude: { type: 'number', nullable: true },
     longitude: { type: 'number', nullable: true },
@@ -342,6 +355,12 @@ const directoryReviewItemSchema = {
       format: 'date-time',
       description: 'ISO-8601',
     },
+    publicationModerationStatus: {
+      type: 'string',
+      enum: ['approved', 'pending_review', 'rejected'],
+      description:
+        'Только если отзыв ещё на модерации или отклонён — для своего текста автором (Bearer); гостям не отдаём.',
+    },
   },
 };
 
@@ -401,6 +420,12 @@ export const organizationDetailResponseSchema = {
       items: organizationVitrineGalleryItemSchema,
       description:
         'Фото витрины салона (порядок как в кабинете). Пустой массив, если галерея не создана.',
+    },
+    publicationModerationStatus: {
+      type: 'string',
+      enum: ['approved', 'pending_review', 'rejected'],
+      description:
+        'Только для владельца (Bearer): пока профиль салона не одобрен, гости получают 404.',
     },
   },
 };

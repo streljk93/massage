@@ -24,6 +24,13 @@
 #
 # Объекты (файлы) — MinIO: API http://localhost:9000, консоль http://localhost:9001
 #   Логин/пароль по умолчанию: minioadmin / minioadmin
+#
+# Предмодерация текста — Ollama в Docker слушает с хоста http://localhost:11435 (внутри контейнера :11434, см. проброс ниже — не пересекается с нативным Ollama на :11434). Модель — entrypoint контейнера + `npm run init`.
+#
+# Отдельно — NSFW-бинарный классификатор для картинок витрины (docker/nsfw-image-moderation): http://localhost:8085,
+# задаётся `IMAGE_MODERATION_BASE_URL`; Nest добавляет модерацию текстов тем же профилём после успешной проверки фото.
+#
+# Очередь BullMQ (фон модерации профиля организации): Redis `:6379` в compose как `redis`; `back` задаёт REDIS_HOST=redis при `MODERATION_QUEUE_ENABLED=true`.
 
 name: services-app
 
@@ -41,12 +48,55 @@ services:
     volumes:
       - minio_data:/data
 
+  # Локальная LLM для предмодерации UGC (Nest → OLLAMA_BASE_URL в сервисе `back`).
+  # Entrypoint поднимает сервер и выполняет `ollama pull` (OLLAMA_MODEL, по умолчанию llama3.2 — см. moderation-defaults.const.ts).
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11435:11434"
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./docker/ollama-compose-entrypoint.sh:/usr/local/bin/ollama-compose-entrypoint.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/ollama-compose-entrypoint.sh"]
+
+  # NSFW-бинарная классификация jpeg/png для галереи салона (nudenet/ONNX, CPU). Префикс API не совпадает с Ollama.
+  image-moderation:
+    build:
+      context: ./docker/nsfw-image-moderation
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Чтобы было имя хоста `host.docker.internal` (скачать файлы у Nest на хосте через MODERATION_FILE_FETCH_ORIGIN)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8085:8085"
+    environment:
+      PORT: "8085"
+      FETCH_TIMEOUT_SEC: "45"
+      MAX_IMAGE_BYTES: "12582912"
+
   mailhog:
     image: mailhog/mailhog:latest
     restart: unless-stopped
     ports:
       - "1025:1025"
       - "8025:8025"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   postgres:
     image: postgres:16-alpine
@@ -91,13 +141,26 @@ services:
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: "false"
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      IMAGE_MODERATION_BASE_URL: ${IMAGE_MODERATION_BASE_URL:-http://image-moderation:8085}
+      MODERATION_FILE_FETCH_ORIGIN: ${MODERATION_FILE_FETCH_ORIGIN:-http://back:3001}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      MODERATION_QUEUE_ENABLED: ${MODERATION_QUEUE_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
       minio:
         condition: service_started
+      ollama:
+        condition: service_started
+      image-moderation:
+        condition: service_started
       mailhog:
         condition: service_started
+      redis:
+        condition: service_healthy
 
   client:
     build:
@@ -122,3 +185,7 @@ volumes:
     name: services-app_postgres_data
   minio_data:
     name: services-app_minio_data
+  ollama_data:
+    name: services-app_ollama_data
+  redis_data:
+    name: services-app_redis_data

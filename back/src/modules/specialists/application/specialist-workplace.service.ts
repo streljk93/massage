@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN } from '../../bookings/domain/booking-cancel-reason';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
+import { PublicationModerationStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
@@ -28,6 +29,7 @@ export class SpecialistWorkplaceService {
       name: string;
       role: string;
       isActiveWorkplace: boolean;
+      publicationModerationStatus: PublicationModerationStatus;
     }>;
     activeOrganizationId: string | null;
   }> {
@@ -43,7 +45,11 @@ export class SpecialistWorkplaceService {
         where: { specialistId: specialist.id, isActive: true },
         include: {
           organization: {
-            select: { id: true, name: true },
+            select: {
+              id: true,
+              name: true,
+              publicationModerationStatus: true,
+            },
           },
         },
         orderBy: { startDate: 'desc' },
@@ -55,6 +61,7 @@ export class SpecialistWorkplaceService {
         role: e.role,
         isActiveWorkplace:
           specialist.activeOrganizationId === e.organization.id,
+        publicationModerationStatus: e.organization.publicationModerationStatus,
       })),
       activeOrganizationId: specialist.activeOrganizationId,
     };

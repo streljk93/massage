@@ -1,4 +1,6 @@
+import './bootstrap-env';
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -18,9 +20,31 @@ import { FilesModule } from './modules/files/files.module';
 import { AddressModule } from './modules/address/address.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ModerationModule } from './modules/moderation/moderation.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SpecialistsModule } from './modules/specialists/specialists.module';
 import { UsersModule } from './modules/users/users.module';
+import { isModerationContentQueueEnabled } from './modules/moderation/queue/moderation-queue-enabled';
+
+const bullRootImports = isModerationContentQueueEnabled()
+  ? [
+      BullModule.forRootAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => {
+          const passwordRaw = config.get<string>('redis.password')?.trim();
+          return {
+            connection: {
+              host: config.getOrThrow<string>('redis.host'),
+              port: config.getOrThrow<number>('redis.port'),
+              ...(passwordRaw ? { password: passwordRaw } : {}),
+              maxRetriesPerRequest: null,
+            },
+          };
+        },
+      }),
+    ]
+  : [];
 
 @Module({
   imports: [
@@ -39,6 +63,7 @@ import { UsersModule } from './modules/users/users.module';
         },
       ],
     }),
+    ...bullRootImports,
     ScheduleModule.forRoot(),
     PrismaModule,
     AddressModule,
@@ -48,6 +73,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     NotificationsModule,
     UsersModule,
+    ModerationModule,
     SpecialistsModule,
     OrganizationsModule,
     CatalogModule,

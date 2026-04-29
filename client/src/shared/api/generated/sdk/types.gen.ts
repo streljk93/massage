@@ -644,6 +644,67 @@ export type AuthRefreshResponses = {
 
 export type AuthRefreshResponse = AuthRefreshResponses[keyof AuthRefreshResponses];
 
+export type ContentModerationListCasesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/moderation/cases';
+};
+
+export type ContentModerationListCasesErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав модератора контента
+     */
+    403: unknown;
+};
+
+export type ContentModerationListCasesResponses = {
+    /**
+     * Список кейсов
+     */
+    200: unknown;
+};
+
+export type ContentModerationApproveData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/moderation/cases/{caseId}/approve';
+};
+
+export type ContentModerationApproveErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав модератора контента
+     */
+    403: unknown;
+};
+
+export type ContentModerationRejectData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/moderation/cases/{caseId}/reject';
+};
+
+export type ContentModerationRejectErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав модератора контента
+     */
+    403: unknown;
+};
+
 export type PushTokensRevokeData = {
     body: {
         token: string;
@@ -822,6 +883,10 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
              * Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.
              */
             isActiveWorkplace: boolean;
+            /**
+             * Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона.
+             */
+            publicationModerationStatus: 'approved' | 'pending_review' | 'rejected';
         }>;
         /**
          * Текущая активная организация мастера; null — только личный приём / не выбрано.
@@ -1545,14 +1610,6 @@ export type OrganizationsListResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
-            /**
-             * Публичный email салона (если указан).
-             */
-            email?: string | null;
-            /**
-             * Сайт или страница салона (URL со схемой или без).
-             */
-            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -2213,7 +2270,12 @@ export type SpecialistsListResponse = SpecialistsListResponses[keyof Specialists
 
 export type SpecialistsListReviewsData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * UUID специалиста
+         */
+        id: string;
+    };
     query?: {
         /**
          * Размер страницы (1–100, по умолчанию 20).
@@ -2271,7 +2333,12 @@ export type SpecialistsListReviewsResponse = SpecialistsListReviewsResponses[key
 
 export type SpecialistsGetByIdData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * UUID специалиста
+         */
+        id: string;
+    };
     query?: {
         /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
@@ -2369,6 +2436,10 @@ export type SpecialistsGetByIdResponses = {
             id: string;
             name: string;
         } | null;
+        /**
+         * Для владельца профиля по Bearer: статус публикации активного салона; для гостей не передаётся.
+         */
+        activeWorkplacePublicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
     };
 };
 
@@ -2376,7 +2447,12 @@ export type SpecialistsGetByIdResponse = SpecialistsGetByIdResponses[keyof Speci
 
 export type OrganizationsListReviewsData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * UUID организации (салона)
+         */
+        id: string;
+    };
     query?: {
         /**
          * Размер страницы (1–100, по умолчанию 20).
@@ -2434,7 +2510,12 @@ export type OrganizationsListReviewsResponse = OrganizationsListReviewsResponses
 
 export type OrganizationsGetByIdData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * UUID организации (салона)
+         */
+        id: string;
+    };
     query?: {
         /**
          * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
@@ -2464,13 +2545,7 @@ export type OrganizationsGetByIdResponses = {
         city?: string | null;
         addressLine: string | null;
         phone: string | null;
-        /**
-         * Публичный email салона (если указан).
-         */
         email?: string | null;
-        /**
-         * Сайт или страница салона (URL со схемой или без).
-         */
         website?: string | null;
         yearsInBusiness: number | null;
         latitude?: number | null;
@@ -2552,6 +2627,10 @@ export type OrganizationsGetByIdResponses = {
              */
             alt?: string | null;
         }>;
+        /**
+         * Для владельца по Bearer: если не approved — витрина салона на модерации или отклонена; для гостей поле не передаётся.
+         */
+        publicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
     };
 };
 
@@ -2759,14 +2838,6 @@ export type PersonalizationGetRecommendationsResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
-            /**
-             * Публичный email салона (если указан).
-             */
-            email?: string | null;
-            /**
-             * Сайт или страница салона (URL со схемой или без).
-             */
-            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -2972,6 +3043,51 @@ export type DevWorkplaceJoinReviewPostReviewResponses = {
 
 export type DevWorkplaceJoinReviewPostReviewResponse = DevWorkplaceJoinReviewPostReviewResponses[keyof DevWorkplaceJoinReviewPostReviewResponses];
 
+export type DevModerationGetQueueData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/dev/moderation/queue';
+};
+
+export type DevModerationGetQueueResponses = {
+    /**
+     * Снимок очереди и справочник статусов
+     */
+    200: unknown;
+};
+
+export type DevModerationResolveCaseData = {
+    body: {
+        decision: 'approve' | 'reject';
+        /**
+         * Обязательно при reject
+         */
+        reason?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/dev/moderation/cases/{caseId}/resolve';
+};
+
+export type DevModerationResolveCaseErrors = {
+    /**
+     * Кейс не открыт или нет reason при reject
+     */
+    400: unknown;
+    /**
+     * Кейс не найден или ручка выключена
+     */
+    404: unknown;
+};
+
+export type DevModerationResolveCaseResponses = {
+    /**
+     * { ok: true }
+     */
+    200: unknown;
+};
+
 export type FavoritesListData = {
     body?: never;
     path?: never;
@@ -3051,14 +3167,6 @@ export type FavoritesListOrganizationsListingResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
-            /**
-             * Публичный email салона (если указан).
-             */
-            email?: string | null;
-            /**
-             * Сайт или страница салона (URL со схемой или без).
-             */
-            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;

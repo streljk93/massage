@@ -64,6 +64,8 @@
         "orgRoleAdmin": "Admin",
         "orgRoleSpecialist": "Specialist",
         "orgActiveWorkplaceBadge": "Current workplace",
+        "orgPublicationPendingBadge": "On moderation",
+        "orgPublicationRejectedBadge": "Not published",
         "orgOpenPublicProfile": "Open public page"
       }
     },
@@ -131,6 +133,8 @@
         "orgRoleAdmin": "Quản trị",
         "orgRoleSpecialist": "Chuyên gia",
         "orgActiveWorkplaceBadge": "Nơi làm việc hiện tại",
+        "orgPublicationPendingBadge": "Đang kiểm duyệt",
+        "orgPublicationRejectedBadge": "Không được công khai",
         "orgOpenPublicProfile": "Mở trang công khai"
       }
     },
@@ -198,6 +202,8 @@
         "orgRoleAdmin": "Администратор",
         "orgRoleSpecialist": "Специалист",
         "orgActiveWorkplaceBadge": "Текущее место приёма",
+        "orgPublicationPendingBadge": "На модерации",
+        "orgPublicationRejectedBadge": "Не опубликовано",
         "orgOpenPublicProfile": "Открыть страницу в витрине"
       }
     }

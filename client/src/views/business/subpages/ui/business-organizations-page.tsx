@@ -140,11 +140,27 @@ export function BusinessOrganizationsPage() {
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {t(orgRoleLabelKey(org.role))}
                     </p>
-                    {org.isActiveWorkplace ?
-                      <p className="mt-2 inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        {t("orgActiveWorkplaceBadge")}
-                      </p>
-                    : null}
+                    {(org.publicationModerationStatus === "pending_review" ||
+                      org.publicationModerationStatus === "rejected" ||
+                      org.isActiveWorkplace) && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {org.publicationModerationStatus === "pending_review" ?
+                          <span className="inline-flex rounded-full bg-amber-500/12 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-200">
+                            {t("orgPublicationPendingBadge")}
+                          </span>
+                        : null}
+                        {org.publicationModerationStatus === "rejected" ?
+                          <span className="inline-flex rounded-full bg-destructive/12 px-2.5 py-0.5 text-xs font-medium text-destructive">
+                            {t("orgPublicationRejectedBadge")}
+                          </span>
+                        : null}
+                        {org.isActiveWorkplace ?
+                          <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                            {t("orgActiveWorkplaceBadge")}
+                          </span>
+                        : null}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Link

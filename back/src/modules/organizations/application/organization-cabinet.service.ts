@@ -9,6 +9,7 @@ import {
   GalleryMediaKind,
   GalleryOwnerKind,
   OrganizationMembershipRole,
+  PublicationModerationStatus,
   SpecialistWorkplaceJoinRequestStatus,
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
@@ -20,6 +21,7 @@ import { organizationNonCategoryTextSearchWhere } from '../../directory/infrastr
 import { AddressPersistenceService } from '../../address/application/address-persistence.service';
 import { AddressResolutionService } from '../../address/application/address-resolution.service';
 import { GalleryService } from '../../gallery/application/gallery.service';
+import { ModerationEnqueueService } from '../../moderation/application/moderation-enqueue.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
@@ -37,6 +39,7 @@ export class OrganizationCabinetService {
     private readonly addressPersistence: AddressPersistenceService,
     private readonly gallery: GalleryService,
     private readonly specialistOnboarding: SpecialistOnboardingService,
+    private readonly moderationEnqueue: ModerationEnqueueService,
   ) {}
 
   private async syncSpecialistListedInDirectory(
@@ -609,6 +612,7 @@ export class OrganizationCabinetService {
           website: norm(body.website),
           addressId: addr.id,
           yearsInBusiness: body.yearsInBusiness ?? null,
+          publicationModerationStatus: PublicationModerationStatus.pending_review,
         },
       });
 
@@ -674,6 +678,8 @@ export class OrganizationCabinetService {
         });
       }
     });
+
+    await this.moderationEnqueue.enqueueOrganizationProfileModeration(orgId);
 
     return this.specialistOnboarding.getOnboarding(userId);
   }

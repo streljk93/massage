@@ -1466,6 +1466,79 @@
         ]
       }
     },
+    "/moderation/cases": {
+      "get": {
+        "description": "Требуется флаг модератора (`User.isContentModerator`).",
+        "operationId": "ContentModeration_listCases",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Список кейсов"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав модератора контента"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Очередь ручной модерации открытых кейсов",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/moderation/cases/{caseId}/approve": {
+      "post": {
+        "operationId": "ContentModeration_approve",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав модератора контента"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Разрешить контент (публикация во витрине)",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
+    "/moderation/cases/{caseId}/reject": {
+      "post": {
+        "operationId": "ContentModeration_reject",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав модератора контента"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Отклонить контент с причиной (не публикуется или снимается)",
+        "tags": [
+          "moderation"
+        ]
+      }
+    },
     "/users/me/push-tokens": {
       "post": {
         "description": "Регистрирует токен устройства для текущего пользователя. Повтор с тем же token переназначит userId (другой логин с того же браузера).",
@@ -1810,7 +1883,8 @@
                           "id",
                           "name",
                           "role",
-                          "isActiveWorkplace"
+                          "isActiveWorkplace",
+                          "publicationModerationStatus"
                         ],
                         "properties": {
                           "id": {
@@ -1832,6 +1906,15 @@
                           "isActiveWorkplace": {
                             "type": "boolean",
                             "description": "Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины."
+                          },
+                          "publicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона."
                           }
                         }
                       }
@@ -3621,13 +3704,11 @@
                           },
                           "email": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Публичный email салона (если указан)."
+                            "nullable": true
                           },
                           "website": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Сайт или страница салона (URL со схемой или без)."
+                            "nullable": true
                           },
                           "yearsInBusiness": {
                             "type": "integer",
@@ -5041,6 +5122,15 @@
                                 "example": "Phú Quốc Spa"
                               }
                             }
+                          },
+                          "activeWorkplacePublicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Только у самого мастера при незавершённой модерации активного салона."
                           }
                         }
                       }
@@ -5119,6 +5209,16 @@
               ],
               "type": "string"
             }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID специалиста",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -5167,6 +5267,15 @@
                             "type": "string",
                             "format": "date-time",
                             "description": "ISO-8601"
+                          },
+                          "publicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Только если отзыв ещё на модерации или отклонён — для своего текста автором (Bearer); гостям не отдаём."
                           }
                         }
                       }
@@ -5201,6 +5310,11 @@
             "description": "Специалист не найден"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Отзывы о специалисте",
         "tags": [
           "directory-specialists"
@@ -5224,6 +5338,16 @@
                 "ru"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID специалиста",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5453,6 +5577,15 @@
                           "example": "Phú Quốc Spa"
                         }
                       }
+                    },
+                    "activeWorkplacePublicationModerationStatus": {
+                      "type": "string",
+                      "enum": [
+                        "approved",
+                        "pending_review",
+                        "rejected"
+                      ],
+                      "description": "Только у самого мастера при незавершённой модерации активного салона."
                     }
                   }
                 }
@@ -5466,6 +5599,11 @@
             "description": "Специалист не найден"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Специалист по id",
         "tags": [
           "directory-specialists"
@@ -5507,6 +5645,16 @@
                 "ru"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID организации (салона)",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5556,6 +5704,15 @@
                             "type": "string",
                             "format": "date-time",
                             "description": "ISO-8601"
+                          },
+                          "publicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Только если отзыв ещё на модерации или отклонён — для своего текста автором (Bearer); гостям не отдаём."
                           }
                         }
                       }
@@ -5590,6 +5747,11 @@
             "description": "Организация не найдена"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Отзывы о салоне",
         "tags": [
           "directory-organizations"
@@ -5613,6 +5775,16 @@
                 "ru"
               ],
               "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "UUID организации (салона)",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -5674,13 +5846,11 @@
                     },
                     "email": {
                       "type": "string",
-                      "nullable": true,
-                      "description": "Публичный email салона (если указан)."
+                      "nullable": true
                     },
                     "website": {
                       "type": "string",
-                      "nullable": true,
-                      "description": "Сайт или страница салона (URL со схемой или без)."
+                      "nullable": true
                     },
                     "yearsInBusiness": {
                       "type": "integer",
@@ -5912,6 +6082,15 @@
                         }
                       },
                       "description": "Фото витрины салона (порядок как в кабинете). Пустой массив, если галерея не создана."
+                    },
+                    "publicationModerationStatus": {
+                      "type": "string",
+                      "enum": [
+                        "approved",
+                        "pending_review",
+                        "rejected"
+                      ],
+                      "description": "Только для владельца (Bearer): пока профиль салона не одобрен, гости получают 404."
                     }
                   }
                 }
@@ -5925,6 +6104,11 @@
             "description": "Организация не найдена"
           }
         },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
         "summary": "Организация по id",
         "tags": [
           "directory-organizations"
@@ -6456,6 +6640,15 @@
                                 "example": "Phú Quốc Spa"
                               }
                             }
+                          },
+                          "activeWorkplacePublicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Только у самого мастера при незавершённой модерации активного салона."
                           }
                         }
                       }
@@ -6512,13 +6705,11 @@
                           },
                           "email": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Публичный email салона (если указан)."
+                            "nullable": true
                           },
                           "website": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Сайт или страница салона (URL со схемой или без)."
+                            "nullable": true
                           },
                           "yearsInBusiness": {
                             "type": "integer",
@@ -7127,6 +7318,136 @@
         ]
       }
     },
+    "/dev/moderation/queue": {
+      "get": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе 404. `reference` — допустимые значения `PublicationModerationStatus`, `ContentModerationCaseKind`, `ContentModerationCaseStatus` и семантика approve/reject.",
+        "operationId": "DevModeration_getQueue",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Снимок очереди и справочник статусов"
+          }
+        },
+        "summary": "[Dev] Очередь предмодерации — открытые кейсы и контент",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/moderation/ollama-eval": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. Вызывает `ModerationOllamaService.evaluateTexts` без записи в БД (как в проде). Без JWT. Нужен `OLLAMA_BASE_URL`; иначе `verdict: review`, `infraUnavailable: true`.",
+        "operationId": "devModeration_ollamaEval",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Строка для проверки (как есть, без нормализации на бэкенде перед отправкой в Ollama)",
+                    "maxLength": 64000
+                  },
+                  "label": {
+                    "type": "string",
+                    "description": "Метка в промпте (по умолчанию «preview»), чтобы различать поля если несколько",
+                    "maxLength": 64
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Результат `evaluateTexts`: парсится JSON модели `{ result, reason }` → `verdict` / `rawSummary`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "verdict": {
+                      "type": "string",
+                      "enum": [
+                        "pass",
+                        "review"
+                      ],
+                      "description": "Итог модерации (после парсинга JSON ответа модели)"
+                    },
+                    "rawSummary": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "`reason` от модели + фрагмент сырого ответа или сообщение при ошибке"
+                    },
+                    "infraUnavailable": {
+                      "type": "boolean",
+                      "description": "true — проблемы с конфигурацией/сетью/моделью Ollama, не вердикт по контенту"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "[Dev] Прогон текста через Ollama модерацию",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/moderation/cases/{caseId}/resolve": {
+      "post": {
+        "description": "Только в dev. `decision: approve` — как `POST /moderation/cases/:id/approve`; `reject` — нужен `reason`. `moderatorUserId` в кейсе будет `null`.",
+        "operationId": "DevModeration_resolveCase",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "approve",
+                      "reject"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "Обязательно при reject"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ ok: true }"
+          },
+          "400": {
+            "description": "Кейс не открыт или нет reason при reject"
+          },
+          "404": {
+            "description": "Кейс не найден или ручка выключена"
+          }
+        },
+        "summary": "[Dev] Одобрить или отклонить кейс модерации",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
     "/favorites": {
       "get": {
         "operationId": "Favorites_list",
@@ -7320,13 +7641,11 @@
                           },
                           "email": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Публичный email салона (если указан)."
+                            "nullable": true
                           },
                           "website": {
                             "type": "string",
-                            "nullable": true,
-                            "description": "Сайт или страница салона (URL со схемой или без)."
+                            "nullable": true
                           },
                           "yearsInBusiness": {
                             "type": "integer",
@@ -7725,6 +8044,15 @@
                                 "example": "Phú Quốc Spa"
                               }
                             }
+                          },
+                          "activeWorkplacePublicationModerationStatus": {
+                            "type": "string",
+                            "enum": [
+                              "approved",
+                              "pending_review",
+                              "rejected"
+                            ],
+                            "description": "Только у самого мастера при незавершённой модерации активного салона."
                           }
                         }
                       }
@@ -7970,7 +8298,7 @@
     },
     {
       "name": "dev",
-      "description": "Только вне production: отладочные и тестовые сценарии (смена статуса брони, пересчёт персонализации, FCM и т.д.)."
+      "description": "Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod)."
     }
   ],
   "servers": [

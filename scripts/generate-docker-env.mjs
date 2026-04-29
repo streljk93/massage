@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Генерирует секреты для docker-compose в корневом `.env`:
- *   JWT_SECRET  — подпись JWT на бэкенде (Nest)
- *   AUTH_SECRET — Auth.js в контейнере client
+ * Обновляет общие секреты в корневом `.env` (монорепо + Docker Compose):
+ *   JWT_SECRET  → сервис `back`
+ *   AUTH_SECRET → сервис `client` (Auth.js)
  *
  *   npm run docker:env
- *   node scripts/generate-docker-env.mjs --force
+ *   node scripts/generate-docker-env.mjs --force   — заменить даже непустые значения
  *
- * Потом: npm run docker:up   или   npm run docker:bootstrap
+ * Если `.env` отсутствует, текст берётся из `.env.example`.
+ * Локально: те же секреты — в `back/.env` (JWT) и `client/.env.local` (AUTH).
  */
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -17,6 +18,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, "..");
 const envPath = path.join(repoRoot, ".env");
+const examplePath = path.join(repoRoot, ".env.example");
 
 const force = process.argv.includes("--force");
 
@@ -24,24 +26,52 @@ function randomSecret() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+function readExampleSeed() {
+  try {
+    return fs.readFileSync(examplePath, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function rhsLooksEmpty(raw) {
+  const t = (raw ?? "").trim();
+  if (t.length === 0) {
+    return true;
+  }
+  if (t === '""' || t === "''") {
+    return true;
+  }
+  return false;
+}
+
 /**
- * @param {string} text
- * @param {string} key
- * @param {string} value
+ * Пустой или отсутствующий RHS → подставляем значение.
+ * Непустой RHS — не трогаем без --force.
  */
-function upsert(text, key, value) {
-  const re = new RegExp(`^\\s*${key}\\s*=.*$`, "m");
-  if (re.test(text)) {
-    if (!force) {
+function upsertLine(text, key, value) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const lineRe = new RegExp(`^\\s*${escaped}\\s*=.*$`, "m");
+  const found = text.match(lineRe);
+
+  if (found) {
+    const line = found[0];
+    const eq = line.indexOf("=");
+    const rhs = eq >= 0 ? line.slice(eq + 1) : "";
+    if (!rhsLooksEmpty(rhs) && !force) {
       return { text, didWrite: false };
     }
-    return { text: text.replace(re, `${key}=${value}`), didWrite: true };
+    return {
+      text: text.replace(lineRe, `${key}=${value}`),
+      didWrite: true,
+    };
   }
+
   const line = `${key}=${value}\n`;
-  if (!text || text.trim().length === 0) {
+  if (!text.trim().length) {
     return {
       text:
-        "# docker-compose: JWT (Nest) + Auth.js (Next). Сгенерировано scripts/generate-docker-env.mjs\n" +
+        `# docker-compose — см. корневой .env.example. Сгенерировано scripts/generate-docker-env.mjs\n` +
         line,
       didWrite: true,
     };
@@ -56,19 +86,24 @@ let text = "";
 try {
   text = fs.readFileSync(envPath, "utf8");
 } catch {
-  /* новый файл */
+  text = "";
+}
+
+if (!text.trim().length) {
+  const seed = readExampleSeed();
+  text = seed.trim().length ? seed : "";
 }
 
 const jwt = randomSecret();
 const auth = randomSecret();
 
-let skipped = [];
+const skipped = [];
 
-let r = upsert(text, "JWT_SECRET", jwt);
+let r = upsertLine(text, "JWT_SECRET", jwt);
 text = r.text;
 if (!r.didWrite) skipped.push("JWT_SECRET");
 
-r = upsert(text, "AUTH_SECRET", auth);
+r = upsertLine(text, "AUTH_SECRET", auth);
 text = r.text;
 if (!r.didWrite) skipped.push("AUTH_SECRET");
 
@@ -80,7 +115,7 @@ fs.writeFileSync(envPath, text, "utf8");
 console.log(`Записано: ${path.relative(repoRoot, envPath)}`);
 if (skipped.length > 0) {
   console.log(
-    `Пропущено (ключи уже есть): ${skipped.join(", ")} — добавьте --force чтобы заменить.`,
+    `Пропущено (уже заданы непустые значения): ${skipped.join(", ")} — --force для замены.`,
   );
 } else {
   console.log("JWT_SECRET и AUTH_SECRET обновлены.");

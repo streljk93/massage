@@ -71,6 +71,31 @@ enum OAuthProvider {
   google
 }
 
+/// Доступность контента во витрине после предмодерации (AI или ручное решение).
+enum PublicationModerationStatus {
+  /// Разрешено к показу (AI одобрил или модератор).
+  approved
+  /// На ручной проверке или ожидание проверки; из витрины скрыто.
+  pending_review
+  /// Отклонено модератором.
+  rejected
+}
+
+/// Тип модерируемой сущности; `subjectId` в `ContentModerationCase` всегда id этой сущности в БД.
+/// Новые виды добавляются сюда — без новых столбцов в таблице кейсов.
+enum ContentModerationCaseKind {
+  organization_profile
+  organization_review
+  specialist_review
+  user_display_name
+}
+
+enum ContentModerationCaseStatus {
+  open
+  resolved_approved
+  resolved_rejected
+}
+
 // --- Core user ---
 
 /// Учётная запись пользователя. Пароль только для email-входа; OAuth — `UserOAuthAccount`.
@@ -109,6 +134,13 @@ model User {
   behaviorEvents       UserBehaviorEvent[]
   preferenceProfile    UserPreferenceProfile?
   oAuthAccounts        UserOAuthAccount[]
+
+  /// Отображаемое имя: после смены проходит предмодерацию; до `approved` скрыто во витрине (мастер).
+  nameModerationStatus PublicationModerationStatus @default(approved)
+  /// Ручная модерация контента (внутренний флаг; не путать с ролью в организации).
+  isContentModerator   Boolean                    @default(false)
+
+  contentModerationCasesResolved ContentModerationCase[] @relation("ContentModerationResolvedBy")
 }
 
 /// Привязка внешнего аккаунта (Google) к `User`.
@@ -337,6 +369,9 @@ model Organization {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  /// Витрина салона: до AI/ручного одобрения не показывается в каталоге.
+  publicationModerationStatus PublicationModerationStatus @default(approved)
+
   reviews              OrganizationReview[]
   services             Service[]
   bookings             Booking[]
@@ -435,6 +470,9 @@ model OrganizationReview {
 
   rating  Int
   comment String?
+
+  /// Публикация текста отзыва во витрине (`approved` только после AI/ручного решения при необходимости).
+  publicationModerationStatus PublicationModerationStatus @default(approved)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -623,12 +661,40 @@ model SpecialistReview {
   rating  Int
   comment String?
 
+  publicationModerationStatus PublicationModerationStatus @default(approved)
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   @@index([specialistId])
   @@index([authorUserId])
+}
+
+/// Элемент очереди ручной модерации (контент не прошёл AI или недоступен AI).
+/// Привязка: одна строка ↔ одна модерируемая сущность (`kind` + `subjectId`), без отдельного столбца на каждый тип.
+/// При жёстком удалении сущности из приложения удаляйте кейсы здесь же (до переноса раньше срабатывал ON DELETE FK).
+model ContentModerationCase {
+  id     String                       @id @default(uuid())
+  kind   ContentModerationCaseKind
+  /// Id модерируемой сущности (смысл задаётся `kind`, см. enum).
+  subjectId String
+  status ContentModerationCaseStatus @default(open)
+
+  aiSummary String? @db.Text
+
+  moderatorUserId String?
+  moderatorUser   User?   @relation("ContentModerationResolvedBy", fields: [moderatorUserId], references: [id], onDelete: SetNull)
+
+  moderatorReason String? @db.Text
+
+  resolvedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([kind, subjectId])
+  @@index([status, createdAt])
 }
 
 /// Бронирование (запись к специалисту); текущее состояние в `status`, история — в BookingStatusHistory.

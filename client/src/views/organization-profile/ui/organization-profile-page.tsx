@@ -19,6 +19,7 @@ import {
   MessageSquare,
   PackageOpen,
   Phone,
+  ShieldAlert,
   Star,
   Users,
 } from "lucide-react";
@@ -730,6 +731,29 @@ export function OrganizationProfilePage({
         />
 
         <div className="relative z-10 mx-auto w-full max-w-lg">
+          {(profile.publicationModerationStatus === "pending_review" ||
+            profile.publicationModerationStatus === "rejected") && (
+            <div className="px-4 pb-3" role="status">
+              <div
+                className={cn(
+                  "flex gap-2 rounded-xl border px-3 py-2.5 text-sm leading-snug",
+                  profile.publicationModerationStatus === "rejected"
+                    ? "border-destructive/40 bg-destructive/10 text-destructive-foreground"
+                    : "border-amber-500/35 bg-amber-500/10 text-foreground",
+                )}
+              >
+                <ShieldAlert
+                  className="mt-0.5 size-4 shrink-0 opacity-90"
+                  aria-hidden
+                />
+                <p className="min-w-0">
+                  {profile.publicationModerationStatus === "rejected"
+                    ? t("moderationRejected")
+                    : t("moderationPending")}
+                </p>
+              </div>
+            </div>
+          )}
           <div className="relative aspect-[375/460] min-h-[16.5rem] w-full overflow-hidden sm:aspect-[375/503] sm:min-h-[18rem]">
             <div className="absolute inset-0">
               <OrganizationVitrineGalleryCarousel

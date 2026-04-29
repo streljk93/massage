@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { addMinutes, parseISO, subHours } from 'date-fns';
-import type { BookingStatus, Prisma } from '@prisma/client';
+import {
+  PublicationModerationStatus,
+  type BookingStatus,
+  type Prisma,
+} from '@prisma/client';
 import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
 import {
   BOOKING_START_TOLERANCE_MS,
@@ -24,6 +28,7 @@ import {
   type CategoryLocaleShape,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import type { SubmitBookingVisitReviewsBody } from '../dto/submit-booking-visit-reviews-body.schema';
@@ -48,6 +53,7 @@ export class BookingsService {
     private readonly bookingsRepository: BookingsRepository,
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
+    private readonly contentModeration: ContentModerationService,
   ) {}
 
   private async resolveBookingsListLocale(
@@ -442,25 +448,53 @@ export class BookingsService {
         ? body.specialistComment
         : null;
 
+    const initialOrgPub =
+      orgComment != null && orgComment.trim() !== ''
+        ? PublicationModerationStatus.pending_review
+        : PublicationModerationStatus.approved;
+    const initialSpPub =
+      spComment != null && spComment.trim() !== ''
+        ? PublicationModerationStatus.pending_review
+        : PublicationModerationStatus.approved;
+
+    let orgReviewId!: string;
+    let specialistReviewId!: string;
+
     await this.prisma.$transaction(async (tx) => {
-      await tx.organizationReview.create({
+      const orgRev = await tx.organizationReview.create({
         data: {
           organizationId,
           authorUserId: clientUserId,
           bookingId: booking.id,
           rating: body.organizationRating,
           comment: orgComment,
+          publicationModerationStatus: initialOrgPub,
         },
       });
-      await tx.specialistReview.create({
+      orgReviewId = orgRev.id;
+      const spRev = await tx.specialistReview.create({
         data: {
           specialistId: booking.specialistId,
           authorUserId: clientUserId,
           bookingId: booking.id,
           rating: body.specialistRating,
           comment: spComment,
+          publicationModerationStatus: initialSpPub,
         },
       });
+      specialistReviewId = spRev.id;
+      await this.refreshOrganizationReviewAggregates(tx, organizationId);
+      await this.refreshSpecialistReviewAggregates(tx, booking.specialistId);
+    });
+
+    await this.contentModeration.moderateVisitReviewPair({
+      organizationReviewId: orgReviewId,
+      specialistReviewId,
+      organizationComment: orgComment,
+      specialistComment: spComment,
+    });
+
+    await this.prisma.$transaction(async (tx) => {
       await this.refreshOrganizationReviewAggregates(tx, organizationId);
       await this.refreshSpecialistReviewAggregates(tx, booking.specialistId);
     });
@@ -473,7 +507,11 @@ export class BookingsService {
     organizationId: string,
   ): Promise<void> {
     const agg = await tx.organizationReview.aggregate({
-      where: { organizationId, deletedAt: null },
+      where: {
+        organizationId,
+        deletedAt: null,
+        publicationModerationStatus: PublicationModerationStatus.approved,
+      },
       _avg: { rating: true },
       _count: { _all: true },
     });
@@ -493,7 +531,11 @@ export class BookingsService {
     specialistId: string,
   ): Promise<void> {
     const agg = await tx.specialistReview.aggregate({
-      where: { specialistId, deletedAt: null },
+      where: {
+        specialistId,
+        deletedAt: null,
+        publicationModerationStatus: PublicationModerationStatus.approved,
+      },
       _avg: { rating: true },
       _count: { _all: true },
     });

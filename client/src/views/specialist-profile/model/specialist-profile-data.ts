@@ -35,4 +35,6 @@ export type SpecialistProfileData = {
   phone: string | null;
   /** Активная организация для приёма; `null`, если не выбрана. */
   activeWorkplace: SpecialistActiveWorkplace | null;
+  /** Для самого мастера: модерация текущего салона во витрине. */
+  workplacePublicationModerationStatus?: "approved" | "pending_review" | "rejected";
 };

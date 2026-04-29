@@ -9,10 +9,13 @@
  *   --skip-docker     не поднимать docker compose
  *   --skip-openapi    не вызывать openapi:sync
  *   --deps-only       только npm install в back и client
+ *   --skip-ollama-pull не удалять локальный образ с предыдущим именем модели перед pull, не выполнять ollama pull (долго при первой загрузке)
  *
- * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, MailHog, back, client),
- * ожидается готовность Postgres, MinIO и веб-UI MailHog, при необходимости дописываются S3_* и SMTP_* в
- * `back/.env` для dev на хосте, затем migrate + seed + openapi:sync.
+ * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, Ollama, image-moderation, Redis, MailHog, back, client),
+ * ожидается готовность Postgres, MinIO, Ollama, Redis и веб-UI MailHog, при необходимости дописываются S3_*, SMTP_*, REDIS_* и OLLAMA_* в
+ * `back/.env`; мигрируют устаревший `OLLAMA_BASE_URL=http://127.0.0.1:11434` → `:11435` (проброс в compose совпадает с `OLLAMA_DOCKER_PUBLISH_PORT` в этом скрипте);
+ * если было имя модели без суффикса (типично `llama3`), замена на актуальный тег (сейчас «llama3.2», см. moderation-defaults);
+ * при необходимости в контейнере удаляется старый образ перед загрузкой новой модели; затем migrate + seed + openapi:sync.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -26,6 +29,14 @@ const args = new Set(process.argv.slice(2));
 const skipDocker = args.has("--skip-docker");
 const skipOpenapi = args.has("--skip-openapi");
 const depsOnly = args.has("--deps-only");
+const skipOllamaPull = args.has("--skip-ollama-pull");
+
+/** См. back/src/config/moderation-defaults.const.ts — DEFAULT_OLLAMA_MODERATION_MODEL. */
+const DEFAULT_OLLAMA_MODEL = "llama3.2";
+/** Имя устаревшей модели в старых .env/local storage — перед pull удаляется `ollama rm` при init. */
+const LEGACY_OLLAMA_MODEL = "llama3";
+/** Порт на хосте для сервиса `ollama` в docker compose (проброс host:CONTAINER на 11434). Нативный Ollama на macOS занимает 11434 — не ставим второй процесс там. */
+const OLLAMA_DOCKER_PUBLISH_PORT = "11435";
 
 function log(msg) {
   console.log(`\n[init] ${msg}`);
@@ -151,6 +162,82 @@ async function waitMailhogReady(timeoutMs = 120000) {
   return false;
 }
 
+async function waitOllamaReady(timeoutMs = 180000) {
+  const stepMs = 2000;
+  const start = Date.now();
+  log(`Ожидание порта Ollama — HTTP для хоста :${OLLAMA_DOCKER_PUBLISH_PORT} (:11434 внутри образа), без загрузки модели…`);
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:${OLLAMA_DOCKER_PUBLISH_PORT}/`,
+        {
+          signal: AbortSignal.timeout(4000),
+        },
+      );
+      if (res.ok || res.status === 404) {
+        log("Ollama отвечает; далее init при необходимости выполнит `ollama pull`.");
+        return true;
+      }
+    } catch {
+      /* контейнер ещё стартует */
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
+async function waitImageModerationReady(timeoutMs = 120000) {
+  const stepMs = 2000;
+  const start = Date.now();
+  log("Ожидание сервиса модерации картинок (HTTP :8085, /healthz)…");
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch("http://127.0.0.1:8085/healthz", {
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j && j.status === "ok") {
+          log(
+            "image-moderation готов (NSFW-сервис: POST /v1/score; см. docker/nsfw-image-moderation).",
+          );
+          return true;
+        }
+      }
+    } catch {
+      /* образ ещё собирается / контейнер стартует */
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
+async function waitRedisReady(timeoutMs = 60000) {
+  const stepMs = 2000;
+  const start = Date.now();
+  log("Ожидание готовности Redis (BullMQ, redis-cli ping)…");
+  while (Date.now() - start < timeoutMs) {
+    const r = spawnSync(
+      "docker",
+      ["compose", "exec", "-T", "redis", "redis-cli", "ping"],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    const out = (r.stdout ?? "").trim().toUpperCase();
+    if (r.status === 0 && out === "PONG") {
+      log("Redis принимает команды (:6379).");
+      return true;
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
 function ensureBackEnvMinioLocal() {
   const p = path.join(repoRoot, "back", ".env");
   let text = "";
@@ -172,6 +259,80 @@ function ensureBackEnvMinioLocal() {
   const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
   fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
   log("Добавлены S3_* в back/.env для загрузки файлов через localhost:9000.");
+}
+
+/** Redis для BullMQ (очередь фоновой модерации профиля салона). При `back` только в Docker — хост `redis`. */
+function ensureBackEnvRedisLocal() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  if (/(?:^|\n)\s*REDIS_HOST\s*=/.test(text)) {
+    return;
+  }
+  const block =
+    "\n# init-project — Redis из docker compose (сервис redis, BullMQ / модерация профиля организации)\n" +
+    "REDIS_HOST=127.0.0.1\n" +
+    "REDIS_PORT=6379\n" +
+    "MODERATION_QUEUE_ENABLED=true\n";
+  const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
+  log(
+    "Добавлены REDIS_* и MODERATION_QUEUE_ENABLED в back/.env (localhost:6379).",
+  );
+}
+
+function ensureBackEnvOllamaLocal() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  if (/(?:^|\n)\s*OLLAMA_BASE_URL\s*=/.test(text)) {
+    return;
+  }
+  const block =
+    "\n# init-project — Ollama из docker compose (предмодерация текста; с хоста порт см. docker-compose.yml)\n" +
+    `OLLAMA_BASE_URL=http://127.0.0.1:${OLLAMA_DOCKER_PUBLISH_PORT}\n` +
+    `OLLAMA_MODEL=${DEFAULT_OLLAMA_MODEL}\n`;
+  const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
+  log(
+    `Добавлены OLLAMA_* в back/.env для API на localhost:${OLLAMA_DOCKER_PUBLISH_PORT}.`,
+  );
+}
+
+/**
+ * Сервер предмодерации фото (docker-compose: image-moderation).
+ * Nest на хосте: контейнер скачивает файлы через host.docker.internal (Docker Desktop).
+ * При Linux без host.docker.internal смените на http://172.17.0.1:3001 или см. доку compose.
+ */
+function ensureBackEnvImageModerationLocal() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  if (/(?:^|\n)\s*IMAGE_MODERATION_BASE_URL\s*=/.test(text)) {
+    return;
+  }
+  const block =
+    "\n# init-project — модерация фото через docker compose (сервис image-moderation, порт :8085)\n" +
+    "IMAGE_MODERATION_BASE_URL=http://127.0.0.1:8085\n" +
+    "# откуда Python-контейнер тянет GET /v1/files/… (Nest на хосте; Linux: при необходимости 172.17.0.1:PORT)\n" +
+    "MODERATION_FILE_FETCH_ORIGIN=http://host.docker.internal:3001\n";
+  const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
+  fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
+  log(
+    "Добавлены IMAGE_MODERATION_BASE_URL (+ MODERATION_FILE_FETCH_ORIGIN) в back/.env для локального контейнера image-moderation.",
+  );
 }
 
 function ensureBackEnvMailhogLocal() {
@@ -196,6 +357,130 @@ function ensureBackEnvMailhogLocal() {
   log(
     "Добавлены SMTP_* / MAIL_FROM в back/.env (письма с localhost back → MailHog :8025).",
   );
+}
+
+/**
+ * Раньше init писал OLLAMA на :11434; нативный Ollama на Mac занимает тот же порт. Docker теперь публикует :11435→:11434.
+ */
+function migrateBackEnvDockerOllamaPublishPort() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    return;
+  }
+  let changed = false;
+  const lines = text.split(/\r?\n/);
+  const next = lines.map((line) => {
+    const m = /^(\s*OLLAMA_BASE_URL\s*=\s*)(\S+)/.exec(line);
+    if (!m) return line;
+    const url = m[2].trim();
+    if (
+      /^https?:\/\/(127\.0\.0\.1|localhost):11434\/?$/i.test(url)
+    ) {
+      changed = true;
+      return `${m[1]}http://127.0.0.1:${OLLAMA_DOCKER_PUBLISH_PORT}`;
+    }
+    return line;
+  });
+  if (!changed) return;
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  fs.writeFileSync(p, next.join(eol), "utf8");
+  log(
+    `Обновлено «OLLAMA_BASE_URL» на порт контейнерного Ollama на хосте :${OLLAMA_DOCKER_PUBLISH_PORT} (:11434 внутри образа — см. docker-compose.yml).`,
+  );
+}
+
+/**
+ * Если в back/.env указано именно значение «llama3» (старое имя модели в Ollama),
+ * замена на актуальный тег (совпадает с `DEFAULT_OLLAMA_MODEL` / `moderation-defaults.const.ts`, сейчас «llama3.2»).
+ */
+function migrateBackEnvLegacyOllamaModel() {
+  const p = path.join(repoRoot, "back", ".env");
+  let text = "";
+  try {
+    text = fs.readFileSync(p, "utf8");
+  } catch {
+    return;
+  }
+  let changed = false;
+  /** Значение — первое «слово» после `=` (без кавычек не обрабатываем «"llama3"». */
+  const re = /^([ \t]*OLLAMA_MODEL[ \t]*=[ \t]*)(\S+)/;
+  const lines = text.split(/\r?\n/);
+  const next = lines.map((line) => {
+    const m = re.exec(line);
+    if (!m) return line;
+    if (m[2] !== LEGACY_OLLAMA_MODEL) return line;
+    changed = true;
+    return `${m[1]}${DEFAULT_OLLAMA_MODEL}${line.slice(m[0].length)}`;
+  });
+  if (!changed) return;
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  fs.writeFileSync(p, next.join(eol), "utf8");
+  log(
+    `Обновлено «OLLAMA_MODEL» в back/.env: ${LEGACY_OLLAMA_MODEL} → ${DEFAULT_OLLAMA_MODEL}.`,
+  );
+}
+
+/**
+ * Удаляет локальный образ устаревшей модели в контейнере `ollama` (освобождает место).
+ * Если образа не было — ошибка игнорируется.
+ */
+function removeLegacyOllamaModelFromCompose() {
+  if (skipOllamaPull) {
+    return;
+  }
+  log(
+    `Удаление устаревшей модели «${LEGACY_OLLAMA_MODEL}» в контейнере ollama (если была локально; не мешает ${DEFAULT_OLLAMA_MODEL})…`,
+  );
+  const r = spawnSync(
+    "docker",
+    ["compose", "exec", "-T", "ollama", "ollama", "rm", LEGACY_OLLAMA_MODEL],
+    {
+      cwd: repoRoot,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    },
+  );
+  if (r.status !== 0) {
+    console.warn(
+      `[init] Удалить «${LEGACY_OLLAMA_MODEL}» не удалось или модели уже нет — это не критично перед загрузкой ${DEFAULT_OLLAMA_MODEL}.`,
+    );
+  } else {
+    log(`Образ модели «${LEGACY_OLLAMA_MODEL}» удалён из Ollama.`);
+  }
+}
+
+/**
+ * Подтягивает модель в контейнер `ollama` (долго при первой загрузке).
+ * Имя модели: env `OLLAMA_MODEL` или см. константу `DEFAULT_OLLAMA_MODEL` в этом файле.
+ */
+function pullOllamaModelIntoCompose() {
+  if (skipOllamaPull) {
+    log(
+      "Пропуск удаления legacy-модели и `ollama pull` (--skip-ollama-pull).",
+    );
+    return;
+  }
+  const model = (process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODEL).trim();
+  log(`Загрузка модели Ollama в контейнер: ollama pull ${model} (может занять много времени)…`);
+  const r = spawnSync(
+    "docker",
+    ["compose", "exec", "-T", "ollama", "ollama", "pull", model],
+    {
+      cwd: repoRoot,
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    },
+  );
+  if (r.status !== 0) {
+    console.warn(
+      `\n[init] ollama pull ${model} завершился с ошибкой (код ${r.status}). Позже: docker compose exec ollama ollama pull ${model}`,
+    );
+  } else {
+    log(`Модель «${model}» в Ollama готова.`);
+  }
 }
 
 function ensureClientEnvBackendUrl() {
@@ -237,6 +522,8 @@ async function main() {
 
   if (skipDocker) {
     log("Пропуск Docker (--skip-docker).");
+    migrateBackEnvDockerOllamaPublishPort();
+    migrateBackEnvLegacyOllamaModel();
     if (!skipOpenapi && process.env.DATABASE_URL) {
       run("openapi:sync", "npm", ["run", "openapi:sync"], repoRoot);
     } else if (!skipOpenapi) {
@@ -245,7 +532,9 @@ async function main() {
       );
     }
     log(
-      "Далее: docker compose up -d (postgres + minio + mailhog + …), см. docker-compose.yml; MinIO :9000, MailHog :8025.",
+      "Далее: docker compose up -d (postgres + redis + minio + ollama + image-moderation + mailhog + …), см. docker-compose.yml; MinIO :9000, Redis :6379, MailHog :8025, Ollama через хост :" +
+        OLLAMA_DOCKER_PUBLISH_PORT +
+        ", NSFW-картинки :8085.",
     );
     process.exit(0);
   }
@@ -266,6 +555,13 @@ async function main() {
     process.exit(1);
   }
 
+  if (!(await waitRedisReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания Redis. Проверьте: docker compose ps, docker compose logs redis",
+    );
+    process.exit(1);
+  }
+
   if (!(await waitMinioReady())) {
     console.error(
       "\n[init] Таймаут ожидания MinIO. Проверьте: docker compose ps, docker compose logs minio",
@@ -280,8 +576,31 @@ async function main() {
     process.exit(1);
   }
 
+  if (!(await waitOllamaReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания Ollama. Проверьте: docker compose ps, docker compose logs ollama",
+    );
+    process.exit(1);
+  }
+
+  if (!(await waitImageModerationReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания image-moderation (:8085). Проверьте: docker compose ps, docker compose logs image-moderation, или docker compose up -d --build image-moderation",
+    );
+    process.exit(1);
+  }
+
+  migrateBackEnvDockerOllamaPublishPort();
+
   ensureBackEnvMinioLocal();
   ensureBackEnvMailhogLocal();
+  ensureBackEnvOllamaLocal();
+  ensureBackEnvImageModerationLocal();
+  ensureBackEnvRedisLocal();
+
+  migrateBackEnvLegacyOllamaModel();
+  removeLegacyOllamaModelFromCompose();
+  pullOllamaModelIntoCompose();
 
   await wait(5000);
 
@@ -327,6 +646,9 @@ async function main() {
   • Swagger:         http://localhost:3001/v1/docs
   • Postgres:        localhost:5432 (см. docker-compose)
   • MinIO (S3):      http://localhost:9000  • консоль http://localhost:9001 (minioadmin / minioadmin)
+  • Redis (BullMQ):  localhost:6379 (фон модерации; init дописывает REDIS_* в back/.env, если нет REDIS_HOST)
+  • Ollama (хост для docker): http://localhost:${OLLAMA_DOCKER_PUBLISH_PORT} • init: миграция back/.env, rm старого тега, pull ${DEFAULT_OLLAMA_MODEL}; иначе npm run init -- --skip-ollama-pull
+  • Модерация фото:  http://localhost:8085/healthz • POST /v1/score (docker: image-moderation; при необходимости MODERATION_FILE_FETCH_ORIGIN в back/.env)
   • MailHog:         http://localhost:8025 (входящие письма; OTP при регистрации при SMTP в back/.env, см. init)
   • Файлы (MinIO): POST /v1/files/public | POST /v1/files/private (Bearer); GET /v1/files/public/:filename | GET /v1/files/private/:filename (Bearer)
 

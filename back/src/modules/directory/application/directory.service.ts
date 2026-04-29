@@ -5,6 +5,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PublicationModerationStatus } from '@prisma/client';
 import {
   DirectoryRepository,
   type DirectoryListRadiusFilter,
@@ -721,10 +722,14 @@ export class DirectoryService {
   async getSpecialistById(
     locale: ApiLocale,
     id: string,
+    viewerUserId?: string | null,
   ): Promise<SpecialistListItemDto | null> {
     const now = new Date();
     const row =
-      await this.directoryRepository.findPublicDirectorySpecialistById(id);
+      await this.directoryRepository.findSpecialistByIdForDirectoryDetail(
+        id,
+        viewerUserId ?? null,
+      );
     if (!row) {
       return null;
     }
@@ -737,24 +742,52 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds([
         id,
       ]);
-    return mapSpecialistRowToListItem(
+    const dto = mapSpecialistRowToListItem(
       row,
       locale,
       now,
       occupiedBySpecialist.get(id) ?? new Set(),
       doneBySpec.get(id) ?? 0,
     );
+
+    const isOwner = viewerUserId != null && row.userId === viewerUserId;
+    const pendingWorkplace =
+      isOwner &&
+      row.activeOrganization &&
+      row.activeOrganization.publicationModerationStatus !==
+        PublicationModerationStatus.approved;
+
+    if (!pendingWorkplace) {
+      return dto;
+    }
+
+    return {
+      ...dto,
+      activeWorkplacePublicationModerationStatus:
+        row.activeOrganization!.publicationModerationStatus,
+    };
   }
 
   async getOrganizationById(
     locale: ApiLocale,
     id: string,
+    viewerUserId?: string | null,
   ): Promise<OrganizationDetailResponseDto | null> {
     const now = new Date();
-    const row = await this.directoryRepository.findOrganizationById(id);
+    const row =
+      await this.directoryRepository.findOrganizationByIdForDirectoryDetail(
+        id,
+        viewerUserId ?? null,
+      );
     if (!row) {
       return null;
     }
+
+    const isOwner =
+      viewerUserId != null &&
+      row.ownerUserId != null &&
+      row.ownerUserId === viewerUserId;
+
     const specialistIds = row.specialistEmployments
       .filter((e) => isVitrineStaffAtOrganization(e, row.id))
       .map((e) => e.specialist.id);
@@ -803,11 +836,19 @@ export class DirectoryService {
       await this.directoryRepository.findOrganizationVitrineGalleryItemsPublic(
         id,
       );
+
+    const showModerationForOwner =
+      isOwner &&
+      row.publicationModerationStatus !== PublicationModerationStatus.approved;
+
     return {
       ...base,
       staff,
       clientsCount,
       vitrineGalleryItems,
+      ...(showModerationForOwner
+        ? { publicationModerationStatus: row.publicationModerationStatus }
+        : {}),
     };
   }
 
@@ -982,10 +1023,14 @@ export class DirectoryService {
     _locale: ApiLocale,
     organizationId: string,
     options: { cursor: string | null; limit: number },
+    viewerUserId?: string | null,
   ): Promise<DirectoryReviewsListResponseDto | null> {
-    const org =
-      await this.directoryRepository.findActiveOrganizationId(organizationId);
-    if (!org) {
+    const can =
+      await this.directoryRepository.canViewerAccessOrganizationReviews(
+        organizationId,
+        viewerUserId ?? null,
+      );
+    if (!can) {
       return null;
     }
     const rawCursor = options.cursor?.trim() || null;
@@ -1002,6 +1047,7 @@ export class DirectoryService {
       organizationId,
       limit: limit + 1,
       cursor: decoded,
+      viewerUserId: viewerUserId ?? null,
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
@@ -1017,6 +1063,12 @@ export class DirectoryService {
         rating: r.rating,
         comment: r.comment,
         createdAt: r.createdAt.toISOString(),
+        ...(r.publicationModerationStatus !==
+        PublicationModerationStatus.approved
+          ? {
+              publicationModerationStatus: r.publicationModerationStatus,
+            }
+          : {}),
       })),
       cursorPage: { nextCursor, hasMore },
     };
@@ -1029,10 +1081,13 @@ export class DirectoryService {
     _locale: ApiLocale,
     specialistId: string,
     options: { cursor: string | null; limit: number },
+    viewerUserId?: string | null,
   ): Promise<DirectoryReviewsListResponseDto | null> {
-    const spec =
-      await this.directoryRepository.findActiveSpecialistId(specialistId);
-    if (!spec) {
+    const can = await this.directoryRepository.canViewerAccessSpecialistReviews(
+      specialistId,
+      viewerUserId ?? null,
+    );
+    if (!can) {
       return null;
     }
     const rawCursor = options.cursor?.trim() || null;
@@ -1049,6 +1104,7 @@ export class DirectoryService {
       specialistId,
       limit: limit + 1,
       cursor: decoded,
+      viewerUserId: viewerUserId ?? null,
     });
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
@@ -1064,6 +1120,12 @@ export class DirectoryService {
         rating: r.rating,
         comment: r.comment,
         createdAt: r.createdAt.toISOString(),
+        ...(r.publicationModerationStatus !==
+        PublicationModerationStatus.approved
+          ? {
+              publicationModerationStatus: r.publicationModerationStatus,
+            }
+          : {}),
       })),
       cursorPage: { nextCursor, hasMore },
     };

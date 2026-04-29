@@ -10,6 +10,8 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
       SELECT 1
       FROM "SpecialistOrganizationEmployment" e
       INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
+      INNER JOIN "User" usr ON usr.id = sp."userId"
+        AND usr."nameModerationStatus" = 'approved'::"PublicationModerationStatus"
       INNER JOIN "Service" s ON s."specialistId" = e."specialistId"
         AND s."categoryId" = osc."serviceCategoryId"
         AND s."deletedAt" IS NULL
@@ -43,11 +45,14 @@ export async function queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecial
       SELECT DISTINCT o.id::text AS id
       FROM "Organization" o
       WHERE o."deletedAt" IS NULL
+        AND o."publicationModerationStatus" = 'approved'::"PublicationModerationStatus"
       ${restrict}
       AND EXISTS (
         SELECT 1
         FROM "SpecialistOrganizationEmployment" e
         INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
+        INNER JOIN "User" usr ON usr.id = sp."userId"
+          AND usr."nameModerationStatus" = 'approved'::"PublicationModerationStatus"
         WHERE e."organizationId" = o.id
           AND e."isActive" = true
           AND sp."listedInDirectory" = true

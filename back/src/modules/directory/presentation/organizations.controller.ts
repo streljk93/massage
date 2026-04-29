@@ -14,6 +14,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
@@ -174,10 +175,18 @@ export class OrganizationsController {
   }
 
   @Get(':id/reviews')
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Отзывы о салоне',
     description:
       'Список `OrganizationReview` для витрины (курсор). Отдельно от отзывов о мастерах (`SpecialistReview`).',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: 'UUID организации (салона)',
+    schema: { type: 'string', format: 'uuid' },
   })
   @ApiLocaleQueryDocs()
   @ApiQuery({
@@ -198,6 +207,7 @@ export class OrganizationsController {
     description: 'Неверный формат locale, limit или cursor',
   })
   async listReviews(
+    @Req() req: AuthedOrGuest,
     @Param('id', ParseUUIDPipe) id: string,
     @RequestLocale() locale: ApiLocale,
     @Query('cursor') cursor?: string,
@@ -210,6 +220,7 @@ export class OrganizationsController {
         cursor: cursor ?? null,
         limit: parseDirectoryListLimit(limitRaw),
       },
+      req.user?.id ?? null,
     );
     if (!row) {
       throw new NotFoundException({
@@ -221,10 +232,18 @@ export class OrganizationsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Организация по id',
     description:
       'Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: 'UUID организации (салона)',
+    schema: { type: 'string', format: 'uuid' },
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: organizationDetailResponseSchema })
@@ -233,10 +252,15 @@ export class OrganizationsController {
     description: 'Неверный формат locale или id',
   })
   async getById(
+    @Req() req: AuthedOrGuest,
     @Param('id', ParseUUIDPipe) id: string,
     @RequestLocale() locale: ApiLocale,
   ): Promise<OrganizationDetailResponseDto> {
-    const row = await this.directoryService.getOrganizationById(locale, id);
+    const row = await this.directoryService.getOrganizationById(
+      locale,
+      id,
+      req.user?.id ?? null,
+    );
     if (!row) {
       throw new NotFoundException({
         code: 'ORG_NOT_FOUND',

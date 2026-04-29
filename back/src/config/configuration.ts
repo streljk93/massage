@@ -1,3 +1,4 @@
+import { DEFAULT_OLLAMA_MODERATION_MODEL } from './moderation-defaults.const';
 import { DEFAULT_ADDRESS_PROVIDER_ORDER } from '../modules/address/domain/address-providers.const';
 
 const nodeEnv = process.env.NODE_ENV ?? 'development';
@@ -5,6 +6,18 @@ const nodeEnv = process.env.NODE_ENV ?? 'development';
 function positiveInt(raw: string | undefined, fallback: number): number {
   const v = Number(raw);
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
+}
+
+/** Порог NSFW (картинки): 0..1, по умолчанию 0.5 (выше → ручная проверка). NudeNet даёт ~0..1 по «телесным» классам; при необходимости MODERATION_IMAGE_UNSAFE_THRESHOLD=0.65. */
+function moderationUnsafeThreshold(
+  raw: string | undefined,
+  fallback: number,
+): number {
+  const v = Number(raw);
+  if (!Number.isFinite(v)) {
+    return fallback;
+  }
+  return Math.min(0.99, Math.max(0.01, v));
 }
 
 export default () => ({
@@ -178,6 +191,57 @@ export default () => ({
         }
         return 'ServicesApp/1.0 (address module; Nominatim; configure ADDRESS_NOMINATIM_USER_AGENT in production)';
       })(),
+    },
+  },
+  /** Redis: очереди BullMQ (фоновая модерация при `MODERATION_QUEUE_ENABLED` не `false`). */
+  redis: {
+    host: process.env.REDIS_HOST?.trim() ?? '127.0.0.1',
+    port: positiveInt(process.env.REDIS_PORT, 6379),
+    password: process.env.REDIS_PASSWORD?.trim() ?? '',
+  },
+  /**
+   * Предмодерация контента (Ollama в Docker / отдельный хост). Без доступного API новый UGC уходит в очередь на ручную проверку.
+   */
+  moderation: {
+    /** `false` у `MODERATION_QUEUE_ENABLED` — без BullMQ: синхронно в HTTP, без Redis. */
+    useContentQueue: process.env.MODERATION_QUEUE_ENABLED !== 'false',
+    ollamaBaseUrl: (process.env.OLLAMA_BASE_URL ?? '').trim(),
+    ollamaModel: (
+      process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODERATION_MODEL
+    ).trim(),
+    /** HTTP-таймаут к Ollama /api/chat. Несколько текстовых полей + локальный CPU часто дают >25 с. */
+    requestTimeoutMs: positiveInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS, 90_000),
+    /**
+     * Автомодерация **только изображений** витрины: контейнер `image-moderation` (POST …/v1/score).
+     * Тексты по-прежнему через Ollama — картинки туда не передаются.
+     * `IMAGE_MODERATION_BASE_URL` не задан (undefined) → в non-production localhost:8085; пустая строка явно отключает; в production без URL — галерея в ручную очередь.
+     */
+    imageModeration: {
+      /** Пустая строка в .env явно отключает. Не задано — в non-production см. ниже (локальный :8085). */
+      baseUrl: (() => {
+        const raw = process.env.IMAGE_MODERATION_BASE_URL;
+        if (raw !== undefined) {
+          return raw.trim();
+        }
+        if (process.env.NODE_ENV === 'production') {
+          return '';
+        }
+        /* Локально: `docker compose up image-moderation` пробрасывает 8085 на хост; совпадает с `scripts/init-project.mjs`. */
+        return 'http://127.0.0.1:8085';
+      })(),
+      /** Origin Nest для GET `/v1/files/...`; контейнер `image-moderation` должен достучаться до хоста (не 127.0.0.1 внутри контейнера). В compose задаётся `http://back:3001`; локально см. `.env.example`. */
+      fileFetchOrigin: (
+        process.env.MODERATION_FILE_FETCH_ORIGIN?.trim() ||
+        `http://host.docker.internal:${process.env.PORT ?? '3001'}`
+      ).replace(/\/$/, ''),
+      unsafeThreshold: moderationUnsafeThreshold(
+        process.env.MODERATION_IMAGE_UNSAFE_THRESHOLD,
+        0.5,
+      ),
+      requestTimeoutMs: positiveInt(
+        process.env.MODERATION_IMAGE_REQUEST_TIMEOUT_MS,
+        60_000,
+      ),
     },
   },
 });

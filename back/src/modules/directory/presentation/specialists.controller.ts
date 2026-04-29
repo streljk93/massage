@@ -14,6 +14,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
@@ -199,10 +200,18 @@ export class SpecialistsController {
   }
 
   @Get(':id/reviews')
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Отзывы о специалисте',
     description:
       'Список `SpecialistReview` (курсор). Отдельно от отзывов о салоне (`OrganizationReview`).',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: 'UUID специалиста',
+    schema: { type: 'string', format: 'uuid' },
   })
   @ApiLocaleQueryDocs()
   @ApiQuery({
@@ -223,15 +232,21 @@ export class SpecialistsController {
     description: 'Неверный формат locale, limit или cursor',
   })
   async listReviews(
+    @Req() req: AuthedOrGuest,
     @Param('id', ParseUUIDPipe) id: string,
     @RequestLocale() locale: ApiLocale,
     @Query('cursor') cursor?: string,
     @Query('limit') limitRaw?: string,
   ): Promise<DirectoryReviewsListResponseDto> {
-    const row = await this.directoryService.listSpecialistReviews(locale, id, {
-      cursor: cursor ?? null,
-      limit: parseDirectoryListLimit(limitRaw),
-    });
+    const row = await this.directoryService.listSpecialistReviews(
+      locale,
+      id,
+      {
+        cursor: cursor ?? null,
+        limit: parseDirectoryListLimit(limitRaw),
+      },
+      req.user?.id ?? null,
+    );
     if (!row) {
       throw new NotFoundException({
         code: 'SPECIALIST_NOT_FOUND',
@@ -242,9 +257,17 @@ export class SpecialistsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAccessOptionalGuard)
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: 'Специалист по id',
     description: 'Профиль мастера: те же поля, что в списке специалистов.',
+  })
+  @ApiParam({
+    name: 'id',
+    required: true,
+    description: 'UUID специалиста',
+    schema: { type: 'string', format: 'uuid' },
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: specialistListItemSchema })
@@ -253,10 +276,15 @@ export class SpecialistsController {
     description: 'Неверный формат locale или id',
   })
   async getById(
+    @Req() req: AuthedOrGuest,
     @Param('id', ParseUUIDPipe) id: string,
     @RequestLocale() locale: ApiLocale,
   ): Promise<SpecialistListItemDto> {
-    const row = await this.directoryService.getSpecialistById(locale, id);
+    const row = await this.directoryService.getSpecialistById(
+      locale,
+      id,
+      req.user?.id ?? null,
+    );
     if (!row) {
       throw new NotFoundException({
         code: 'SPECIALIST_NOT_FOUND',

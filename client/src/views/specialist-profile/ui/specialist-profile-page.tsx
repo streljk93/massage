@@ -12,6 +12,7 @@ import {
   MessageSquare,
   PackageOpen,
   Phone,
+  ShieldAlert,
   Users,
 } from "lucide-react";
 import { useLocale, useFormatter, useTranslations } from "next-intl";
@@ -415,6 +416,33 @@ export function SpecialistProfilePage({
             </div>
           </div>
         </div>
+
+        {(profile.workplacePublicationModerationStatus === "pending_review" ||
+          profile.workplacePublicationModerationStatus === "rejected") && (
+          <div
+            className="relative z-10 mx-auto w-full max-w-lg px-4 pb-2"
+            role="status"
+          >
+            <div
+              className={cn(
+                "flex gap-2 rounded-xl border px-3 py-2.5 text-sm leading-snug",
+                profile.workplacePublicationModerationStatus === "rejected"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive-foreground"
+                  : "border-amber-500/35 bg-amber-500/10 text-foreground",
+              )}
+            >
+              <ShieldAlert
+                className="mt-0.5 size-4 shrink-0 opacity-90"
+                aria-hidden
+              />
+              <p className="min-w-0">
+                {profile.workplacePublicationModerationStatus === "rejected"
+                  ? t("workplaceModerationRejected")
+                  : t("workplaceModerationPending")}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Основной блок: одна карточка на контент */}
         <div className="relative z-10 mx-auto mt-4 w-full max-w-lg px-4">

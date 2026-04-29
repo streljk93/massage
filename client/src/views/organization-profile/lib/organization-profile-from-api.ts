@@ -76,5 +76,9 @@ export function organizationProfileFromApiDetail(
     slotCalendarDates,
     specialists,
     vitrineGallery,
+    ...(detail.publicationModerationStatus !== undefined &&
+    detail.publicationModerationStatus !== "approved"
+      ? { publicationModerationStatus: detail.publicationModerationStatus }
+      : {}),
   };
 }

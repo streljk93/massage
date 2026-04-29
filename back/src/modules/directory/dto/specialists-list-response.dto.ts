@@ -1,3 +1,4 @@
+import type { PublicationModerationStatus } from '@prisma/client';
 import type { ListingSlotGroupSeed } from '../domain/listing-slot-groups';
 import type { CursorPageMetaDto } from './cursor-page.dto';
 import type { DirectoryCategoryTagDto } from './directory-category-tag.dto';
@@ -67,6 +68,10 @@ export type SpecialistListItemDto = {
     id: string;
     name: string;
   } | null;
+  /**
+   * Только для самого специалиста: статус модерации текущего салона во витрине.
+   */
+  activeWorkplacePublicationModerationStatus?: PublicationModerationStatus;
 };
 
 export type SpecialistsListResponseDto = {

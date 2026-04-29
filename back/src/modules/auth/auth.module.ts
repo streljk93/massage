@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MailModule } from '../../infrastructure/mail/mail.module';
+import { ModerationModule } from '../moderation/moderation.module';
 import { AuthService } from './application/auth.service';
 import { PendingRegistrationRepository } from './infrastructure/pending-registration.repository';
 import { PasswordHasher } from './infrastructure/password-hasher';
@@ -14,6 +15,7 @@ import { AuthController } from './presentation/auth.controller';
   imports: [
     ConfigModule,
     MailModule,
+    ModerationModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

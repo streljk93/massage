@@ -88,7 +88,7 @@ export const specialistMyOrganizationsResponseSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'name', 'role', 'isActiveWorkplace'],
+        required: ['id', 'name', 'role', 'isActiveWorkplace', 'publicationModerationStatus'],
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
@@ -101,6 +101,12 @@ export const specialistMyOrganizationsResponseSchema = {
             type: 'boolean',
             description:
               'Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.',
+          },
+          publicationModerationStatus: {
+            type: 'string',
+            enum: ['approved', 'pending_review', 'rejected'],
+            description:
+              'Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона.',
           },
         },
       },

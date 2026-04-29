@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepository } from '../../auth/infrastructure/user.repository';
+import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import type { PatchMeBody } from '../dto/patch-me-body.schema';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly contentModeration: ContentModerationService,
+  ) {}
 
   async getMe(userId: string) {
     const user = await this.userRepository.findActiveById(userId);
@@ -26,6 +30,7 @@ export class UsersService {
   }
 
   async patchMe(userId: string, body: PatchMeBody) {
+    const prev = await this.userRepository.findActiveById(userId);
     const updated = await this.userRepository.updateProfile(userId, {
       name: body.name,
       avatarUrl: body.avatarUrl,
@@ -38,6 +43,16 @@ export class UsersService {
         code: 'USER_NOT_FOUND',
         message: 'User not found',
       });
+    }
+    if (
+      prev != null &&
+      body.name !== undefined &&
+      body.name.trim() !== prev.name.trim()
+    ) {
+      await this.contentModeration.moderateDisplayNameAfterPatch(
+        userId,
+        updated.name,
+      );
     }
     return {
       id: updated.id,

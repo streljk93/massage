@@ -7,6 +7,11 @@ export type DirectoryReviewItemDto = {
   comment: string | null;
   /** ISO-8601 */
   createdAt: string;
+  /**
+   * Только для отзыва автора, пока текст не одобрен: `pending_review` / `rejected`.
+   * Для гостей в ленте всегда одобренные отзывы — поле отсутствует.
+   */
+  publicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
 };
 
 export type DirectoryReviewsListResponseDto = {

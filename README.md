@@ -21,8 +21,8 @@ npm run init
 1. Устанавливает зависимости в `back/` и `client/`
 2. Создаёт в корне файл **`.env`** с `JWT_SECRET` и `AUTH_SECRET` (для `docker compose`), если их ещё нет
 3. При необходимости дописывает **`client/.env.local`**: `AUTH_SECRET` и `AUTH_BACKEND_URL=http://localhost:3001`
-4. Поднимает стек: **`docker compose up --build -d`** (Postgres, **MinIO**, **MailHog**, `back`, `client`)
-5. Ждёт готовности **PostgreSQL**, **MinIO** (S3 API) и **MailHog** (веб-интерфейс :8025), при необходимости дописывает **`back/.env`**: `S3_*` для `http://127.0.0.1:9000` и **`SMTP_*` / `MAIL_FROM`** (исходящие письма в dev с хоста бэка уходят в MailHog на `127.0.0.1:1025`, см. `back/.env.example`)
+4. Поднимает стек **`docker compose up --build -d`**: см. раздел ниже **«Сервисы Docker Compose»** и `docker-compose.yml`
+5. Ждёт готовности ключевых контейнеров (Postgres, MinIO, MailHog, **Redis**, **Ollama**, **image-moderation**) и при необходимости дописывает **`back/.env`** (S3 под MinIO, SMTP под MailHog, Ollama/модерация картинок/Redis под BullMQ при пустых значениях — см. `scripts/init-project.mjs` и `back/.env.example`)
 6. Применяет миграции и **сидирует каталог по умолчанию** (большая категория «Массаж» и подкатегории — см. `back/prisma/seed.mjs`)
 7. Выполняет **`openapi:sync`** (экспорт OpenAPI + генерация typed SDK на клиенте; нужен доступ к БД на `localhost:5432`)
 
@@ -36,6 +36,26 @@ npm run init
 | PostgreSQL | `localhost:5432` (логин/пароль/БД — в `docker-compose.yml`) |
 | MinIO (файлы, S3 API) | http://localhost:9000 • консоль http://localhost:9001 (`minioadmin` / `minioadmin`) |
 | **MailHog** (входящие письма в dev) | http://localhost:8025 — SMTP `127.0.0.1:1025` (или `mailhog:1025` из контейнера `back`) |
+| **Ollama** (предмодерация текста UGC для Nest) | с хоста: **http://localhost:11435** (:11434 внутри образа; не конфликтует с нативным Ollama на :11434) |
+| **image-moderation** (NSFW score для галереи) | HTTP **localhost:8085** (`POST /v1/score`), код в `docker/nsfw-image-moderation/` |
+| **Redis** (очереди BullMQ для фон модерации) | с хоста: **localhost:6379**, том данных `redis_data`; внутри compose `back` ходит по имени **`redis`** |
+
+### Сервисы Docker Compose (контейнеры)
+
+Образ приложения задаёт **`docker-compose.yml`** (имя проекта Compose: `services-app`). Кратко:
+
+| Контейнер / сервис | Назначение |
+|--------------------|-----------|
+| **postgres** | БД приложения (`services`), при необходимости только его: `docker compose up postgres -d`. |
+| **minio** | Объектное хранилище (S3-совместимый API для файлов приложения). |
+| **redis** | Брокер **BullMQ**: фон модерации профиля организации после онбординга; без него включите синхронный режим в `back`: `MODERATION_QUEUE_ENABLED=false`. |
+| **ollama** | Локальная LLM для предмодерации **текста** через `OLLAMA_BASE_URL` у Nest (модель — `scripts/init-project.mjs`, entrypoint образа). |
+| **image-moderation** | Отдельный HTTP-сервис для **изображений** витрины (бинарный скоринг; не смешивать API с Ollama). Собирается из `docker/nsfw-image-moderation/`. |
+| **mailhog** | Перехват исходящей почты в dev (OTP и т.д.). |
+| **back** | Nest API; зависит от БД, MinIO, Ollama, image-moderation, MailHog и **Redis** (последний со **healthcheck**). |
+| **client** | Next.js во фронтенд-слое приложения (зависит от `back`). |
+
+Проброс портов и переменные по умолчанию — в **`docker-compose.yml`**; если Nest запущен **на хосте** без контейнеров, см. **`back/.env.example`** (`REDIS_*`, `OLLAMA_*`, `IMAGE_MODERATION_*`).
 
 **Почта и регистрация с OTP:** в **development** бэк шлёт письма **только по SMTP** (в т.ч. в MailHog); в **production** — **только через Resend** (`RESEND_API_KEY`), SMTP для OTP тогда не используется. Реализация: `back/src/infrastructure/mail/mail.service.ts`, переменные — `back/.env.example`.
 
@@ -94,20 +114,23 @@ npm run openapi:sync
 
 | Файл | Назначение |
 |------|------------|
-| **Корень `.env`** | Подхватывает Docker Compose для `${JWT_SECRET}`, `${AUTH_SECRET}`. Генерация: `npm run docker:env`. В git **не** коммитится. Шаблон: `.env.example`. |
-| **`client/.env.local`** | Локальный Next (в т.ч. Auth.js `AUTH_SECRET`, `AUTH_BACKEND_URL`). Шаблон: `client/.env.example`. |
-| **`back/.env`** | API Nest: `DATABASE_URL`, `JWT_SECRET`, S3, почта. Для **dev** после `init` часто появляются `S3_*` и `SMTP_*` под MinIO и MailHog; для **prod** — `RESEND_API_KEY` и `MAIL_FROM`. Подробно: `back/.env.example`. |
+| **Корень `.env` / `.env.example`** | Общие для compose секреты: `JWT_SECRET` (Nest) и `AUTH_SECRET` (Auth.js в Next). `npm run docker:env` пишет в корень `.env` (при первом запуске копирует структуру из `.env.example`). Файла `.env` в git нет. |
+| **`client/.env.local`** | Локальный Next (`AUTH_BACKEND_URL`, `NEXT_PUBLIC_*` и т.д.). `AUTH_SECRET` дублируйте из корня или через `npm run auth:secret`. Шаблон: `client/.env.example`. |
+| **`back/.env`** | Только параметры Nest: `DATABASE_URL`, S3, модерация, почта. **`JWT_SECRET`** для локального `start:dev` — тот же, что в корневом `.env` после `docker:env`; в шаблоне указано в блоке Core. Подробно: `back/.env.example`. |
 
 Секреты для сессий: из корня можно выполнить `npm run auth:secret` или `npm run auth:secret:write` (дописать в `client/.env.local`).
 
 ---
 
-## Данные PostgreSQL в Docker
+## Данные томов Docker
 
-Том **`postgres_data`** сохраняет данные между перезапусками.
+- **`postgres_data`** — PostgreSQL.
+- **`redis_data`** — Redis (BullMQ; ключи вида `bull:*`).
+- **`minio_data`** — MinIO / объекты S3 приложения.
+- **`ollama_data`** — локальное хранилище моделей Ollama (`ollama/ollama`).
 
-- `docker compose down` — контейнеры останавливаются, **данные БД сохраняются**
-- `docker compose down -v` — удаляет тома → **база обнуляется**
+- `docker compose down` — контейнеры останавливаются, **том named volumes по умолчанию сохраняются**
+- `docker compose down -v` — удаляет тома → обнуляет **БД** и **persist Redis** среди подключённых volumes (осторожно)
 
 ---
 
@@ -115,7 +138,7 @@ npm run openapi:sync
 
 | Команда | Действие |
 |---------|----------|
-| `npm run docker:down` | Остановить Compose-без `-v` |
+| `npm run docker:down` | Остановить Compose **без** `-v` |
 | `npm run docker:logs` | Логи контейнеров |
 | `npm run docker:psql` | Интерактивный `psql` в postgres |
 | `npm run build:all` | Сборка клиента и бэка (см. скрипты в репозитории) |

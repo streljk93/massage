@@ -9,7 +9,9 @@
         "loading": "Loading…",
         "empty": "No reviews yet",
         "emptyHint": "Reviews from clients will appear here.",
-        "commentHeading": "Comment"
+        "commentHeading": "Comment",
+        "reviewPending": "Under review",
+        "reviewRejected": "Not published"
       }
     },
     "vi": {
@@ -21,7 +23,9 @@
         "loading": "Đang tải…",
         "empty": "Chưa có đánh giá",
         "emptyHint": "Đánh giá từ khách hàng sẽ hiển thị tại đây.",
-        "commentHeading": "Bình luận"
+        "commentHeading": "Bình luận",
+        "reviewPending": "Đang duyệt",
+        "reviewRejected": "Không hiển thị"
       }
     },
     "ru": {
@@ -33,7 +37,9 @@
         "loading": "Загрузка…",
         "empty": "Пока нет отзывов",
         "emptyHint": "Отзывы клиентов появятся здесь.",
-        "commentHeading": "Комментарий"
+        "commentHeading": "Комментарий",
+        "reviewPending": "На проверке",
+        "reviewRejected": "Не опубликован"
       }
     }
   }

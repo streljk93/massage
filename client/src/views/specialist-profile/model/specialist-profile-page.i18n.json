@@ -35,7 +35,9 @@
         "durationMin": "{n} min",
         "booking": "Booking",
         "bookingAriaLoading": "Sending booking…",
-        "bookingSuccess": "Booking confirmed"
+        "bookingSuccess": "Booking confirmed",
+        "workplaceModerationPending": "Your current salon profile is awaiting moderation — only you see this preview; it is hidden from clients until approved.",
+        "workplaceModerationRejected": "The platform did not approve your current salon profile for publication. Only you still see this view; guests do not."
       }
     },
     "vi": {
@@ -73,7 +75,9 @@
         "durationMin": "{n} phút",
         "booking": "Đặt lịch",
         "bookingAriaLoading": "Đang gửi đặt lịch…",
-        "bookingSuccess": "Đã đặt lịch thành công"
+        "bookingSuccess": "Đã đặt lịch thành công",
+        "workplaceModerationPending": "Hồ sơ salon hiện tại của bạn đang chờ duyệt — chỉ bạn xem được bản xem trước; khách sẽ không thấy cho đến khi được phê duyệt.",
+        "workplaceModerationRejected": "Nền tảng chưa duyệt hồ sơ salon của bạn để hiển thị công khai. Chỉ bạn còn thấy phiên này; khách không thấy."
       }
     },
     "ru": {
@@ -111,7 +115,9 @@
         "durationMin": "{n} мин",
         "booking": "Записаться",
         "bookingAriaLoading": "Отправляем запись…",
-        "bookingSuccess": "Запись создана"
+        "bookingSuccess": "Запись создана",
+        "workplaceModerationPending": "Текущий профиль вашего салона на модерации — предпросмотр видите только вы, для клиентов витрина скрыта до одобрения.",
+        "workplaceModerationRejected": "Текущий профиль вашего салона не допущен к публикации. Этот просмотр видите только вы; гости салон не увидят."
       }
     }
   }

@@ -53,7 +53,9 @@
           "footMassage": "Foot massage",
           "relaxMassage": "Relax massage"
         },
-        "booking": "Booking"
+        "booking": "Booking",
+        "moderationPending": "This salon profile is still under moderation — only you see this preview; guests will not find it in search until it is approved.",
+        "moderationRejected": "This salon profile was not approved for publication. Only you still see this view; guests do not."
       }
     },
     "vi": {
@@ -109,7 +111,9 @@
           "footMassage": "Massage chân",
           "relaxMassage": "Massage thư giãn"
         },
-        "booking": "Đặt lịch"
+        "booking": "Đặt lịch",
+        "moderationPending": "Hồ sơ salon của bạn vẫn đang được kiể duyệt — chỉ mình bạn xem trước; khách sẽ không thấy trên phần tìm kiếm cho đến khi được phê duyệt.",
+        "moderationRejected": "Hồ sơ salon của bạn chưa được phép đăng công khai. Chỉ bạn còn thấy phiên này; khách không thấy."
       }
     },
     "ru": {
@@ -165,7 +169,9 @@
           "footMassage": "Массаж стоп",
           "relaxMassage": "Расслабляющий массаж"
         },
-        "booking": "Записаться"
+        "booking": "Записаться",
+        "moderationPending": "Профиль салона всё ещё на модерации — это предпросмотр только для вас; в поиске и каталоге салон скрыт до одобрения.",
+        "moderationRejected": "Профиль салона не допущен к публикации. Вы по-прежнему видите этот экран; для гостей салон недоступен."
       }
     }
   }

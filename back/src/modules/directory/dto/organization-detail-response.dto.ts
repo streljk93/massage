@@ -1,3 +1,4 @@
+import type { PublicationModerationStatus } from '@prisma/client';
 import type { OrganizationListItemDto } from './organizations-list-response.dto';
 import type { SpecialistBookableServiceDto } from './specialists-list-response.dto';
 
@@ -32,4 +33,8 @@ export type OrganizationDetailResponseDto = OrganizationListItemDto & {
   clientsCount: number;
   /** Фото витрины (пусто, если галерея не создана). */
   vitrineGalleryItems: OrganizationVitrineGalleryItemDto[];
+  /**
+   * Только для владельца салона, пока профиль не одобрен: статус модерации витрины.
+   */
+  publicationModerationStatus?: PublicationModerationStatus;
 };

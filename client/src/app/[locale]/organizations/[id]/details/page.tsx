@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
+import { auth } from "@/auth";
 import {
   createServerSdkClient,
   organizationsGetById,
@@ -16,7 +17,8 @@ type Props = {
 export default async function Page({ params }: Props) {
   const { id } = await params;
   const locale = (await getLocale()) as AppLocale;
-  const sdk = createServerSdkClient();
+  const session = await auth();
+  const sdk = createServerSdkClient({ accessToken: session?.accessToken });
 
   if (!sdk) {
     notFound();
@@ -27,8 +29,7 @@ export default async function Page({ params }: Props) {
     path: { id },
     query: { locale },
     fetch: serverSdkFetchNoStore,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- SDK path typing
-  } as any);
+  });
 
   if (res.error || !res.data) {
     notFound();

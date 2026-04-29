@@ -4,6 +4,7 @@ import {
   GalleryMediaKind,
   GalleryOwnerKind,
   Prisma,
+  PublicationModerationStatus,
 } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
@@ -33,6 +34,63 @@ import type {
   DecodedSpecialistListCursor,
   DecodedSpecialistOffsetCursor,
 } from '../../../common/pagination/directory-list-cursor-codec';
+
+/** Гость видит только одобренный текст; автор — ещё и свои отзывы на модерации / отклонённые. */
+function moderationWhereOrganizationReview(
+  viewerUserId: string | null,
+): Prisma.OrganizationReviewWhereInput {
+  if (viewerUserId == null) {
+    return {
+      publicationModerationStatus: PublicationModerationStatus.approved,
+    };
+  }
+  return {
+    OR: [
+      { publicationModerationStatus: PublicationModerationStatus.approved },
+      {
+        AND: [
+          { authorUserId: viewerUserId },
+          {
+            publicationModerationStatus: {
+              in: [
+                PublicationModerationStatus.pending_review,
+                PublicationModerationStatus.rejected,
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function moderationWhereSpecialistReview(
+  viewerUserId: string | null,
+): Prisma.SpecialistReviewWhereInput {
+  if (viewerUserId == null) {
+    return {
+      publicationModerationStatus: PublicationModerationStatus.approved,
+    };
+  }
+  return {
+    OR: [
+      { publicationModerationStatus: PublicationModerationStatus.approved },
+      {
+        AND: [
+          { authorUserId: viewerUserId },
+          {
+            publicationModerationStatus: {
+              in: [
+                PublicationModerationStatus.pending_review,
+                PublicationModerationStatus.rejected,
+              ],
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 const serviceCategoryWithLocales = {
   include: {
@@ -66,6 +124,7 @@ const specialistActiveOrganizationInclude = {
     phone: true,
     listingWorkdayStartMinute: true,
     listingWorkdayEndMinute: true,
+    publicationModerationStatus: true,
   },
 } as const;
 
@@ -313,6 +372,13 @@ export class DirectoryRepository {
         deletedAt: null,
         listedInDirectory: true,
         activeOrganizationId: { not: null },
+        user: {
+          nameModerationStatus: PublicationModerationStatus.approved,
+        },
+        activeOrganization: {
+          deletedAt: null,
+          publicationModerationStatus: PublicationModerationStatus.approved,
+        },
       },
     ];
     if (radius != null) {
@@ -341,7 +407,12 @@ export class DirectoryRepository {
     radius: DirectoryListRadiusFilter | null,
   ): Promise<Prisma.OrganizationWhereInput[] | null> {
     let radiusIds: string[] | null = null;
-    const andParts: Prisma.OrganizationWhereInput[] = [{ deletedAt: null }];
+    const andParts: Prisma.OrganizationWhereInput[] = [
+      {
+        deletedAt: null,
+        publicationModerationStatus: PublicationModerationStatus.approved,
+      },
+    ];
     if (radius != null) {
       const inRadius = await findOrganizationIdsWithinRadiusMeters(
         this.prisma,
@@ -790,9 +861,43 @@ export class DirectoryRepository {
       return null;
     }
     return this.prisma.organization.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        publicationModerationStatus: PublicationModerationStatus.approved,
+      },
       include: organizationListInclude(),
     });
+  }
+
+  /**
+   * Карточка салона: публично — только витрина + `approved`; владелец (`ownerUserId`) видит
+   * профиль независимо от модерации (для превью и статуса).
+   */
+  async findOrganizationByIdForDirectoryDetail(
+    id: string,
+    viewerUserId: string | null,
+  ): Promise<OrganizationListRow | null> {
+    const head = await this.prisma.organization.findFirst({
+      where: { id, deletedAt: null },
+      select: { ownerUserId: true },
+    });
+    if (!head) {
+      return null;
+    }
+    const isOwner =
+      viewerUserId != null &&
+      head.ownerUserId != null &&
+      head.ownerUserId === viewerUserId;
+
+    if (isOwner) {
+      return this.prisma.organization.findFirst({
+        where: { id, deletedAt: null },
+        include: organizationListInclude(),
+      });
+    }
+
+    return this.findOrganizationById(id);
   }
 
   /**
@@ -834,19 +939,31 @@ export class DirectoryRepository {
       return Promise.resolve([]);
     }
     return this.prisma.organization.findMany({
-      where: { id: { in: eligible }, deletedAt: null },
+      where: {
+        id: { in: eligible },
+        deletedAt: null,
+        publicationModerationStatus: PublicationModerationStatus.approved,
+      },
       include: organizationListInclude(),
     });
   }
 
   findSpecialistById(id: string): Promise<SpecialistListRow | null> {
     return this.prisma.specialist.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        user: { nameModerationStatus: PublicationModerationStatus.approved },
+        activeOrganization: {
+          deletedAt: null,
+          publicationModerationStatus: PublicationModerationStatus.approved,
+        },
+      },
       include: specialistListInclude(),
     });
   }
 
-  /** Витрина: только мастер, участвующий в каталоге (место приёма + флаг). */
+  /** Витрина: только мастер, участвующий в каталоге (место приёма + флаг + модерация). */
   findPublicDirectorySpecialistById(
     id: string,
   ): Promise<SpecialistListRow | null> {
@@ -856,9 +973,41 @@ export class DirectoryRepository {
         deletedAt: null,
         listedInDirectory: true,
         activeOrganizationId: { not: null },
+        user: { nameModerationStatus: PublicationModerationStatus.approved },
+        activeOrganization: {
+          deletedAt: null,
+          publicationModerationStatus: PublicationModerationStatus.approved,
+        },
       },
       include: specialistListInclude(),
     });
+  }
+
+  /**
+   * Профиль специалиста: гость — только публичный каталог (`findPublicDirectorySpecialistById`);
+   * сам пользователь‑мастер видит свой профиль независимо от модерации салона/листа.
+   */
+  async findSpecialistByIdForDirectoryDetail(
+    id: string,
+    viewerUserId: string | null,
+  ): Promise<SpecialistListRow | null> {
+    const head = await this.prisma.specialist.findFirst({
+      where: { id, deletedAt: null },
+      select: { userId: true },
+    });
+    if (!head) {
+      return null;
+    }
+    const isOwner = viewerUserId != null && head.userId === viewerUserId;
+
+    if (isOwner) {
+      return this.prisma.specialist.findFirst({
+        where: { id, deletedAt: null },
+        include: specialistListInclude(),
+      });
+    }
+
+    return this.findPublicDirectorySpecialistById(id);
   }
 
   findSpecialistsByIds(ids: string[]): Promise<SpecialistListRow[]> {
@@ -1021,10 +1170,58 @@ export class DirectoryRepository {
     });
   }
 
+  /**
+   * Список отзывов салона доступен только для опубликованного салона или владельца (профиль скрыт).
+   */
+  async canViewerAccessOrganizationReviews(
+    organizationId: string,
+    viewerUserId: string | null,
+  ): Promise<boolean> {
+    const o = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { ownerUserId: true, publicationModerationStatus: true },
+    });
+    if (!o) {
+      return false;
+    }
+    if (
+      o.publicationModerationStatus === PublicationModerationStatus.approved
+    ) {
+      return true;
+    }
+    return (
+      viewerUserId != null &&
+      o.ownerUserId != null &&
+      o.ownerUserId === viewerUserId
+    );
+  }
+
+  /**
+   * Аналогично салону: публично — профиль есть в каталоге; автор отзыва — всегда.
+   */
+  async canViewerAccessSpecialistReviews(
+    specialistId: string,
+    viewerUserId: string | null,
+  ): Promise<boolean> {
+    const s = await this.prisma.specialist.findFirst({
+      where: { id: specialistId, deletedAt: null },
+      select: { userId: true },
+    });
+    if (!s) {
+      return false;
+    }
+    if (viewerUserId != null && s.userId === viewerUserId) {
+      return true;
+    }
+    return (await this.findPublicDirectorySpecialistById(specialistId)) != null;
+  }
+
   async findOrganizationReviewsPage(args: {
     organizationId: string;
     limit: number;
     cursor: { createdAt: Date; id: string } | null;
+    /** Автор видит свои отзывы с незавершённой модерацией; остальные — только одобренные. */
+    viewerUserId?: string | null;
   }): Promise<
     Array<{
       id: string;
@@ -1032,23 +1229,34 @@ export class DirectoryRepository {
       comment: string | null;
       createdAt: Date;
       authorName: string;
+      publicationModerationStatus: PublicationModerationStatus;
     }>
   > {
-    const base = {
-      organizationId: args.organizationId,
-      deletedAt: null,
+    const moderationWhere = moderationWhereOrganizationReview(
+      args.viewerUserId ?? null,
+    );
+    const identityWhere = {
+      AND: [
+        { organizationId: args.organizationId },
+        { deletedAt: null },
+        moderationWhere,
+      ],
     } satisfies Prisma.OrganizationReviewWhereInput;
     const where: Prisma.OrganizationReviewWhereInput =
       args.cursor == null
-        ? base
+        ? identityWhere
         : {
-            ...base,
-            OR: [
-              { createdAt: { lt: args.cursor.createdAt } },
+            AND: [
+              identityWhere,
               {
-                AND: [
-                  { createdAt: args.cursor.createdAt },
-                  { id: { lt: args.cursor.id } },
+                OR: [
+                  { createdAt: { lt: args.cursor.createdAt } },
+                  {
+                    AND: [
+                      { createdAt: args.cursor.createdAt },
+                      { id: { lt: args.cursor.id } },
+                    ],
+                  },
                 ],
               },
             ],
@@ -1067,6 +1275,7 @@ export class DirectoryRepository {
       comment: r.comment,
       createdAt: r.createdAt,
       authorName: r.author.name,
+      publicationModerationStatus: r.publicationModerationStatus,
     }));
   }
 
@@ -1074,6 +1283,7 @@ export class DirectoryRepository {
     specialistId: string;
     limit: number;
     cursor: { createdAt: Date; id: string } | null;
+    viewerUserId?: string | null;
   }): Promise<
     Array<{
       id: string;
@@ -1081,23 +1291,34 @@ export class DirectoryRepository {
       comment: string | null;
       createdAt: Date;
       authorName: string;
+      publicationModerationStatus: PublicationModerationStatus;
     }>
   > {
-    const base = {
-      specialistId: args.specialistId,
-      deletedAt: null,
+    const moderationWhere = moderationWhereSpecialistReview(
+      args.viewerUserId ?? null,
+    );
+    const identityWhere = {
+      AND: [
+        { specialistId: args.specialistId },
+        { deletedAt: null },
+        moderationWhere,
+      ],
     } satisfies Prisma.SpecialistReviewWhereInput;
     const where: Prisma.SpecialistReviewWhereInput =
       args.cursor == null
-        ? base
+        ? identityWhere
         : {
-            ...base,
-            OR: [
-              { createdAt: { lt: args.cursor.createdAt } },
+            AND: [
+              identityWhere,
               {
-                AND: [
-                  { createdAt: args.cursor.createdAt },
-                  { id: { lt: args.cursor.id } },
+                OR: [
+                  { createdAt: { lt: args.cursor.createdAt } },
+                  {
+                    AND: [
+                      { createdAt: args.cursor.createdAt },
+                      { id: { lt: args.cursor.id } },
+                    ],
+                  },
                 ],
               },
             ],
@@ -1116,6 +1337,7 @@ export class DirectoryRepository {
       comment: r.comment,
       createdAt: r.createdAt,
       authorName: r.author.name,
+      publicationModerationStatus: r.publicationModerationStatus,
     }));
   }
 

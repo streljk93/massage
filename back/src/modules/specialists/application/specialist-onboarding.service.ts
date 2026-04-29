@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { SpecialistWorkplaceJoinRequestStatus } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 import type { PatchSpecialistProfileBody } from '../dto/specialist-body.schema';
 
@@ -8,7 +9,10 @@ type OnboardingStep = 1 | 3 | 4 | 5 | 6;
 
 @Injectable()
 export class SpecialistOnboardingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly contentModeration: ContentModerationService,
+  ) {}
 
   private isProfileComplete(
     user: { name: string; phone: string | null },
@@ -168,6 +172,10 @@ export class SpecialistOnboardingService {
         message: 'Specialist profile not found for this user',
       });
     }
+    const prevUser = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { name: true },
+    });
     await this.prisma.$transaction(async (tx) => {
       const userPatch: { name?: string; phone?: string | null } = {};
       if (body.name != null) {
@@ -233,6 +241,22 @@ export class SpecialistOnboardingService {
         }
       }
     });
+    if (
+      prevUser != null &&
+      body.name !== undefined &&
+      body.name.trim() !== prevUser.name.trim()
+    ) {
+      const saved = await this.prisma.user.findFirst({
+        where: { id: userId, deletedAt: null },
+        select: { name: true },
+      });
+      if (saved?.name != null) {
+        await this.contentModeration.moderateDisplayNameAfterPatch(
+          userId,
+          saved.name,
+        );
+      }
+    }
     return this.mapOnboarding(userId);
   }
 

@@ -28,6 +28,7 @@ export type EntityReviewsInitial = {
     rating: number;
     comment: string | null;
     createdAt: string;
+    publicationModerationStatus?: "approved" | "pending_review" | "rejected";
   }>;
   cursorPage: { nextCursor: string | null; hasMore: boolean };
 };
@@ -81,12 +82,12 @@ export function EntityReviewsPage({
               client,
               path: { id: entityId },
               query: q,
-            } as never)
+            })
           : await specialistsListReviews({
               client,
               path: { id: entityId },
               query: q,
-            } as never);
+            });
       if (res.error || !res.data) {
         return;
       }
@@ -138,10 +139,22 @@ export function EntityReviewsPage({
                 key={r.id}
                 className="overflow-hidden rounded-2xl border border-border/70 bg-card px-4 py-3"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 text-sm font-semibold text-foreground">
-                    {r.authorName}
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    <p className="min-w-0 text-sm font-semibold text-foreground">
+                      {r.authorName}
+                    </p>
+                    {r.publicationModerationStatus === "pending_review" ? (
+                      <span className="inline-flex shrink-0 rounded-md border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-foreground">
+                        {t("reviewPending")}
+                      </span>
+                    ) : null}
+                    {r.publicationModerationStatus === "rejected" ? (
+                      <span className="inline-flex shrink-0 rounded-md border border-destructive/35 bg-destructive/10 px-1.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-destructive-foreground">
+                        {t("reviewRejected")}
+                      </span>
+                    ) : null}
+                  </div>
                   <time
                     className="shrink-0 text-xs text-muted-foreground tabular-nums"
                     dateTime={r.createdAt}

@@ -9,11 +9,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { OAuthProvider, Prisma } from '@prisma/client';
+import { OAuthProvider, Prisma, PublicationModerationStatus } from '@prisma/client';
 import { addMinutes } from 'date-fns';
 import { parseApiLocale } from '../../../common/i18n/api-locale';
 import { MailService } from '../../../infrastructure/mail/mail.service';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import type { AuthResponseDto } from '../dto/auth-response.dto';
 import type { LoginBody } from '../dto/login-body.schema';
 import type { OauthLoginBody } from '../dto/oauth-login-body.schema';
@@ -53,6 +54,7 @@ export class AuthService {
     private readonly pendingRegistration: PendingRegistrationRepository,
     private readonly oauthTokenVerifier: OAuthTokenVerifier,
     private readonly oauthAccountRepository: OAuthAccountRepository,
+    private readonly contentModeration: ContentModerationService,
   ) {}
 
   async register(body: RegisterBody): Promise<RegisterPendingResponseDto> {
@@ -154,11 +156,13 @@ export class AuthService {
             name: pending.name,
             passwordHash: pending.passwordHash,
             emailVerifiedAt: new Date(),
+            nameModerationStatus: PublicationModerationStatus.pending_review,
           },
         });
         await tx.pendingRegistration.delete({ where: { email } });
         return u;
       });
+      void this.contentModeration.moderateDisplayNameInitial(user.id).catch(() => {});
       return this.issueTokens({
         id: user.id,
         email: user.email,
@@ -298,6 +302,7 @@ export class AuthService {
             passwordHash: null,
             avatarUrl: profile.pictureUrl,
             locale,
+            nameModerationStatus: PublicationModerationStatus.pending_review,
           },
         });
         await tx.userOAuthAccount.create({
@@ -309,6 +314,7 @@ export class AuthService {
         });
         return u;
       });
+      void this.contentModeration.moderateDisplayNameInitial(user.id).catch(() => {});
       return this.issueTokens({
         id: user.id,
         email: user.email,

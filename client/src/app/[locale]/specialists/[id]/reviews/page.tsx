@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
+import { auth } from "@/auth";
 import {
   createServerSdkClient,
   specialistsGetById,
@@ -16,7 +17,8 @@ type Props = {
 export default async function Page({ params }: Props) {
   const { id } = await params;
   const locale = (await getLocale()) as AppLocale;
-  const sdk = createServerSdkClient();
+  const session = await auth();
+  const sdk = createServerSdkClient({ accessToken: session?.accessToken });
 
   if (!sdk) {
     notFound();
@@ -28,13 +30,13 @@ export default async function Page({ params }: Props) {
       path: { id },
       query: { locale },
       fetch: serverSdkFetchNoStore,
-    } as never),
+    }),
     specialistsListReviews({
       client: sdk,
       path: { id },
       query: { locale, limit: 20 },
       fetch: serverSdkFetchNoStore,
-    } as never),
+    }),
   ]);
 
   if (detail.error || !detail.data) {

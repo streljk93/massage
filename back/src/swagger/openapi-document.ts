@@ -13,19 +13,23 @@ const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
   },
   {
     name: 'auth',
-    description: 'Вход, регистрация, OAuth, обновление и отзыв сессии, верификация email.',
+    description:
+      'Вход, регистрация, OAuth, обновление и отзыв сессии, верификация email.',
   },
   {
     name: 'users',
-    description: 'Профиль текущего пользователя (аккаунт): имя, аватар, локаль, напоминания.',
+    description:
+      'Профиль текущего пользователя (аккаунт): имя, аватар, локаль, напоминания.',
   },
   {
     name: 'notifications',
-    description: 'Push: регистрация и отзыв FCM-токена для текущего пользователя.',
+    description:
+      'Push: регистрация и отзыв FCM-токена для текущего пользователя.',
   },
   {
     name: 'address',
-    description: 'Подсказки адреса и канонизация (геокодеры на стороне сервера).',
+    description:
+      'Подсказки адреса и канонизация (геокодеры на стороне сервера).',
   },
   {
     name: 'catalog',
@@ -33,7 +37,8 @@ const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
   },
   {
     name: 'directory',
-    description: 'Витрина: общие подсказки для фильтра каталога (без списков сущностей).',
+    description:
+      'Витрина: общие подсказки для фильтра каталога (без списков сущностей).',
   },
   {
     name: 'directory-organizations',
@@ -66,7 +71,8 @@ const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
   },
   {
     name: 'personalization',
-    description: 'Портрет пользователя и рекомендации (частично с опциональным JWT).',
+    description:
+      'Портрет пользователя и рекомендации (частично с опциональным JWT).',
   },
   {
     name: 'advertising',
@@ -79,7 +85,7 @@ const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
   {
     name: 'dev',
     description:
-      'Только вне production: отладочные и тестовые сценарии (смена статуса брони, пересчёт персонализации, FCM и т.д.).',
+      'Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod).',
   },
 ] as const;
 
