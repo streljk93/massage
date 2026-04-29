@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, ChevronRight, Loader2 } from "lucide-react";
+import { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
@@ -9,13 +10,16 @@ import { BusinessEmptyState } from "@/entities/business";
 import {
   createBrowserSdkClient,
   specialistsCabinetGetSpecialistMyOrganizations,
+  specialistsCabinetPatchSpecialistActiveOrganization,
 } from "@/shared/api";
-import { useQuery } from "@tanstack/react-query";
+import { notify } from "@/shared/lib/notifications/notify";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
 
 const ORGS_QK = ["specialistMyOrganizations"] as const;
+const ONB_QK = ["specialistOnboarding"] as const;
 
 function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRoleSpecialist" {
   if (role === "owner") {
@@ -30,8 +34,45 @@ function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRo
 export function BusinessOrganizationsPage() {
   const t = useTranslations("businessAppSubpages");
   const locale = useLocale() as AppLocale;
+  const queryClient = useQueryClient();
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
+
+  const sdk = useMemo(
+    () => createBrowserSdkClient(accessToken, { locale }),
+    [accessToken, locale],
+  );
+
+  const setActiveWorkplaceMutation = useMutation({
+    mutationFn: async (organizationId: string) => {
+      const { data: res, error } = await specialistsCabinetPatchSpecialistActiveOrganization({
+        client: sdk,
+        body: { organizationId },
+      });
+      if (error || !res) {
+        throw error ?? new Error("active-organization");
+      }
+      return res;
+    },
+    onSuccess: async (res) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...ORGS_QK] }),
+        queryClient.invalidateQueries({ queryKey: [...ONB_QK] }),
+      ]);
+      const cancelled = res.cancelledBookingsCount;
+      if (cancelled > 0) {
+        notify.success(
+          t("orgSwitchWorkplaceDoneTitle"),
+          t("orgSwitchWorkplaceCancelledBookings", { count: cancelled }),
+        );
+      } else {
+        notify.success(t("orgSwitchWorkplaceDoneTitle"));
+      }
+    },
+    onError: () => {
+      notify.error(t("orgSwitchWorkplaceError"));
+    },
+  });
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: [...ORGS_QK, accessToken, locale],
@@ -39,7 +80,7 @@ export function BusinessOrganizationsPage() {
       sessionStatus === "authenticated" && typeof accessToken === "string" && accessToken.length > 0,
     queryFn: async () => {
       const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
-        client: createBrowserSdkClient(accessToken, { locale }),
+        client: sdk,
       });
       if (err || !res) {
         throw err ?? new Error("organizations");
@@ -163,6 +204,27 @@ export function BusinessOrganizationsPage() {
                     )}
                   </div>
                 </div>
+                {!org.isActiveWorkplace ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    tone="light"
+                    className="mt-3 h-auto min-h-10 w-full justify-center rounded-xl border border-border py-2 text-[0.9375rem] font-medium whitespace-normal leading-snug"
+                    disabled={
+                      setActiveWorkplaceMutation.isPending &&
+                      setActiveWorkplaceMutation.variables !== org.id
+                    }
+                    aria-label={t("orgSetActiveWorkplaceAria")}
+                    onClick={() => {
+                      void setActiveWorkplaceMutation.mutateAsync(org.id);
+                    }}
+                  >
+                    {setActiveWorkplaceMutation.isPending &&
+                    setActiveWorkplaceMutation.variables === org.id ?
+                      <Loader2 className="size-5 shrink-0 animate-spin" aria-hidden />
+                    : t("orgSetActiveWorkplace")}
+                  </Button>
+                ) : null}
                 <Link
                   href={`/organizations/${org.id}`}
                   className={cn(

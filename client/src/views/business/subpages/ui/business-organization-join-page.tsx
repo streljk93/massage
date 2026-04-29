@@ -9,10 +9,9 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
   createBrowserSdkClient,
+  organizationsCabinetGetWorkplaceOrganizationSearch,
   organizationsCabinetPostRequestWorkplaceJoin,
-  organizationsList,
 } from "@/shared/api";
-import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import { Button, SearchAutocomplete } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
@@ -58,11 +57,10 @@ export function BusinessOrganizationJoinPage() {
     const tmr = setTimeout(() => {
       setOrgPending(true);
       void (async () => {
-        const { data, error } = await organizationsList({
+        const { data, error } = await organizationsCabinetGetWorkplaceOrganizationSearch({
           client: sdk,
           query: {
             q,
-            majorSlug: CATALOG_MAJOR_CATEGORY_SLUG,
             limit: 8,
             locale,
           },

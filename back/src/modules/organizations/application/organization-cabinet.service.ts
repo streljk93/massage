@@ -244,8 +244,9 @@ export class OrganizationCabinetService {
   }
 
   /**
-   * Салоны для выбора места работы (заявка в штат). Без правил публичной витрины —
-   * иначе новые салоны и салоны без мастеров в каталоге не находятся в поиске.
+   * Салоны для выбора места работы (заявка в штат). Без правил публичной витрины
+   * по мастерам/OSC — иначе новые салоны и салоны без мастеров в каталоге не находятся.
+   * В выдаче только организации с **`publicationModerationStatus === approved`** (после модерации публикации).
    */
   async searchOrganizationsForWorkplaceJoin(
     locale: ApiLocale,
@@ -253,7 +254,10 @@ export class OrganizationCabinetService {
     limit: number,
   ): Promise<WorkplaceOrganizationSearchResponseDto> {
     const take = Math.min(Math.max(limit, 1), 50);
-    const where: Prisma.OrganizationWhereInput = { deletedAt: null };
+    const where: Prisma.OrganizationWhereInput = {
+      deletedAt: null,
+      publicationModerationStatus: PublicationModerationStatus.approved,
+    };
     if (q) {
       where.AND = [organizationNonCategoryTextSearchWhere(q, locale)];
     }

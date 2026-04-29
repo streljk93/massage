@@ -66,7 +66,12 @@
         "orgActiveWorkplaceBadge": "Current workplace",
         "orgPublicationPendingBadge": "On moderation",
         "orgPublicationRejectedBadge": "Not published",
-        "orgOpenPublicProfile": "Open public page"
+        "orgOpenPublicProfile": "Open public page",
+        "orgSetActiveWorkplace": "Set as current workplace",
+        "orgSetActiveWorkplaceAria": "Make this salon your current workplace for new bookings and your public listing",
+        "orgSwitchWorkplaceDoneTitle": "Workplace updated",
+        "orgSwitchWorkplaceCancelledBookings": "Active bookings at your previous workplace were canceled: {count}.",
+        "orgSwitchWorkplaceError": "Could not switch workplace. Try again."
       }
     },
     "vi": {
@@ -135,7 +140,12 @@
         "orgActiveWorkplaceBadge": "Nơi làm việc hiện tại",
         "orgPublicationPendingBadge": "Đang kiểm duyệt",
         "orgPublicationRejectedBadge": "Không được công khai",
-        "orgOpenPublicProfile": "Mở trang công khai"
+        "orgOpenPublicProfile": "Mở trang công khai",
+        "orgSetActiveWorkplace": "Đặt làm nơi làm việc hiện tại",
+        "orgSetActiveWorkplaceAria": "Đặt salon này là nơi làm việc hiện tại để nhận lịch mới và hồ sơ công khai",
+        "orgSwitchWorkplaceDoneTitle": "Đã cập nhật nơi làm việc",
+        "orgSwitchWorkplaceCancelledBookings": "Đã hủy {count} lịch hẹn còn hiệu tại salon trước đó.",
+        "orgSwitchWorkplaceError": "Không đổi được nơi làm việc. Thử lại."
       }
     },
     "ru": {
@@ -204,7 +214,12 @@
         "orgActiveWorkplaceBadge": "Текущее место приёма",
         "orgPublicationPendingBadge": "На модерации",
         "orgPublicationRejectedBadge": "Не опубликовано",
-        "orgOpenPublicProfile": "Открыть страницу в витрине"
+        "orgOpenPublicProfile": "Открыть страницу в витрине",
+        "orgSetActiveWorkplace": "Сделать текущим местом приёма",
+        "orgSetActiveWorkplaceAria": "Сделать этот салон текущим местом приёма: новые записи и адрес на витрине",
+        "orgSwitchWorkplaceDoneTitle": "Место приёма обновлено",
+        "orgSwitchWorkplaceCancelledBookings": "На прежнем месте приёма отменено активных записей: {count}.",
+        "orgSwitchWorkplaceError": "Не удалось переключить место приёма. Попробуйте снова."
       }
     }
   }
