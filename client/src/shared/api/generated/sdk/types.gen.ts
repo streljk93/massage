@@ -1545,6 +1545,14 @@ export type OrganizationsListResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            /**
+             * Публичный email салона (если указан).
+             */
+            email?: string | null;
+            /**
+             * Сайт или страница салона (URL со схемой или без).
+             */
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -2456,6 +2464,14 @@ export type OrganizationsGetByIdResponses = {
         city?: string | null;
         addressLine: string | null;
         phone: string | null;
+        /**
+         * Публичный email салона (если указан).
+         */
+        email?: string | null;
+        /**
+         * Сайт или страница салона (URL со схемой или без).
+         */
+        website?: string | null;
         yearsInBusiness: number | null;
         latitude?: number | null;
         longitude?: number | null;
@@ -2743,6 +2759,14 @@ export type PersonalizationGetRecommendationsResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            /**
+             * Публичный email салона (если указан).
+             */
+            email?: string | null;
+            /**
+             * Сайт или страница салона (URL со схемой или без).
+             */
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -3027,6 +3051,14 @@ export type FavoritesListOrganizationsListingResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            /**
+             * Публичный email салона (если указан).
+             */
+            email?: string | null;
+            /**
+             * Сайт или страница салона (URL со схемой или без).
+             */
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;

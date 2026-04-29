@@ -208,38 +208,41 @@ function escapeAttr(value: string) {
 }
 
 /**
- * `dimmed` не в HTML — тот же `L.divIcon` остаётся в кеше, иначе при смене радиуса
- * маркеры и кластер перерисовываются с морганием.
+ * Пин для карты: круг с фото + плавный хвост; якорь — нижняя точка.
+ * Тень общая на обёртке, без SVG filter/ids (не дублируются в DOM клонов маркеров).
  */
-function buildSearchMapPinIcon(
-  selected: boolean,
-  imageSrc: string,
-  rating: number,
-) {
-  const pad = 5;
-  const gap = 6;
-  const avatarSize = selected ? 40 : 34;
-  const ratingText = rating.toFixed(1);
-  const fontSize = 12;
-  const textW = Math.max(30, ratingText.length * 7);
-  const totalW = pad + avatarSize + gap + textW + pad;
-  const totalH = pad * 2 + avatarSize;
-  /** Точка на карте — центр аватара. */
-  const anchorX = pad + avatarSize / 2;
-  const anchorY = pad + avatarSize / 2;
-  const shadow = selected
-    ? "0 2px 10px rgba(0,0,0,.16),0 0 0 2px #fff,0 0 0 4px var(--primary)"
-    : "0 2px 8px rgba(0,0,0,.14)";
+function buildSearchMapPinIcon(selected: boolean, imageSrc: string) {
+  const head = selected ? 46 : 38;
+  /** Ширина / высота хвоста (SVG), пропорционально «голове». */
+  const tailW = Math.round(head * 0.52);
+  const tailH = Math.round(head * 0.34);
+  const overlap = Math.max(5, Math.round(head * 0.14));
   const src = escapeAttr(imageSrc);
+  /** Общая «подкладка» пина (корректный CSS `filter`, не box-shadow). */
+  const pinShellFilter =
+    "drop-shadow(0 2px 5px rgba(15,23,42,0.1)) drop-shadow(0 8px 16px rgba(15,23,42,0.08))";
+  /** Кромка только **внутри** круга (`inset`), иначе внешние кольца рисуются поверх хвоста. */
+  const headInnerEdge = selected
+    ? "inset 0 0 0 4px var(--primary)"
+    : "inset 0 0 0 1px rgba(15,23,42,0.07)";
+  const w = head;
+  const h = head + tailH - overlap;
+  const anchorX = w / 2;
+  const anchorY = h;
+  /** Плавный верх хвоста (к ободку круга), низ — остриё. */
+  const tailPath = "M0 8 Q50 0 100 8 L50 72 Z";
+  const html = `<div style="width:${w}px;height:${h}px;display:flex;flex-direction:column;align-items:center;margin:0;padding:0;background:transparent;box-sizing:border-box;filter:${pinShellFilter}">
+      <div style="position:relative;z-index:2;width:${head}px;height:${head}px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2.5px solid #fff;box-shadow:${headInnerEdge};box-sizing:border-box;background:linear-gradient(180deg,#fafafa 0%,#ececee 100%)">
+        <img src="${src}" alt="" width="${head}" height="${head}" style="display:block;width:100%;height:100%;object-fit:cover"/>
+      </div>
+      <svg width="${tailW}" height="${tailH}" viewBox="0 0 100 72" preserveAspectRatio="xMidYMax meet" aria-hidden="true" style="display:block;margin-top:-${overlap}px;position:relative;z-index:1;flex-shrink:0">
+        <path d="${tailPath}" fill="#ffffff"/>
+      </svg>
+    </div>`;
   return L.divIcon({
     className: "search-map-pin",
-    html: `<div style="display:flex;align-items:center;box-sizing:border-box;gap:${gap}px;width:${totalW}px;height:${totalH}px;padding:${pad}px;background:#fff;border-radius:9999px;box-shadow:${shadow};opacity:1">
-      <div style="width:${avatarSize}px;height:${avatarSize}px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.12)">
-        <img src="${src}" alt="" width="${avatarSize}" height="${avatarSize}" style="display:block;width:100%;height:100%;object-fit:cover"/>
-      </div>
-      <span style="font-weight:600;font-size:${fontSize}px;line-height:1;color:#2f2f2f;white-space:nowrap;font-family:system-ui,sans-serif">${ratingText}</span>
-    </div>`,
-    iconSize: [totalW, totalH],
+    html,
+    iconSize: [w, h],
     iconAnchor: [anchorX, anchorY],
   });
 }
@@ -247,18 +250,14 @@ function buildSearchMapPinIcon(
 const PIN_ICON_CACHE_MAX = 200;
 const searchMapPinIconCache = new Map<string, L.DivIcon>();
 
-function getSearchMapPinIcon(
-  selected: boolean,
-  imageSrc: string,
-  rating: number,
-) {
-  const k = `${selected ? 1 : 0}\0${imageSrc}\0${rating.toFixed(1)}`;
+function getSearchMapPinIcon(selected: boolean, imageSrc: string) {
+  const k = `${selected ? 1 : 0}\0${imageSrc}`;
   let icon = searchMapPinIconCache.get(k);
   if (icon == null) {
     if (searchMapPinIconCache.size >= PIN_ICON_CACHE_MAX) {
       searchMapPinIconCache.clear();
     }
-    icon = buildSearchMapPinIcon(selected, imageSrc, rating);
+    icon = buildSearchMapPinIcon(selected, imageSrc);
     searchMapPinIconCache.set(k, icon);
   }
   return icon;
@@ -353,11 +352,7 @@ const SearchMapPinsLayer = memo(function SearchMapPinsLayer({
                   position={[item.lat, item.lng]}
                   zIndexOffset={0}
                   opacity={item.dimmed ? 0.38 : 1}
-                  icon={getSearchMapPinIcon(
-                    false,
-                    item.imageSrc,
-                    item.rating,
-                  )}
+                  icon={getSearchMapPinIcon(false, item.imageSrc)}
                   eventHandlers={clusterMarkerClickByIndex[index]}
                 />
               ))}
@@ -369,11 +364,7 @@ const SearchMapPinsLayer = memo(function SearchMapPinsLayer({
               position={[selectedMapItem.lat, selectedMapItem.lng]}
               zIndexOffset={2000}
               opacity={selectedMapItem.dimmed ? 0.38 : 1}
-              icon={getSearchMapPinIcon(
-                true,
-                selectedMapItem.imageSrc,
-                selectedMapItem.rating,
-              )}
+              icon={getSearchMapPinIcon(true, selectedMapItem.imageSrc)}
               eventHandlers={clusterMarkerClickByIndex[activeMarkerIndex]}
             />
           : null}
@@ -784,7 +775,7 @@ export function SearchResultsLeafletMap({
     <div
       ref={wrapRef}
       className={cn(
-        "relative size-full min-h-[280px] rounded-2xl [&_.leaflet-bottom.leaflet-right]:!hidden [&_.leaflet-control-attribution]:!hidden [&_img.leaflet-attribution-flag]:!hidden",
+        "relative size-full min-h-[280px] rounded-2xl [&_.leaflet-bottom.leaflet-right]:!hidden [&_.leaflet-control-attribution]:!hidden [&_img.leaflet-attribution-flag]:!hidden [&_.leaflet-div-icon.search-map-pin]:!border-0 [&_.leaflet-div-icon.search-map-pin]:!bg-transparent [&_.leaflet-div-icon.search-map-cluster-icon]:!border-0 [&_.leaflet-div-icon.search-map-cluster-icon]:!bg-transparent",
         mapGesturesIsolatePage && "touch-none overscroll-contain",
       )}
       onTouchMove={() => {

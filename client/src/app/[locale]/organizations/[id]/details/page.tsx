@@ -47,6 +47,11 @@ export default async function Page({ params }: Props) {
       organizationId={d.id}
       name={d.name}
       description={d.description ?? null}
+      addressLine={d.addressLine}
+      city={d.city ?? null}
+      phone={d.phone}
+      email={d.email ?? null}
+      website={d.website ?? null}
       staff={staff}
     />
   );

@@ -17,6 +17,8 @@ export type OrganizationListItemDto = {
   city: string | null;
   addressLine: string | null;
   phone: string | null;
+  email: string | null;
+  website: string | null;
   yearsInBusiness: number | null;
   latitude: number | null;
   longitude: number | null;

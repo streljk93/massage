@@ -286,6 +286,8 @@ function mapOrganizationRowToListItem(
     city: localized.city,
     addressLine: o.address?.addressLine ?? null,
     phone: o.phone,
+    email: o.email,
+    website: o.website,
     yearsInBusiness: o.yearsInBusiness,
     latitude: localized.latitude,
     longitude: localized.longitude,

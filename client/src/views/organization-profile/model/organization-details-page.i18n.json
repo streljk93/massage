@@ -6,6 +6,14 @@
         "backAria": "Back to profile",
         "aboutHeading": "About the salon",
         "descriptionEmpty": "No description yet.",
+        "contactHeading": "Contact",
+        "addressLabel": "Address",
+        "phoneLabel": "Phone",
+        "emailLabel": "Email",
+        "websiteLabel": "Website",
+        "phoneCallAria": "Call this number",
+        "emailWriteAria": "Write email",
+        "websiteOpenAria": "Open website in new tab",
         "specialistsHeading": "Specialists",
         "specialistProfileAria": "Open {name}'s profile"
       }
@@ -16,6 +24,14 @@
         "backAria": "Quay lại hồ sơ",
         "aboutHeading": "Về salon",
         "descriptionEmpty": "Chưa có mô tả.",
+        "contactHeading": "Liên hệ",
+        "addressLabel": "Địa chỉ",
+        "phoneLabel": "Điện thoại",
+        "emailLabel": "Email",
+        "websiteLabel": "Website",
+        "phoneCallAria": "Gọi số này",
+        "emailWriteAria": "Gửi email",
+        "websiteOpenAria": "Mở website trong tab mới",
         "specialistsHeading": "Chuyên gia",
         "specialistProfileAria": "Mở hồ sơ {name}"
       }
@@ -26,6 +42,14 @@
         "backAria": "Назад к профилю",
         "aboutHeading": "О салоне",
         "descriptionEmpty": "Описание пока не заполнено.",
+        "contactHeading": "Контакты",
+        "addressLabel": "Адрес",
+        "phoneLabel": "Телефон",
+        "emailLabel": "Email",
+        "websiteLabel": "Сайт",
+        "phoneCallAria": "Позвонить по этому номеру",
+        "emailWriteAria": "Написать на email",
+        "websiteOpenAria": "Открыть сайт в новой вкладке",
         "specialistsHeading": "Специалисты",
         "specialistProfileAria": "Открыть профиль: {name}"
       }

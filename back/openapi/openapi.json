@@ -3619,6 +3619,16 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "email": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Публичный email салона (если указан)."
+                          },
+                          "website": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Сайт или страница салона (URL со схемой или без)."
+                          },
                           "yearsInBusiness": {
                             "type": "integer",
                             "nullable": true
@@ -5662,6 +5672,16 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "email": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Публичный email салона (если указан)."
+                    },
+                    "website": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Сайт или страница салона (URL со схемой или без)."
+                    },
                     "yearsInBusiness": {
                       "type": "integer",
                       "nullable": true
@@ -6490,6 +6510,16 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "email": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Публичный email салона (если указан)."
+                          },
+                          "website": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Сайт или страница салона (URL со схемой или без)."
+                          },
                           "yearsInBusiness": {
                             "type": "integer",
                             "nullable": true
@@ -7287,6 +7317,16 @@
                           "phone": {
                             "type": "string",
                             "nullable": true
+                          },
+                          "email": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Публичный email салона (если указан)."
+                          },
+                          "website": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Сайт или страница салона (URL со схемой или без)."
                           },
                           "yearsInBusiness": {
                             "type": "integer",
