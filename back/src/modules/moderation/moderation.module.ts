@@ -46,6 +46,7 @@ const moderationContentQueue = useModerationContentQueue
     ContentModerationService,
     ModerationEnqueueService,
     ModerationOllamaService,
+    ImageNsfwModerationService,
   ],
 })
 export class ModerationModule {}

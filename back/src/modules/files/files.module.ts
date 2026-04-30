@@ -7,5 +7,6 @@ import { FilesController } from './presentation/files.controller';
   imports: [AuthModule],
   controllers: [FilesController],
   providers: [FilesService],
+  exports: [FilesService],
 })
 export class FilesModule {}

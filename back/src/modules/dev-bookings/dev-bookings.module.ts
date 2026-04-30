@@ -4,6 +4,7 @@ import { DirectoryModule } from '../directory/directory.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PersonalizationModule } from '../personalization/personalization.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { FilesModule } from '../files/files.module';
 import { ModerationModule } from '../moderation/moderation.module';
 import { DevBookingStatusService } from './application/dev-booking-status.service';
 import { DevFcmTestService } from './application/dev-fcm-test.service';
@@ -24,6 +25,7 @@ import { DevModerationQueueService } from './application/dev-moderation-queue.se
     DirectoryModule,
     OrganizationsModule,
     ModerationModule,
+    FilesModule,
   ],
   controllers: [
     DevBookingsController,

@@ -85,7 +85,7 @@ const SWAGGER_TAG_ORDER_AND_DESCRIPTIONS: readonly {
   {
     name: 'dev',
     description:
-      'Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod).',
+      'Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; `POST …/dev/moderation/image-eval` — загрузка картинки и ответ NSFW-сервиса (NudeNet + CLIP); смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod).',
   },
 ] as const;
 

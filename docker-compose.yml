@@ -62,7 +62,7 @@ services:
       - ./docker/ollama-compose-entrypoint.sh:/usr/local/bin/ollama-compose-entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/usr/local/bin/ollama-compose-entrypoint.sh"]
 
-  # NSFW-бинарная классификация jpeg/png для галереи салона (nudenet/ONNX, CPU). Префикс API не совпадает с Ollama.
+  # NSFW (NudeNet) + pairwise CLIP (violence…) для галереи салона — docker/nsfw-image-moderation, CPU.
   image-moderation:
     build:
       context: ./docker/nsfw-image-moderation
@@ -77,6 +77,8 @@ services:
       PORT: "8085"
       FETCH_TIMEOUT_SEC: "45"
       MAX_IMAGE_BYTES: "12582912"
+      MODERATION_CLIP_REVIEW_THRESHOLD: ${MODERATION_CLIP_REVIEW_THRESHOLD:-0.7}
+      IMAGE_MODERATION_CLIP_ENABLED: ${IMAGE_MODERATION_CLIP_ENABLED:-true}
 
   mailhog:
     image: mailhog/mailhog:latest
@@ -144,6 +146,7 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
       IMAGE_MODERATION_BASE_URL: ${IMAGE_MODERATION_BASE_URL:-http://image-moderation:8085}
+      MODERATION_CLIP_REVIEW_THRESHOLD: ${MODERATION_CLIP_REVIEW_THRESHOLD:-0.7}
       MODERATION_FILE_FETCH_ORIGIN: ${MODERATION_FILE_FETCH_ORIGIN:-http://back:3001}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}

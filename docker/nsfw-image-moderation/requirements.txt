@@ -1,6 +1,8 @@
-# NSFW-бинарный классификатор (keras + ONNX weights внутри nudenet — не нужен CUDA на CPU).
+# NSFW: NudeNet (ONNX). CLIP: open_clip + torch (CPU — см. Dockerfile).
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 httpx==0.28.1
 python-multipart==0.0.20
 nudenet==3.4.2
+open_clip_torch==2.24.0
+Pillow>=10,<12

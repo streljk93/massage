@@ -242,6 +242,14 @@ export default () => ({
         process.env.MODERATION_IMAGE_REQUEST_TIMEOUT_MS,
         60_000,
       ),
+      /**
+       * Сервис `image-moderation` (CLIP pairwise): любая категория violence…weapon с вероятностью > порога → ревью.
+       * Совпадает с `MODERATION_CLIP_REVIEW_THRESHOLD` в Docker.
+       */
+      clipReviewThreshold: moderationUnsafeThreshold(
+        process.env.MODERATION_CLIP_REVIEW_THRESHOLD,
+        0.7,
+      ),
     },
   },
 });
