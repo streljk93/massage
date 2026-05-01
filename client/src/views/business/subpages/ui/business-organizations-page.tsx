@@ -9,6 +9,11 @@ import { Link } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
+  displayNameForCabinetOrganization,
+  specialistMyOrganizationsQueryKey,
+  SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
+} from "@/entities/organizations";
+import {
   createBrowserSdkClient,
   organizationsCabinetDeleteOrganizationAsOwner,
   organizationsCabinetGetDeleteOrganizationBookingsPreview,
@@ -25,7 +30,6 @@ import { Button } from "@/shared/ui/button";
 import { Switch } from "@/shared/ui/switch";
 import { cn, motion, previewSrcForPersistedGalleryUrl } from "@/shared/lib";
 
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 const ONB_QK = ["specialistOnboarding"] as const;
 
 function roleAllowsSalonCabinetEditing(role: string): boolean {
@@ -40,14 +44,6 @@ function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRo
     return "orgRoleAdmin";
   }
   return "orgRoleSpecialist";
-}
-
-function displayNameForOrgList(org: {
-  name: string;
-  salonCabinetPreview: { name: string } | null;
-}): string {
-  const draft = org.salonCabinetPreview;
-  return draft != null && draft.name.trim().length > 0 ? draft.name : org.name;
 }
 
 const ORG_BOOKINGS_CONFIRM_TZ = "Asia/Ho_Chi_Minh";
@@ -205,7 +201,7 @@ export function BusinessOrganizationsPage() {
     },
     onSuccess: async (res) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [...ORGS_QK] }),
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
         queryClient.invalidateQueries({ queryKey: [...ONB_QK] }),
         queryClient.invalidateQueries({ queryKey: ["specialistSalonBookings"] }),
       ]);
@@ -224,7 +220,7 @@ export function BusinessOrganizationsPage() {
   });
 
   const setActiveWorkplaceMutation = useMutation({
-    mutationFn: async (organizationId: string) => {
+    mutationFn: async (organizationId: string | null) => {
       const { data: res, error } = await specialistsCabinetPatchSpecialistActiveOrganization({
         client: sdk,
         body: { organizationId },
@@ -234,12 +230,24 @@ export function BusinessOrganizationsPage() {
       }
       return res;
     },
-    onSuccess: async (res) => {
+    onSuccess: async (res, organizationId) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [...ORGS_QK] }),
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
         queryClient.invalidateQueries({ queryKey: [...ONB_QK] }),
+        queryClient.invalidateQueries({ queryKey: ["specialistSalonBookings"] }),
       ]);
       const cancelled = res.cancelledBookingsCount;
+      if (organizationId === null) {
+        if (cancelled > 0) {
+          notify.success(
+            t("orgClearWorkplaceDoneTitle"),
+            t("orgSwitchWorkplaceCancelledBookings", { count: cancelled }),
+          );
+        } else {
+          notify.success(t("orgClearWorkplaceDoneTitle"));
+        }
+        return;
+      }
       if (cancelled > 0) {
         notify.success(
           t("orgSwitchWorkplaceDoneTitle"),
@@ -249,13 +257,15 @@ export function BusinessOrganizationsPage() {
         notify.success(t("orgSwitchWorkplaceDoneTitle"));
       }
     },
-    onError: () => {
-      notify.error(t("orgSwitchWorkplaceError"));
+    onError: (_err, organizationId) => {
+      notify.error(
+        organizationId === null ? t("orgClearWorkplaceError") : t("orgSwitchWorkplaceError"),
+      );
     },
   });
 
   const { data, isPending, isError, refetch } = useQuery({
-    queryKey: [...ORGS_QK, accessToken, locale],
+    queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled:
       sessionStatus === "authenticated" && typeof accessToken === "string" && accessToken.length > 0,
     queryFn: async () => {
@@ -401,7 +411,7 @@ export function BusinessOrganizationsPage() {
         >
           {organizations.map((org) => {
             const draft = org.salonCabinetPreview;
-            const displayName = displayNameForOrgList(org);
+            const displayName = displayNameForCabinetOrganization(org);
             const hasDraftUnderReview = draft != null;
             const showModerationPendingBadge =
               hasDraftUnderReview ||
@@ -558,21 +568,64 @@ export function BusinessOrganizationsPage() {
                         id={switchId}
                         size="default"
                         checked={org.isActiveWorkplace}
-                        disabled={switchInteractionBusy && !org.isActiveWorkplace}
+                        disabled={switchInteractionBusy}
                         aria-label={
                           org.isActiveWorkplace ?
-                            t("orgActiveWorkplaceSwitchLockedAria")
+                            t("orgActiveWorkplaceSwitchClearAria")
                           : t("orgSetActiveWorkplaceAria")
                         }
                         onCheckedChange={(on) => {
                           void (async () => {
-                            if (
-                              switchInteractionBusy ||
-                              !on ||
-                              org.isActiveWorkplace
-                            ) {
+                            if (switchInteractionBusy) {
                               return;
                             }
+                            if (!on && org.isActiveWorkplace) {
+                              setPreviewSwitchAwayBusy(true);
+                              try {
+                                const preview =
+                                  await specialistsCabinetGetSpecialistActiveOrganizationBookingsPreview(
+                                    {
+                                      client: sdk,
+                                      query: {
+                                        organizationId: org.id,
+                                        locale,
+                                      },
+                                    },
+                                  );
+                                if (preview.error || !preview.data) {
+                                  notify.error(t("orgSwitchWorkplacePreviewLoadError"));
+                                  return;
+                                }
+                                const rows = preview.data.bookings;
+                                if (rows.length > 0) {
+                                  const ok = await confirmAction({
+                                    title: t("orgClearWorkplaceConfirmTitle"),
+                                    body: (
+                                      <OrgSwitchWorkplaceBookingsConfirmBody rows={rows} />
+                                    ),
+                                    confirmLabel: t("orgClearWorkplaceConfirmAction"),
+                                    cancelLabel: t("orgClearWorkplaceConfirmBack"),
+                                    destructive: true,
+                                  });
+                                  if (!ok) {
+                                    return;
+                                  }
+                                }
+                              } finally {
+                                setPreviewSwitchAwayBusy(false);
+                              }
+                              try {
+                                await setActiveWorkplaceMutation.mutateAsync(null);
+                              } catch {
+                                /* Mutation onError notifies */
+                              }
+                              return;
+                            }
+
+                            if (!on || org.isActiveWorkplace) {
+                              return;
+                            }
+
                             if (
                               activeWorkplaceId != null &&
                               activeWorkplaceId !== org.id

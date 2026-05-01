@@ -322,7 +322,7 @@ export class SpecialistWorkplaceService {
   async setActiveOrganization(
     userId: string,
     body: PatchSpecialistActiveOrganizationBody,
-  ): Promise<{ activeOrganizationId: string; cancelledBookingsCount: number }> {
+  ): Promise<{ activeOrganizationId: string | null; cancelledBookingsCount: number }> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
       select: { id: true, activeOrganizationId: true },
@@ -332,6 +332,60 @@ export class SpecialistWorkplaceService {
         code: 'SPECIALIST_PROFILE_NOT_FOUND',
         message: 'Specialist profile not found for this user',
       });
+    }
+
+    if (body.organizationId === null) {
+      const previousOrgId = specialist.activeOrganizationId;
+      if (previousOrgId == null) {
+        return {
+          activeOrganizationId: null,
+          cancelledBookingsCount: 0,
+        };
+      }
+
+      const cancelled = await this.prisma.$transaction(async (tx) => {
+        await tx.specialist.update({
+          where: { id: specialist.id },
+          data: { activeOrganizationId: null },
+        });
+        const fresh = await tx.specialist.findFirst({
+          where: { id: specialist.id },
+          select: { onboardingCompletedAt: true, activeOrganizationId: true },
+        });
+        if (fresh) {
+          await tx.specialist.update({
+            where: { id: specialist.id },
+            data: {
+              listedInDirectory: computeListedInDirectory({
+                onboardingCompletedAt: fresh.onboardingCompletedAt,
+                activeOrganizationId: fresh.activeOrganizationId,
+              }),
+            },
+          });
+        }
+        return this.bookingsRepository.cancelActiveBookingsAtOrganization(tx, {
+          specialistId: specialist.id,
+          organizationId: previousOrgId,
+          actorUserId: userId,
+          cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
+          cancellationComment: null,
+        });
+      });
+      for (const row of cancelled) {
+        void this.pushNotifications.notifyClientBookingStatusChange(
+          row.id,
+          row.fromStatus,
+          row.toStatus,
+        );
+      }
+      await syncOrganizationServiceCategoriesFromSpecialistServices(
+        this.prisma,
+        previousOrgId,
+      );
+      return {
+        activeOrganizationId: null,
+        cancelledBookingsCount: cancelled.length,
+      };
     }
 
     const org = await this.prisma.organization.findFirst({

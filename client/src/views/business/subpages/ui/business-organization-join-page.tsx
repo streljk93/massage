@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
+import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   createBrowserSdkClient,
   organizationsCabinetGetWorkplaceOrganizationSearch,
@@ -17,7 +18,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 
 const ONB_QK = ["specialistOnboarding"] as const;
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
 
 export function BusinessOrganizationJoinPage() {
@@ -103,7 +103,9 @@ export function BusinessOrganizationJoinPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
-      await queryClient.invalidateQueries({ queryKey: [...ORGS_QK, accessToken, locale] });
+      await queryClient.invalidateQueries({
+        queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
+      });
       await queryClient.invalidateQueries({ queryKey: [...JOIN_REQ_QK, accessToken, locale] });
       router.replace("/business/organizations");
     } finally {

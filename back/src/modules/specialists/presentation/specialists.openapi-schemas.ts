@@ -23,7 +23,11 @@ export const patchSpecialistActiveOrganizationRequestSchema = {
   type: 'object',
   required: ['organizationId'],
   properties: {
-    organizationId: { type: 'string', format: 'uuid' },
+    organizationId: {
+      oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
+      description:
+        'UUID организации как место приёма или null — снять место приёма (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).',
+    },
   },
 };
 
@@ -31,7 +35,11 @@ export const patchSpecialistActiveOrganizationResponseSchema = {
   type: 'object',
   required: ['activeOrganizationId', 'cancelledBookingsCount'],
   properties: {
-    activeOrganizationId: { type: 'string', format: 'uuid' },
+    activeOrganizationId: {
+      oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
+      description:
+        'Текущее место приёма после операции; null если снято.',
+    },
     cancelledBookingsCount: {
       type: 'integer',
       minimum: 0,
@@ -151,7 +159,7 @@ export const specialistMyOrganizationsResponseSchema = {
     activeOrganizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
       description:
-        'Текущая активная организация мастера; null — только личный приём / не выбрано.',
+        'Текущая активная организация мастера; null — место приёма не выбрано (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).',
     },
   },
 };

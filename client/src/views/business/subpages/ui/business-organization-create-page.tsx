@@ -9,6 +9,7 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState, useBusinessSalonCatalogCategories } from "@/entities/business";
 import {
   OrganizationSalonCabinetForm,
+  specialistMyOrganizationsQueryKey,
   type OrganizationSalonCabinetSubmitBody,
 } from "@/entities/organizations";
 import {
@@ -20,7 +21,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 
 const ONB_QK = ["specialistOnboarding"] as const;
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 
 export function BusinessOrganizationCreatePage() {
   const t = useTranslations("specialistOnboarding");
@@ -62,7 +62,9 @@ export function BusinessOrganizationCreatePage() {
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] }),
-        queryClient.invalidateQueries({ queryKey: [...ORGS_QK, accessToken, locale] }),
+        queryClient.invalidateQueries({
+          queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
+        }),
       ]);
       router.replace("/business/organizations");
     } finally {

@@ -10,6 +10,8 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState, useBusinessSalonCatalogCategories } from "@/entities/business";
 import {
   OrganizationSalonCabinetForm,
+  SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
+  specialistMyOrganizationsQueryKey,
   type OrganizationSalonCabinetFormInitialValues,
   type OrganizationSalonCabinetSubmitBody,
 } from "@/entities/organizations";
@@ -26,7 +28,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { parseVnLocalForInput } from "@/views/business/setup/lib/specialist-onboarding-utils";
 
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 
 function roleAllowsSalonCabinetEditing(role: string): boolean {
@@ -120,7 +121,7 @@ export function BusinessOrganizationEditPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const membershipsQuery = useQuery({
-    queryKey: [...ORGS_QK, accessToken, locale],
+    queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
       const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
@@ -188,7 +189,8 @@ export function BusinessOrganizationEditPage() {
       await Promise.all([
         queryClient.invalidateQueries({
           predicate: (q) =>
-            Array.isArray(q.queryKey) && q.queryKey[0] === ORGS_QK[0],
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX[0],
         }),
         queryClient.invalidateQueries({
           predicate: (q) =>

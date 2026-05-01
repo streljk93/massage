@@ -943,7 +943,7 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
             publishedCoverImageUrl: string | null;
         }>;
         /**
-         * Текущая активная организация мастера; null — только личный приём / не выбрано.
+         * Текущая активная организация мастера; null — место приёма не выбрано (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).
          */
         activeOrganizationId: string | unknown;
     };
@@ -1104,7 +1104,10 @@ export type SpecialistsCabinetGetSpecialistSalonBookingsResponse = SpecialistsCa
 
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
-        organizationId: string;
+        /**
+         * UUID организации как место приёма или null — снять место приёма (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).
+         */
+        organizationId: string | unknown;
     };
     path?: never;
     query?: never;
@@ -1128,7 +1131,10 @@ export type SpecialistsCabinetPatchSpecialistActiveOrganizationErrors = {
 
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationResponses = {
     200: {
-        activeOrganizationId: string;
+        /**
+         * Текущее место приёма после операции; null если снято.
+         */
+        activeOrganizationId: string | unknown;
         /**
          * Сколько активных записей отменено на прежней организации (canceled_by_master).
          */

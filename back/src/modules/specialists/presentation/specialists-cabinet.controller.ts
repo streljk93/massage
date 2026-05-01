@@ -186,7 +186,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.',
+      'Текущая организация мастера (адрес витрины и новые записи). При смене или снятии (`organizationId`: null) активные брони на прежнем месте приёма отменяются.',
   })
   @ApiBody({ schema: patchSpecialistActiveOrganizationRequestSchema })
   @ApiOkResponse({ schema: patchSpecialistActiveOrganizationResponseSchema })

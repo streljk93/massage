@@ -309,7 +309,7 @@ export const specialistsCabinetGetSpecialistSalonBookings = <ThrowOnError extend
 });
 
 /**
- * Текущая организация мастера (адрес витрины и новые записи). При смене активные брони на прежний адрес отменяются.
+ * Текущая организация мастера (адрес витрины и новые записи). При смене или снятии (`organizationId`: null) активные брони на прежнем месте приёма отменяются.
  */
 export const specialistsCabinetPatchSpecialistActiveOrganization = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistActiveOrganizationData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],

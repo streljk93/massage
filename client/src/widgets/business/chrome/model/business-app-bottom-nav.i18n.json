@@ -9,7 +9,8 @@
         "organizationsSubmenuExpandAria": "Expand organization shortcuts",
         "organizationsSubmenuCollapseAria": "Collapse organization shortcuts",
         "bookings": "Bookings",
-        "profile": "Profile"
+        "profile": "Profile",
+        "activeWorkplaceBarLabel": "Active workplace"
       }
     },
     "vi": {
@@ -21,7 +22,8 @@
         "organizationsSubmenuExpandAria": "Mở các lối tắt tổ chức",
         "organizationsSubmenuCollapseAria": "Thu gọn các lối tắt tổ chức",
         "bookings": "Lịch hẹn",
-        "profile": "Hồ sơ"
+        "profile": "Hồ sơ",
+        "activeWorkplaceBarLabel": "Nơi làm việc hiện tại"
       }
     },
     "ru": {
@@ -33,7 +35,8 @@
         "organizationsSubmenuExpandAria": "Показать пункты организаций",
         "organizationsSubmenuCollapseAria": "Скрыть пункты организаций",
         "bookings": "Записи",
-        "profile": "Профиль"
+        "profile": "Профиль",
+        "activeWorkplaceBarLabel": "Текущее место приёма"
       }
     }
   }

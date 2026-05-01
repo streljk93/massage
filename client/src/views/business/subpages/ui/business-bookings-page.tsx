@@ -15,6 +15,7 @@ import {
   usePendingBookingCountdown,
 } from "@/entities/booking";
 import { BusinessEmptyState } from "@/entities/business";
+import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   bookingIsNewTab,
   compareBookingsNewTabPriority,
@@ -51,7 +52,6 @@ import { SalonConfirmedCancelDialog } from "./salon-confirmed-cancel-dialog";
 
 type SalonBookingRow = SpecialistsCabinetGetSpecialistSalonBookingsResponse["bookings"][number];
 
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 const SALON_BOOKINGS_QK = ["specialistSalonBookings"] as const;
 
 function isOrgManagerRole(role: string): boolean {
@@ -276,7 +276,7 @@ export function BusinessBookingsPage() {
   );
 
   const orgsQuery = useQuery({
-    queryKey: [...ORGS_QK, accessToken, locale],
+    queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
       const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({

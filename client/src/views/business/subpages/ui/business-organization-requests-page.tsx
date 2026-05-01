@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
+import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   createBrowserSdkClient,
   organizationsCabinetGetWorkplaceJoinRequestsForOrganization,
@@ -19,7 +20,6 @@ import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
 
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
-const ORGS_QK = ["specialistMyOrganizations"] as const;
 const ORG_INCOMING_QK = ["orgIncomingWorkplaceJoinRequests"] as const;
 
 type RequestsTab = "outgoing" | "incoming";
@@ -94,7 +94,7 @@ export function BusinessOrganizationRequestsPage() {
   });
 
   const orgsForIncomingQuery = useQuery({
-    queryKey: [...ORGS_QK, accessToken, locale],
+    queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed && tab === "incoming",
     queryFn: async () => {
       const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
@@ -180,7 +180,9 @@ export function BusinessOrganizationRequestsPage() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: [...ORG_INCOMING_QK] });
-      await queryClient.invalidateQueries({ queryKey: [...ORGS_QK, accessToken, locale] });
+      await queryClient.invalidateQueries({
+        queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
+      });
       await queryClient.invalidateQueries({ queryKey: [...JOIN_REQ_QK, accessToken, locale] });
     },
   });

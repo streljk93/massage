@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/app/i18n/navigation";
@@ -16,6 +16,7 @@ import {
   BusinessCabinetHeaderProvider,
   type CabinetHeaderLeadRole,
 } from "./business-cabinet-nav-context";
+import { BusinessCabinetActiveOrgDock } from "./business-cabinet-active-org-dock";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
@@ -109,6 +110,12 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
     return `/business/setup/${step}` as const;
   }, [onboard?.onboardingStep]);
 
+  const [activeOrgDockVisible, setActiveOrgDockVisible] = useState(false);
+
+  const onActiveOrgDockVisibleChange = useCallback((visible: boolean) => {
+    setActiveOrgDockVisible((prev) => (prev === visible ? prev : visible));
+  }, []);
+
   return (
     <BusinessCabinetHeaderProvider lead={headerLead}>
       <div className="flex min-h-screen flex-col bg-surface-light">
@@ -131,13 +138,15 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
         <div
           className={cn(
             "flex min-h-0 min-w-0 flex-1 flex-col",
-            isSetupPath(pathname)
-              ? "pb-0"
-              : "pb-[max(1rem,env(safe-area-inset-bottom))]",
+            isSetupPath(pathname) ? "pb-0"
+            : activeOrgDockVisible ?
+              "pb-[calc(4.25rem+env(safe-area-inset-bottom))]"
+            : "pb-[max(1rem,env(safe-area-inset-bottom))]",
           )}
         >
           {children}
         </div>
+        <BusinessCabinetActiveOrgDock onVisibleChange={onActiveOrgDockVisibleChange} />
       </div>
     </BusinessCabinetHeaderProvider>
   );

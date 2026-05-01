@@ -1,4 +1,18 @@
 export { default as organizationCardI18n } from "./model/organization-card.i18n.json";
+export { default as businessActiveOrganizationContextCardI18n } from "./model/business-active-organization-context-card.i18n.json";
+export { useSpecialistMyOrganizationsQuery } from "./api/use-specialist-my-organizations";
+export {
+  SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
+  specialistMyOrganizationsQueryKey,
+  pickActiveWorkplaceOrganization,
+  displayNameForCabinetOrganization,
+  cabinetOrganizationCoverSrc,
+  type SpecialistMyOrganizationRow,
+} from "./lib/specialist-my-organizations";
+export {
+  BusinessActiveOrganizationContextCard,
+  type BusinessActiveOrganizationContextCardProps,
+} from "./ui/business-active-organization-context-card";
 export {
   organizationCardSeedFromApi,
   resolveDirectoryImageSrc,

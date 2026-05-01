@@ -4,7 +4,10 @@ import {
   bookingListCardI18n,
 } from "@/entities/booking";
 import { catalogFiltersDialogI18n } from "@/entities/catalog";
-import { organizationCardI18n } from "@/entities/organizations";
+import {
+  businessActiveOrganizationContextCardI18n,
+  organizationCardI18n,
+} from "@/entities/organizations";
 import { categoryCardI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { comingSoonI18n } from "@/features/coming-soon";
@@ -109,6 +112,7 @@ const bundles: ColocatedI18nBundle[] = [
   organizationProfilePageI18n,
   organizationDetailsPageI18n,
   organizationCardI18n,
+  businessActiveOrganizationContextCardI18n,
   specialistCardI18n,
   adminPageI18n,
 ];
