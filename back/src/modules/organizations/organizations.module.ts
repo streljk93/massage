@@ -2,8 +2,10 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { AddressModule } from '../address/address.module';
 import { AuthModule } from '../auth/auth.module';
+import { BookingsModule } from '../bookings/bookings.module';
 import { GalleryModule } from '../gallery/gallery.module';
 import { ModerationModule } from '../moderation/moderation.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { SpecialistsModule } from '../specialists/specialists.module';
 import { OrganizationCabinetService } from './application/organization-cabinet.service';
 import { OrganizationsCabinetController } from './presentation/organizations-cabinet.controller';
@@ -16,6 +18,8 @@ import { OrganizationsCabinetController } from './presentation/organizations-cab
     GalleryModule,
     ModerationModule,
     SpecialistsModule,
+    BookingsModule,
+    NotificationsModule,
   ],
   controllers: [OrganizationsCabinetController],
   providers: [OrganizationCabinetService],

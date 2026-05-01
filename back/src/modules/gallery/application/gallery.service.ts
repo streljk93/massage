@@ -196,7 +196,7 @@ export class GalleryService {
 
     await this.prisma.$transaction(async (tx) => {
       for (let i = 0; i < orderedItemIds.length; i++) {
-        const id = orderedItemIds[i]!;
+        const id = orderedItemIds[i];
         await tx.galleryItem.update({
           where: { id },
           data: { sortOrder: i },

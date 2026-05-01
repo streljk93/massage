@@ -210,7 +210,10 @@ export default () => ({
       process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODERATION_MODEL
     ).trim(),
     /** HTTP-таймаут к Ollama /api/chat. Несколько текстовых полей + локальный CPU часто дают >25 с. */
-    requestTimeoutMs: positiveInt(process.env.OLLAMA_REQUEST_TIMEOUT_MS, 90_000),
+    requestTimeoutMs: positiveInt(
+      process.env.OLLAMA_REQUEST_TIMEOUT_MS,
+      90_000,
+    ),
     /**
      * Автомодерация **только изображений** витрины: контейнер `image-moderation` (POST …/v1/score).
      * Тексты по-прежнему через Ollama — картинки туда не передаются.
@@ -251,5 +254,13 @@ export default () => ({
         0.7,
       ),
     },
+  },
+  /**
+   * Суперадмин платформы (`User.platformRole` = master): только из `back/.env` или env контейнера (см. `docker-compose` → `env_file`).
+   */
+  adminMaster: {
+    email: process.env.ADMIN_MASTER_EMAIL?.trim() ?? '',
+    password: process.env.ADMIN_MASTER_PASSWORD ?? '',
+    name: process.env.ADMIN_MASTER_NAME?.trim() || 'Platform Admin',
   },
 });

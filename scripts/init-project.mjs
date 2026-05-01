@@ -13,11 +13,12 @@
  *
  * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, Ollama, image-moderation, Redis, MailHog, back, client),
  * ожидается готовность Postgres, MinIO, Ollama, Redis и веб-UI MailHog, при необходимости дописываются S3_*, SMTP_*, REDIS_* и OLLAMA_* в
- * `back/.env`; мигрируют устаревший `OLLAMA_BASE_URL=http://127.0.0.1:11434` → `:11435` (проброс в compose совпадает с `OLLAMA_DOCKER_PUBLISH_PORT` в этом скрипте);
+ * `back/.env`; при необходимости синхронизируются или дописываются `ADMIN_MASTER_*` (**только в back/.env**); мигрируют устаревший `OLLAMA_BASE_URL=http://127.0.0.1:11434` → `:11435` (проброс в compose совпадает с `OLLAMA_DOCKER_PUBLISH_PORT` в этом скрипте);
  * если было имя модели без суффикса (типично `llama3`), замена на актуальный тег (сейчас «llama3.2», см. moderation-defaults);
  * при необходимости в контейнере удаляется старый образ перед загрузкой новой модели; затем migrate + seed + openapi:sync.
  */
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -483,6 +484,139 @@ function pullOllamaModelIntoCompose() {
   }
 }
 
+const ADMIN_MASTER_KEYS = [
+  "ADMIN_MASTER_NAME",
+  "ADMIN_MASTER_EMAIL",
+  "ADMIN_MASTER_PASSWORD",
+];
+
+function adminMasterRhsNonempty(raw) {
+  const t = (raw ?? "").trim();
+  if (t.length === 0) return false;
+  if (t === '""' || t === "''") return false;
+  return true;
+}
+
+function adminMasterParseAssignments(text) {
+  /** @type {Record<string, string>} */
+  const out = Object.create(null);
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (!m) continue;
+    out[m[1]] = m[2] ?? "";
+  }
+  return out;
+}
+
+function adminMasterHasKeyLine(text, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|\\n)\\s*${escaped}\\s*=`).test(text);
+}
+
+function adminMasterStripEnvKeys(text, keys) {
+  const keySet = new Set(keys);
+  const eol = text.includes("\r\n") ? "\r\n" : "\n";
+  const lines = text.split(/\r?\n/);
+  const outLines = [];
+  for (const line of lines) {
+    const m = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/.exec(line);
+    if (m && keySet.has(m[1])) continue;
+    outLines.push(line);
+  }
+  const joined = outLines.join(eol === "\r\n" ? "\r\n" : "\n");
+  return joined.replace(/(\r?\n){3,}/g, `${eol}${eol}`);
+}
+
+/**
+ * `ADMIN_MASTER_*` только в `back/.env`: миграция из корня, дописывание недостающих ключей.
+ */
+function ensureAdminMasterInBackDotEnv() {
+  const rootPath = path.join(repoRoot, ".env");
+  const backPath = path.join(repoRoot, "back", ".env");
+
+  let rootText = "";
+  try {
+    rootText = fs.readFileSync(rootPath, "utf8");
+  } catch {
+    /* нет файла */
+  }
+  let backText = "";
+  try {
+    backText = fs.readFileSync(backPath, "utf8");
+  } catch {
+    /* нет файла */
+  }
+
+  const rootMap = adminMasterParseAssignments(rootText);
+
+  const migratedLines = [];
+  for (const key of ADMIN_MASTER_KEYS) {
+    if (adminMasterHasKeyLine(backText, key)) continue;
+    if (!adminMasterRhsNonempty(rootMap[key])) continue;
+    migratedLines.push(`${key}=${rootMap[key].trim()}`);
+  }
+  if (migratedLines.length > 0) {
+    const pre = backText.length && !backText.endsWith("\n") ? "\n" : "";
+    backText = `${backText}${pre}${migratedLines.join("\n")}\n`;
+    console.log(
+      `[init/env] ADMIN_MASTER_* перенесены из корня в ${path.relative(repoRoot, backPath)}.`,
+    );
+  }
+
+  const hadAdminInRootBefore = ADMIN_MASTER_KEYS.some((k) =>
+    adminMasterHasKeyLine(rootText, k),
+  );
+  if (hadAdminInRootBefore) {
+    let nextRoot = adminMasterStripEnvKeys(rootText, ADMIN_MASTER_KEYS);
+    nextRoot = nextRoot.replace(
+      /^\s*#\s*Суперадмин:?[^\r\n]*(?:\r?\n|$)/gim,
+      "",
+    );
+    nextRoot = nextRoot.replace(/\s+$/, "");
+    const withNl = nextRoot.length === 0 ? "" : `${nextRoot}\n`;
+    fs.mkdirSync(path.dirname(rootPath), { recursive: true });
+    fs.writeFileSync(rootPath, withNl, "utf8");
+    console.log(
+      "[init/env] Ключи ADMIN_MASTER_* удалены из корневого .env (источник — back/.env).",
+    );
+  }
+
+  const toGenerate = [];
+  if (!adminMasterHasKeyLine(backText, "ADMIN_MASTER_NAME")) {
+    toGenerate.push("ADMIN_MASTER_NAME=Platform Admin");
+  }
+  if (!adminMasterHasKeyLine(backText, "ADMIN_MASTER_EMAIL")) {
+    toGenerate.push(
+      `ADMIN_MASTER_EMAIL=admin.${randomBytes(8).toString("hex")}@local.dev`,
+    );
+  }
+  if (!adminMasterHasKeyLine(backText, "ADMIN_MASTER_PASSWORD")) {
+    toGenerate.push(
+      `ADMIN_MASTER_PASSWORD=${randomBytes(21).toString("base64url")}`,
+    );
+  }
+
+  if (toGenerate.length > 0) {
+    const header =
+      "\n# Суперадмин: при старте Nest создаёт/обновляет пользователя master (ADMIN_MASTER_EMAIL + пароль).\n";
+    const block = `${header}${toGenerate.join("\n")}\n`;
+    const prefix = backText.length && !backText.endsWith("\n") ? "\n" : "";
+    backText = `${backText}${prefix}${block}`;
+    console.log(
+      `[init/env] В ${path.relative(repoRoot, backPath)} дописаны недостающие ADMIN_MASTER_*.`,
+    );
+  }
+
+  const backNeedsWrite =
+    migratedLines.length > 0 || toGenerate.length > 0;
+  if (backNeedsWrite) {
+    fs.mkdirSync(path.dirname(backPath), { recursive: true });
+    const outBack =
+      backText.endsWith("\n") || backText.length === 0 ? backText : `${backText}\n`;
+    fs.writeFileSync(backPath, outBack, "utf8");
+  }
+}
+
 function ensureClientEnvBackendUrl() {
   const p = path.join(repoRoot, "client", ".env.local");
   let text = "";
@@ -519,6 +653,7 @@ async function main() {
   );
   run("auth:secret:write", "npm", ["run", "auth:secret:write"], repoRoot);
   ensureClientEnvBackendUrl();
+  ensureAdminMasterInBackDotEnv();
 
   if (skipDocker) {
     log("Пропуск Docker (--skip-docker).");

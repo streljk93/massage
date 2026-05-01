@@ -15,15 +15,13 @@ import { profileUserDemo } from "../lib/mock-data";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { UserAvatar } from "@/shared/ui";
-import { cn } from "@/shared/lib";
+import { cn, resolveApiResourceUrl } from "@/shared/lib";
 import {
   createBrowserSdkClient,
   filesUploadPublic,
   usersMe,
   usersPatchMe,
 } from "@/shared/api";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
-
 const labelClass = "text-xs font-medium text-muted-foreground";
 
 const acceptImage =

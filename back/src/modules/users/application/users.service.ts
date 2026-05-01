@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PublicationModerationStatus } from '@prisma/client';
 import { UserRepository } from '../../auth/infrastructure/user.repository';
 import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import type { PatchMeBody } from '../dto/patch-me-body.schema';
@@ -26,17 +27,29 @@ export class UsersService {
       locale: user.locale,
       bookingReminderEnabled: user.bookingReminderEnabled,
       bookingReminderLeadMinutes: user.bookingReminderLeadMinutes,
+      platformRole: user.platformRole,
+      isContentModerator: user.isContentModerator,
     };
   }
 
   async patchMe(userId: string, body: PatchMeBody) {
     const prev = await this.userRepository.findActiveById(userId);
+    const freezeCatalog =
+      prev != null &&
+      body.name !== undefined &&
+      body.name.trim() !== prev.name.trim() &&
+      prev.nameModerationStatus === PublicationModerationStatus.approved;
     const updated = await this.userRepository.updateProfile(userId, {
       name: body.name,
       avatarUrl: body.avatarUrl,
       locale: body.locale,
       bookingReminderEnabled: body.bookingReminderEnabled,
       bookingReminderLeadMinutes: body.bookingReminderLeadMinutes,
+      ...(freezeCatalog
+        ? {
+            catalogListedName: prev.catalogListedName ?? prev.name,
+          }
+        : {}),
     });
     if (!updated) {
       throw new NotFoundException({
@@ -62,6 +75,8 @@ export class UsersService {
       locale: updated.locale,
       bookingReminderEnabled: updated.bookingReminderEnabled,
       bookingReminderLeadMinutes: updated.bookingReminderLeadMinutes,
+      platformRole: updated.platformRole,
+      isContentModerator: updated.isContentModerator,
     };
   }
 }

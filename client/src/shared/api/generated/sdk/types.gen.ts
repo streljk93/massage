@@ -647,7 +647,12 @@ export type AuthRefreshResponse = AuthRefreshResponses[keyof AuthRefreshResponse
 export type ContentModerationListCasesData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Максимум кейсов (1–100), по умолчанию 50
+         */
+        limit?: number;
+    };
     url: '/moderation/cases';
 };
 
@@ -671,7 +676,12 @@ export type ContentModerationListCasesResponses = {
 
 export type ContentModerationApproveData = {
     body?: never;
-    path?: never;
+    path: {
+        /**
+         * Id кейса модерации
+         */
+        caseId: unknown;
+    };
     query?: never;
     url: '/moderation/cases/{caseId}/approve';
 };
@@ -688,8 +698,18 @@ export type ContentModerationApproveErrors = {
 };
 
 export type ContentModerationRejectData = {
-    body?: never;
-    path?: never;
+    body: {
+        /**
+         * Причина отказа модератора
+         */
+        reason: string;
+    };
+    path: {
+        /**
+         * Id кейса модерации
+         */
+        caseId: unknown;
+    };
     query?: never;
     url: '/moderation/cases/{caseId}/reject';
 };
@@ -794,6 +814,14 @@ export type UsersMeResponses = {
          * За сколько минут до визита прислать push (только при включённом флаге).
          */
         bookingReminderLeadMinutes: 15 | 30 | 60;
+        /**
+         * Платформенная роль; master — полный доступ к админ-панели (суперадмин из ADMIN_MASTER_*).
+         */
+        platformRole: 'standard' | 'master';
+        /**
+         * Доступ к ручной модерации контента (очередь /moderation/cases).
+         */
+        isContentModerator: boolean;
     };
 };
 
@@ -851,6 +879,14 @@ export type UsersPatchMeResponses = {
          * За сколько минут до визита прислать push (только при включённом флаге).
          */
         bookingReminderLeadMinutes: 15 | 30 | 60;
+        /**
+         * Платформенная роль; master — полный доступ к админ-панели (суперадмин из ADMIN_MASTER_*).
+         */
+        platformRole: 'standard' | 'master';
+        /**
+         * Доступ к ручной модерации контента (очередь /moderation/cases).
+         */
+        isContentModerator: boolean;
     };
 };
 
@@ -887,6 +923,24 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
              * Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона.
              */
             publicationModerationStatus: 'approved' | 'pending_review' | 'rejected';
+            /**
+             * Есть ревизия в `pending_review` — превью для кабинета; поле `name` строки организации всё ещё опубликованное (гость).
+             */
+            salonCabinetPreview: {
+                revisionId: string;
+                /**
+                 * Название из черновика ревизии (может отличаться от `name`).
+                 */
+                name: string;
+                /**
+                 * Первое фото галереи черновика; относительные URL как у остальных файлов API.
+                 */
+                coverImageUrl: string | null;
+            } | null;
+            /**
+             * Первое фото галереи опубликованного профиля организации; для карточки в кабинете, когда нет pending-ревизии.
+             */
+            publishedCoverImageUrl: string | null;
         }>;
         /**
          * Текущая активная организация мастера; null — только личный приём / не выбрано.
@@ -896,6 +950,61 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
 };
 
 export type SpecialistsCabinetGetSpecialistMyOrganizationsResponse = SpecialistsCabinetGetSpecialistMyOrganizationsResponses[keyof SpecialistsCabinetGetSpecialistMyOrganizationsResponses];
+
+export type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`.
+         */
+        organizationId: string;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/active-organization/bookings-preview';
+};
+
+export type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewErrors = {
+    /**
+     * organizationId не совпадает с текущим местом приёма (NOT_CURRENT_ACTIVE_WORKPLACE_ORGANIZATION)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses = {
+    200: {
+        /**
+         * Активные брони клиентов к текущему мастеру в указанной организации (то, что отменится при смене места приёма).
+         */
+        bookings: Array<{
+            id: string;
+            status: 'pending' | 'confirmed' | 'in_progress';
+            statusLabel: string;
+            startsAt: string;
+            endsAt: string;
+            pendingExpiresAt: string | null;
+            clientDisplayName: string;
+            categoryShortName: string;
+            /**
+             * Длительность слота на момент записи; отдельно от `endsAt - startsAt`.
+             */
+            durationMinutes: number;
+        }>;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponse = SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses[keyof SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses];
 
 export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData = {
     body?: never;
@@ -929,6 +1038,69 @@ export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses = {
 };
 
 export type SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponse = SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses[keyof SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses];
+
+export type SpecialistsCabinetGetSpecialistSalonBookingsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма.
+         */
+        scope: 'managed' | 'active_workplace';
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/salon-bookings';
+};
+
+export type SpecialistsCabinetGetSpecialistSalonBookingsErrors = {
+    /**
+     * Невалидный query
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistSalonBookingsResponses = {
+    200: {
+        bookings: Array<{
+            id: string;
+            status: 'pending' | 'expired' | 'reject_by_master' | 'reject_by_client' | 'confirmed' | 'canceled_by_master' | 'canceled_by_client' | 'no_show_by_client' | 'no_show_by_master' | 'in_progress' | 'done';
+            statusLabel: string;
+            specialistId: string;
+            /**
+             * Мастер, принимающий по этой брони.
+             */
+            specialistName: string;
+            specialistImageUrl: string | null;
+            organizationId: string | null;
+            organizationName: string | null;
+            /**
+             * Имя гостя из учётной записи на момент ответа.
+             */
+            clientDisplayName: string;
+            categoryShortName: string;
+            amount: number | null;
+            currency: string;
+            startsAt: string;
+            endsAt: string;
+            pendingExpiresAt: string | null;
+            cancelReason: string | null;
+            cancellationComment: string | null;
+        }>;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistSalonBookingsResponse = SpecialistsCabinetGetSpecialistSalonBookingsResponses[keyof SpecialistsCabinetGetSpecialistSalonBookingsResponses];
 
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
@@ -1030,6 +1202,9 @@ export type SpecialistsCabinetGetSpecialistOnboardingResponse = SpecialistsCabin
 
 export type SpecialistsCabinetPatchSpecialistProfileData = {
     body: {
+        /**
+         * Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`.
+         */
         name?: string;
         phone?: string | unknown;
         bio?: string;
@@ -1432,11 +1607,11 @@ export type SpecialistBookingsConfirmPendingErrors = {
      */
     401: unknown;
     /**
-     * У JWT нет профиля специалиста
+     * Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)
      */
     403: unknown;
     /**
-     * Бронь не найдена или чужая
+     * Бронь не найдена
      */
     404: unknown;
 };
@@ -1459,6 +1634,95 @@ export type SpecialistBookingsConfirmPendingResponses = {
 
 export type SpecialistBookingsConfirmPendingResponse = SpecialistBookingsConfirmPendingResponses[keyof SpecialistBookingsConfirmPendingResponses];
 
+export type SpecialistBookingsRejectPendingData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/bookings/me/{id}/reject';
+};
+
+export type SpecialistBookingsRejectPendingErrors = {
+    /**
+     * Статус не `pending` (код `BOOKING_NOT_PENDING`)
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)
+     */
+    403: unknown;
+    /**
+     * Бронь не найдена
+     */
+    404: unknown;
+};
+
+export type SpecialistBookingsRejectPendingResponses = {
+    200: {
+        id: string;
+        /**
+         * Клиент получает push об отказе салона до подтверждения записи.
+         */
+        status: 'reject_by_master';
+    };
+};
+
+export type SpecialistBookingsRejectPendingResponse = SpecialistBookingsRejectPendingResponses[keyof SpecialistBookingsRejectPendingResponses];
+
+export type SpecialistBookingsCancelConfirmedData = {
+    body: {
+        /**
+         * При `master_other` в теле нужен непустой `cancellationComment`.
+         */
+        cancelReason: 'master_schedule_conflict' | 'master_unavailable_or_ill' | 'master_organization_closed' | 'master_duplicate_or_error' | 'master_other';
+        /**
+         * Для `master_other` — обязателен.
+         */
+        cancellationComment?: string;
+    };
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/bookings/me/{id}/cancel';
+};
+
+export type SpecialistBookingsCancelConfirmedErrors = {
+    /**
+     * Не `confirmed`, ошибка тела или `master_other` без комментария (`BOOKING_CANNOT_CANCEL`)
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)
+     */
+    403: unknown;
+    /**
+     * Бронь не найдена
+     */
+    404: unknown;
+};
+
+export type SpecialistBookingsCancelConfirmedResponses = {
+    200: {
+        id: string;
+        /**
+         * Клиент получает push об отмене с вашей стороны.
+         */
+        status: 'canceled_by_master';
+    };
+};
+
+export type SpecialistBookingsCancelConfirmedResponse = SpecialistBookingsCancelConfirmedResponses[keyof SpecialistBookingsCancelConfirmedResponses];
+
 export type SpecialistBookingsStartVisitData = {
     body?: never;
     path: {
@@ -1478,11 +1742,11 @@ export type SpecialistBookingsStartVisitErrors = {
      */
     401: unknown;
     /**
-     * У JWT нет профиля специалиста
+     * Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)
      */
     403: unknown;
     /**
-     * Бронь не найдена или чужая
+     * Бронь не найдена
      */
     404: unknown;
 };
@@ -1610,6 +1874,8 @@ export type OrganizationsListResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            email?: string | null;
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -1670,12 +1936,12 @@ export type OrganizationsListResponse = OrganizationsListResponses[keyof Organiz
 
 export type OrganizationsCabinetPostCreateOrganizationData = {
     /**
-     * Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь).
+     * Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`.
      */
     body: {
         name: string;
         /**
-         * Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно).
+         * Ссылка на объект геокодера. Если одновременно переданы непустой `addressLine`, `latitude` и `longitude` — координаты и строка адреса берутся с клиента (точка с карты кабинета); иначе сервер заполняет адрес через resolve по place_id.
          */
         placeReference?: {
             provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
@@ -1745,6 +2011,238 @@ export type OrganizationsCabinetPostCreateOrganizationResponses = {
 };
 
 export type OrganizationsCabinetPostCreateOrganizationResponse = OrganizationsCabinetPostCreateOrganizationResponses[keyof OrganizationsCabinetPostCreateOrganizationResponses];
+
+export type OrganizationsCabinetGetCabinetOrganizationProfileForEditData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}/cabinet-edit';
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses = {
+    200: {
+        name: string;
+        description: string | null;
+        phone: string | null;
+        email: string | null;
+        website: string | null;
+        yearsInBusiness: number | null;
+        addressLine: string | null;
+        city: string | null;
+        latitude: number | null;
+        longitude: number | null;
+        placeReference: {
+            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+            placeId: string;
+        } | null;
+        serviceCategoryIds: Array<string>;
+        galleryItems: Array<{
+            url: string;
+            alt: string | null;
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationProfileForEditResponse = OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses[keyof OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses];
+
+export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}/delete-bookings-preview';
+};
+
+export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Только владелец организации (NOT_ORGANIZATION_OWNER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses = {
+    200: {
+        /**
+         * Активные записи салона во всех мастерах — если продолжить удаление организации, они будут автоматически отменены.
+         */
+        bookings: Array<{
+            id: string;
+            status: 'pending' | 'confirmed' | 'in_progress';
+            statusLabel: string;
+            startsAt: string;
+            endsAt: string;
+            pendingExpiresAt: string | null;
+            clientDisplayName: string;
+            categoryShortName: string;
+            /**
+             * Длительность слота на момент записи; отдельно от endsAt − startsAt.
+             */
+            durationMinutes: number;
+            /**
+             * Имя/витринное имя мастера, принимающего по записи.
+             */
+            specialistDisplayName: string;
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponse = OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses[keyof OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses];
+
+export type OrganizationsCabinetDeleteOrganizationAsOwnerData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}';
+};
+
+export type OrganizationsCabinetDeleteOrganizationAsOwnerErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Только владелец организации (NOT_ORGANIZATION_OWNER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetDeleteOrganizationAsOwnerResponses = {
+    200: {
+        ok: true;
+        /**
+         * Число отменённых активных записей.
+         */
+        cancelledBookingsCount: number;
+    };
+};
+
+export type OrganizationsCabinetDeleteOrganizationAsOwnerResponse = OrganizationsCabinetDeleteOrganizationAsOwnerResponses[keyof OrganizationsCabinetDeleteOrganizationAsOwnerResponses];
+
+export type OrganizationsCabinetPatchOrganizationData = {
+    /**
+     * Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`.
+     */
+    body: {
+        name: string;
+        /**
+         * Ссылка на объект геокодера. Если одновременно переданы непустой `addressLine`, `latitude` и `longitude` — координаты и строка адреса берутся с клиента (точка с карты кабинета); иначе сервер заполняет адрес через resolve по place_id.
+         */
+        placeReference?: {
+            provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
+            placeId: string;
+        };
+        addressLine?: string;
+        city?: string | null;
+        latitude?: number;
+        longitude?: number;
+        description?: string;
+        /**
+         * Вьетнам E.164: +84 и 8–12 цифр национального номера (как в профиле мастера). Пусто — не указывать.
+         */
+        phone?: string | null;
+        email?: string | null;
+        /**
+         * URL сайта; допустимо без схемы — сервер добавит https://.
+         */
+        website?: string | null;
+        yearsInBusiness?: number | null;
+        imageUrl?: string | null;
+        imageAlt?: string | null;
+        /**
+         * URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются.
+         */
+        galleryImageUrls?: Array<string>;
+        serviceCategoryIds: Array<string>;
+    };
+    path: {
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}';
+};
+
+export type OrganizationsCabinetPatchOrganizationErrors = {
+    /**
+     * Категории или валидация тела
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetPatchOrganizationResponses = {
+    200: {
+        /**
+         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         */
+        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type OrganizationsCabinetPatchOrganizationResponse = OrganizationsCabinetPatchOrganizationResponses[keyof OrganizationsCabinetPatchOrganizationResponses];
 
 export type OrganizationsCabinetPostRequestWorkplaceJoinData = {
     body?: never;
@@ -2252,6 +2750,10 @@ export type SpecialistsListResponses = {
                 id: string;
                 name: string;
             } | null;
+            /**
+             * Только у самого мастера при незавершённой модерации активного салона.
+             */
+            activeWorkplacePublicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
         }>;
         cursorPage: {
             /**
@@ -2315,6 +2817,10 @@ export type SpecialistsListReviewsResponses = {
              * ISO-8601
              */
             createdAt: string;
+            /**
+             * Только если отзыв ещё на модерации или отклонён — для своего текста автором (Bearer); гостям не отдаём.
+             */
+            publicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
         }>;
         cursorPage: {
             /**
@@ -2437,7 +2943,7 @@ export type SpecialistsGetByIdResponses = {
             name: string;
         } | null;
         /**
-         * Для владельца профиля по Bearer: статус публикации активного салона; для гостей не передаётся.
+         * Только у самого мастера при незавершённой модерации активного салона.
          */
         activeWorkplacePublicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
     };
@@ -2492,6 +2998,10 @@ export type OrganizationsListReviewsResponses = {
              * ISO-8601
              */
             createdAt: string;
+            /**
+             * Только если отзыв ещё на модерации или отклонён — для своего текста автором (Bearer); гостям не отдаём.
+             */
+            publicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
         }>;
         cursorPage: {
             /**
@@ -2628,7 +3138,7 @@ export type OrganizationsGetByIdResponses = {
             alt?: string | null;
         }>;
         /**
-         * Для владельца по Bearer: если не approved — витрина салона на модерации или отклонена; для гостей поле не передаётся.
+         * Только для владельца (Bearer): пока профиль салона не одобрен, гости получают 404.
          */
         publicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
     };
@@ -2829,6 +3339,10 @@ export type PersonalizationGetRecommendationsResponses = {
                 id: string;
                 name: string;
             } | null;
+            /**
+             * Только у самого мастера при незавершённой модерации активного салона.
+             */
+            activeWorkplacePublicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
         }>;
         organizations: Array<{
             id: string;
@@ -2838,6 +3352,8 @@ export type PersonalizationGetRecommendationsResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            email?: string | null;
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -3057,6 +3573,118 @@ export type DevModerationGetQueueResponses = {
     200: unknown;
 };
 
+export type DevModerationOllamaEvalData = {
+    body: {
+        /**
+         * Строка для проверки (как есть, без нормализации на бэкенде перед отправкой в Ollama)
+         */
+        text: string;
+        /**
+         * Метка в промпте (по умолчанию «preview»), чтобы различать поля если несколько
+         */
+        label?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/dev/moderation/ollama-eval';
+};
+
+export type DevModerationOllamaEvalResponses = {
+    /**
+     * Результат `evaluateTexts`: парсится JSON модели `{ result, reason }` → `verdict` / `rawSummary`.
+     */
+    200: {
+        /**
+         * Итог модерации (после парсинга JSON ответа модели)
+         */
+        verdict?: 'pass' | 'review';
+        /**
+         * `reason` от модели + фрагмент сырого ответа или сообщение при ошибке
+         */
+        rawSummary?: string | null;
+        /**
+         * true — проблемы с конфигурацией/сетью/моделью Ollama, не вердикт по контенту
+         */
+        infraUnavailable?: boolean;
+    };
+};
+
+export type DevModerationOllamaEvalResponse = DevModerationOllamaEvalResponses[keyof DevModerationOllamaEvalResponses];
+
+export type DevModerationImageEvalData = {
+    body: {
+        /**
+         * Изображение (jpeg, png, webp или gif до 10 МБ). То же multipart-поле, что для `POST /files/public`.
+         */
+        file: Blob | File;
+    };
+    path?: never;
+    query?: never;
+    url: '/dev/moderation/image-eval';
+};
+
+export type DevModerationImageEvalErrors = {
+    /**
+     * Нет файла или не изображение (ожидается `image*`)
+     */
+    400: unknown;
+};
+
+export type DevModerationImageEvalResponses = {
+    /**
+     * Итог `scoreSingleImageDev` и пути загрузки
+     */
+    200: {
+        /**
+         * Относительный путь после загрузки (`/v1/files/public/…`)
+         */
+        stored_path: string;
+        /**
+         * Абсолютный URL, переданный в sidecar (`MODERATION_FILE_FETCH_ORIGIN` + путь). `null` если origin не задан.
+         */
+        resolved_image_url?: string | null;
+        /**
+         * true — `IMAGE_MODERATION_BASE_URL` пустой; скоринг не вызывался.
+         */
+        infraUnavailable: boolean;
+        /**
+         * true — не задан `MODERATION_FILE_FETCH_ORIGIN` (нельзя построить URL для скачивания изображения контейнером).
+         */
+        moderation_file_fetch_misconfigured?: boolean;
+        /**
+         * JSON от POST …/v1/score (NudeNet + CLIP) при успехе
+         */
+        score?: {
+            safe?: boolean | null;
+            unsafe_score?: number | null;
+            safe_score?: number | null;
+            /**
+             * Блок CLIP контейнера `image-moderation` (violence/blood/gore/… когда включено)
+             */
+            clip?: {
+                enabled?: boolean;
+                review_recommended?: boolean | null;
+                threshold?: number | null;
+                scores?: {
+                    [key: string]: number;
+                } | null;
+                [key: string]: unknown;
+            } | null;
+            [key: string]: unknown;
+        } | null;
+        /**
+         * Текст ошибки HTTP/сети/парсинга от sidecar
+         */
+        error?: string | null;
+        /**
+         * HTTP-код ответа sidecar при ошибке
+         */
+        http_status?: number | null;
+    };
+};
+
+export type DevModerationImageEvalResponse = DevModerationImageEvalResponses[keyof DevModerationImageEvalResponses];
+
 export type DevModerationResolveCaseData = {
     body: {
         decision: 'approve' | 'reject';
@@ -3167,6 +3795,8 @@ export type FavoritesListOrganizationsListingResponses = {
             city?: string | null;
             addressLine: string | null;
             phone: string | null;
+            email?: string | null;
+            website?: string | null;
             yearsInBusiness: number | null;
             latitude?: number | null;
             longitude?: number | null;
@@ -3312,6 +3942,10 @@ export type FavoritesListSpecialistsListingResponses = {
                 id: string;
                 name: string;
             } | null;
+            /**
+             * Только у самого мастера при незавершённой модерации активного салона.
+             */
+            activeWorkplacePublicationModerationStatus?: 'approved' | 'pending_review' | 'rejected';
         }>;
     };
 };

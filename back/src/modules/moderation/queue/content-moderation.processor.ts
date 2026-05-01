@@ -10,20 +10,32 @@ import {
 @Injectable()
 @Processor(CONTENT_MODERATION_QUEUE)
 export class ContentModerationProcessor extends WorkerHost {
-  constructor(
-    private readonly contentModeration: ContentModerationService,
-  ) {
+  constructor(private readonly contentModeration: ContentModerationService) {
     super();
   }
 
-  async process(job: Job<{ organizationId?: string }>): Promise<void> {
+  async process(
+    job: Job<{
+      organizationProfileRevisionId?: string;
+      organizationId?: string;
+    }>,
+  ): Promise<void> {
     if (job.name !== CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE) {
       throw new Error(`Unknown moderation job name: ${job.name}`);
     }
-    const organizationId = job.data.organizationId;
-    if (typeof organizationId !== 'string' || organizationId.length === 0) {
-      throw new Error('organizationId missing in job data');
+    const revisionIdRaw = job.data.organizationProfileRevisionId?.trim();
+    if (revisionIdRaw != null && revisionIdRaw.length > 0) {
+      await this.contentModeration.moderateOrganizationProfileRevision(
+        revisionIdRaw,
+      );
+      return;
     }
-    await this.contentModeration.moderateNewOrganizationProfile(organizationId);
+    const legacyOrgId = job.data.organizationId?.trim();
+    if (legacyOrgId == null || legacyOrgId.length === 0) {
+      throw new Error(
+        'organizationProfileRevisionId (or legacy organizationId) missing in job data',
+      );
+    }
+    await this.contentModeration.moderateNewOrganizationProfile(legacyOrgId);
   }
 }

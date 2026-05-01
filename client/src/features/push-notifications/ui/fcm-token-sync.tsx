@@ -5,7 +5,7 @@ import { getMessaging, getToken, isSupported, onMessage } from "firebase/messagi
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 import { getFirebaseWebConfig } from "@/shared/config/firebase-public";
 import {
   fcmDataShouldRefetchClientBookingsList,

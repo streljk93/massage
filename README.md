@@ -19,7 +19,7 @@ npm run init
 Скрипт:
 
 1. Устанавливает зависимости в `back/` и `client/`
-2. Создаёт в корне файл **`.env`** с `JWT_SECRET` и `AUTH_SECRET` (для `docker compose`), если их ещё нет
+2. Создаёт в корне файл **`.env`** с `JWT_SECRET` и `AUTH_SECRET` (для `docker compose`). Секрет суперадмина дописывается в **`back/.env`** (`ADMIN_MASTER_*`); при наличии устаревших ключей в корне они переносятся в `back/.env`.
 3. При необходимости дописывает **`client/.env.local`**: `AUTH_SECRET` и `AUTH_BACKEND_URL=http://localhost:3001`
 4. Поднимает стек **`docker compose up --build -d`**: см. раздел ниже **«Сервисы Docker Compose»** и `docker-compose.yml`
 5. Ждёт готовности ключевых контейнеров (Postgres, MinIO, MailHog, **Redis**, **Ollama**, **image-moderation**) и при необходимости дописывает **`back/.env`** (S3 под MinIO, SMTP под MailHog, Ollama/модерация картинок/Redis под BullMQ при пустых значениях — см. `scripts/init-project.mjs` и `back/.env.example`)
@@ -74,7 +74,7 @@ npm run init
 ### Только секреты для Compose и подъём
 
 ```bash
-npm run docker:env          # корневой .env: JWT_SECRET, AUTH_SECRET
+npm run docker:env          # корневой .env: JWT_SECRET, AUTH_SECRET (суперадмин — `npm run init`)
 npm run docker:up           # docker compose up --build -d
 ```
 

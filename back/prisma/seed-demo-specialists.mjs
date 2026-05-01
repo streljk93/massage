@@ -11,7 +11,10 @@
  * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
 import bcrypt from 'bcrypt';
-import { OrganizationMembershipRole } from '@prisma/client';
+import {
+  OrganizationMembershipRole,
+  PublicationModerationStatus,
+} from '@prisma/client';
 
 const SALT_ROUNDS = 12;
 
@@ -269,6 +272,7 @@ export async function seedDemoSpecialists(prisma) {
     where: { userId: ownerUser.id },
     create: {
       userId: ownerUser.id,
+      listingName: 'Демо владелец салона',
       bio: 'Владелец демо-салона, массажист.',
       experienceYears: 10,
       imageUrl:
@@ -277,6 +281,7 @@ export async function seedDemoSpecialists(prisma) {
       onboardingCompletedAt: null,
     },
     update: {
+      listingName: 'Демо владелец салона',
       bio: 'Владелец демо-салона, массажист.',
       experienceYears: 10,
       imageUrl:
@@ -290,6 +295,7 @@ export async function seedDemoSpecialists(prisma) {
     where: { userId: workerUser.id },
     create: {
       userId: workerUser.id,
+      listingName: 'Демо мастер (сотрудник)',
       bio: 'Мастер салона (сотрудник).',
       experienceYears: 5,
       imageUrl:
@@ -298,6 +304,7 @@ export async function seedDemoSpecialists(prisma) {
       onboardingCompletedAt: DEMO_ONBOARDING_COMPLETED_AT,
     },
     update: {
+      listingName: 'Демо мастер (сотрудник)',
       bio: 'Мастер салона (сотрудник).',
       experienceYears: 5,
       imageUrl:
@@ -761,7 +768,9 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
           organizationId: org.id,
           authorUserId: author.id,
           rating,
-          comment,
+          publishedComment: comment,
+          pendingCommentDraft: null,
+          publicationModerationStatus: PublicationModerationStatus.approved,
         },
       });
     }
@@ -781,7 +790,9 @@ async function applyDemoDirectoryReviewPack(prisma, authorUsers) {
           specialistId,
           authorUserId: author.id,
           rating,
-          comment,
+          publishedComment: comment,
+          pendingCommentDraft: null,
+          publicationModerationStatus: PublicationModerationStatus.approved,
         },
       });
     }
@@ -895,7 +906,7 @@ async function topUpOriginalSalon(prisma, ctx) {
     'demo.salon.worker4@example.com',
   ].slice(0, need);
 
-  const orgCategoryRows = await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
+  await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
   let specIndex = employments.length;
 
   for (const email of topUpEmails) {
@@ -1049,6 +1060,7 @@ async function upsertFullSalon(prisma, args) {
     where: { userId: ownerUser.id },
     create: {
       userId: ownerUser.id,
+      listingName: `Владелец «${def.name}»`,
       bio: 'Владелец салона, ведёт приём.',
       experienceYears: 12,
       imageUrl: avatarForSeed(seedOffset + 1).replace('w=128', 'w=200'),
@@ -1056,6 +1068,7 @@ async function upsertFullSalon(prisma, args) {
       onboardingCompletedAt: null,
     },
     update: {
+      listingName: `Владелец «${def.name}»`,
       listedInDirectory: false,
       onboardingCompletedAt: null,
     },
@@ -1125,6 +1138,7 @@ async function upsertFullSalon(prisma, args) {
       where: { userId: user.id },
       create: {
         userId: user.id,
+        listingName: `Мастер ${w} · ${def.name}`,
         bio: `Мастер салона «${def.name}».`,
         experienceYears: 4 + w,
         imageUrl: avatarForSeed(seedOffset + w + 20).replace('w=128', 'w=200'),
@@ -1132,6 +1146,7 @@ async function upsertFullSalon(prisma, args) {
         onboardingCompletedAt: DEMO_ONBOARDING_COMPLETED_AT,
       },
       update: {
+        listingName: `Мастер ${w} · ${def.name}`,
         listedInDirectory: true,
         onboardingCompletedAt: DEMO_ONBOARDING_COMPLETED_AT,
       },

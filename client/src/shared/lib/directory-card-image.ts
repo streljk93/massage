@@ -1,4 +1,4 @@
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import { resolveApiResourceUrl } from "./resolve-api-resource-url";
 
 const FALLBACK_CARD_IMAGE = "/massage.png";
 

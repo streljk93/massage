@@ -12,7 +12,9 @@ import {
 
 const bookingListInclude = {
   specialist: {
-    include: {
+    select: {
+      listingName: true,
+      imageUrl: true,
       user: { select: { name: true } },
     },
   },
@@ -21,11 +23,21 @@ const bookingListInclude = {
   },
   organizationReview: {
     where: { deletedAt: null },
-    select: { id: true, rating: true, comment: true },
+    select: {
+      id: true,
+      rating: true,
+      publishedComment: true,
+      pendingCommentDraft: true,
+    },
   },
   specialistReview: {
     where: { deletedAt: null },
-    select: { id: true, rating: true, comment: true },
+    select: {
+      id: true,
+      rating: true,
+      publishedComment: true,
+      pendingCommentDraft: true,
+    },
   },
 } satisfies Prisma.BookingInclude;
 
@@ -35,6 +47,33 @@ export type BookingListRow = Prisma.BookingGetPayload<{
 
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
   ['pending', 'confirmed', 'in_progress'];
+
+const salonCabinetBookingSelect = {
+  id: true,
+  status: true,
+  startsAt: true,
+  endsAt: true,
+  pendingExpiresAt: true,
+  categoryShortNameSnapshot: true,
+  priceAmountSnapshot: true,
+  currencySnapshot: true,
+  cancelReason: true,
+  cancellationComment: true,
+  client: { select: { name: true } },
+  specialist: {
+    select: {
+      id: true,
+      listingName: true,
+      imageUrl: true,
+      user: { select: { name: true } },
+    },
+  },
+  organization: { select: { id: true, name: true } },
+} satisfies Prisma.BookingSelect;
+
+export type SalonCabinetBookingRow = Prisma.BookingGetPayload<{
+  select: typeof salonCabinetBookingSelect;
+}>;
 
 @Injectable()
 export class BookingsRepository {
@@ -180,6 +219,63 @@ export class BookingsRepository {
   }
 
   /**
+   * Активные брони мастера по конкретной организации (`pending`, `confirmed`, `in_progress`)
+   * — превью того, что отменится при уходе с этого места приёма (без мутаций).
+   */
+  findActiveBookingsAtOrganizationForCabinetPreview(
+    specialistId: string,
+    organizationId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      status: BookingStatus;
+      startsAt: Date;
+      endsAt: Date;
+      pendingExpiresAt: Date | null;
+      categoryShortNameSnapshot: string | null;
+      durationMinutes: number;
+      clientDisplayName: string | null;
+    }>
+  > {
+    return this.prisma.booking
+      .findMany({
+        where: {
+          specialistId,
+          organizationId,
+          deletedAt: null,
+          status: { in: ACTIVE_BOOKING_STATUSES },
+        },
+        select: {
+          id: true,
+          status: true,
+          startsAt: true,
+          endsAt: true,
+          pendingExpiresAt: true,
+          categoryShortNameSnapshot: true,
+          durationMinutes: true,
+          client: {
+            select: { name: true },
+          },
+        },
+        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+      })
+      .then((rows) =>
+        rows.map((r) => ({
+          id: r.id,
+          status: r.status,
+          startsAt: r.startsAt,
+          endsAt: r.endsAt,
+          pendingExpiresAt: r.pendingExpiresAt ?? null,
+          categoryShortNameSnapshot: r.categoryShortNameSnapshot,
+          durationMinutes: r.durationMinutes,
+          clientDisplayName: r.client.name?.trim()
+            ? r.client.name.trim()
+            : null,
+        })),
+      );
+  }
+
+  /**
    * Активные записи мастера по организации (место приёма) переводятся в `canceled_by_master`
    * (например при смене текущей организации у специалиста).
    */
@@ -242,6 +338,179 @@ export class BookingsRepository {
       out.push({ id: row.id, fromStatus: row.status, toStatus });
     }
     return out;
+  }
+
+  /**
+   * Превью активных записей всего салона (все специалисты) перед удалением организации.
+   */
+  findAllActiveBookingsAtOrganizationForDeletePreview(
+    organizationId: string,
+  ): Promise<
+    Array<{
+      id: string;
+      status: BookingStatus;
+      startsAt: Date;
+      endsAt: Date;
+      pendingExpiresAt: Date | null;
+      categoryShortNameSnapshot: string | null;
+      durationMinutes: number;
+      clientDisplayName: string | null;
+      specialistDisplayName: string | null;
+    }>
+  > {
+    return this.prisma.booking
+      .findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          status: { in: ACTIVE_BOOKING_STATUSES },
+        },
+        select: {
+          id: true,
+          status: true,
+          startsAt: true,
+          endsAt: true,
+          pendingExpiresAt: true,
+          categoryShortNameSnapshot: true,
+          durationMinutes: true,
+          client: {
+            select: { name: true },
+          },
+          specialist: {
+            select: {
+              listingName: true,
+              user: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
+      })
+      .then((rows) =>
+        rows.map((r) => {
+          const listing = (r.specialist.listingName ?? '').trim();
+          const userName = (r.specialist.user.name ?? '').trim();
+          const specialistDisplayName =
+            listing.length > 0 ? listing : userName.length > 0 ? userName : null;
+          return {
+            id: r.id,
+            status: r.status,
+            startsAt: r.startsAt,
+            endsAt: r.endsAt,
+            pendingExpiresAt: r.pendingExpiresAt ?? null,
+            categoryShortNameSnapshot: r.categoryShortNameSnapshot,
+            durationMinutes: r.durationMinutes,
+            clientDisplayName: r.client.name?.trim()
+              ? r.client.name.trim()
+              : null,
+            specialistDisplayName,
+          };
+        }),
+      );
+  }
+
+  /**
+   * Активные записи салона переводятся в `reject_by_master`/`canceled_by_master` (удаление организации).
+   */
+  async cancelAllActiveBookingsAtOrganization(
+    tx: Prisma.TransactionClient,
+    args: {
+      organizationId: string;
+      actorUserId: string;
+      cancelReason: string;
+      cancellationComment?: string | null;
+    },
+  ): Promise<
+    Array<{ id: string; fromStatus: BookingStatus; toStatus: BookingStatus }>
+  > {
+    const rows = await tx.booking.findMany({
+      where: {
+        organizationId: args.organizationId,
+        deletedAt: null,
+        status: { in: ACTIVE_BOOKING_STATUSES },
+      },
+      select: { id: true, status: true },
+    });
+    const historyReason = [args.cancelReason, args.cancellationComment ?? '']
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(' | ');
+    const out: Array<{
+      id: string;
+      fromStatus: BookingStatus;
+      toStatus: BookingStatus;
+    }> = [];
+    for (const row of rows) {
+      const toStatus: BookingStatus =
+        row.status === 'pending' ? 'reject_by_master' : 'canceled_by_master';
+      if (!isBookingStatusTransitionAllowed(row.status, toStatus)) {
+        throw new Error(
+          `Invalid booking status transition for org delete cancel: ${row.status} -> ${toStatus}`,
+        );
+      }
+      await tx.booking.update({
+        where: { id: row.id },
+        data: {
+          status: toStatus,
+          pendingExpiresAt: null,
+          cancelReason: args.cancelReason,
+          cancellationComment: args.cancellationComment ?? null,
+        },
+      });
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: row.id,
+          fromStatus: row.status,
+          toStatus,
+          actorUserId: args.actorUserId,
+          reason: historyReason.length > 0 ? historyReason : null,
+        },
+      });
+      out.push({ id: row.id, fromStatus: row.status, toStatus });
+    }
+    return out;
+  }
+
+  /**
+   * Все активные записи по организации (доступ только для пользователей с проверкой в сервисе).
+   */
+  findManyForSalonCabinetManaged(
+    organizationIds: string[],
+    statuses?: BookingStatus[],
+  ): Promise<SalonCabinetBookingRow[]> {
+    if (organizationIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.booking.findMany({
+      where: {
+        deletedAt: null,
+        organizationId: { in: organizationIds },
+        ...(statuses !== undefined && statuses.length > 0
+          ? { status: { in: statuses } }
+          : {}),
+      },
+      select: salonCabinetBookingSelect,
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  /** Записи конкретного мастера в организации-текущем месте приёма (кабинет «мои записи»). */
+  findManyForSalonCabinetActiveWorkplace(
+    specialistId: string,
+    organizationId: string,
+    statuses?: BookingStatus[],
+  ): Promise<SalonCabinetBookingRow[]> {
+    return this.prisma.booking.findMany({
+      where: {
+        specialistId,
+        organizationId,
+        deletedAt: null,
+        ...(statuses !== undefined && statuses.length > 0
+          ? { status: { in: statuses } }
+          : {}),
+      },
+      select: salonCabinetBookingSelect,
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    });
   }
 
   /**

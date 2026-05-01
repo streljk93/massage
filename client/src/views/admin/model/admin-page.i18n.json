@@ -1,0 +1,160 @@
+{
+  "messages": {
+    "en": {
+      "admin": {
+        "title": "Admin",
+        "tabModeration": "Pending review",
+        "backHome": "Home",
+        "loading": "Loading…",
+        "forbidden": "You do not have moderator or super-admin access.",
+        "signInPrompt": "Sign in to open the admin area.",
+        "signInCta": "Log in",
+        "accessDeniedLoggedIn": "Your account does not include moderator or master rights.",
+        "emptyQueue": "The moderation queue is empty.",
+        "noEntity": "Related record not found.",
+        "table": {
+          "kind": "Type",
+          "previewGuest": "Guest-visible (catalog / live)",
+          "previewPending": "Under review (submission)",
+          "aiSummary": "AI (submission / delta)",
+          "actions": "Actions",
+          "approve": "Approve",
+          "reject": "Reject",
+          "listFailed": "Failed to load the moderation queue."
+        },
+        "preview": {
+          "emptyListed": "Nothing approved for catalog yet.",
+          "experienceYears": "Experience: {years} yrs",
+          "reviewEmpty": "No published comment yet.",
+          "reviewDraftEmpty": "Draft comment missing.",
+          "guestNameMissing": "No listed name yet.",
+          "organizationNotInShowcase": "Not visible to guests yet: the salon stays out of the catalog until this profile is approved.",
+          "galleryUploaded": "Uploaded photos ({count})",
+          "galleryThumbnailAltOrdinal": "Photo {index} of {total}",
+          "salonDescriptionFull": "Description (full text)",
+          "salonPhone": "Phone",
+          "salonEmail": "Email",
+          "salonWebsite": "Website"
+        },
+        "kinds": {
+          "organization_profile": "Salon profile",
+          "organization_review": "Salon review",
+          "specialist_review": "Specialist review",
+          "specialist_profile": "Specialist profile",
+          "user_display_name": "User display name"
+        },
+        "rejectDialog": {
+          "title": "Reject case",
+          "reasonLabel": "Reason",
+          "reasonPlaceholder": "Short reason for the author",
+          "cancel": "Cancel",
+          "submit": "Reject"
+        }
+      }
+    },
+    "vi": {
+      "admin": {
+        "title": "Quản trị",
+        "tabModeration": "Chờ duyệt",
+        "backHome": "Trang chủ",
+        "loading": "Đang tải…",
+        "forbidden": "Bạn không có quyền kiểm duyệt hoặc siêu quản trị.",
+        "signInPrompt": "Đăng nhập để vào khu quản trị.",
+        "signInCta": "Đăng nhập",
+        "accessDeniedLoggedIn": "Tài khoản của bạn không có quyền moderator hoặc master.",
+        "emptyQueue": "Hàng đợi kiểm duyệt trống.",
+        "noEntity": "Không tìm thấy bản ghi liên quan.",
+        "table": {
+          "kind": "Loại",
+          "previewGuest": "Khách nhìn thấy (catalog / đang)",
+          "previewPending": "Đang chờ duyệt (bản gửi)",
+          "aiSummary": "AI (bản / thay đổi)",
+          "actions": "Thao tác",
+          "approve": "Duyệt",
+          "reject": "Từ chối",
+          "listFailed": "Không tải được hàng đợi kiểm duyệt."
+        },
+        "preview": {
+          "emptyListed": "Chưa có ấn định trong catalog.",
+          "experienceYears": "Kinh nghiệm: {years} năm",
+          "reviewEmpty": "Chưa có bình luận đã duyệt.",
+          "reviewDraftEmpty": "Không có bản nháp bình luận.",
+          "guestNameMissing": "Chưa có tên hiển thị được duyệt.",
+          "organizationNotInShowcase": "Khách chưa thấy: salon chưa lên catalog cho đến khi được duyệt.",
+          "galleryUploaded": "Ảnh đã tải lên ({count})",
+          "galleryThumbnailAltOrdinal": "Ảnh {index}/{total}",
+          "salonDescriptionFull": "Mô tả (toàn văn)",
+          "salonPhone": "Điện thoại",
+          "salonEmail": "Email",
+          "salonWebsite": "Website"
+        },
+        "kinds": {
+          "organization_profile": "Hồ sơ salon",
+          "organization_review": "Đánh giá salon",
+          "specialist_review": "Đánh giá chuyên gia",
+          "specialist_profile": "Hồ sơ chuyên gia",
+          "user_display_name": "Tên hiển thị người dùng"
+        },
+        "rejectDialog": {
+          "title": "Từ chối case",
+          "reasonLabel": "Lý do",
+          "reasonPlaceholder": "Lý do ngắn cho tác giả",
+          "cancel": "Hủy",
+          "submit": "Từ chối"
+        }
+      }
+    },
+    "ru": {
+      "admin": {
+        "title": "Админка",
+        "tabModeration": "На модерации",
+        "backHome": "На главную",
+        "loading": "Загрузка…",
+        "forbidden": "Нет прав модератора или суперадмина.",
+        "signInPrompt": "Войдите, чтобы открыть админку.",
+        "signInCta": "Войти",
+        "accessDeniedLoggedIn": "У этой учётной записи нет прав модератора или master.",
+        "emptyQueue": "Очередь модерации пуста.",
+        "noEntity": "Связанная запись не найдена.",
+        "table": {
+          "kind": "Тип",
+          "previewGuest": "Что видит гость (витрина / сейчас)",
+          "previewPending": "На модерации (подача)",
+          "aiSummary": "AI (подача / дельта)",
+          "actions": "Действия",
+          "approve": "Одобрить",
+          "reject": "Отклонить",
+          "listFailed": "Не удалось загрузить очередь модерации."
+        },
+        "preview": {
+          "emptyListed": "В каталоге ещё не опубликовано.",
+          "experienceYears": "Опыт: {years} лет",
+          "reviewEmpty": "Опубликованного текста отзыва нет.",
+          "reviewDraftEmpty": "Черновик комментария пуст.",
+          "guestNameMissing": "Отображаемого имени ещё не было.",
+          "organizationNotInShowcase": "Гости не видят: салон в каталоге только после одобрения этого профиля.",
+          "galleryUploaded": "Загруженные фото ({count})",
+          "galleryThumbnailAltOrdinal": "Фото {index} из {total}",
+          "salonDescriptionFull": "Описание (полный текст)",
+          "salonPhone": "Телефон",
+          "salonEmail": "Email",
+          "salonWebsite": "Сайт"
+        },
+        "kinds": {
+          "organization_profile": "Профиль салона",
+          "organization_review": "Отзыв о салоне",
+          "specialist_review": "Отзыв о специалисте",
+          "specialist_profile": "Профиль специалиста",
+          "user_display_name": "Отображаемое имя"
+        },
+        "rejectDialog": {
+          "title": "Отклонить кейс",
+          "reasonLabel": "Причина",
+          "reasonPlaceholder": "Кратко для пользователя",
+          "cancel": "Отмена",
+          "submit": "Отклонить"
+        }
+      }
+    }
+  }
+}

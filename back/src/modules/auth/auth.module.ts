@@ -34,6 +34,6 @@ import { AuthController } from './presentation/auth.controller';
     OAuthTokenVerifier,
     OAuthAccountRepository,
   ],
-  exports: [AuthService, JwtModule, UserRepository],
+  exports: [AuthService, JwtModule, UserRepository, PasswordHasher],
 })
 export class AuthModule {}

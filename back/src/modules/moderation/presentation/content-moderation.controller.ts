@@ -11,17 +11,17 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
+  ApiBody,
   ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import {
-  JwtAccessGuard,
-  type AuthenticatedUser,
-} from '../../../common/guards';
+import { JwtAccessGuard, type AuthenticatedUser } from '../../../common/guards';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { ContentModerationService } from '../application/content-moderation.service';
 import type { ModerationRejectBody } from '../dto/moderation-resolve-body.schema';
@@ -41,13 +41,19 @@ export class ContentModerationController {
   @ApiOperation({
     summary: 'Очередь ручной модерации открытых кейсов',
     description:
-      'Требуется флаг модератора (`User.isContentModerator`).',
+      'Требуется `User.platformRole` = master или флаг модератора `User.isContentModerator`.',
   })
   @ApiOkResponse({
     description: 'Список кейсов',
   })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   @ApiForbiddenResponse({ description: 'Нет прав модератора контента' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Максимум кейсов (1–100), по умолчанию 50',
+    schema: { type: 'integer', minimum: 1, maximum: 100 },
+  })
   async listCases(@Query('limit') limitRaw?: string) {
     const n = Math.min(Math.max(Number(limitRaw ?? '50') || 50, 1), 100);
     return this.moderation.listOpenCases(n);
@@ -56,6 +62,7 @@ export class ContentModerationController {
   @Post('cases/:caseId/approve')
   @UseGuards(JwtAccessGuard, ContentModeratorGuard)
   @ApiBearerAuth('access-token')
+  @ApiParam({ name: 'caseId', format: 'uuid', description: 'Id кейса модерации' })
   @ApiOperation({ summary: 'Разрешить контент (публикация во витрине)' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   @ApiForbiddenResponse({ description: 'Нет прав модератора контента' })
@@ -70,6 +77,21 @@ export class ContentModerationController {
   @Post('cases/:caseId/reject')
   @UseGuards(JwtAccessGuard, ContentModeratorGuard)
   @ApiBearerAuth('access-token')
+  @ApiParam({ name: 'caseId', format: 'uuid', description: 'Id кейса модерации' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['reason'],
+      properties: {
+        reason: {
+          type: 'string',
+          minLength: 1,
+          maxLength: 2000,
+          description: 'Причина отказа модератора',
+        },
+      },
+    },
+  })
   @ApiOperation({
     summary: 'Отклонить контент с причиной (не публикуется или снимается)',
   })

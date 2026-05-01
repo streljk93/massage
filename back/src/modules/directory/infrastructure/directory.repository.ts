@@ -9,6 +9,10 @@ import {
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import {
+  directoryListedSpecialistListingNameWhereInput,
+  specialistProfileListingWhereInput,
+} from '../lib/directory-specialist-listed-profile';
+import {
   findOrganizationIdsWithinRadiusMeters,
   findSpecialistIdsWithinRadiusMeters,
 } from './directory-geo-radius-ids';
@@ -92,6 +96,24 @@ function moderationWhereSpecialistReview(
   };
 }
 
+/** Текст отзыва для витрины: гости — только опубликованный; автор своего текста «на модерации» видит черновик. */
+function directoryReviewListedComment(args: {
+  viewerUserId: string | null;
+  row: {
+    authorUserId: string;
+    publishedComment: string | null;
+    pendingCommentDraft: string | null;
+  };
+}): string | null {
+  const viewer = args.viewerUserId;
+  const isAuthor = viewer != null && viewer === args.row.authorUserId;
+  const draft = args.row.pendingCommentDraft?.trim() ?? '';
+  if (isAuthor && draft !== '') {
+    return args.row.pendingCommentDraft;
+  }
+  return args.row.publishedComment;
+}
+
 const serviceCategoryWithLocales = {
   include: {
     serviceCategory: {
@@ -130,7 +152,12 @@ const specialistActiveOrganizationInclude = {
 
 function specialistIncludeForOrgEmployment() {
   return {
-    user: { select: { id: true, name: true } },
+    user: {
+      select: {
+        id: true,
+        phone: true,
+      },
+    },
     services: directoryServiceInclude,
     activeOrganization: specialistActiveOrganizationInclude,
   } satisfies Prisma.SpecialistInclude;
@@ -138,7 +165,12 @@ function specialistIncludeForOrgEmployment() {
 
 function specialistListInclude() {
   return {
-    user: { select: { id: true, name: true, phone: true } },
+    user: {
+      select: {
+        id: true,
+        phone: true,
+      },
+    },
     serviceCategories: serviceCategoryWithLocales,
     /** Услуги каталога с `specialistId` = этот мастер. */
     services: directoryServiceInclude,
@@ -369,16 +401,19 @@ export class DirectoryRepository {
   ): Promise<Prisma.SpecialistWhereInput[] | null> {
     const andParts: Prisma.SpecialistWhereInput[] = [
       {
-        deletedAt: null,
-        listedInDirectory: true,
-        activeOrganizationId: { not: null },
-        user: {
-          nameModerationStatus: PublicationModerationStatus.approved,
-        },
-        activeOrganization: {
-          deletedAt: null,
-          publicationModerationStatus: PublicationModerationStatus.approved,
-        },
+        AND: [
+          {
+            deletedAt: null,
+            listedInDirectory: true,
+            activeOrganizationId: { not: null },
+            activeOrganization: {
+              deletedAt: null,
+              publicationModerationStatus: PublicationModerationStatus.approved,
+            },
+          },
+          directoryListedSpecialistListingNameWhereInput(),
+          specialistProfileListingWhereInput(),
+        ],
       },
     ];
     if (radius != null) {
@@ -953,11 +988,14 @@ export class DirectoryRepository {
       where: {
         id,
         deletedAt: null,
-        user: { nameModerationStatus: PublicationModerationStatus.approved },
         activeOrganization: {
           deletedAt: null,
           publicationModerationStatus: PublicationModerationStatus.approved,
         },
+        AND: [
+          directoryListedSpecialistListingNameWhereInput(),
+          specialistProfileListingWhereInput(),
+        ],
       },
       include: specialistListInclude(),
     });
@@ -973,11 +1011,14 @@ export class DirectoryRepository {
         deletedAt: null,
         listedInDirectory: true,
         activeOrganizationId: { not: null },
-        user: { nameModerationStatus: PublicationModerationStatus.approved },
         activeOrganization: {
           deletedAt: null,
           publicationModerationStatus: PublicationModerationStatus.approved,
         },
+        AND: [
+          directoryListedSpecialistListingNameWhereInput(),
+          specialistProfileListingWhereInput(),
+        ],
       },
       include: specialistListInclude(),
     });
@@ -1015,20 +1056,45 @@ export class DirectoryRepository {
       return Promise.resolve([]);
     }
     return this.prisma.specialist.findMany({
-      where: { id: { in: ids }, deletedAt: null },
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+        AND: [
+          directoryListedSpecialistListingNameWhereInput(),
+          specialistProfileListingWhereInput(),
+        ],
+      },
       include: specialistListInclude(),
     });
   }
 
   /** Подкатегории, которые есть у мастеров, показываемых в каталоге. */
   findDistinctServiceCategoryIdsForListingSpecialists(): Promise<string[]> {
-    return this.prisma.$queryRaw<{ serviceCategoryId: string }[]>`
-        SELECT DISTINCT ssc."serviceCategoryId"
-        FROM "SpecialistServiceCategory" ssc
-        INNER JOIN "Specialist" s ON s.id = ssc."specialistId"
-        WHERE s."listedInDirectory" = true
-          AND s."deletedAt" IS NULL
-      `.then((rows) => rows.map((r) => r.serviceCategoryId));
+    return this.prisma.specialist
+      .findMany({
+        where: {
+          deletedAt: null,
+          listedInDirectory: true,
+          AND: [
+            directoryListedSpecialistListingNameWhereInput(),
+            specialistProfileListingWhereInput(),
+          ],
+        },
+        select: {
+          serviceCategories: {
+            select: { serviceCategoryId: true },
+          },
+        },
+      })
+      .then((rows) => {
+        const ids = new Set<string>();
+        for (const row of rows) {
+          for (const c of row.serviceCategories) {
+            ids.add(c.serviceCategoryId);
+          }
+        }
+        return [...ids];
+      });
   }
 
   /**
@@ -1265,14 +1331,25 @@ export class DirectoryRepository {
       where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: args.limit,
-      include: {
+      select: {
+        id: true,
+        rating: true,
+        publishedComment: true,
+        pendingCommentDraft: true,
+        authorUserId: true,
+        createdAt: true,
+        publicationModerationStatus: true,
         author: { select: { name: true } },
       },
     });
+    const viewerUid = args.viewerUserId ?? null;
     return rows.map((r) => ({
       id: r.id,
       rating: r.rating,
-      comment: r.comment,
+      comment: directoryReviewListedComment({
+        viewerUserId: viewerUid,
+        row: r,
+      }),
       createdAt: r.createdAt,
       authorName: r.author.name,
       publicationModerationStatus: r.publicationModerationStatus,
@@ -1327,14 +1404,25 @@ export class DirectoryRepository {
       where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: args.limit,
-      include: {
+      select: {
+        id: true,
+        rating: true,
+        publishedComment: true,
+        pendingCommentDraft: true,
+        authorUserId: true,
+        createdAt: true,
+        publicationModerationStatus: true,
         author: { select: { name: true } },
       },
     });
+    const viewerUid = args.viewerUserId ?? null;
     return rows.map((r) => ({
       id: r.id,
       rating: r.rating,
-      comment: r.comment,
+      comment: directoryReviewListedComment({
+        viewerUserId: viewerUid,
+        row: r,
+      }),
       createdAt: r.createdAt,
       authorName: r.author.name,
       publicationModerationStatus: r.publicationModerationStatus,

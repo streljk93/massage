@@ -133,7 +133,9 @@ export class AuthController {
   @ApiBody({ schema: authOauthLoginRequestSchema })
   @ApiOkResponse({ schema: authTokensResponseSchema })
   @ApiBadRequestResponse({ schema: authBadRequestOauthSchema })
-  @ApiBadRequestResponse({ description: 'Ошибка Zod: нет `idToken` / `accessToken` для провайдера' })
+  @ApiBadRequestResponse({
+    description: 'Ошибка Zod: нет `idToken` / `accessToken` для провайдера',
+  })
   async loginWithOauth(
     @Body(new ZodValidationPipe(oauthLoginBodySchema))
     body: OauthLoginBody,

@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  PlatformRole,
+  Prisma,
+  type PublicationModerationStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 
 export type UserRecord = {
   id: string;
   email: string;
   name: string;
+  catalogListedName: string | null;
+  nameModerationStatus: PublicationModerationStatus;
   passwordHash: string | null;
   avatarUrl: string | null;
   emailVerifiedAt: Date | null;
@@ -13,6 +19,8 @@ export type UserRecord = {
   locale: string | null;
   bookingReminderEnabled: boolean;
   bookingReminderLeadMinutes: number;
+  platformRole: PlatformRole;
+  isContentModerator: boolean;
 };
 
 @Injectable()
@@ -64,6 +72,7 @@ export class UserRepository {
     id: string,
     data: {
       name?: string;
+      catalogListedName?: string | null;
       avatarUrl?: string | null;
       locale?: string | null;
       bookingReminderEnabled?: boolean;
@@ -78,6 +87,9 @@ export class UserRepository {
       where: { id },
       data: {
         ...(data.name !== undefined ? { name: data.name } : {}),
+        ...(data.catalogListedName !== undefined
+          ? { catalogListedName: data.catalogListedName }
+          : {}),
         ...(data.avatarUrl !== undefined ? { avatarUrl: data.avatarUrl } : {}),
         ...(data.locale !== undefined ? { locale: data.locale } : {}),
         ...(data.bookingReminderEnabled !== undefined

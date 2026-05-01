@@ -12,6 +12,7 @@ export class ModerationEnqueueService {
   private readonly logger = new Logger(ModerationEnqueueService.name);
 
   constructor(
+    @Inject(ContentModerationService)
     private readonly contentModeration: ContentModerationService,
     @Optional()
     @Inject(getQueueToken(CONTENT_MODERATION_QUEUE))
@@ -24,26 +25,28 @@ export class ModerationEnqueueService {
    * Если очередь сконфигурирована, но `queue.add` упал (Redis недоступен и т.п.) — синхронный fallback.
    */
   async enqueueOrganizationProfileModeration(
-    organizationId: string,
+    organizationProfileRevisionId: string,
   ): Promise<void> {
     if (this.queue) {
       try {
         await this.queue.add(CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE, {
-          organizationId,
+          organizationProfileRevisionId,
         });
         return;
       } catch (err: unknown) {
         const cause = err instanceof Error ? err.message : String(err);
         this.logger.warn(
-          `Не удалось добавить job в очередь BullMQ (модерация профиля салона, org=${organizationId}); выполняем moderateNewOrganizationProfile в этом процессе. Причина: ${cause}`,
+          `Не удалось добавить job в очередь BullMQ (модерация профиля салона, revision=${organizationProfileRevisionId}); выполняем moderateOrganizationProfileRevision в этом процессе. Причина: ${cause}`,
         );
-        await this.contentModeration.moderateNewOrganizationProfile(
-          organizationId,
+        await this.contentModeration.moderateOrganizationProfileRevision(
+          organizationProfileRevisionId,
         );
         return;
       }
     }
-    await this.contentModeration.moderateNewOrganizationProfile(organizationId);
+    await this.contentModeration.moderateOrganizationProfileRevision(
+      organizationProfileRevisionId,
+    );
     if (
       process.env.MODERATION_QUEUE_ENABLED !== 'false' &&
       !this.queue &&

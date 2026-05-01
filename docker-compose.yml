@@ -125,6 +125,10 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    # ADMIN_MASTER_* и прочие секреты Nest — в back/.env (`npm run init` дописывает суперадмина).
+    env_file:
+      - path: ./back/.env
+        required: false
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/services?schema=public
       PORT: "3001"

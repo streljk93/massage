@@ -111,7 +111,10 @@ export class BookingPushContextRepository implements BookingPushContextReader {
         specialist: {
           select: {
             userId: true,
-            user: { select: { email: true, name: true, locale: true } },
+            listingName: true,
+            user: {
+              select: { email: true, name: true, locale: true },
+            },
           },
         },
         organization: { select: orgSelect },
@@ -132,7 +135,8 @@ export class BookingPushContextRepository implements BookingPushContextReader {
       clientName: row.client.name,
       specialistUserId: row.specialist.userId,
       specialistEmail: row.specialist.user.email,
-      specialistName: row.specialist.user.name,
+      specialistName:
+        row.specialist.listingName?.trim() || row.specialist.user.name || '—',
       startsAt: row.startsAt,
       endsAt: row.endsAt,
       status: row.status,
@@ -159,7 +163,12 @@ export class BookingPushContextRepository implements BookingPushContextReader {
         priceAmountSnapshot: true,
         currencySnapshot: true,
         client: { select: { id: true, locale: true, email: true } },
-        specialist: { select: { user: { select: { name: true } } } },
+        specialist: {
+          select: {
+            listingName: true,
+            user: { select: { name: true } },
+          },
+        },
         organization: { select: orgSelect },
       },
     });
@@ -172,7 +181,8 @@ export class BookingPushContextRepository implements BookingPushContextReader {
       clientUserId: row.client.id,
       clientEmail: row.client.email,
       categoryShortName: row.categoryShortNameSnapshot?.trim() ?? '',
-      specialistName: row.specialist.user.name,
+      specialistName:
+        row.specialist.listingName?.trim() || row.specialist.user.name || '—',
       startsAt: row.startsAt,
       endsAt: row.endsAt,
       status: row.status,

@@ -47,6 +47,7 @@ import {
   specialistDetailsPageI18n,
   specialistProfilePageI18n,
 } from "@/views/specialist-profile";
+import { adminPageI18n } from "@/views/admin";
 import { searchMapPageI18n, searchPageI18n } from "@/views/search";
 import { addressMapPickerDialogI18n } from "@/widgets/address-map-picker";
 import {
@@ -109,6 +110,7 @@ const bundles: ColocatedI18nBundle[] = [
   organizationDetailsPageI18n,
   organizationCardI18n,
   specialistCardI18n,
+  adminPageI18n,
 ];
 
 export function loadMessagesForLocale(locale: string): Record<string, unknown> {

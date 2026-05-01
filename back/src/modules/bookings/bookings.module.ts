@@ -20,6 +20,10 @@ import { SpecialistBookingsController } from './presentation/specialist-bookings
     BookingStatusLocaleRepository,
     BookingsSchedulerService,
   ],
-  exports: [BookingsRepository],
+  exports: [
+    BookingsRepository,
+    BookingStatusLocaleRepository,
+    BookingsService,
+  ],
 })
 export class BookingsModule {}

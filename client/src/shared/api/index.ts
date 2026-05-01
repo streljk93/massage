@@ -13,7 +13,6 @@ export {
   createBrowserSdkClient,
   getBrowserApiV1BaseUrl,
 } from "./create-browser-sdk-client";
-export { resolveApiResourceUrl } from "./resolve-api-resource-url";
 export {
   createServerSdkClient,
   serverSdkFetchNoStore,

@@ -1,5 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { SpecialistWorkplaceJoinRequestStatus } from '@prisma/client';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  PublicationModerationStatus,
+  SpecialistWorkplaceJoinRequestStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
@@ -15,10 +22,14 @@ export class SpecialistOnboardingService {
   ) {}
 
   private isProfileComplete(
-    user: { name: string; phone: string | null },
-    spec: { bio: string | null; experienceYears: number | null },
+    user: { phone: string | null },
+    spec: {
+      bio: string | null;
+      experienceYears: number | null;
+      listingName: string | null;
+    },
   ): boolean {
-    if (!user.name?.trim() || !user.phone?.trim()) {
+    if (!spec.listingName?.trim() || !user.phone?.trim()) {
       return false;
     }
     if (!spec.bio?.trim() || spec.experienceYears == null) {
@@ -48,7 +59,7 @@ export class SpecialistOnboardingService {
     }
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
-      select: { name: true, phone: true },
+      select: { phone: true },
     });
     if (!user) {
       return { step: 1, specialistId: null };
@@ -80,9 +91,7 @@ export class SpecialistOnboardingService {
     return { step: 6, specialistId: spec.id };
   }
 
-  private async mapOnboarding(
-    userId: string,
-  ): Promise<{
+  private async mapOnboarding(userId: string): Promise<{
     onboardingStep: OnboardingStep;
     specialist: Record<string, unknown> | null;
   }> {
@@ -121,12 +130,16 @@ export class SpecialistOnboardingService {
         userId: spec.userId,
         bio: spec.bio,
         experienceYears: spec.experienceYears,
+        listingName: spec.listingName,
         imageUrl: spec.imageUrl,
         imageAlt: spec.imageAlt,
+        profilePublicationModerationStatus:
+          spec.profilePublicationModerationStatus,
         massage: spec.massageProfile
           ? {
               pressureLevel: spec.massageProfile.pressureLevel,
-              pressureAdaptsToClient: spec.massageProfile.pressureAdaptsToClient,
+              pressureAdaptsToClient:
+                spec.massageProfile.pressureAdaptsToClient,
             }
           : null,
         activeOrganizationId: spec.activeOrganizationId,
@@ -172,30 +185,38 @@ export class SpecialistOnboardingService {
         message: 'Specialist profile not found for this user',
       });
     }
-    const prevUser = await this.prisma.user.findFirst({
-      where: { id: userId, deletedAt: null },
-      select: { name: true },
+    const prevSpec = await this.prisma.specialist.findFirst({
+      where: { id: spec.id, deletedAt: null },
+      select: {
+        listingName: true,
+        bio: true,
+        experienceYears: true,
+        imageUrl: true,
+        imageAlt: true,
+        profilePublicationModerationStatus: true,
+      },
     });
+    const touchesVitrineFields =
+      body.name !== undefined ||
+      body.bio !== undefined ||
+      body.imageUrl !== undefined;
     await this.prisma.$transaction(async (tx) => {
-      const userPatch: { name?: string; phone?: string | null } = {};
-      if (body.name != null) {
-        userPatch.name = body.name;
-      }
       if (body.phone !== undefined) {
-        userPatch.phone = body.phone;
-      }
-      if (Object.keys(userPatch).length > 0) {
         await tx.user.update({
           where: { id: userId },
-          data: userPatch,
+          data: { phone: body.phone },
         });
       }
       const specData: {
+        listingName?: string;
         bio?: string;
         experienceYears?: number;
         imageUrl?: string | null;
         imageAlt?: string | null;
       } = {};
+      if (body.name != null) {
+        specData.listingName = body.name;
+      }
       if (body.bio != null) {
         specData.bio = body.bio;
       }
@@ -209,9 +230,22 @@ export class SpecialistOnboardingService {
         specData.imageAlt = body.imageAlt;
       }
       if (Object.keys(specData).length > 0) {
+        const freezeCatalogForGuests =
+          touchesVitrineFields &&
+          prevSpec?.profilePublicationModerationStatus ===
+            PublicationModerationStatus.approved;
         await tx.specialist.update({
           where: { id: spec.id },
-          data: specData,
+          data: {
+            ...specData,
+            ...(freezeCatalogForGuests && prevSpec != null
+              ? {
+                  catalogListedBio: prevSpec.bio ?? null,
+                  catalogListedListingName: prevSpec.listingName ?? null,
+                  catalogListedImageUrl: prevSpec.imageUrl ?? null,
+                }
+              : {}),
+          },
         });
       }
       if (body.massage !== undefined) {
@@ -241,21 +275,8 @@ export class SpecialistOnboardingService {
         }
       }
     });
-    if (
-      prevUser != null &&
-      body.name !== undefined &&
-      body.name.trim() !== prevUser.name.trim()
-    ) {
-      const saved = await this.prisma.user.findFirst({
-        where: { id: userId, deletedAt: null },
-        select: { name: true },
-      });
-      if (saved?.name != null) {
-        await this.contentModeration.moderateDisplayNameAfterPatch(
-          userId,
-          saved.name,
-        );
-      }
+    if (touchesVitrineFields) {
+      await this.contentModeration.moderateSpecialistProfile(spec.id);
     }
     return this.mapOnboarding(userId);
   }

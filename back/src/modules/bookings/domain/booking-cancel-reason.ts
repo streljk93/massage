@@ -22,6 +22,12 @@ export const BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN =
 export const BOOKING_CANCEL_REASON_MASTER_LEFT_WORKPLACE_ADDRESS =
   'master_left_workplace_address' as const;
 
+/**
+ * Автоотмена активных записей при удалении организации владельцем из кабинета.
+ */
+export const BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN =
+  'The salon was removed. This booking was cancelled automatically.' as const;
+
 export type BookingCancelReasonCode =
   | typeof BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT
   | typeof BOOKING_CANCEL_REASON_MASTER_LEFT_WORKPLACE_ADDRESS;

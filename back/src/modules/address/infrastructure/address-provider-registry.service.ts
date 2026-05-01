@@ -52,7 +52,9 @@ export class AddressProviderRegistry {
     for (const id of order) {
       const p = this.byId.get(id);
       if (p == null) {
-        this.log.warn(`unknown address provider in ADDRESS_PROVIDER_ORDER: ${id}`);
+        this.log.warn(
+          `unknown address provider in ADDRESS_PROVIDER_ORDER: ${id}`,
+        );
         continue;
       }
       if (p.isConfigured()) {

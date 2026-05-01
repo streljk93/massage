@@ -58,6 +58,22 @@ function coordsMatchResolved(
   );
 }
 
+/**
+ * Reverse‑геокодеры обычно возвращают в `resolved` центроид найденного объекта (OSM и т.п.),
+ * а не координаты запроса — поэтому в формы и БД передаём именно точку маркера Leaflet.
+ */
+function pickPinnedToLeafletMarker(
+  pick: AddressMapPickResult,
+  leafletLat: number,
+  leafletLng: number,
+): AddressMapPickResult {
+  return {
+    ...pick,
+    latitude: leafletLat,
+    longitude: leafletLng,
+  };
+}
+
 export type AddressMapPickerDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -372,23 +388,24 @@ export function AddressMapPickerDialog({
   const onConfirm = async () => {
     setLocalError(null);
 
+    const [leafLat, leafLng] = marker;
+
     if (
       resolvedFromSearch &&
       pinCleanAfterSearch &&
       coordsMatchResolved(marker, resolvedFromSearch)
     ) {
-      onPick(resolvedFromSearch);
+      onPick(pickPinnedToLeafletMarker(resolvedFromSearch, leafLat, leafLng));
       onOpenChange(false);
       return;
     }
 
     setSubmitting(true);
     try {
-      const [lat, lng] = marker;
       const { data, error } = await addressReverse({
         client,
         query: { locale },
-        body: { latitude: lat, longitude: lng },
+        body: { latitude: leafLat, longitude: leafLng },
       });
       if (error || !data?.resolved) {
         setLocalError(t("reverseError"));
@@ -399,7 +416,7 @@ export function AddressMapPickerDialog({
         setLocalError(t("reverseError"));
         return;
       }
-      onPick(mapped);
+      onPick(pickPinnedToLeafletMarker(mapped, leafLat, leafLng));
       onOpenChange(false);
     } finally {
       setSubmitting(false);

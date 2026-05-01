@@ -11,9 +11,8 @@ import {
   type BookingCardProps,
 } from "@/entities/booking";
 import { Slider } from "@/shared/ui/slider";
-import { cn, motion } from "@/shared/lib";
+import { cn, motion, resolveApiResourceUrl } from "@/shared/lib";
 import { bookingsList, createBrowserSdkClient } from "@/shared/api";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { isAfter, parseISO, subMilliseconds } from "date-fns";
 import { compareBookingsNewTabPriority } from "@/views/bookings/lib/booking-api-to-ui";
 import {

@@ -21,6 +21,8 @@ export type BookingShowcaseCardProps = {
   /** Если задано — строка мастера ведёт в профиль. */
   specialistProfileHref?: string;
   specialistLinkAriaLabel?: string;
+  /** Строка под описанием услуги (например клиент / салон в кабинете бизнеса). */
+  guestCaption?: ReactNode;
   /** Нижняя полоса статуса / таймера. */
   statusFooter?: ReactNode;
   /**
@@ -50,6 +52,7 @@ export function BookingShowcaseCard({
   variant = "dark",
   specialistProfileHref,
   specialistLinkAriaLabel,
+  guestCaption,
   statusFooter,
   statusFooterSuccess,
   statusFooterInProgress,
@@ -84,6 +87,9 @@ export function BookingShowcaseCard({
         >
           {serviceLine}
         </p>
+        {guestCaption != null && guestCaption !== "" ? (
+          <div className="mt-1 text-xs leading-snug text-muted-foreground">{guestCaption}</div>
+        ) : null}
       </div>
     </>
   );

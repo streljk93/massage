@@ -6,12 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { OrganizationCabinetService } from '../../organizations/application/organization-cabinet.service';

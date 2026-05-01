@@ -9,3 +9,17 @@ export {
   OrganizationCard,
   type OrganizationCardProps,
 } from "./ui/organization-card";
+export { OrgContactFields, type OrgContactFieldsProps } from "./ui/org-contact-fields";
+export {
+  OrganizationSalonCabinetForm,
+  type OrganizationSalonCabinetFormInitialValues,
+  type OrganizationSalonCabinetFormProps,
+  type OrganizationSalonCabinetSubmitBody,
+} from "./ui/organization-salon-cabinet-form";
+export {
+  normalizeEmailOnBlur,
+  normalizeWebsiteOnBlur,
+  validateOrgContactForSubmit,
+  type OrgContactValidated,
+  type OrgContactValidationErrorKey,
+} from "./lib/organization-contact-form";

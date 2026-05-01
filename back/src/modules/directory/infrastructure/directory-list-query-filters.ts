@@ -24,7 +24,7 @@ function specialistTextSearchWhere(
 ): Prisma.SpecialistWhereInput {
   return {
     OR: [
-      { user: { name: { contains: q, mode: 'insensitive' } } },
+      { listingName: { contains: q, mode: 'insensitive' } },
       { bio: { contains: q, mode: 'insensitive' } },
       {
         activeOrganization: {

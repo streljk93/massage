@@ -50,6 +50,12 @@ enum OrganizationMembershipRole {
   specialist
 }
 
+/// Глобальная платформенная роль учётной записи (не роль мастера в организации).
+enum PlatformRole {
+  standard
+  master
+}
+
 /// Заявка мастера на работу в существующем салоне (онбординг / смена места).
 enum SpecialistWorkplaceJoinRequestStatus {
   pending
@@ -81,12 +87,26 @@ enum PublicationModerationStatus {
   rejected
 }
 
-/// Тип модерируемой сущности; `subjectId` в `ContentModerationCase` всегда id этой сущности в БД.
+enum OrganizationProfileRevisionStatus {
+  pending_review
+  published
+  rejected
+  superseded
+}
+
+/// Область привязки галереи (расширяется: главная, новости и т.д.).
+enum GalleryOwnerKind {
+  organization
+  organization_profile_revision
+}
+
+/// Тип модерируемой сущности; `subjectId` — id строки (`organization_profile` = `OrganizationProfileRevision.id`; `specialist_profile` = `Specialist.id`).
 /// Новые виды добавляются сюда — без новых столбцов в таблице кейсов.
 enum ContentModerationCaseKind {
   organization_profile
   organization_review
   specialist_review
+  specialist_profile
   user_display_name
 }
 
@@ -102,8 +122,10 @@ enum ContentModerationCaseStatus {
 model User {
   id           String    @id @default(uuid())
   email        String    @unique
-  /// Отображаемое имя (профиль).
+  /// Отображаемое имя (редактируемое пользователем).
   name         String
+  /// Последнее имя, допущенное ко витрине; пока имя «на модерации», в каталоге показываем это (или синхрон с `name` при отсутствии правок).
+  catalogListedName String?
   /// Argon2/bcrypt-хэш; null если пользователь только через OAuth (будущее).
   passwordHash String?
   /// Телефон (редактируемый профиль).
@@ -139,6 +161,8 @@ model User {
   nameModerationStatus PublicationModerationStatus @default(approved)
   /// Ручная модерация контента (внутренний флаг; не путать с ролью в организации).
   isContentModerator   Boolean                    @default(false)
+  /// Суперадмин: полный доступ к админ-панели; создаётся/обновляется из `ADMIN_MASTER_*` в `back/.env` при старте API.
+  platformRole         PlatformRole               @default(standard)
 
   contentModerationCasesResolved ContentModerationCase[] @relation("ContentModerationResolvedBy")
 }
@@ -287,6 +311,7 @@ model ServiceCategory {
 
   specialistTags    SpecialistServiceCategory[]
   organizationTags OrganizationServiceCategory[]
+  revisionTags     OrganizationProfileRevisionServiceCategory[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -371,6 +396,9 @@ model Organization {
 
   /// Витрина салона: до AI/ручного одобрения не показывается в каталоге.
   publicationModerationStatus PublicationModerationStatus @default(approved)
+  /// Снимок витринного профиля, уже опубликованный гостям; промодерированный черновик лежит в ревизиях со статусом pending/rejected.
+  publishedProfileRevisionId String? @unique
+  publishedProfileRevision   OrganizationProfileRevision? @relation("OrganizationPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
 
   reviews              OrganizationReview[]
   services             Service[]
@@ -381,14 +409,60 @@ model Organization {
   locales               OrganizationLocale[]
   serviceCategories     OrganizationServiceCategory[]
   workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
+  profileRevisions OrganizationProfileRevision[] @relation("OrganizationProfileRevisions")
 
   @@index([ownerUserId])
   @@index([addressId])
 }
 
-/// Область привязки галереи (расширяется: главная, новости и т.д.).
-enum GalleryOwnerKind {
-  organization
+/// Черновик/история витринного профиля организации до promote в строку `Organization`
+/// (локали витрины + адрес и т.п. копируются из снимка ревизии на этапе промоута).
+model OrganizationProfileRevision {
+  id             String @id @default(uuid())
+  organizationId String
+  organization   Organization @relation("OrganizationProfileRevisions", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  status OrganizationProfileRevisionStatus @default(pending_review)
+
+  /// Локаль UI при подаче — для восстановления строк `OrganizationLocale` без отдельных переводов ревизии.
+  catalogLocale String
+
+  /// Копия текстов ручного ввода (один язык, без таблицы `*RevisionLocale`).
+  name        String
+  description String?
+  phone       String?
+  email       String?
+  website     String?
+  yearsInBusiness Int?
+
+  /// Снимок адреса на момент подачи (как после `resolveToCanonical`; промоут обновляет `Address` организации).
+  addressLine            String?
+  city                   String?
+  latitude               Float?
+  longitude              Float?
+  addressSourceProvider   String?
+  addressSourceReference  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publishedOnOrganization Organization[] @relation("OrganizationPublishedRevision")
+  serviceCategories     OrganizationProfileRevisionServiceCategory[]
+
+  @@index([organizationId])
+  @@index([organizationId, status])
+}
+
+/// Подкатегории витрины, привязанные к черновику ревизии (до одобрения — копируются в `OrganizationServiceCategory`).
+model OrganizationProfileRevisionServiceCategory {
+  revisionId        String
+  serviceCategoryId String
+
+  revision        OrganizationProfileRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  serviceCategory ServiceCategory            @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+
+  @@id([revisionId, serviceCategoryId])
+  @@index([serviceCategoryId])
 }
 
 /// Тип элемента галереи (видео — на будущее).
@@ -468,8 +542,11 @@ model OrganizationReview {
   bookingId String?  @unique
   booking   Booking? @relation("OrganizationReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
 
-  rating  Int
-  comment String?
+  rating Int
+  /// Текст после одобрения; виден во витрине гостям.
+  publishedComment String? @db.Text
+  /// Не опубликованный черновик (на проверке); сам автор может видеть в API отдельно.
+  pendingCommentDraft String? @db.Text
 
   /// Публикация текста отзыва во витрине (`approved` только после AI/ручного решения при необходимости).
   publicationModerationStatus PublicationModerationStatus @default(approved)
@@ -491,10 +568,18 @@ model Specialist {
   bio             String?
   experienceYears Int?
 
+  /// Имя мастера на витрине (каталог, карточка записи). Не путать с `User.name` (личный клиентский профиль).
+  listingName                   String?
   ratingAverage Float @default(0)
   reviewsCount  Int   @default(0)
   imageUrl      String?
   imageAlt      String?
+
+  /// Публикация полей профиля для каталога: одобрено / на модерации; при правках после одобрения гости видят снимок в `catalogListed*`.
+  profilePublicationModerationStatus PublicationModerationStatus @default(approved)
+  catalogListedBio               String?
+  catalogListedListingName       String?
+  catalogListedImageUrl          String?
 
   /// Параметры, специфичные для вертикали «массаж» (сила нажима и т.д.); другие крупные категории — отдельные 1:1.
   massageProfile SpecialistMassageProfile?
@@ -658,8 +743,9 @@ model SpecialistReview {
   bookingId String?  @unique
   booking   Booking? @relation("SpecialistReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
 
-  rating  Int
-  comment String?
+  rating Int
+  publishedComment String? @db.Text
+  pendingCommentDraft String? @db.Text
 
   publicationModerationStatus PublicationModerationStatus @default(approved)
 

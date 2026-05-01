@@ -4,9 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN } from '../../bookings/domain/booking-cancel-reason';
+import { BookingStatusLocaleRepository } from '../../bookings/infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
-import { PublicationModerationStatus } from '@prisma/client';
+import {
+  GalleryMediaKind,
+  GalleryOwnerKind,
+  OrganizationProfileRevisionStatus,
+  PublicationModerationStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import {
+  buildBookingStatusLabelMap,
+  parseApiLocale,
+  pickBookingStatusLabel,
+  type ApiLocale,
+} from '../../../common/i18n';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
@@ -17,6 +29,7 @@ export class SpecialistWorkplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
   ) {}
 
@@ -30,6 +43,17 @@ export class SpecialistWorkplaceService {
       role: string;
       isActiveWorkplace: boolean;
       publicationModerationStatus: PublicationModerationStatus;
+      /** Черновик на модерации: превью для кабинета (гость в каталоге ещё по опубликованной строке). */
+      salonCabinetPreview: {
+        revisionId: string;
+        name: string;
+        coverImageUrl: string | null;
+      } | null;
+      /**
+       * Обложка опубликованной витрины (галерея организации). Если есть `salonCabinetPreview`, карточку
+       * кабинета лучше собирать из превью; это поле нужно, когда pending-ревизии нет.
+       */
+      publishedCoverImageUrl: string | null;
     }>;
     activeOrganizationId: string | null;
   }> {
@@ -54,15 +78,112 @@ export class SpecialistWorkplaceService {
         },
         orderBy: { startDate: 'desc' },
       });
+    const orgIds = [...new Set(employments.map((x) => x.organization.id))];
+    const latestPendingByOrgId = new Map<
+      string,
+      { revisionId: string; name: string }
+    >();
+    if (orgIds.length > 0) {
+      const pendingRows =
+        await this.prisma.organizationProfileRevision.findMany({
+          where: {
+            organizationId: { in: orgIds },
+            status: OrganizationProfileRevisionStatus.pending_review,
+          },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            organizationId: true,
+            name: true,
+          },
+        });
+      for (const row of pendingRows) {
+        if (!latestPendingByOrgId.has(row.organizationId)) {
+          latestPendingByOrgId.set(row.organizationId, {
+            revisionId: row.id,
+            name: row.name,
+          });
+        }
+      }
+    }
+
+    const revisionIdsWithPreview = [...latestPendingByOrgId.values()].map(
+      (v) => v.revisionId,
+    );
+    const publishedCoverUrlByOrgId = new Map<string, string>();
+    if (orgIds.length > 0) {
+      const orgGalleries = await this.prisma.gallery.findMany({
+        where: {
+          ownerKind: GalleryOwnerKind.organization,
+          ownerId: { in: orgIds },
+        },
+        select: {
+          ownerId: true,
+          items: {
+            where: { kind: GalleryMediaKind.image },
+            orderBy: { sortOrder: 'asc' },
+            take: 1,
+            select: { url: true },
+          },
+        },
+      });
+      for (const g of orgGalleries) {
+        const first = g.items[0]?.url?.trim();
+        if (first) {
+          publishedCoverUrlByOrgId.set(g.ownerId, first);
+        }
+      }
+    }
+    const coverUrlByRevisionId = new Map<string, string>();
+    if (revisionIdsWithPreview.length > 0) {
+      const galleries = await this.prisma.gallery.findMany({
+        where: {
+          ownerKind: GalleryOwnerKind.organization_profile_revision,
+          ownerId: { in: revisionIdsWithPreview },
+        },
+        select: {
+          ownerId: true,
+          items: {
+            where: { kind: GalleryMediaKind.image },
+            orderBy: { sortOrder: 'asc' },
+            take: 1,
+            select: { url: true },
+          },
+        },
+      });
+      for (const g of galleries) {
+        const first = g.items[0]?.url?.trim();
+        if (first) {
+          coverUrlByRevisionId.set(g.ownerId, first);
+        }
+      }
+    }
+
     return {
-      organizations: employments.map((e) => ({
-        id: e.organization.id,
-        name: e.organization.name,
-        role: e.role,
-        isActiveWorkplace:
-          specialist.activeOrganizationId === e.organization.id,
-        publicationModerationStatus: e.organization.publicationModerationStatus,
-      })),
+      organizations: employments.map((e) => {
+        const pending = latestPendingByOrgId.get(e.organization.id);
+        const salonCabinetPreview =
+          pending != null
+            ? {
+                revisionId: pending.revisionId,
+                name: pending.name,
+                coverImageUrl:
+                  coverUrlByRevisionId.get(pending.revisionId) ?? null,
+              }
+            : null;
+        return {
+          id: e.organization.id,
+          name: e.organization.name,
+          role: e.role,
+          isActiveWorkplace:
+            specialist.activeOrganizationId === e.organization.id,
+          publicationModerationStatus:
+            e.organization.publicationModerationStatus,
+          salonCabinetPreview,
+          publishedCoverImageUrl:
+            publishedCoverUrlByOrgId.get(e.organization.id) ?? null,
+        };
+      }),
       activeOrganizationId: specialist.activeOrganizationId,
     };
   }
@@ -104,6 +225,96 @@ export class SpecialistWorkplaceService {
         updatedAt: r.updatedAt,
         resolvedAt: r.resolvedAt,
         organization: r.organization,
+      })),
+    };
+  }
+
+  private async resolveCabinetBookingPreviewLocale(
+    userId: string,
+    localeFromQuery: ApiLocale | undefined,
+  ): Promise<ApiLocale> {
+    if (localeFromQuery !== undefined) {
+      return localeFromQuery;
+    }
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { locale: true },
+    });
+    return parseApiLocale(user?.locale);
+  }
+
+  /**
+   * Превью активных броней с вами как мастером на текущем месте приёма —
+   * то же множество, что будет отменено при смене активной организации.
+   */
+  async previewBookingsWhenLeavingActiveOrganization(
+    userId: string,
+    organizationIdFromQuery: string,
+    localeFromQuery: ApiLocale | undefined,
+  ): Promise<{
+    bookings: Array<{
+      id: string;
+      status: string;
+      statusLabel: string;
+      startsAt: string;
+      endsAt: string;
+      pendingExpiresAt: string | null;
+      clientDisplayName: string;
+      categoryShortName: string;
+      durationMinutes: number;
+    }>;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+
+    if (specialist.activeOrganizationId !== organizationIdFromQuery) {
+      throw new BadRequestException({
+        code: 'NOT_CURRENT_ACTIVE_WORKPLACE_ORGANIZATION',
+        message:
+          'Bookings preview is only available for the organization that is your current workplace',
+      });
+    }
+
+    const locale = await this.resolveCabinetBookingPreviewLocale(
+      userId,
+      localeFromQuery,
+    );
+
+    const [localeRows, rawRows] = await Promise.all([
+      this.bookingStatusLocaleRepository.findAll(),
+      this.bookingsRepository.findActiveBookingsAtOrganizationForCabinetPreview(
+        specialist.id,
+        organizationIdFromQuery,
+      ),
+    ]);
+
+    const labelMap = buildBookingStatusLabelMap(localeRows);
+
+    return {
+      bookings: rawRows.map((b) => ({
+        id: b.id,
+        status: b.status,
+        statusLabel: pickBookingStatusLabel(b.status, locale, labelMap),
+        startsAt: b.startsAt.toISOString(),
+        endsAt: b.endsAt.toISOString(),
+        pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
+        clientDisplayName: (() => {
+          const n = b.clientDisplayName?.trim();
+          return n != null && n.length > 0 ? n : '—';
+        })(),
+        categoryShortName: (() => {
+          const c = (b.categoryShortNameSnapshot ?? '').trim();
+          return c.length > 0 ? c : '—';
+        })(),
+        durationMinutes: b.durationMinutes,
       })),
     };
   }

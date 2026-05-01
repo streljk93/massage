@@ -1,3 +1,5 @@
+import { BOOKING_STATUS_ALL_ORDERED } from '../../bookings/domain/booking-status-all-ordered';
+
 export const specialistOnboardingResponseSchema = {
   type: 'object',
   required: ['onboardingStep', 'specialist'],
@@ -88,7 +90,15 @@ export const specialistMyOrganizationsResponseSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'name', 'role', 'isActiveWorkplace', 'publicationModerationStatus'],
+        required: [
+          'id',
+          'name',
+          'role',
+          'isActiveWorkplace',
+          'publicationModerationStatus',
+          'salonCabinetPreview',
+          'publishedCoverImageUrl',
+        ],
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
@@ -108,6 +118,33 @@ export const specialistMyOrganizationsResponseSchema = {
             description:
               'Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона.',
           },
+          salonCabinetPreview: {
+            type: 'object',
+            nullable: true,
+            description:
+              'Есть ревизия в `pending_review` — превью для кабинета; поле `name` строки организации всё ещё опубликованное (гость).',
+            required: ['revisionId', 'name', 'coverImageUrl'],
+            properties: {
+              revisionId: { type: 'string', format: 'uuid' },
+              name: {
+                type: 'string',
+                description:
+                  'Название из черновика ревизии (может отличаться от `name`).',
+              },
+              coverImageUrl: {
+                type: 'string',
+                nullable: true,
+                description:
+                  'Первое фото галереи черновика; относительные URL как у остальных файлов API.',
+              },
+            },
+          },
+          publishedCoverImageUrl: {
+            type: 'string',
+            nullable: true,
+            description:
+              'Первое фото галереи опубликованного профиля организации; для карточки в кабинете, когда нет pending-ревизии.',
+          },
         },
       },
     },
@@ -122,7 +159,13 @@ export const specialistMyOrganizationsResponseSchema = {
 export const patchSpecialistProfileRequestSchema = {
   type: 'object',
   properties: {
-    name: { type: 'string', minLength: 1, maxLength: 120 },
+    name: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 120,
+      description:
+        'Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`.',
+    },
     phone: {
       oneOf: [
         { type: 'string', minLength: 1, maxLength: 32 },
@@ -181,5 +224,119 @@ export const deleteSpecialistPersonalServiceResponseSchema = {
   required: ['ok'],
   properties: {
     ok: { type: 'boolean', enum: [true] },
+  },
+};
+
+export const specialistActiveOrganizationBookingsPreviewResponseSchema = {
+  type: 'object',
+  required: ['bookings'],
+  properties: {
+    bookings: {
+      type: 'array',
+      description:
+        'Активные брони клиентов к текущему мастеру в указанной организации (то, что отменится при смене места приёма).',
+      items: {
+        type: 'object',
+        required: [
+          'id',
+          'status',
+          'statusLabel',
+          'startsAt',
+          'endsAt',
+          'pendingExpiresAt',
+          'clientDisplayName',
+          'categoryShortName',
+          'durationMinutes',
+        ],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          status: {
+            type: 'string',
+            enum: ['pending', 'confirmed', 'in_progress'],
+          },
+          statusLabel: { type: 'string' },
+          startsAt: { type: 'string', format: 'date-time' },
+          endsAt: { type: 'string', format: 'date-time' },
+          pendingExpiresAt: {
+            type: 'string',
+            format: 'date-time',
+            nullable: true,
+          },
+          clientDisplayName: { type: 'string' },
+          categoryShortName: { type: 'string' },
+          durationMinutes: {
+            type: 'integer',
+            minimum: 1,
+            description:
+              'Длительность слота на момент записи; отдельно от `endsAt - startsAt`.',
+          },
+        },
+      },
+    },
+  },
+};
+
+const salonCabinetBookingStatuses = [...BOOKING_STATUS_ALL_ORDERED];
+
+/** Список броней в кабинете мастера: «все записи» (организации, где owner/admin) или «текущее место приёма». */
+export const specialistSalonCabinetBookingItemSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'status',
+    'statusLabel',
+    'specialistId',
+    'specialistName',
+    'specialistImageUrl',
+    'organizationId',
+    'organizationName',
+    'clientDisplayName',
+    'categoryShortName',
+    'amount',
+    'currency',
+    'startsAt',
+    'endsAt',
+    'pendingExpiresAt',
+    'cancelReason',
+    'cancellationComment',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: salonCabinetBookingStatuses,
+    },
+    statusLabel: { type: 'string' },
+    specialistId: { type: 'string', format: 'uuid' },
+    specialistName: {
+      type: 'string',
+      description: 'Мастер, принимающий по этой брони.',
+    },
+    specialistImageUrl: { type: 'string', nullable: true },
+    organizationId: { type: 'string', format: 'uuid', nullable: true },
+    organizationName: { type: 'string', nullable: true },
+    clientDisplayName: {
+      type: 'string',
+      description: 'Имя гостя из учётной записи на момент ответа.',
+    },
+    categoryShortName: { type: 'string' },
+    amount: { type: 'integer', nullable: true },
+    currency: { type: 'string' },
+    startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time' },
+    pendingExpiresAt: { type: 'string', format: 'date-time', nullable: true },
+    cancelReason: { type: 'string', nullable: true },
+    cancellationComment: { type: 'string', nullable: true },
+  },
+};
+
+export const specialistSalonBookingsListResponseSchema = {
+  type: 'object',
+  required: ['bookings'],
+  properties: {
+    bookings: {
+      type: 'array',
+      items: specialistSalonCabinetBookingItemSchema,
+    },
   },
 };

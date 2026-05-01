@@ -111,7 +111,8 @@ export class DevModerationController {
   @ApiConsumes('multipart/form-data')
   @ApiProduces('application/json')
   @ApiOperation({
-    summary: '[Dev] Прогон изображения через NSFW image-moderation (NudeNet + CLIP)',
+    summary:
+      '[Dev] Прогон изображения через NSFW image-moderation (NudeNet + CLIP)',
     description:
       'Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. ' +
       'Файл загружается в публичное хранилище (`POST /files/public`), затем вызывается тот же `POST …/v1/score`, что для витрины. ' +
@@ -132,7 +133,8 @@ export class DevModerationController {
     if (!upload.mimetype.startsWith('image/')) {
       throw new BadRequestException({
         code: 'IMAGE_FILE_REQUIRED',
-        message: 'multipart field `file` must be an image (jpeg, png, webp, gif)',
+        message:
+          'multipart field `file` must be an image (jpeg, png, webp, gif)',
       });
     }
 

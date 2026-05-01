@@ -85,7 +85,8 @@ export class AddressController {
   @Throttle({ default: { ttl: 60_000, limit: 40 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Разрешить place id поставщика в канонический адрес (координаты + строки для БД)',
+    summary:
+      'Разрешить place id поставщика в канонический адрес (координаты + строки для БД)',
   })
   @ApiLocaleQueryDocs()
   @ApiBody({ schema: addressResolveRequestSchema })
@@ -96,7 +97,8 @@ export class AddressController {
   @ApiServiceUnavailableResponse()
   @ApiTooManyRequestsResponse()
   async resolve(
-    @Body(new ZodValidationPipe(addressResolveBodySchema)) body: AddressResolveBody,
+    @Body(new ZodValidationPipe(addressResolveBodySchema))
+    body: AddressResolveBody,
     @RequestLocale() locale: ApiLocale,
   ) {
     const resolved = await this.addressResolution.resolveToCanonical(
@@ -125,7 +127,8 @@ export class AddressController {
   @ApiServiceUnavailableResponse()
   @ApiTooManyRequestsResponse()
   async reverse(
-    @Body(new ZodValidationPipe(addressReverseBodySchema)) body: AddressReverseBody,
+    @Body(new ZodValidationPipe(addressReverseBodySchema))
+    body: AddressReverseBody,
     @RequestLocale() locale: ApiLocale,
   ) {
     const resolved = await this.addressResolution.reverseToCanonical(

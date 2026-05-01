@@ -225,9 +225,11 @@ export function SearchPageClient({
     time: "",
   });
   useLayoutEffect(() => {
-    setSlotPick({
-      day: urlFilters.slotDay ?? "",
-      time: urlFilters.slotTime ?? "",
+    queueMicrotask(() => {
+      setSlotPick({
+        day: urlFilters.slotDay ?? "",
+        time: urlFilters.slotTime ?? "",
+      });
     });
   }, [urlFilters.slotDay, urlFilters.slotTime]);
 

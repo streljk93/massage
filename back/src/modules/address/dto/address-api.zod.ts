@@ -8,7 +8,9 @@ export const addressSuggestionsQuerySchema = z
   })
   .strict();
 
-export type AddressSuggestionsQuery = z.infer<typeof addressSuggestionsQuerySchema>;
+export type AddressSuggestionsQuery = z.infer<
+  typeof addressSuggestionsQuerySchema
+>;
 
 const addressProviderIdSchema = z.enum([
   'locationiq',

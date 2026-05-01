@@ -12,7 +12,9 @@ export function useDelayedLoadingIndicator(
   const [visible, setVisible] = useState(false);
   useLayoutEffect(() => {
     if (!active) {
-      setVisible(false);
+      queueMicrotask(() => {
+        setVisible(false);
+      });
       return;
     }
     const id = window.setTimeout(() => {

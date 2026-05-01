@@ -82,7 +82,12 @@ export class AddressResolutionService {
         message: 'Invalid coordinates',
       });
     }
-    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    if (
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
       throw new BadRequestException({
         code: 'ADDRESS_COORDS_OUT_OF_RANGE',
         message: 'Coordinates out of range',
@@ -160,6 +165,10 @@ export class AddressResolutionService {
       });
     }
     const requestTimeoutMs = this.registry.requestTimeoutMs();
-    return p.resolveByPlaceId(ref, { locale: options?.locale }, requestTimeoutMs);
+    return p.resolveByPlaceId(
+      ref,
+      { locale: options?.locale },
+      requestTimeoutMs,
+    );
   }
 }

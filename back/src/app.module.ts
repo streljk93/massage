@@ -21,6 +21,7 @@ import { AddressModule } from './modules/address/address.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
+import { AdminMasterModule } from './modules/admin/admin-master.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { SpecialistsModule } from './modules/specialists/specialists.module';
 import { UsersModule } from './modules/users/users.module';
@@ -50,7 +51,7 @@ const bullRootImports = isModerationContentQueueEnabled()
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '.env.local'],
+      envFilePath: ['../.env', '../.env.local', '.env', '.env.local'],
       load: [configuration],
     }),
     ThrottlerModule.forRootAsync({
@@ -71,6 +72,7 @@ const bullRootImports = isModerationContentQueueEnabled()
     HealthModule,
     FilesModule,
     AuthModule,
+    AdminMasterModule,
     NotificationsModule,
     UsersModule,
     ModerationModule,

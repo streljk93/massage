@@ -56,15 +56,26 @@ export function ConfirmActionHost() {
       }}
     >
       <AlertDialogContent
+        className="min-w-0"
         onEscapeKeyDown={() => {
           respond(false);
         }}
       >
-        <AlertDialogHeader>
+        <AlertDialogHeader className="min-w-0">
           <AlertDialogTitle>{session.title}</AlertDialogTitle>
-          {session.description ? (
-            <AlertDialogDescription>{session.description}</AlertDialogDescription>
-          ) : null}
+          {(session.description !== undefined && session.description !== "") ||
+          session.body != null ?
+            <AlertDialogDescription asChild>
+              <div className="min-w-0 max-w-full space-y-3 text-sm font-normal leading-relaxed tracking-normal [&_strong]:font-medium">
+                {session.description !== undefined && session.description !== "" ?
+                  <p className="whitespace-pre-wrap text-muted-foreground">
+                    {session.description}
+                  </p>
+                : null}
+                {session.body}
+              </div>
+            </AlertDialogDescription>
+          : null}
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogPrimitive.Cancel asChild>

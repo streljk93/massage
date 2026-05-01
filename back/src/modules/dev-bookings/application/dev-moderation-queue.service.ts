@@ -16,7 +16,10 @@ const PUBLICATION_STATUS_DOCS = [
     value: 'pending_review',
     label: 'Ожидает ручной проверки или ещё не разрешён AI',
   },
-  { value: 'rejected', label: 'Отклонён модератором; не показывается клиентам' },
+  {
+    value: 'rejected',
+    label: 'Отклонён модератором; не показывается клиентам',
+  },
 ] as const;
 
 const CASE_KIND_DOCS = [
@@ -31,6 +34,10 @@ const CASE_KIND_DOCS = [
   {
     value: ContentModerationCaseKind.specialist_review,
     labelRu: 'Комментарий к отзыву о специалисте',
+  },
+  {
+    value: ContentModerationCaseKind.specialist_profile,
+    labelRu: 'Профиль мастера во витрине (био, стаж аватар и alt)',
   },
   {
     value: ContentModerationCaseKind.user_display_name,
@@ -85,15 +92,13 @@ export class DevModerationQueueService {
         approve: {
           decision: 'approve',
           setsPublicationTo: 'approved',
-          note:
-            'Публикует связанную сущность (салон / отзыв / имя) с PublicationModerationStatus = approved где применимо',
+          note: 'Публикует связанную сущность (салон / отзыв / имя) с PublicationModerationStatus = approved где применимо',
         },
         reject: {
           decision: 'reject',
           setsPublicationTo: 'rejected',
           reasonRequired: true,
-          note:
-            'Отклоняет контент — требуются reason + PublicationModerationStatus = rejected',
+          note: 'Отклоняет контент — требуются reason + PublicationModerationStatus = rejected',
         },
       },
     };
@@ -108,55 +113,46 @@ export class DevModerationQueueService {
     });
     const cases = await hydrateContentModerationCaseRows(this.prisma, casesRaw);
 
-    const orgProfileIds = [
+    const orgProfileRevisionIds = [
       ...new Set(
         cases
           .filter(
-            (c) =>
-              c.kind === ContentModerationCaseKind.organization_profile,
+            (c) => c.kind === ContentModerationCaseKind.organization_profile,
           )
           .map((c) => c.subjectId),
       ),
     ];
 
-    const localesByOrgId =
-      orgProfileIds.length > 0
-        ? await this.prisma.organizationLocale.findMany({
-            where: { organizationId: { in: orgProfileIds } },
+    const revisionRows =
+      orgProfileRevisionIds.length > 0
+        ? await this.prisma.organizationProfileRevision.findMany({
+            where: { id: { in: orgProfileRevisionIds } },
             select: {
+              id: true,
               organizationId: true,
-              locale: true,
+              status: true,
               name: true,
               description: true,
             },
           })
         : [];
-
-    const locMap = new Map<string, typeof localesByOrgId>();
-    for (const row of localesByOrgId) {
-      let arr = locMap.get(row.organizationId);
-      if (arr == null) {
-        arr = [];
-        locMap.set(row.organizationId, arr);
-      }
-      arr.push(row);
-    }
+    const revisionById = new Map(revisionRows.map((r) => [r.id, r] as const));
 
     const galleryItemCounts = await Promise.all(
-      orgProfileIds.map(async (oid) => {
+      orgProfileRevisionIds.map(async (revisionId) => {
         const imageCount = await this.prisma.galleryItem.count({
           where: {
             gallery: {
-              ownerKind: GalleryOwnerKind.organization,
-              ownerId: oid,
+              ownerKind: GalleryOwnerKind.organization_profile_revision,
+              ownerId: revisionId,
             },
           },
         });
-        return { organizationId: oid, imageCount };
+        return { revisionId, imageCount };
       }),
     );
-    const galleryByOrg = new Map(
-      galleryItemCounts.map((x) => [x.organizationId, x.imageCount] as const),
+    const galleryByRevision = new Map(
+      galleryItemCounts.map((x) => [x.revisionId, x.imageCount] as const),
     );
 
     return cases.map((c) => ({
@@ -172,14 +168,20 @@ export class DevModerationQueueService {
         c.organization != null
           ? {
               type: 'organization_profile' as const,
-              organizationId: c.subjectId,
+              profileRevisionId: c.subjectId,
+              organizationId: c.organization.id,
+              revisionStatus: revisionById.get(c.subjectId)?.status ?? null,
+              revisionName: revisionById.get(c.subjectId)?.name ?? null,
+              revisionDescription:
+                revisionById.get(c.subjectId)?.description ?? null,
               publicationModerationStatus:
                 c.organization.publicationModerationStatus ?? null,
-              name: c.organization.name ?? null,
-              description: c.organization.description ?? null,
+              liveName: c.organization.name ?? null,
+              liveDescription: c.organization.description ?? null,
               slug: c.organization.slug ?? null,
-              locales: locMap.get(c.subjectId) ?? [],
-              galleryImageCount: galleryByOrg.get(c.subjectId) ?? 0,
+              locales: [],
+              revisionGalleryImageCount:
+                galleryByRevision.get(c.subjectId) ?? 0,
             }
           : c.kind === ContentModerationCaseKind.organization_review &&
               c.organizationReview
@@ -188,7 +190,11 @@ export class DevModerationQueueService {
                 reviewId: c.organizationReview.id,
                 organizationId: c.organizationReview.organizationId,
                 rating: c.organizationReview.rating,
-                comment: c.organizationReview.comment,
+                comment:
+                  c.organizationReview.pendingCommentDraft ??
+                  c.organizationReview.publishedComment,
+                publishedComment: c.organizationReview.publishedComment,
+                pendingCommentDraft: c.organizationReview.pendingCommentDraft,
                 publicationModerationStatus:
                   c.organizationReview.publicationModerationStatus,
               }
@@ -199,20 +205,39 @@ export class DevModerationQueueService {
                   reviewId: c.specialistReview.id,
                   specialistId: c.specialistReview.specialistId,
                   rating: c.specialistReview.rating,
-                  comment: c.specialistReview.comment,
+                  comment:
+                    c.specialistReview.pendingCommentDraft ??
+                    c.specialistReview.publishedComment,
+                  publishedComment: c.specialistReview.publishedComment,
+                  pendingCommentDraft: c.specialistReview.pendingCommentDraft,
                   publicationModerationStatus:
                     c.specialistReview.publicationModerationStatus,
                 }
-              : c.kind === ContentModerationCaseKind.user_display_name &&
-                  c.targetUser
+              : c.kind === ContentModerationCaseKind.specialist_profile &&
+                  c.specialistListedProfile
                 ? {
-                    type: 'user_display_name' as const,
-                    userId: c.targetUser.id,
-                    email: c.targetUser.email,
-                    displayName: c.targetUser.name,
-                    nameModerationStatus: c.targetUser.nameModerationStatus,
+                    type: 'specialist_profile' as const,
+                    specialistId: c.specialistListedProfile.id,
+                    userId: c.specialistListedProfile.userId,
+                    listingName: c.specialistListedProfile.listingName,
+                    bio: c.specialistListedProfile.bio,
+                    experienceYears: c.specialistListedProfile.experienceYears,
+                    imageUrl: c.specialistListedProfile.imageUrl,
+                    imageAlt: c.specialistListedProfile.imageAlt,
+                    profilePublicationModerationStatus:
+                      c.specialistListedProfile
+                        .profilePublicationModerationStatus,
                   }
-                : { type: 'unknown' as const, note: 'связи не загружены' },
+                : c.kind === ContentModerationCaseKind.user_display_name &&
+                    c.targetUser
+                  ? {
+                      type: 'user_display_name' as const,
+                      userId: c.targetUser.id,
+                      email: c.targetUser.email,
+                      displayName: c.targetUser.name,
+                      nameModerationStatus: c.targetUser.nameModerationStatus,
+                    }
+                  : { type: 'unknown' as const, note: 'связи не загружены' },
     }));
   }
 }

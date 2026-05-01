@@ -20,7 +20,7 @@ export type OrgContactFieldsProps = {
   website: string;
   setWebsite: (v: string) => void;
   disabled?: boolean;
-  t: (key: string) => string;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
 };
 
 /**

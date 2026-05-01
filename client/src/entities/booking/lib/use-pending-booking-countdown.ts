@@ -50,8 +50,12 @@ export function usePendingBookingCountdown(
     }
 
     const id = window.setInterval(() => {
+      const now = Date.now();
       setPulse((n) => n + 1);
       tryExpire();
+      if (now >= deadline) {
+        window.clearInterval(id);
+      }
     }, 1000);
     return () => window.clearInterval(id);
   }, [enabled, expiresAtIso]);

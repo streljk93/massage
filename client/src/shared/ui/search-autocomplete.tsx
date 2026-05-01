@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 
 import { cn } from "@/shared/lib";
 import { Input, type InputProps } from "./input";
@@ -94,14 +94,10 @@ export function SearchAutocomplete({
   autoFocus,
   suppressBrowserSavedAddresses = false,
 }: SearchAutocompleteProps) {
+  const suppressAutofillUid = useId().replace(/:/g, "");
   const anchorRef = useRef<HTMLDivElement | null>(null);
-  const antiAutofillNameRef = useRef<string | null>(null);
-  if (suppressBrowserSavedAddresses && antiAutofillNameRef.current === null) {
-    antiAutofillNameRef.current =
-      globalThis.crypto?.randomUUID?.() ?? `addr-${Date.now()}`;
-  }
   const inputName = suppressBrowserSavedAddresses
-    ? `addr-q-${antiAutofillNameRef.current}`
+    ? `addr-q-${suppressAutofillUid}`
     : name;
 
   const canShowList = value.trim().length >= minQueryLength && listOpen;

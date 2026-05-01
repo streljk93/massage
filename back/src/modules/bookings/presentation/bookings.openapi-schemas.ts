@@ -1,6 +1,7 @@
 /** JSON Schema для Swagger — бронирования клиента. */
 
 import { BOOKING_CLIENT_CANCEL_REASON_CODES } from '../domain/booking-client-cancel-reasons';
+import { BOOKING_MASTER_CANCEL_REASON_CODES } from '../domain/booking-master-cancel-reasons';
 import { BOOKING_STATUS_ALL_ORDERED } from '../domain/booking-status-all-ordered';
 
 const bookingStatusEnum = [...BOOKING_STATUS_ALL_ORDERED];
@@ -189,6 +190,56 @@ export const cancelBookingResponseSchema = {
 /** Ответ `POST /bookings/me/:id/confirm` — после ручного подтверждения мастером. */
 export const specialistConfirmBookingResponseSchema =
   createBookingResponseSchema;
+
+/** Ответ `POST /bookings/me/:id/reject` — отклонение мастером/салоном до подтверждения. */
+export const specialistRejectPendingBookingResponseSchema = {
+  type: 'object',
+  required: ['id', 'status'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: ['reject_by_master'],
+      description: 'Клиент получает push об отказе салона до подтверждения записи.',
+    },
+  },
+};
+
+
+const masterCancelReasonEnum = [...BOOKING_MASTER_CANCEL_REASON_CODES];
+
+/** Тело `POST /bookings/me/:id/cancel` — отмена подтверждённой записи мастером/салоном. */
+export const specialistCancelConfirmedBookingRequestSchema = {
+  type: 'object',
+  required: ['cancelReason'],
+  properties: {
+    cancelReason: {
+      type: 'string',
+      enum: masterCancelReasonEnum,
+      description:
+        'При `master_other` в теле нужен непустой `cancellationComment`.',
+    },
+    cancellationComment: {
+      type: 'string',
+      maxLength: 2000,
+      description: 'Для `master_other` — обязателен.',
+    },
+  },
+};
+
+/** Ответ `POST /bookings/me/:id/cancel`. */
+export const specialistCancelConfirmedBookingResponseSchema = {
+  type: 'object',
+  required: ['id', 'status'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: ['canceled_by_master'],
+      description: 'Клиент получает push об отмене с вашей стороны.',
+    },
+  },
+};
 
 /** Ответ `POST /bookings/me/:id/start-visit` — начало приёма. */
 export const specialistStartVisitResponseSchema = {

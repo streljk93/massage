@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 
 const credentialsSchema = z.object({
   email: z.email(),

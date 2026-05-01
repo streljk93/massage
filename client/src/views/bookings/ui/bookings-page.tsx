@@ -18,11 +18,15 @@ import {
   BookingHistoryCard,
   BookingListCard,
   bookingHistoryDateTagsMuted,
+  bookingHistorySystemNote,
+  buildVisitRatePath,
   formatBookingServiceLineClient,
+  parseBookingsListTab,
+  type BookingsListTab,
 } from "@/entities/booking";
 import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
 import { homeUser } from "@/widgets/home/lib/mock-data";
-import { cn, motion } from "@/shared/lib";
+import { cn, motion, resolveApiResourceUrl } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
 import {
   bookingsCancel,
@@ -31,12 +35,6 @@ import {
 } from "@/shared/api";
 import type { BookingsCancelData } from "@/shared/api/generated/sdk/types.gen";
 import { FCM_CLIENT_BOOKINGS_LIST_REFETCH } from "@/shared/lib/bookings/fcm-list-refetch";
-import {
-  buildVisitRatePath,
-  parseBookingsListTab,
-  type BookingsListTab,
-} from "@/entities/booking";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
 import { parseISO } from "date-fns";
 import {
   vnCalendarYmdString,
@@ -47,7 +45,6 @@ import {
   compareBookingsNewTabPriority,
   mapApiStatusToListCard,
 } from "../lib/booking-api-to-ui";
-import { bookingHistorySystemNote } from "../lib/booking-history-system-note";
 import { BookingCancelDialog } from "./booking-cancel-dialog";
 import { BookingPendingCancelDialog } from "./booking-pending-cancel-dialog";
 import {
@@ -94,6 +91,12 @@ function specialistAvatarSrc(url: string | null | undefined): string | undefined
 export function BookingsPage() {
   const t = useTranslations("bookings");
   const tBookingHistory = useTranslations("bookingHistory");
+  const tMasterCancelReasonLabel = useTranslations(
+    "bookingHistory.masterCancelReasons",
+  );
+  const tClientCancelReasonLabel = useTranslations(
+    "bookingHistory.clientCancelReasons",
+  );
   const tRoot = useTranslations();
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
@@ -393,6 +396,8 @@ export function BookingsPage() {
         row.cancelReason,
         row.cancellationComment,
         (key) => tBookingHistory(key),
+        (code) => tMasterCancelReasonLabel(code),
+        (code) => tClientCancelReasonLabel(code),
       );
 
       const canRate =
@@ -418,7 +423,7 @@ export function BookingsPage() {
           : undefined,
       };
     });
-  }, [format, historyRows, tBookingHistory, tRoot]);
+  }, [format, historyRows, tBookingHistory, tClientCancelReasonLabel, tMasterCancelReasonLabel, tRoot]);
 
   const headerName =
     session?.user?.name?.trim() ||

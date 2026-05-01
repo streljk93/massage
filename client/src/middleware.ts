@@ -33,6 +33,24 @@ const profileGuestAllowedRegex = new RegExp(
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
+  if (/^\/admin(?:\/|$)/.test(pathname)) {
+    const suffix = pathname === "/admin" ? "" : pathname.slice("/admin".length);
+    const url = req.nextUrl.clone();
+    url.pathname = `/${routing.defaultLocale}/admin${suffix}`;
+    return NextResponse.redirect(url);
+  }
+
+  const adminLocalePathRegex = new RegExp(
+    `^\\/(${routing.locales.join("|")})\\/admin(\\/.*)?$`,
+  );
+  if (adminLocalePathRegex.test(pathname) && !req.auth) {
+    const locale = pathname.split("/")[1] ?? routing.defaultLocale;
+    const url = req.nextUrl.clone();
+    url.pathname = `/${locale}/login`;
+    url.searchParams.set("callbackUrl", pathname + req.nextUrl.search);
+    return NextResponse.redirect(url);
+  }
+
   if (profilePathRegex.test(pathname) && !req.auth) {
     if (profileGuestAllowedRegex.test(pathname)) {
       return intlMiddleware(withAppLocaleHeader(req));

@@ -8,7 +8,7 @@
  *   node scripts/generate-docker-env.mjs --force   — заменить даже непустые значения
  *
  * Если `.env` отсутствует, текст берётся из `.env.example`.
- * Локально: те же секреты — в `back/.env` (JWT) и `client/.env.local` (AUTH).
+ * `ADMIN_MASTER_*` в `back/.env` задаёт только `npm run init` (конец `scripts/init-project.mjs`).
  */
 import crypto from "node:crypto";
 import fs from "node:fs";

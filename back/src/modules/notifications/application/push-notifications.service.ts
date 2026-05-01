@@ -227,7 +227,10 @@ export class PushNotificationsService {
         return;
       }
       const loc = localeFromSavedUserProfile(ctx.clientLocale);
-      const serviceDisplay = this.displayServiceName(ctx.categoryShortName, loc);
+      const serviceDisplay = this.displayServiceName(
+        ctx.categoryShortName,
+        loc,
+      );
       const timeLabel = this.formatLocalAppointmentTime(ctx.startsAt, loc);
       const { title, body } = this.clientBookingStatusCopy(loc, toStatus, {
         service: serviceDisplay,
@@ -380,7 +383,10 @@ export class PushNotificationsService {
         return;
       }
       const loc = localeFromSavedUserProfile(ctx.clientLocale);
-      const serviceDisplay = this.displayServiceName(ctx.categoryShortName, loc);
+      const serviceDisplay = this.displayServiceName(
+        ctx.categoryShortName,
+        loc,
+      );
       const timeLabel = this.formatLocalAppointmentTime(ctx.startsAt, loc);
       const { title, body } = this.clientReminderCopy(loc, {
         service: serviceDisplay,

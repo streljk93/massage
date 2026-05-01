@@ -52,7 +52,8 @@ export class ImageNsfwModerationService {
       return t;
     }
     const modBase =
-      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ?? '';
+      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ??
+      '';
     const modLooksLikeDockerSidecar =
       modBase.includes(':8085') ||
       modBase.includes('image-moderation') ||
@@ -77,7 +78,8 @@ export class ImageNsfwModerationService {
 
   isEnabled(): boolean {
     const base =
-      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ?? '';
+      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ??
+      '';
     return base.length > 0;
   }
 
@@ -88,13 +90,15 @@ export class ImageNsfwModerationService {
       return t;
     }
     const originRaw =
-      this.config.get<string>('moderation.imageModeration.fileFetchOrigin')?.trim() ??
-      '';
+      this.config
+        .get<string>('moderation.imageModeration.fileFetchOrigin')
+        ?.trim() ?? '';
     if (originRaw.length === 0) {
       return null;
     }
-    const origin =
-      this.normalizeFileFetchOriginForDockerSidecar(originRaw).replace(/\/+$/, '');
+    const origin = this.normalizeFileFetchOriginForDockerSidecar(
+      originRaw,
+    ).replace(/\/+$/, '');
     const path = t.startsWith('/') ? t : `/${t}`;
     return `${origin}${path}`;
   }
@@ -103,9 +107,7 @@ export class ImageNsfwModerationService {
    * POST `IMAGE_MODERATION_BASE_URL`/v1/score — один байнд для витрины и dev Swagger.
    * `resolvedImageUrl` — уже абсолютный URL, видимый контейнеру image-moderation (см. `resolvePublicUrl`).
    */
-  async postScoreForImageUrl(
-    resolvedImageUrl: string,
-  ): Promise<
+  async postScoreForImageUrl(resolvedImageUrl: string): Promise<
     | { ok: true; decoded: ScoreResponse }
     | {
         ok: false;
@@ -115,7 +117,8 @@ export class ImageNsfwModerationService {
       }
   > {
     const base =
-      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ?? '';
+      this.config.get<string>('moderation.imageModeration.baseUrl')?.trim() ??
+      '';
     const timeoutMs =
       this.config.get<number>('moderation.imageModeration.requestTimeoutMs') ??
       60_000;
@@ -164,9 +167,7 @@ export class ImageNsfwModerationService {
   /**
    * [Dev/Swagger] Сырой JSON от контейнера image-moderation (NudeNet + CLIP) по уже разрешённому URL.
    */
-  async scoreSingleImageDev(
-    resolvedImageUrl: string,
-  ): Promise<
+  async scoreSingleImageDev(resolvedImageUrl: string): Promise<
     | { infra_disabled: true }
     | {
         infra_disabled: false;
@@ -205,9 +206,12 @@ export class ImageNsfwModerationService {
       return { kind: 'service_disabled' };
     }
     const threshold =
-      this.config.get<number>('moderation.imageModeration.unsafeThreshold') ?? 0.5;
+      this.config.get<number>('moderation.imageModeration.unsafeThreshold') ??
+      0.5;
     const clipThreshold =
-      this.config.get<number>('moderation.imageModeration.clipReviewThreshold') ?? 0.7;
+      this.config.get<number>(
+        'moderation.imageModeration.clipReviewThreshold',
+      ) ?? 0.7;
 
     const slice = storedUrls.slice(0, maxImages);
     const summaries: string[] = [];
@@ -219,8 +223,7 @@ export class ImageNsfwModerationService {
       if (resolved == null) {
         return {
           kind: 'service_error',
-          summary:
-            `Не удалось построить абсолютный URL для картинки #${index}; задайте MODERATION_FILE_FETCH_ORIGIN.`,
+          summary: `Не удалось построить абсолютный URL для картинки #${index}; задайте MODERATION_FILE_FETCH_ORIGIN.`,
         };
       }
       const scored = await this.postScoreForImageUrl(resolved);
@@ -291,8 +294,7 @@ export class ImageNsfwModerationService {
     }
     return {
       kind: 'all_safe',
-      details:
-        `${slice.length} image(s) scanned (NudeNet + CLIP pairwise; image moderation service)`,
+      details: `${slice.length} image(s) scanned (NudeNet + CLIP pairwise; image moderation service)`,
     };
   }
 }

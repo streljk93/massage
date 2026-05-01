@@ -10,12 +10,7 @@ function trimmedOrNull(v: string | null | undefined): string | null {
 
 const placeReferenceBodySchema = z
   .object({
-    provider: z.enum([
-      'locationiq',
-      'geoapify',
-      'opencage',
-      'nominatim',
-    ]),
+    provider: z.enum(['locationiq', 'geoapify', 'opencage', 'nominatim']),
     placeId: z.string().min(1).max(400).trim(),
   })
   .strict();
@@ -24,8 +19,10 @@ export const createOrganizationBodySchema = z
   .object({
     name: z.string().min(1).max(200).trim(),
     /**
-     * Предпочтительно: разрешение на сервере через `AddressModule` (без доверия lat/lng с клиента).
-     * Если задано — поля `addressLine` / `latitude` / `longitude` не требуются.
+     * Ссылка на объект геокодера (аудит / повторный resolve при необходимости).
+     * Если вместе с ней переданы `latitude`, `longitude` и непустой `addressLine` —
+     * координаты и строка адреса сохраняются с клиента (точка с карты кабинета), без `resolveByPlaceId`.
+     * Иначе сервер заполняет адрес через `resolveToCanonical(placeReference)` (устар. режим).
      */
     placeReference: placeReferenceBodySchema.optional(),
     addressLine: z.string().min(1).max(500).trim().optional(),
@@ -49,6 +46,29 @@ export const createOrganizationBodySchema = z
   .strict()
   .superRefine((data, ctx) => {
     if (data.placeReference) {
+      const lat = data.latitude;
+      const lng = data.longitude;
+      const hasBothCoords = lat != null && lng != null;
+      const hasPartialCoords =
+        (lat != null && lng == null) || (lat == null && lng != null);
+      if (hasPartialCoords) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'latitude and longitude must be set together',
+          path: ['latitude'],
+        });
+      }
+      if (hasBothCoords) {
+        const line = data.addressLine?.trim() ?? '';
+        if (line.length < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              'addressLine is required when saving coordinates from map picker',
+            path: ['addressLine'],
+          });
+        }
+      }
       return;
     }
     if (
@@ -58,7 +78,8 @@ export const createOrganizationBodySchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Either placeReference or addressLine with latitude and longitude',
+        message:
+          'Either placeReference or addressLine with latitude and longitude',
         path: ['addressLine'],
       });
     }
@@ -108,9 +129,11 @@ export const createOrganizationBodySchema = z
     const email = trimmedOrNull(data.email)?.toLowerCase() ?? null;
     const webRaw = trimmedOrNull(data.website);
     const website =
-      webRaw == null ? null
-      : /^https?:\/\//i.test(webRaw) ? webRaw
-      : `https://${webRaw}`;
+      webRaw == null
+        ? null
+        : /^https?:\/\//i.test(webRaw)
+          ? webRaw
+          : `https://${webRaw}`;
     return {
       ...data,
       phone,
@@ -119,4 +142,6 @@ export const createOrganizationBodySchema = z
     };
   });
 
-export type CreateOrganizationBody = z.infer<typeof createOrganizationBodySchema>;
+export type CreateOrganizationBody = z.infer<
+  typeof createOrganizationBodySchema
+>;

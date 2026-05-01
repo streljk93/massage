@@ -141,11 +141,15 @@ export function VisitRatePage() {
       return;
     }
     if (!accessToken) {
-      setLoadState("err");
-      setLoadMessage(t("signInHint"));
+      queueMicrotask(() => {
+        setLoadState("err");
+        setLoadMessage(t("signInHint"));
+      });
       return;
     }
-    void load();
+    queueMicrotask(() => {
+      void load();
+    });
   }, [accessToken, load, sessionStatus, t]);
 
   const onSubmit = async () => {

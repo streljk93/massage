@@ -57,7 +57,6 @@ export function FullScreenPhotoGallery({
       return;
     }
     const start = Math.min(items.length - 1, Math.max(0, initialIndex));
-    setVisibleIndex(start);
     requestAnimationFrame(() => {
       scrollToIndex(start);
     });

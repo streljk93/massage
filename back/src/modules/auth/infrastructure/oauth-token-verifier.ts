@@ -1,4 +1,9 @@
-import { BadRequestException, Inject, Injectable, Optional } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { OAuthProvider } from '@prisma/client';
@@ -29,7 +34,9 @@ export class OAuthTokenVerifier {
   private googleClient: OAuth2Client | null = null;
 
   constructor(
-    @Optional() @Inject(ConfigService) private readonly config: ConfigService | undefined,
+    @Optional()
+    @Inject(ConfigService)
+    private readonly config: ConfigService | undefined,
   ) {}
 
   private googleAudiencesFromEnv(): string[] {
@@ -101,7 +108,9 @@ export class OAuthTokenVerifier {
     const name =
       (typeof payload.name === 'string' && payload.name.trim()
         ? payload.name.trim()
-        : null) ?? this.fallbackNameFromEmail(email) ?? 'User';
+        : null) ??
+      this.fallbackNameFromEmail(email) ??
+      'User';
     const pictureUrl =
       typeof payload.picture === 'string' && payload.picture.length > 0
         ? payload.picture

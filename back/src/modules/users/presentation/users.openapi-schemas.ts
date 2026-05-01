@@ -8,6 +8,8 @@ export const userProfileSchema = {
     'locale',
     'bookingReminderEnabled',
     'bookingReminderLeadMinutes',
+    'platformRole',
+    'isContentModerator',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -31,6 +33,16 @@ export const userProfileSchema = {
       enum: [15, 30, 60],
       description:
         'За сколько минут до визита прислать push (только при включённом флаге).',
+    },
+    platformRole: {
+      type: 'string',
+      enum: ['standard', 'master'],
+      description:
+        'Платформенная роль; master — полный доступ к админ-панели (суперадмин из ADMIN_MASTER_*).',
+    },
+    isContentModerator: {
+      type: 'boolean',
+      description: 'Доступ к ручной модерации контента (очередь /moderation/cases).',
     },
   },
 };

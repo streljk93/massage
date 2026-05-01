@@ -164,10 +164,12 @@ function SearchMapInteractiveLayer({
   );
 
   useEffect(() => {
-    setActiveCardIndex((prev) => {
-      if (list.length === 0) return null;
-      if (prev == null) return null;
-      return Math.min(prev, list.length - 1);
+    queueMicrotask(() => {
+      setActiveCardIndex((prev) => {
+        if (list.length === 0) return null;
+        if (prev == null) return null;
+        return Math.min(prev, list.length - 1);
+      });
     });
   }, [list.length]);
 

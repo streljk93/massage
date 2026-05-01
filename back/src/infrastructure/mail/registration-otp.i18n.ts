@@ -18,7 +18,8 @@ export const REGISTRATION_OTP_I18N: Record<
     preview: 'Use this code within 15 minutes to finish signing up.',
     greeting: (name) => `Hi ${name},`,
     instruction: 'Enter this code to confirm your address:',
-    footer: 'Expires in 15 minutes. If you didn’t request this, you can safely ignore this message.',
+    footer:
+      'Expires in 15 minutes. If you didn’t request this, you can safely ignore this message.',
     textBody: (name, code) =>
       `Hello ${name},\n\nYour verification code is: ${code}\n\nIt expires in 15 minutes. If you did not request this, you can ignore this email.`,
   },

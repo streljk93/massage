@@ -7,7 +7,21 @@
         "rateVisitAria": "Rate visit for appointment with {name}",
         "statusUnknown": "Status unavailable",
         "systemExpiredNoConfirmation": "Canceled: not confirmed in time",
-        "systemMasterLeftWorkplace": "The specialist is no longer available at this address. The booking was cancelled automatically."
+        "systemMasterLeftWorkplace": "The specialist is no longer available at this address. The booking was cancelled automatically.",
+        "masterCancelReasons": {
+          "master_schedule_conflict": "Sorry, but this time is no longer available.",
+          "master_unavailable_or_ill": "The specialist is unavailable or cannot attend.",
+          "master_organization_closed": "The salon is closed at this time.",
+          "master_duplicate_or_error": "The booking was a duplicate or entered by mistake.",
+          "master_other": "The booking was cancelled by the salon."
+        },
+        "clientCancelReasons": {
+          "client_schedule_changed": "My plans changed",
+          "client_found_alternative": "I booked elsewhere / another time",
+          "client_health_personal": "Health or personal reasons",
+          "client_price_or_service": "Price, service, or expectations",
+          "client_other": "Other"
+        }
       }
     },
     "vi": {
@@ -17,7 +31,21 @@
         "rateVisitAria": "Đánh giá lượt tới với {name}",
         "statusUnknown": "Không xác định trạng thái",
         "systemExpiredNoConfirmation": "Đã hủy: không xác nhận kịp",
-        "systemMasterLeftWorkplace": "Chuyên gia không còn làm việc tại địa chỉ này. Lịch hẹn đã được hủy tự động."
+        "systemMasterLeftWorkplace": "Chuyên gia không còn làm việc tại địa chỉ này. Lịch hẹn đã được hủy tự động.",
+        "masterCancelReasons": {
+          "master_schedule_conflict": "Xin lỗi, khung giờ này đã không còn trống.",
+          "master_unavailable_or_ill": "Chuyên gia không khả dụng hoặc không thể đến.",
+          "master_organization_closed": "Salon đóng cửa vào thời điểm này.",
+          "master_duplicate_or_error": "Lịch trùng lặp hoặc được tạo nhầm.",
+          "master_other": "Salon đã hủy lịch hẹn."
+        },
+        "clientCancelReasons": {
+          "client_schedule_changed": "Kế hoạch của tôi thay đổi",
+          "client_found_alternative": "Tôi đặt chỗ khác / thời gian khác",
+          "client_health_personal": "Lý do sức khỏe hoặc cá nhân",
+          "client_price_or_service": "Giá, dịch vụ hoặc kỳ vọng",
+          "client_other": "Khác"
+        }
       }
     },
     "ru": {
@@ -27,7 +55,21 @@
         "rateVisitAria": "Оценить визит, запись с {name}",
         "statusUnknown": "Статус недоступен",
         "systemExpiredNoConfirmation": "Отменено: не подтвердили вовремя",
-        "systemMasterLeftWorkplace": "Мастер больше не ведёт приём по этому адресу. Запись отменена автоматически."
+        "systemMasterLeftWorkplace": "Мастер больше не ведёт приём по этому адресу. Запись отменена автоматически.",
+        "masterCancelReasons": {
+          "master_schedule_conflict": "Извините, но на это время уже занято.",
+          "master_unavailable_or_ill": "Мастер недоступен или не может принять клиента.",
+          "master_organization_closed": "На это время салон закрыт.",
+          "master_duplicate_or_error": "Запись оказалась дублем или ошибкой.",
+          "master_other": "Салон отменил запись."
+        },
+        "clientCancelReasons": {
+          "client_schedule_changed": "Изменились планы",
+          "client_found_alternative": "Записался в другое место / на другое время",
+          "client_health_personal": "Здоровье или личные обстоятельства",
+          "client_price_or_service": "Цена, услуга или ожидания",
+          "client_other": "Другое"
+        }
       }
     }
   }

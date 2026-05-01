@@ -23,6 +23,13 @@ import {
 import type { DirectoryListSort } from '../../../common/pagination/directory-list-sort';
 import { PersonalizationService } from '../../personalization/application/personalization.service';
 import {
+  directorySpecialistListedBio,
+  directorySpecialistListedExperienceYears,
+  directorySpecialistListedImageAlt,
+  directorySpecialistListedImageUrl,
+  directorySpecialistListedListingName,
+} from '../lib/directory-specialist-listed-profile';
+import {
   decodeReviewListCursor,
   encodeReviewListCursor,
 } from '../../../common/pagination/review-list-cursor-codec';
@@ -184,6 +191,7 @@ function mapSpecialistRowToListItem(
   now: Date,
   occupiedKeys: Set<string>,
   doneClientsCount: number,
+  opts?: { listedNameMode: 'public_catalog' | 'raw_account' },
 ): SpecialistListItemDto {
   const slotGroups = buildListingSlotGroupsFromOccupiedKeys(occupiedKeys, now);
 
@@ -200,7 +208,7 @@ function mapSpecialistRowToListItem(
   );
   const metaLine =
     [addressLine, city].filter((x) => x?.trim()).join(', ') ||
-    s.bio?.trim() ||
+    directorySpecialistListedBio(s)?.trim() ||
     '';
   const servicesLine = categoriesLine || '';
   const listingWd = normalizeDirectoryListingWorkdayBounds(
@@ -209,12 +217,20 @@ function mapSpecialistRowToListItem(
   );
   const phone = loc?.phone?.trim() || s.user.phone?.trim() || null;
   const activeWorkplace = loc ? { id: loc.id, name: loc.name.trim() } : null;
+  const listedName =
+    opts?.listedNameMode === 'raw_account'
+      ? (s.listingName ?? '').trim()
+      : directorySpecialistListedListingName(s);
+  const listedBio = directorySpecialistListedBio(s);
+  const listedYears = directorySpecialistListedExperienceYears(s);
+  const listedImg = directorySpecialistListedImageUrl(s);
+  const listedImgAlt = directorySpecialistListedImageAlt(s);
   return {
     id: s.id,
     userId: s.userId,
-    name: s.user.name,
-    bio: s.bio,
-    experienceYears: s.experienceYears,
+    name: listedName,
+    bio: listedBio,
+    experienceYears: listedYears,
     doneClientsCount,
     ratingAverage: s.ratingAverage,
     rating: s.ratingAverage,
@@ -224,8 +240,8 @@ function mapSpecialistRowToListItem(
     addressLine,
     city,
     phone,
-    imageUrl: s.imageUrl,
-    imageAlt: s.imageAlt,
+    imageUrl: listedImg,
+    imageAlt: listedImgAlt,
     metaLine,
     servicesLine,
     categories: mapDirectoryCategoryTags(s.serviceCategories, locale),
@@ -313,15 +329,22 @@ function mapSpecialistToStaffMember(
   /** Строка локации салона (карточка сотрудника привязана к этой организации). */
   organizationMetaLine: string,
   occupiedKeys: Set<string>,
+  /** Владелец салона видит «живые» имена мастеров; гости — витринные (заморозка при pending). */
+  viewerIsOrganizationOwner: boolean,
 ): OrganizationStaffMemberDto {
-  const metaLine = organizationMetaLine.trim() || s.bio?.trim() || '';
+  const staffBio = directorySpecialistListedBio(s);
+  const staffImg = directorySpecialistListedImageUrl(s);
+  const metaLine = organizationMetaLine.trim() || staffBio?.trim() || '';
+  const displayName = viewerIsOrganizationOwner
+    ? (s.listingName ?? '').trim()
+    : directorySpecialistListedListingName(s);
   return {
     id: s.id,
     userId: s.userId,
-    name: s.user.name,
+    name: displayName,
     rating: s.ratingAverage,
     metaLine,
-    imageUrl: s.imageUrl,
+    imageUrl: staffImg,
     bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
     occupiedListingSlotKeys: [...occupiedKeys].sort(),
   };
@@ -742,15 +765,18 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds([
         id,
       ]);
+    const isOwner = viewerUserId != null && row.userId === viewerUserId;
     const dto = mapSpecialistRowToListItem(
       row,
       locale,
       now,
       occupiedBySpecialist.get(id) ?? new Set(),
       doneBySpec.get(id) ?? 0,
+      {
+        listedNameMode: isOwner ? 'raw_account' : 'public_catalog',
+      },
     );
 
-    const isOwner = viewerUserId != null && row.userId === viewerUserId;
     const pendingWorkplace =
       isOwner &&
       row.activeOrganization &&
@@ -826,6 +852,7 @@ export class DirectoryService {
           locale,
           base.metaLine,
           occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
+          isOwner,
         ),
       );
     const clientsCount =

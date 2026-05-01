@@ -3,6 +3,84 @@ import type { ApiLocale } from '../../../common/i18n';
 
 const ORG_TEXT_SEARCH_LOCALES: ApiLocale[] = ['en', 'vi', 'ru'];
 
+/** Условие на `Specialist` sp: витринный профиль мастера одобрен или показываем снимок до модерации правки. */
+const specialistVitrineProfileSql = Prisma.sql`(
+  sp."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
+  OR (
+    sp."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
+    AND (
+      sp."catalogListedBio" IS NOT NULL
+      OR sp."catalogListedImageUrl" IS NOT NULL
+      OR sp."catalogListedListingName" IS NOT NULL
+    )
+  )
+  OR (
+    sp."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
+    AND (
+      sp."catalogListedBio" IS NOT NULL
+      OR sp."catalogListedImageUrl" IS NOT NULL
+      OR sp."catalogListedListingName" IS NOT NULL
+    )
+  )
+)`;
+
+const specialistVitrineProfileSqlSp0 = Prisma.sql`(
+  sp0."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
+  OR (
+    sp0."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
+    AND (
+      sp0."catalogListedBio" IS NOT NULL
+      OR sp0."catalogListedImageUrl" IS NOT NULL
+      OR sp0."catalogListedListingName" IS NOT NULL
+    )
+  )
+  OR (
+    sp0."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
+    AND (
+      sp0."catalogListedBio" IS NOT NULL
+      OR sp0."catalogListedImageUrl" IS NOT NULL
+      OR sp0."catalogListedListingName" IS NOT NULL
+    )
+  )
+)`;
+
+/** Имя мастера во витрине: живое одобренное или замороженное при модерации (не из `User.name`). */
+const specialistVitrineListingNameSql = Prisma.sql`(
+  (
+    sp."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
+    AND sp."listingName" IS NOT NULL
+    AND length(trim(COALESCE(sp."listingName", ''))) > 0
+  )
+  OR (
+    sp."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
+    AND sp."catalogListedListingName" IS NOT NULL
+    AND length(trim(COALESCE(sp."catalogListedListingName", ''))) > 0
+  )
+  OR (
+    sp."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
+    AND sp."catalogListedListingName" IS NOT NULL
+    AND length(trim(COALESCE(sp."catalogListedListingName", ''))) > 0
+  )
+)`;
+
+const specialistVitrineListingNameSqlSp0 = Prisma.sql`(
+  (
+    sp0."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
+    AND sp0."listingName" IS NOT NULL
+    AND length(trim(COALESCE(sp0."listingName", ''))) > 0
+  )
+  OR (
+    sp0."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
+    AND sp0."catalogListedListingName" IS NOT NULL
+    AND length(trim(COALESCE(sp0."catalogListedListingName", ''))) > 0
+  )
+  OR (
+    sp0."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
+    AND sp0."catalogListedListingName" IS NOT NULL
+    AND length(trim(COALESCE(sp0."catalogListedListingName", ''))) > 0
+  )
+)`;
+
 /** Подкатегория объявлена у салона и закрыта активным мастером из каталога с забронируемой услугой (VND). */
 export function vitrineCategoryCoverageExists(): Prisma.Sql {
   return Prisma.sql`
@@ -10,8 +88,8 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
       SELECT 1
       FROM "SpecialistOrganizationEmployment" e
       INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
-      INNER JOIN "User" usr ON usr.id = sp."userId"
-        AND usr."nameModerationStatus" = 'approved'::"PublicationModerationStatus"
+        AND ${specialistVitrineProfileSql}
+        AND ${specialistVitrineListingNameSql}
       INNER JOIN "Service" s ON s."specialistId" = e."specialistId"
         AND s."categoryId" = osc."serviceCategoryId"
         AND s."deletedAt" IS NULL
@@ -51,8 +129,8 @@ export async function queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecial
         SELECT 1
         FROM "SpecialistOrganizationEmployment" e
         INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
-        INNER JOIN "User" usr ON usr.id = sp."userId"
-          AND usr."nameModerationStatus" = 'approved'::"PublicationModerationStatus"
+          AND ${specialistVitrineProfileSql}
+          AND ${specialistVitrineListingNameSql}
         WHERE e."organizationId" = o.id
           AND e."isActive" = true
           AND sp."listedInDirectory" = true
@@ -237,6 +315,8 @@ export async function queryDistinctStorefrontOrganizationServiceCategoryIds(pris
           SELECT 1
           FROM "SpecialistOrganizationEmployment" e0
           INNER JOIN "Specialist" sp0 ON sp0.id = e0."specialistId"
+            AND ${specialistVitrineProfileSqlSp0}
+            AND ${specialistVitrineListingNameSqlSp0}
           WHERE e0."organizationId" = o.id
             AND e0."isActive" = true
             AND sp0."listedInDirectory" = true

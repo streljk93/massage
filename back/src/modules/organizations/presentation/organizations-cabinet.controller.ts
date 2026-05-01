@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -34,7 +36,10 @@ import {
 } from '../../../common/i18n';
 import { parseListSearchQ } from '../../../common/pagination/directory-list-search-query.parse';
 import { OrganizationCabinetService } from '../application/organization-cabinet.service';
-import { createOrganizationBodySchema, type CreateOrganizationBody } from '../dto/create-organization-body.schema';
+import {
+  createOrganizationBodySchema,
+  type CreateOrganizationBody,
+} from '../dto/create-organization-body.schema';
 import {
   workplaceJoinRequestListQuerySchema,
   workplaceJoinRequestReviewBodySchema,
@@ -43,6 +48,9 @@ import {
 } from '../dto/workplace-join-request.schema';
 import {
   createOrganizationRequestSchema,
+  organizationCabinetDeleteBookingsPreviewResponseSchema,
+  organizationCabinetDeleteOrganizationResponseSchema,
+  organizationCabinetEditProfileResponseSchema,
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
   workplaceJoinRequestReviewResponseSchema,
@@ -55,7 +63,9 @@ type AuthedRequest = Request & { user: AuthenticatedUser };
 @ApiTags('cabinet-organizations')
 @Controller('organizations')
 export class OrganizationsCabinetController {
-  constructor(private readonly organizationCabinet: OrganizationCabinetService) {}
+  constructor(
+    private readonly organizationCabinet: OrganizationCabinetService,
+  ) {}
 
   @Get('workplace-search')
   @UseGuards(JwtAccessGuard)
@@ -133,6 +143,130 @@ export class OrganizationsCabinetController {
     );
   }
 
+  @Get(':organizationId/cabinet-edit')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Поля салона для формы редактирования (владелец БД или активный admin).',
+    description:
+      'В отличие от публичного `GET /organizations/:id`, доступно админам орг без статуса `approved` по витрине.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiOkResponse({ schema: organizationCabinetEditProfileResponseSchema })
+  @ApiForbiddenResponse({
+    description: 'Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getCabinetOrganizationProfileForEdit(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+  ) {
+    return this.organizationCabinet.getCabinetOrganizationProfileForEdit(
+      req.user.id,
+      organizationId,
+      locale,
+    );
+  }
+
+  @Get(':organizationId/delete-bookings-preview')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiLocaleQueryDocs()
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiOperation({
+    summary:
+      'Превью активных записей салона перед удалением организации владельцем.',
+    description:
+      'Тот же тип списка, что при смене места приёма для одного мастера, но по всей организации; плюс имя принимающего специалиста.',
+  })
+  @ApiOkResponse({
+    schema: organizationCabinetDeleteBookingsPreviewResponseSchema,
+  })
+  @ApiForbiddenResponse({
+    description: 'Только владелец организации (NOT_ORGANIZATION_OWNER)',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getDeleteOrganizationBookingsPreview(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+  ) {
+    return this.organizationCabinet.previewDeleteOrganizationBookings(
+      req.user.id,
+      organizationId,
+      locale,
+    );
+  }
+
+  @Delete(':organizationId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiOperation({
+    summary:
+      'Удалить организацию из кабинета (soft delete): только владелец платформенной записи салона.',
+    description:
+      'Активные записи отменяются, услуги салона архивируются, членства и заявки в штат закрываются.',
+  })
+  @ApiOkResponse({ schema: organizationCabinetDeleteOrganizationResponseSchema })
+  @ApiForbiddenResponse({
+    description: 'Только владелец организации (NOT_ORGANIZATION_OWNER)',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async deleteOrganizationAsOwner(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+  ) {
+    return this.organizationCabinet.deleteOrganizationAsOwner(
+      req.user.id,
+      organizationId,
+    );
+  }
+
+  @Patch(':organizationId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.',
+    description:
+      'Тело как у `POST /organizations`. Slug салона не меняется.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiBody({ schema: createOrganizationRequestSchema })
+  @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
+  @ApiBadRequestResponse({ description: 'Категории или валидация тела' })
+  @ApiForbiddenResponse({
+    description: 'Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async patchOrganization(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Body(new ZodValidationPipe(createOrganizationBodySchema))
+    body: CreateOrganizationBody,
+  ) {
+    return this.organizationCabinet.patchOrganizationAsManager(
+      req.user.id,
+      organizationId,
+      body,
+      locale,
+    );
+  }
+
   @Post(':organizationId/workplace-requests')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
@@ -178,14 +312,7 @@ export class OrganizationsCabinetController {
   @ApiQuery({
     name: 'status',
     required: false,
-    enum: [
-      'pending',
-      'rejected',
-      'blocked',
-      'accepted',
-      'withdrawn',
-      'all',
-    ],
+    enum: ['pending', 'rejected', 'blocked', 'accepted', 'withdrawn', 'all'],
   })
   @ApiOkResponse({ schema: workplaceJoinRequestListResponseSchema })
   @ApiBadRequestResponse({ description: 'Невалидный query (status)' })
@@ -224,8 +351,7 @@ export class OrganizationsCabinetController {
     description: 'Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)',
   })
   @ApiNotFoundResponse({
-    description:
-      'Нет pending-заявки (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)',
+    description: 'Нет pending-заявки (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)',
   })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async postReviewWorkplaceJoinRequest(

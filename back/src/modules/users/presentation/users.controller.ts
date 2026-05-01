@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -22,7 +15,10 @@ import { JwtAccessGuard, type AuthenticatedUser } from '../../../common/guards';
 import { UsersService } from '../application/users.service';
 import type { PatchMeBody } from '../dto/patch-me-body.schema';
 import { patchMeBodySchema } from '../dto/patch-me-body.schema';
-import { patchMeRequestSchema, userProfileSchema } from './users.openapi-schemas';
+import {
+  patchMeRequestSchema,
+  userProfileSchema,
+} from './users.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
 

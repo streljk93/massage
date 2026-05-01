@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { OAuthProvider, Prisma, PublicationModerationStatus } from '@prisma/client';
+import {
+  OAuthProvider,
+  Prisma,
+  PublicationModerationStatus,
+} from '@prisma/client';
 import { addMinutes } from 'date-fns';
 import { parseApiLocale } from '../../../common/i18n/api-locale';
 import { MailService } from '../../../infrastructure/mail/mail.service';
@@ -162,7 +166,9 @@ export class AuthService {
         await tx.pendingRegistration.delete({ where: { email } });
         return u;
       });
-      void this.contentModeration.moderateDisplayNameInitial(user.id).catch(() => {});
+      void this.contentModeration
+        .moderateDisplayNameInitial(user.id)
+        .catch(() => {});
       return this.issueTokens({
         id: user.id,
         email: user.email,
@@ -246,10 +252,11 @@ export class AuthService {
     const profile: VerifiedOAuthProfile =
       await this.oauthTokenVerifier.verifyGoogleIdToken(body.idToken);
 
-    const linkedUserId = await this.oauthAccountRepository.findUserIdByProviderAccount(
-      provider,
-      profile.providerAccountId,
-    );
+    const linkedUserId =
+      await this.oauthAccountRepository.findUserIdByProviderAccount(
+        provider,
+        profile.providerAccountId,
+      );
     if (linkedUserId) {
       const user = await this.userRepository.findActiveById(linkedUserId);
       if (!user) {
@@ -314,7 +321,9 @@ export class AuthService {
         });
         return u;
       });
-      void this.contentModeration.moderateDisplayNameInitial(user.id).catch(() => {});
+      void this.contentModeration
+        .moderateDisplayNameInitial(user.id)
+        .catch(() => {});
       return this.issueTokens({
         id: user.id,
         email: user.email,
@@ -322,7 +331,10 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
         const again = await this.userRepository.findActiveByEmail(email);
         if (again) {
           return this.linkOauthToExistingUser(
@@ -375,11 +387,15 @@ export class AuthService {
         avatarUrl: user.avatarUrl,
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        const uid = await this.oauthAccountRepository.findUserIdByProviderAccount(
-          provider,
-          profile.providerAccountId,
-        );
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        const uid =
+          await this.oauthAccountRepository.findUserIdByProviderAccount(
+            provider,
+            profile.providerAccountId,
+          );
         if (uid) {
           const u2 = await this.userRepository.findActiveById(uid);
           if (u2) {

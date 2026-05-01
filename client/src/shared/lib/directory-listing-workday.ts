@@ -45,7 +45,7 @@ export function normalizeClientListingWorkday(
   ) {
     return { ...DEFAULT_DIR_WORKDAY };
   }
-  let a =
+  const a =
     Math.floor(Math.max(0, startMinute) / SLOT_GRID_MINUTES) * SLOT_GRID_MINUTES;
   let b =
     Math.ceil(Math.max(0, endMinute) / SLOT_GRID_MINUTES) * SLOT_GRID_MINUTES;

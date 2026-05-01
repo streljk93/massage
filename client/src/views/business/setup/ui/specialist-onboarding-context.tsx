@@ -7,7 +7,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type Dispatch,
   type ReactNode,
@@ -37,8 +36,8 @@ import {
   specialistsCabinetPostSpecialistOnboardingComplete,
   specialistsCabinetPostSpecialistPersonalService,
 } from "@/shared/api";
-import { validateOrgContactForSubmit } from "@/views/business/lib/organization-contact-form";
-import { resolveApiResourceUrl } from "@/shared/api/resolve-api-resource-url";
+import type { OrganizationSalonCabinetSubmitBody } from "@/entities/organizations";
+import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 import type { ExperienceKey } from "../lib/specialist-onboarding-utils";
 import {
   clampUi,
@@ -52,20 +51,16 @@ import {
   yearsToKey,
   type SvcForm,
 } from "../lib/specialist-onboarding-utils";
-import { ORG_SALON_GALLERY_MAX_FILES } from "@/shared/ui";
 
 export const ONB_QK = ["specialistOnboarding"] as const;
-
-export type PendingOrgGalleryItem = {
-  id: string;
-  file: File;
-  previewUrl: string;
-};
 
 export type SpecialistOnboardingSpec = {
   bio?: string | null;
   experienceYears?: number | null;
   imageUrl?: string | null;
+  /** Имя мастера на витрине (каталог). */
+  listingName?: string | null;
+  /** Личное имя аккаунта (`User.name`). */
   userName?: string;
   userPhone?: string | null;
   massage?: {
@@ -131,31 +126,6 @@ export type SpecialistOnboardingContextValue = {
   orgPending: boolean;
   createSalonOpen: boolean;
   setCreateSalonOpen: (v: boolean) => void;
-  newOrgName: string;
-  setNewOrgName: (v: string) => void;
-  newOrgAddrQ: string;
-  setNewOrgAddrQ: (v: string) => void;
-  newOrgPlacePicked: string | null;
-  setNewOrgPlacePicked: (v: string | null) => void;
-  orgAddressMapOpen: boolean;
-  setOrgAddressMapOpen: (v: boolean) => void;
-  orgAddressMapNonce: number;
-  setOrgAddressMapNonce: Dispatch<SetStateAction<number>>;
-  newOrgPhone: string;
-  setNewOrgPhone: (v: string) => void;
-  newOrgEmail: string;
-  setNewOrgEmail: (v: string) => void;
-  newOrgWebsite: string;
-  setNewOrgWebsite: (v: string) => void;
-  newOrgDescription: string;
-  setNewOrgDescription: (v: string) => void;
-  newOrgYears: string;
-  setNewOrgYears: (v: string) => void;
-  newOrgCategoryIds: Set<string>;
-  setNewOrgCategoryIds: Dispatch<SetStateAction<Set<string>>>;
-  pendingOrgGallery: PendingOrgGalleryItem[];
-  addPendingOrgGalleryFiles: (files: File[]) => void;
-  removePendingOrgGalleryItem: (id: string) => void;
   createOrgSubmitting: boolean;
   workplaceSubmitting: boolean;
   introSubmitting: boolean;
@@ -173,7 +143,9 @@ export type SpecialistOnboardingContextValue = {
   onProfileContinue: () => Promise<void>;
   onServicesContinue: () => Promise<void>;
   onOrgContinue: () => Promise<void>;
-  onCreateSalonSubmit: () => Promise<void>;
+  submitCreateOrganizationFromOnboarding: (
+    body: OrganizationSalonCabinetSubmitBody,
+  ) => Promise<void>;
   onWorkplaceSkip: () => void;
   onDone: () => Promise<void>;
 
@@ -181,7 +153,6 @@ export type SpecialistOnboardingContextValue = {
   removeService: (i: number) => void;
   updateSvc: (i: number, p: SvcForm) => void;
   isServicePanelOpen: (si: number) => boolean;
-  resetCreateSalonForm: () => void;
 };
 
 const SpecialistOnboardingContext =
@@ -245,91 +216,19 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [orgSuggestOpen, setOrgSuggestOpen] = useState(true);
   const [orgPending, setOrgPending] = useState(false);
   const [createSalonOpen, setCreateSalonOpen] = useState(false);
-  const [newOrgName, setNewOrgName] = useState("");
-  const [newOrgAddrQ, setNewOrgAddrQ] = useState("");
-  const [newOrgPlacePicked, setNewOrgPlacePicked] = useState<string | null>(null);
-  const [orgAddressMapOpen, setOrgAddressMapOpen] = useState(false);
-  const [orgAddressMapNonce, setOrgAddressMapNonce] = useState(0);
-  /** Национальные цифры Вьетнама без +84 (как в шаге профиля). */
-  const [newOrgPhone, setNewOrgPhone] = useState("");
-  const [newOrgEmail, setNewOrgEmail] = useState("");
-  const [newOrgWebsite, setNewOrgWebsite] = useState("");
-  const [newOrgDescription, setNewOrgDescription] = useState("");
-  const [newOrgYears, setNewOrgYears] = useState("");
-  const [newOrgCategoryIds, setNewOrgCategoryIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [pendingOrgGallery, setPendingOrgGallery] = useState<PendingOrgGalleryItem[]>([]);
-  const pendingOrgGalleryRef = useRef<PendingOrgGalleryItem[]>([]);
-  useEffect(() => {
-    pendingOrgGalleryRef.current = pendingOrgGallery;
-  }, [pendingOrgGallery]);
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
   const [workplaceSubmitting, setWorkplaceSubmitting] = useState(false);
   const [introSubmitting, setIntroSubmitting] = useState(false);
   const [servicesSubmitting, setServicesSubmitting] = useState(false);
   const [doneSubmitting, setDoneSubmitting] = useState(false);
 
-  const resetCreateSalonForm = useCallback(() => {
-    setPendingOrgGallery((prev) => {
-      prev.forEach((x) => URL.revokeObjectURL(x.previewUrl));
-      return [];
-    });
-    setNewOrgName("");
-    setNewOrgAddrQ("");
-    setNewOrgPlacePicked(null);
-    setOrgAddressMapOpen(false);
-    setNewOrgPhone("");
-    setNewOrgEmail("");
-    setNewOrgWebsite("");
-    setNewOrgDescription("");
-    setNewOrgYears("");
-    setNewOrgCategoryIds(new Set());
-  }, []);
-
-  const addPendingOrgGalleryFiles = useCallback((files: File[]) => {
-    setPendingOrgGallery((prev) => {
-      const room = ORG_SALON_GALLERY_MAX_FILES - prev.length;
-      if (room <= 0) {
-        return prev;
-      }
-      const imageFiles = files.filter((f) => f.type.startsWith("image/")).slice(0, room);
-      if (imageFiles.length === 0) {
-        return prev;
-      }
-      const next = [...prev];
-      for (const file of imageFiles) {
-        next.push({
-          id: crypto.randomUUID(),
-          file,
-          previewUrl: URL.createObjectURL(file),
-        });
-      }
-      return next;
-    });
-  }, []);
-
-  const removePendingOrgGalleryItem = useCallback((id: string) => {
-    setPendingOrgGallery((prev) => {
-      const item = prev.find((x) => x.id === id);
-      if (item) {
-        URL.revokeObjectURL(item.previewUrl);
-      }
-      return prev.filter((x) => x.id !== id);
-    });
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      pendingOrgGalleryRef.current.forEach((x) => URL.revokeObjectURL(x.previewUrl));
-    };
-  }, []);
-
   useEffect(() => {
     if (!spec) {
       return;
     }
-    setPName((prev) => (prev ? prev : spec.userName ?? ""));
+    setPName((prev) =>
+      prev ? prev : (spec.listingName ?? spec.userName ?? "").trim() || "",
+    );
     setPPhoneLocal((prev) => (prev ? prev : parseVnLocalForInput(spec.userPhone)));
     setPBio((prev) => (prev ? prev : spec.bio?.trim() ?? ""));
     setPExp((prev) => (prev ?? yearsToKey(spec.experienceYears)));
@@ -614,106 +513,30 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     }
   };
 
-  const onCreateSalonSubmit = async () => {
-    if (!newOrgName.trim() || newOrgPlacePicked == null) {
-      setFormError(t("vErrCreateOrgRequired"));
-      return;
-    }
-    let placeRef: { provider: string; placeId: string };
-    try {
-      const parsed = JSON.parse(newOrgPlacePicked) as { p: string; i: string };
-      if (
-        typeof parsed.p !== "string" ||
-        typeof parsed.i !== "string" ||
-        !parsed.p ||
-        !parsed.i
-      ) {
-        setFormError(t("vErrCreateOrgRequired"));
-        return;
-      }
-      placeRef = { provider: parsed.p, placeId: parsed.i };
-    } catch {
-      setFormError(t("vErrCreateOrgRequired"));
-      return;
-    }
-    if (newOrgCategoryIds.size < 1) {
-      setFormError(t("vErrCreateOrgCategories"));
-      return;
-    }
-    const contact = validateOrgContactForSubmit({
-      phoneLocalDigits: newOrgPhone,
-      email: newOrgEmail,
-      website: newOrgWebsite,
-    });
-    if (!contact.ok) {
-      setFormError(t(contact.errorKey));
-      return;
-    }
-    setFormError(null);
-    setCreateOrgSubmitting(true);
-    let imageUrl: string | undefined;
-    const galleryUrls: string[] = [];
-    for (const item of pendingOrgGallery) {
-      const up = await filesUploadPublic({
-        client: sdk,
-        body: { file: item.file },
-      });
-      if (up.error || !up.data?.url) {
-        setFormError(t("vErrPhoto"));
+  const submitCreateOrganizationFromOnboarding = useCallback(
+    async (body: OrganizationSalonCabinetSubmitBody) => {
+      setFormError(null);
+      setCreateOrgSubmitting(true);
+      try {
+        const { error } = await organizationsCabinetPostCreateOrganization({
+          client: sdk,
+          query: { locale },
+          body,
+        });
+        if (error) {
+          setFormError(t("vErrCreateOrg"));
+          return;
+        }
+        setCreateSalonOpen(false);
+        await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+        const { data: o2 } = await refetch();
+        setStep(5, o2?.onboardingStep);
+      } finally {
         setCreateOrgSubmitting(false);
-        return;
       }
-      galleryUrls.push(up.data.url);
-    }
-    if (galleryUrls.length > 0) {
-      imageUrl = galleryUrls[0];
-    }
-    const galleryImageUrls = galleryUrls.length > 1 ? galleryUrls.slice(1) : undefined;
-    const yearsRaw = newOrgYears.trim();
-    const yearsParsed =
-      yearsRaw === ""
-        ? null
-        : Math.min(80, Math.max(0, parseInt(yearsRaw, 10) || 0));
-    try {
-      const { error } = await organizationsCabinetPostCreateOrganization({
-        client: sdk,
-        query: { locale },
-        body: {
-          name: newOrgName.trim(),
-          placeReference: {
-            provider: placeRef.provider as
-              | "locationiq"
-              | "geoapify"
-              | "opencage"
-              | "nominatim",
-            placeId: placeRef.placeId,
-          },
-          description: newOrgDescription.trim() || undefined,
-          phone: contact.value.phone,
-          email: contact.value.email,
-          website: contact.value.website,
-          yearsInBusiness: yearsParsed,
-          imageUrl: imageUrl ?? null,
-          imageAlt: imageUrl != null ? newOrgName.trim() : null,
-          ...(galleryImageUrls != null && galleryImageUrls.length > 0 ?
-            { galleryImageUrls }
-          : {}),
-          serviceCategoryIds: Array.from(newOrgCategoryIds),
-        },
-      });
-      if (error) {
-        setFormError(t("vErrCreateOrg"));
-        return;
-      }
-      resetCreateSalonForm();
-      setCreateSalonOpen(false);
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
-      const { data: o2 } = await refetch();
-      setStep(5, o2?.onboardingStep);
-    } finally {
-      setCreateOrgSubmitting(false);
-    }
-  };
+    },
+    [accessToken, locale, queryClient, refetch, sdk, setStep, t],
+  );
 
   const onWorkplaceSkip = () => {
     setFormError(null);
@@ -821,31 +644,6 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     orgPending,
     createSalonOpen,
     setCreateSalonOpen,
-    newOrgName,
-    setNewOrgName,
-    newOrgAddrQ,
-    setNewOrgAddrQ,
-    newOrgPlacePicked,
-    setNewOrgPlacePicked,
-    orgAddressMapOpen,
-    setOrgAddressMapOpen,
-    orgAddressMapNonce,
-    setOrgAddressMapNonce,
-    newOrgPhone,
-    setNewOrgPhone,
-    newOrgEmail,
-    setNewOrgEmail,
-    newOrgWebsite,
-    setNewOrgWebsite,
-    newOrgDescription,
-    setNewOrgDescription,
-    newOrgYears,
-    setNewOrgYears,
-    newOrgCategoryIds,
-    setNewOrgCategoryIds,
-    pendingOrgGallery,
-    addPendingOrgGalleryFiles,
-    removePendingOrgGalleryItem,
     createOrgSubmitting,
     workplaceSubmitting,
     introSubmitting,
@@ -860,14 +658,13 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     onProfileContinue,
     onServicesContinue,
     onOrgContinue,
-    onCreateSalonSubmit,
+    submitCreateOrganizationFromOnboarding,
     onWorkplaceSkip,
     onDone,
     addService,
     removeService,
     updateSvc,
     isServicePanelOpen,
-    resetCreateSalonForm,
   };
 
   return (

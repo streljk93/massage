@@ -1,7 +1,7 @@
 import {
   isPlausibleVnNational,
   toE164Vietnam,
-} from "../setup/lib/specialist-onboarding-utils";
+} from "@/shared/lib/vn-phone-contact";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

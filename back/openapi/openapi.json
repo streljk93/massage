@@ -1468,9 +1468,21 @@
     },
     "/moderation/cases": {
       "get": {
-        "description": "Требуется флаг модератора (`User.isContentModerator`).",
+        "description": "Требуется `User.platformRole` = master или флаг модератора `User.isContentModerator`.",
         "operationId": "ContentModeration_listCases",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Максимум кейсов (1–100), по умолчанию 50",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Список кейсов"
@@ -1496,7 +1508,17 @@
     "/moderation/cases/{caseId}/approve": {
       "post": {
         "operationId": "ContentModeration_approve",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "description": "Id кейса модерации",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "401": {
             "description": "Нет или невалидный access token"
@@ -1519,7 +1541,38 @@
     "/moderation/cases/{caseId}/reject": {
       "post": {
         "operationId": "ContentModeration_reject",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "caseId",
+            "required": true,
+            "in": "path",
+            "description": "Id кейса модерации",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "description": "Причина отказа модератора"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "401": {
             "description": "Нет или невалидный access token"
@@ -1662,7 +1715,9 @@
                     "avatarUrl",
                     "locale",
                     "bookingReminderEnabled",
-                    "bookingReminderLeadMinutes"
+                    "bookingReminderLeadMinutes",
+                    "platformRole",
+                    "isContentModerator"
                   ],
                   "properties": {
                     "id": {
@@ -1702,6 +1757,18 @@
                         60
                       ],
                       "description": "За сколько минут до визита прислать push (только при включённом флаге)."
+                    },
+                    "platformRole": {
+                      "type": "string",
+                      "enum": [
+                        "standard",
+                        "master"
+                      ],
+                      "description": "Платформенная роль; master — полный доступ к админ-панели (суперадмин из ADMIN_MASTER_*)."
+                    },
+                    "isContentModerator": {
+                      "type": "boolean",
+                      "description": "Доступ к ручной модерации контента (очередь /moderation/cases)."
                     }
                   }
                 }
@@ -1792,7 +1859,9 @@
                     "avatarUrl",
                     "locale",
                     "bookingReminderEnabled",
-                    "bookingReminderLeadMinutes"
+                    "bookingReminderLeadMinutes",
+                    "platformRole",
+                    "isContentModerator"
                   ],
                   "properties": {
                     "id": {
@@ -1832,6 +1901,18 @@
                         60
                       ],
                       "description": "За сколько минут до визита прислать push (только при включённом флаге)."
+                    },
+                    "platformRole": {
+                      "type": "string",
+                      "enum": [
+                        "standard",
+                        "master"
+                      ],
+                      "description": "Платформенная роль; master — полный доступ к админ-панели (суперадмин из ADMIN_MASTER_*)."
+                    },
+                    "isContentModerator": {
+                      "type": "boolean",
+                      "description": "Доступ к ручной модерации контента (очередь /moderation/cases)."
                     }
                   }
                 }
@@ -1884,7 +1965,9 @@
                           "name",
                           "role",
                           "isActiveWorkplace",
-                          "publicationModerationStatus"
+                          "publicationModerationStatus",
+                          "salonCabinetPreview",
+                          "publishedCoverImageUrl"
                         ],
                         "properties": {
                           "id": {
@@ -1915,6 +1998,36 @@
                               "rejected"
                             ],
                             "description": "Витрина: approved — в каталоге; pending_review / rejected — на модерации или отклонён публикация салона."
+                          },
+                          "salonCabinetPreview": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "Есть ревизия в `pending_review` — превью для кабинета; поле `name` строки организации всё ещё опубликованное (гость).",
+                            "required": [
+                              "revisionId",
+                              "name",
+                              "coverImageUrl"
+                            ],
+                            "properties": {
+                              "revisionId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Название из черновика ревизии (может отличаться от `name`)."
+                              },
+                              "coverImageUrl": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Первое фото галереи черновика; относительные URL как у остальных файлов API."
+                              }
+                            }
+                          },
+                          "publishedCoverImageUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Первое фото галереи опубликованного профиля организации; для карточки в кабинете, когда нет pending-ревизии."
                           }
                         }
                       }
@@ -1946,6 +2059,131 @@
           }
         ],
         "summary": "Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/active-organization/bookings-preview": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistActiveOrganizationBookingsPreview",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`."
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bookings"
+                  ],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "description": "Активные брони клиентов к текущему мастеру в указанной организации (то, что отменится при смене места приёма).",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "status",
+                          "statusLabel",
+                          "startsAt",
+                          "endsAt",
+                          "pendingExpiresAt",
+                          "clientDisplayName",
+                          "categoryShortName",
+                          "durationMinutes"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "in_progress"
+                            ]
+                          },
+                          "statusLabel": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "pendingExpiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "clientDisplayName": {
+                            "type": "string"
+                          },
+                          "categoryShortName": {
+                            "type": "string"
+                          },
+                          "durationMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Длительность слота на момент записи; отдельно от `endsAt - startsAt`."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "organizationId не совпадает с текущим местом приёма (NOT_CURRENT_ACTIVE_WORKPLACE_ORGANIZATION)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Превью активных броней к вам в текущей организации — то же, что будет отменено при смене места приёма.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2045,6 +2283,181 @@
           }
         ],
         "summary": "Заявки текущего мастера на вступление в организации (отправленные из кабинета).",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/salon-bookings": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistSalonBookings",
+        "parameters": [
+          {
+            "name": "scope",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "managed",
+                "active_workplace"
+              ]
+            },
+            "description": "managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма."
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bookings"
+                  ],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "status",
+                          "statusLabel",
+                          "specialistId",
+                          "specialistName",
+                          "specialistImageUrl",
+                          "organizationId",
+                          "organizationName",
+                          "clientDisplayName",
+                          "categoryShortName",
+                          "amount",
+                          "currency",
+                          "startsAt",
+                          "endsAt",
+                          "pendingExpiresAt",
+                          "cancelReason",
+                          "cancellationComment"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "expired",
+                              "reject_by_master",
+                              "reject_by_client",
+                              "confirmed",
+                              "canceled_by_master",
+                              "canceled_by_client",
+                              "no_show_by_client",
+                              "no_show_by_master",
+                              "in_progress",
+                              "done"
+                            ]
+                          },
+                          "statusLabel": {
+                            "type": "string"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistName": {
+                            "type": "string",
+                            "description": "Мастер, принимающий по этой брони."
+                          },
+                          "specialistImageUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "organizationName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "clientDisplayName": {
+                            "type": "string",
+                            "description": "Имя гостя из учётной записи на момент ответа."
+                          },
+                          "categoryShortName": {
+                            "type": "string"
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "currency": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "pendingExpiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "cancelReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "cancellationComment": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Список броней для бизнес-экрана: по управляемым салонам или только «мои» на текущем месте.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2240,7 +2653,8 @@
                   "name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 120
+                    "maxLength": 120,
+                    "description": "Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`."
                   },
                   "phone": {
                     "oneOf": [
@@ -3080,7 +3494,7 @@
     },
     "/bookings/me/{id}/confirm": {
       "post": {
-        "description": "Переводит `pending` → `confirmed` для брони этого мастера, пишет историю, отправляет push клиенту. JWT — пользователь с профилем `Specialist`.",
+        "description": "Переводит `pending` → `confirmed` для брони, пишет историю, отправляет push клиенту. JWT — пользователь с профилем `Specialist`: либо принимающий мастер брони, либо owner/admin организации, указанной в брони.",
         "operationId": "SpecialistBookings_confirmPending",
         "parameters": [
           {
@@ -3144,10 +3558,10 @@
             "description": "Нет access token"
           },
           "403": {
-            "description": "У JWT нет профиля специалиста"
+            "description": "Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)"
           },
           "404": {
-            "description": "Бронь не найдена или чужая"
+            "description": "Бронь не найдена"
           }
         },
         "security": [
@@ -3155,7 +3569,170 @@
             "access-token": []
           }
         ],
-        "summary": "Подтвердить запись (специалист)",
+        "summary": "Подтвердить запись (специалист / салон)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/me/{id}/reject": {
+      "post": {
+        "description": "`pending` → `reject_by_master`, push клиенту. Доступ: принимающий мастер или owner/admin организации из брони.",
+        "operationId": "SpecialistBookings_rejectPending",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "reject_by_master"
+                      ],
+                      "description": "Клиент получает push об отказе салона до подтверждения записи."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Статус не `pending` (код `BOOKING_NOT_PENDING`)"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)"
+          },
+          "404": {
+            "description": "Бронь не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Отклонить ожидающую запись (мастер / салон)",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/bookings/me/{id}/cancel": {
+      "post": {
+        "description": "`confirmed` → `canceled_by_master`; причина и комментарий пишутся в бронь, push клиенту. Owner/admin салона может отменять запись любого принимающего мастера в своей организации.",
+        "operationId": "SpecialistBookings_cancelConfirmed",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cancelReason"
+                ],
+                "properties": {
+                  "cancelReason": {
+                    "type": "string",
+                    "enum": [
+                      "master_schedule_conflict",
+                      "master_unavailable_or_ill",
+                      "master_organization_closed",
+                      "master_duplicate_or_error",
+                      "master_other"
+                    ],
+                    "description": "При `master_other` в теле нужен непустой `cancellationComment`."
+                  },
+                  "cancellationComment": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "description": "Для `master_other` — обязателен."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "status"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "canceled_by_master"
+                      ],
+                      "description": "Клиент получает push об отмене с вашей стороны."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Не `confirmed`, ошибка тела или `master_other` без комментария (`BOOKING_CANNOT_CANCEL`)"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)"
+          },
+          "404": {
+            "description": "Бронь не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Отменить подтверждённую запись (мастер / салон)",
         "tags": [
           "bookings"
         ]
@@ -3163,7 +3740,7 @@
     },
     "/bookings/me/{id}/start-visit": {
       "post": {
-        "description": "Переводит `confirmed` → `in_progress` для брони этого мастера. Допустимо не раньше времени начала слота `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`, как при создании брони). Пишет историю, отправляет push клиенту.",
+        "description": "Переводит `confirmed` → `in_progress`. Допустимо не раньше `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`). Принимающий мастер или owner/admin организации из брони.",
         "operationId": "SpecialistBookings_startVisit",
         "parameters": [
           {
@@ -3220,10 +3797,10 @@
             "description": "Нет access token"
           },
           "403": {
-            "description": "У JWT нет профиля специалиста"
+            "description": "Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)"
           },
           "404": {
-            "description": "Бронь не найдена или чужая"
+            "description": "Бронь не найдена"
           }
         },
         "security": [
@@ -3239,7 +3816,7 @@
     },
     "/organizations/workplace-search": {
       "get": {
-        "description": "Пустой `q` — первые `limit` активных салонов по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).",
+        "description": "Только салоны с **одобренной** публикацией (`approved` после модерации). Пустой `q` — первые `limit` по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).",
         "operationId": "OrganizationsCabinet_getWorkplaceOrganizationSearch",
         "parameters": [
           {
@@ -3332,7 +3909,7 @@
             "access-token": []
           }
         ],
-        "summary": "Поиск салона для заявки на место работы (без фильтров публичной витрины).",
+        "summary": "Поиск салона для заявки на место работы (без фильтров публичной витрины по мастерам).",
         "tags": [
           "cabinet-organizations"
         ]
@@ -3396,7 +3973,7 @@
                         "maxLength": 400
                       }
                     },
-                    "description": "Сервер разрешает place_id через `GET/POST /v1/address/...` (предпочтительно)."
+                    "description": "Ссылка на объект геокодера. Если одновременно переданы непустой `addressLine`, `latitude` и `longitude` — координаты и строка адреса берутся с клиента (точка с карты кабинета); иначе сервер заполняет адрес через resolve по place_id."
                   },
                   "addressLine": {
                     "type": "string",
@@ -3477,7 +4054,7 @@
                     }
                   }
                 },
-                "description": "Адрес: либо `placeReference` (рекомендуется), либо `addressLine`+`latitude`+`longitude` (устар. путь)."
+                "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
               }
             }
           }
@@ -3869,6 +4446,572 @@
         "summary": "Список организаций (курсорная пагинация)",
         "tags": [
           "directory-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/cabinet-edit": {
+      "get": {
+        "description": "В отличие от публичного `GET /organizations/:id`, доступно админам орг без статуса `approved` по витрине.",
+        "operationId": "OrganizationsCabinet_getCabinetOrganizationProfileForEdit",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "description",
+                    "phone",
+                    "email",
+                    "website",
+                    "yearsInBusiness",
+                    "addressLine",
+                    "city",
+                    "latitude",
+                    "longitude",
+                    "placeReference",
+                    "serviceCategoryIds",
+                    "galleryItems"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "phone": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "email": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "website": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "yearsInBusiness": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 80,
+                      "nullable": true
+                    },
+                    "addressLine": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "city": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "latitude": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "longitude": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "placeReference": {
+                      "type": "object",
+                      "nullable": true,
+                      "required": [
+                        "provider",
+                        "placeId"
+                      ],
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "locationiq",
+                            "geoapify",
+                            "opencage",
+                            "nominatim"
+                          ]
+                        },
+                        "placeId": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "serviceCategoryIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "galleryItems": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "url",
+                          "alt"
+                        ],
+                        "properties": {
+                          "url": {
+                            "type": "string"
+                          },
+                          "alt": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Поля салона для формы редактирования (владелец БД или активный admin).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/delete-bookings-preview": {
+      "get": {
+        "description": "Тот же тип списка, что при смене места приёма для одного мастера, но по всей организации; плюс имя принимающего специалиста.",
+        "operationId": "OrganizationsCabinet_getDeleteOrganizationBookingsPreview",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "bookings"
+                  ],
+                  "properties": {
+                    "bookings": {
+                      "type": "array",
+                      "description": "Активные записи салона во всех мастерах — если продолжить удаление организации, они будут автоматически отменены.",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "status",
+                          "statusLabel",
+                          "startsAt",
+                          "endsAt",
+                          "pendingExpiresAt",
+                          "clientDisplayName",
+                          "categoryShortName",
+                          "durationMinutes",
+                          "specialistDisplayName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "in_progress"
+                            ]
+                          },
+                          "statusLabel": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "pendingExpiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "clientDisplayName": {
+                            "type": "string"
+                          },
+                          "categoryShortName": {
+                            "type": "string"
+                          },
+                          "durationMinutes": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "description": "Длительность слота на момент записи; отдельно от endsAt − startsAt."
+                          },
+                          "specialistDisplayName": {
+                            "type": "string",
+                            "description": "Имя/витринное имя мастера, принимающего по записи."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Только владелец организации (NOT_ORGANIZATION_OWNER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Превью активных записей салона перед удалением организации владельцем.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}": {
+      "delete": {
+        "description": "Активные записи отменяются, услуги салона архивируются, членства и заявки в штат закрываются.",
+        "operationId": "OrganizationsCabinet_deleteOrganizationAsOwner",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok",
+                    "cancelledBookingsCount"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "cancelledBookingsCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Число отменённых активных записей."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Только владелец организации (NOT_ORGANIZATION_OWNER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить организацию из кабинета (soft delete): только владелец платформенной записи салона.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      },
+      "patch": {
+        "description": "Тело как у `POST /organizations`. Slug салона не меняется.",
+        "operationId": "OrganizationsCabinet_patchOrganization",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "serviceCategoryIds"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "placeReference": {
+                    "type": "object",
+                    "required": [
+                      "provider",
+                      "placeId"
+                    ],
+                    "properties": {
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "locationiq",
+                          "geoapify",
+                          "opencage",
+                          "nominatim"
+                        ]
+                      },
+                      "placeId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "description": "Ссылка на объект геокодера. Если одновременно переданы непустой `addressLine`, `latitude` и `longitude` — координаты и строка адреса берутся с клиента (точка с карты кабинета); иначе сервер заполняет адрес через resolve по place_id."
+                  },
+                  "addressLine": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "nullable": true
+                  },
+                  "latitude": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "phone": {
+                    "type": "string",
+                    "maxLength": 32,
+                    "nullable": true,
+                    "description": "Вьетнам E.164: +84 и 8–12 цифр национального номера (как в профиле мастера). Пусто — не указывать."
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254,
+                    "nullable": true
+                  },
+                  "website": {
+                    "type": "string",
+                    "maxLength": 2048,
+                    "nullable": true,
+                    "description": "URL сайта; допустимо без схемы — сервер добавит https://."
+                  },
+                  "yearsInBusiness": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "imageUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048,
+                    "nullable": true
+                  },
+                  "imageAlt": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "nullable": true
+                  },
+                  "galleryImageUrls": {
+                    "type": "array",
+                    "maxItems": 24,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 2048
+                    },
+                    "description": "URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются."
+                  },
+                  "serviceCategoryIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 40,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                },
+                "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        3,
+                        4,
+                        5,
+                        6
+                      ],
+                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Категории или валидация тела"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.",
+        "tags": [
+          "cabinet-organizations"
         ]
       }
     },
@@ -7401,6 +8544,131 @@
         ]
       }
     },
+    "/dev/moderation/image-eval": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. Файл загружается в публичное хранилище (`POST /files/public`), затем вызывается тот же `POST …/v1/score`, что для витрины. Нужны `IMAGE_MODERATION_BASE_URL` и `MODERATION_FILE_FETCH_ORIGIN` (абсолютный URL для скачивания файла контейнером). Без JWT.",
+        "operationId": "devModeration_imageEval",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Изображение (jpeg, png, webp или gif до 10 МБ). То же multipart-поле, что для `POST /files/public`."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Итог `scoreSingleImageDev` и пути загрузки",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "stored_path",
+                    "infraUnavailable"
+                  ],
+                  "properties": {
+                    "stored_path": {
+                      "type": "string",
+                      "description": "Относительный путь после загрузки (`/v1/files/public/…`)"
+                    },
+                    "resolved_image_url": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Абсолютный URL, переданный в sidecar (`MODERATION_FILE_FETCH_ORIGIN` + путь). `null` если origin не задан."
+                    },
+                    "infraUnavailable": {
+                      "type": "boolean",
+                      "description": "true — `IMAGE_MODERATION_BASE_URL` пустой; скоринг не вызывался."
+                    },
+                    "moderation_file_fetch_misconfigured": {
+                      "type": "boolean",
+                      "description": "true — не задан `MODERATION_FILE_FETCH_ORIGIN` (нельзя построить URL для скачивания изображения контейнером)."
+                    },
+                    "score": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "JSON от POST …/v1/score (NudeNet + CLIP) при успехе",
+                      "properties": {
+                        "safe": {
+                          "type": "boolean",
+                          "nullable": true
+                        },
+                        "unsafe_score": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "safe_score": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "clip": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "Блок CLIP контейнера `image-moderation` (violence/blood/gore/… когда включено)",
+                          "properties": {
+                            "enabled": {
+                              "type": "boolean"
+                            },
+                            "review_recommended": {
+                              "type": "boolean",
+                              "nullable": true
+                            },
+                            "threshold": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "scores": {
+                              "type": "object",
+                              "nullable": true,
+                              "additionalProperties": {
+                                "type": "number"
+                              }
+                            }
+                          },
+                          "additionalProperties": true
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    "error": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Текст ошибки HTTP/сети/парсинга от sidecar"
+                    },
+                    "http_status": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "HTTP-код ответа sidecar при ошибке"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет файла или не изображение (ожидается `image/*`)"
+          }
+        },
+        "summary": "[Dev] Прогон изображения через NSFW image-moderation (NudeNet + CLIP)",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
     "/dev/moderation/cases/{caseId}/resolve": {
       "post": {
         "description": "Только в dev. `decision: approve` — как `POST /moderation/cases/:id/approve`; `reject` — нужен `reason`. `moderatorUserId` в кейсе будет `null`.",
@@ -8298,7 +9566,7 @@
     },
     {
       "name": "dev",
-      "description": "Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod)."
+      "description": "Только вне production: отладочные сценарии. В т.ч. `POST …/dev/moderation/ollama-eval` — пробная модерация текста через Ollama; `POST …/dev/moderation/image-eval` — загрузка картинки и ответ NSFW-сервиса (NudeNet + CLIP); смена статуса брони; пересчёт персонализации; FCM; очередь `ContentModerationCase`. При `DISABLE_DEV_TEST_ROUTES=true` ручки отдают **404** (и не попадают в prod)."
     }
   ],
   "servers": [

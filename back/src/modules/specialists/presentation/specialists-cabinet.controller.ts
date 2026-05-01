@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +20,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -30,11 +32,16 @@ import {
   RequestLocale,
   type ApiLocale,
 } from '../../../common/i18n';
+import { BookingsService } from '../../bookings/application/bookings.service';
 import { SpecialistOnboardingService } from '../application/specialist-onboarding.service';
 import { SpecialistPersonalCatalogService } from '../application/specialist-personal-catalog.service';
 import { SpecialistWorkplaceService } from '../application/specialist-workplace.service';
+import type { SpecialistActiveOrganizationBookingsPreviewQuery } from '../dto/specialist-active-organization-bookings-preview-query.schema';
+import { specialistActiveOrganizationBookingsPreviewQuerySchema } from '../dto/specialist-active-organization-bookings-preview-query.schema';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { patchSpecialistActiveOrganizationBodySchema } from '../dto/patch-specialist-active-organization-body.schema';
+import type { SalonCabinetBookingsListQuery } from '../dto/salon-cabinet-bookings-list-query.schema';
+import { salonCabinetBookingsListQuerySchema } from '../dto/salon-cabinet-bookings-list-query.schema';
 import {
   createSpecialistPersonalServiceBodySchema,
   patchSpecialistProfileBodySchema,
@@ -48,9 +55,11 @@ import {
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
   patchSpecialistProfileRequestSchema,
+  specialistActiveOrganizationBookingsPreviewResponseSchema,
   specialistMyOrganizationsResponseSchema,
   specialistMyWorkplaceJoinRequestsResponseSchema,
   specialistOnboardingResponseSchema,
+  specialistSalonBookingsListResponseSchema,
 } from './specialists.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
@@ -67,6 +76,7 @@ export class SpecialistsCabinetController {
     private readonly specialistWorkplaceService: SpecialistWorkplaceService,
     private readonly specialistOnboardingService: SpecialistOnboardingService,
     private readonly specialistPersonalCatalogService: SpecialistPersonalCatalogService,
+    private readonly bookingsService: BookingsService,
   ) {}
 
   @Get('me/organizations')
@@ -82,6 +92,46 @@ export class SpecialistsCabinetController {
     return this.specialistWorkplaceService.listMyOrganizations(req.user.id);
   }
 
+  @Get('me/active-organization/bookings-preview')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'organizationId',
+    required: true,
+    schema: { type: 'string', format: 'uuid' },
+    description:
+      'Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`.',
+  })
+  @ApiOperation({
+    summary:
+      'Превью активных броней к вам в текущей организации — то же, что будет отменено при смене места приёма.',
+  })
+  @ApiOkResponse({
+    schema: specialistActiveOrganizationBookingsPreviewResponseSchema,
+  })
+  @ApiBadRequestResponse({
+    description:
+      'organizationId не совпадает с текущим местом приёма (NOT_CURRENT_ACTIVE_WORKPLACE_ORGANIZATION)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async getSpecialistActiveOrganizationBookingsPreview(
+    @Req() req: AuthedRequest,
+    @Query(
+      new ZodValidationPipe(
+        specialistActiveOrganizationBookingsPreviewQuerySchema,
+      ),
+    )
+    query: SpecialistActiveOrganizationBookingsPreviewQuery,
+  ) {
+    return this.specialistWorkplaceService.previewBookingsWhenLeavingActiveOrganization(
+      req.user.id,
+      query.organizationId,
+      query.locale,
+    );
+  }
+
   @Get('me/workplace-join-requests')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
@@ -94,6 +144,40 @@ export class SpecialistsCabinetController {
   async getSpecialistMyWorkplaceJoinRequests(@Req() req: AuthedRequest) {
     return this.specialistWorkplaceService.listMyWorkplaceJoinRequests(
       req.user.id,
+    );
+  }
+
+  @Get('me/salon-bookings')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'scope',
+    required: true,
+    schema: {
+      type: 'string',
+      enum: ['managed', 'active_workplace'],
+    },
+    description:
+      'managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма.',
+  })
+  @ApiOperation({
+    summary:
+      'Список броней для бизнес-экрана: по управляемым салонам или только «мои» на текущем месте.',
+  })
+  @ApiOkResponse({ schema: specialistSalonBookingsListResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидный query' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async getSpecialistSalonBookings(
+    @Req() req: AuthedRequest,
+    @Query(new ZodValidationPipe(salonCabinetBookingsListQuerySchema))
+    query: SalonCabinetBookingsListQuery,
+  ) {
+    return this.bookingsService.listSalonCabinetBusiness(
+      req.user.id,
+      query.scope,
+      query.locale,
     );
   }
 
