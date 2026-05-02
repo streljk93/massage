@@ -174,8 +174,9 @@ services:
       context: ./client
       dockerfile: Dockerfile
       args:
-        # Запекается в клиентский бандл при build. На VPS: в корневом `.env` NEXT_PUBLIC_API_URL=http://IP:3001 и `docker compose build client`
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        AUTH_BACKEND_URL: http://back:3001
+        # Пусто по умолчанию: браузер → `/v1` на том же хосте, Next проксирует на `back`. Задайте только для явного cross-origin API.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     restart: unless-stopped
     ports:
       - "3000:3000"

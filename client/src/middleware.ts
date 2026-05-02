@@ -66,6 +66,7 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/((?!api|_next|_next/static|_next/image|favicon.ico|.*\\..*).*)",
+    // `v1` — прокси на API (next.config rewrites), без next-intl / auth на серверных fetch к Nest
+    "/((?!api|v1|_next|_next/static|_next/image|favicon.ico|.*\\..*).*)",
   ],
 };
