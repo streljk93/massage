@@ -35,6 +35,8 @@ export function createBrowserSdkClient(
     createConfig<ClientOptions>({
       baseUrl: getBrowserApiV1BaseUrl() as ClientOptions["baseUrl"],
       auth: accessToken,
+      /** Без этого браузер может кэшировать GET `/v1/*` на том же origin (списки броней не обновляются). */
+      cache: "no-store",
     }),
   );
 
