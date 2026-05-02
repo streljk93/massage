@@ -3,7 +3,7 @@
 # Конфигурация в стиле типичного enterprise Compose:
 # • Явная bridge-сеть `internal` — весь межсервисный трафик только в ней.
 # • Несекретные инварианты стека (имена сервисов, AUTH_BACKEND_URL) — в YAML.
-# • Секреты и среда приложения — корневой `.env` (`npm run docker:env`) и `back/.env` / `client/.env`.
+# • Сеть compose: см. блок `environment` у `back` — перебивает `localhost` из `back/.env` под хост Nest.
 # • Healthcheck API (`back`) и образ зависимостей по `service_healthy` где уместно.
 # • Ротация json-file логов контейнеров.
 #
@@ -147,6 +147,18 @@ services:
     ports:
       - "3001:3001"
     env_file: *env-back
+    environment:
+      # Имена сервисов Docker; внутри контейнера localhost ≠ postgres/redis/minio из compose.
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/services?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      S3_ENDPOINT: http://minio:9000
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      IMAGE_MODERATION_BASE_URL: ${IMAGE_MODERATION_BASE_URL:-http://image-moderation:8085}
+      MODERATION_FILE_FETCH_ORIGIN: ${MODERATION_FILE_FETCH_ORIGIN:-http://back:3001}
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
     healthcheck:
       # Без CMD-SHELL — меньше проблем с кавычками; в образе нет wget/curl.
       test:
