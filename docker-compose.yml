@@ -148,16 +148,16 @@ services:
       - "3001:3001"
     env_file: *env-back
     healthcheck:
-      # В runner нет wget/curl; Node 18+ даёт глобальный fetch.
+      # Без CMD-SHELL — меньше проблем с кавычками; в образе нет wget/curl.
       test:
-        [
-          "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3001/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
-        ]
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3001/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
       interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 120s
+      retries: 8
+      start_period: 180s
     depends_on:
       postgres:
         condition: service_healthy

@@ -20,7 +20,8 @@ async function bootstrap() {
     credentials: true,
   });
 
-  await app.listen(port);
+  // Явный хост — в Docker иначе иногда слушают только IPv6, healthcheck на 127.0.0.1 не проходит.
+  await app.listen(port, '0.0.0.0');
 }
 
 void bootstrap();
