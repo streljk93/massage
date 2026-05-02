@@ -9,11 +9,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM base AS builder
-# Для `rewrites` в next.config (прокси `/v1` → API). В compose: http://back:3001
-ARG AUTH_BACKEND_URL=http://127.0.0.1:3001
-ENV AUTH_BACKEND_URL=$AUTH_BACKEND_URL
-# Если пусто — клиентский SDK использует относительный `/v1` (через rewrite выше).
-ARG NEXT_PUBLIC_API_URL=
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY --from=deps /app/node_modules ./node_modules

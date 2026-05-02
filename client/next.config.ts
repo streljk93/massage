@@ -7,18 +7,6 @@ const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
   /**
-   * Браузер ходит на тот же origin: `/v1/*` → Nest (`AUTH_BACKEND_URL`).
-   * Так Docker/VPS не зависят от `NEXT_PUBLIC_API_URL` при сборке (достаточно ARG при build).
-   */
-  async rewrites() {
-    const raw = process.env.AUTH_BACKEND_URL?.trim();
-    if (!raw) {
-      return [];
-    }
-    const base = raw.replace(/\/+$/, "");
-    return [{ source: "/v1/:path*", destination: `${base}/v1/:path*` }];
-  },
-  /**
    * Dev по IP в LAN: иначе Next режет WebSocket HMR и часть `/_next/*` (Origin ≠ localhost).
    * Маски — сегменты через точку, `*` на октет (как у `remotePatterns`).
    * Дополнительно: `NEXT_DEV_ALLOWED_ORIGINS=host1,host2` без порта.
