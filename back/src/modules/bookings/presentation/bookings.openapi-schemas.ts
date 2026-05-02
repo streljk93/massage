@@ -55,6 +55,12 @@ export const bookingListItemSchema = {
     'startsAt',
     'endsAt',
     'visitReviewComplete',
+    'visitReviewOrganizationRating',
+    'visitReviewSpecialistRating',
+    'visitReviewDisplayRating',
+    'visitReviewOrganizationExcerpt',
+    'visitReviewSpecialistExcerpt',
+    'visitReviewExcerpt',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -100,17 +106,39 @@ export const bookingListItemSchema = {
       description:
         'Оба отзыва по визиту (салон + мастер) созданы. До отправки `POST .../visit-reviews` — `false`.',
     },
+    visitReviewOrganizationRating: {
+      type: 'number',
+      nullable: true,
+      description: 'Оценка салона (1–5), если отзыв уже есть.',
+    },
+    visitReviewSpecialistRating: {
+      type: 'number',
+      nullable: true,
+      description: 'Оценка мастера (1–5), если отзыв уже есть.',
+    },
     visitReviewDisplayRating: {
       type: 'number',
       nullable: true,
       description:
         'Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`.',
     },
+    visitReviewOrganizationExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Комментарий отзыва о салоне (черновик модерации важнее опубликованного).',
+    },
+    visitReviewSpecialistExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Комментарий отзыва о мастере (черновик модерации важнее опубликованного).',
+    },
     visitReviewExcerpt: {
       type: 'string',
       nullable: true,
       description:
-        'Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`.',
+        'Краткое объединённое превью: комментарий о мастере или о салоне.',
     },
   },
 };

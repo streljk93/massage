@@ -154,6 +154,19 @@ export const workplaceJoinRequestReviewResponseSchema = {
   },
 };
 
+export const workplaceJoinApplicantCabinetProfileResponseSchema = {
+  type: 'object',
+  required: ['specialist'],
+  properties: {
+    specialist: {
+      type: 'object',
+      description:
+        'Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).',
+      additionalProperties: true,
+    },
+  },
+};
+
 export const workplaceJoinRequestListResponseSchema = {
   type: 'object',
   required: ['requests'],

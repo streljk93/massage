@@ -39,6 +39,7 @@ export function SpecialistSetupIndexRedirect() {
     queryFn: async () => {
       const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
         client: sdk,
+        query: { locale },
       });
       if (error || !data) {
         throw new Error("onboarding");

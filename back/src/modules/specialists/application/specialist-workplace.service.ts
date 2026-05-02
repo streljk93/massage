@@ -11,6 +11,7 @@ import {
   GalleryOwnerKind,
   OrganizationProfileRevisionStatus,
   PublicationModerationStatus,
+  SpecialistWorkplaceJoinRequestStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import {
@@ -34,25 +35,22 @@ export class SpecialistWorkplaceService {
   ) {}
 
   /**
-   * Активные членства мастера в организациях (текущие места работы в истории трудоустройства).
+   * Организации мастера: активные членства и салоны, по которым висит заявка на вступление (pending).
    */
   async listMyOrganizations(userId: string): Promise<{
     organizations: Array<{
       id: string;
       name: string;
-      role: string;
+      membershipStatus: 'employed' | 'pending_join';
+      workplaceJoinRequestId: string | null;
+      role: string | null;
       isActiveWorkplace: boolean;
       publicationModerationStatus: PublicationModerationStatus;
-      /** Черновик на модерации: превью для кабинета (гость в каталоге ещё по опубликованной строке). */
       salonCabinetPreview: {
         revisionId: string;
         name: string;
         coverImageUrl: string | null;
       } | null;
-      /**
-       * Обложка опубликованной витрины (галерея организации). Если есть `salonCabinetPreview`, карточку
-       * кабинета лучше собирать из превью; это поле нужно, когда pending-ревизии нет.
-       */
       publishedCoverImageUrl: string | null;
     }>;
     activeOrganizationId: string | null;
@@ -78,7 +76,36 @@ export class SpecialistWorkplaceService {
         },
         orderBy: { startDate: 'desc' },
       });
-    const orgIds = [...new Set(employments.map((x) => x.organization.id))];
+    const employedOrgIds = [
+      ...new Set(employments.map((x) => x.organization.id)),
+    ];
+    const pendingJoinRowsRaw =
+      await this.prisma.specialistWorkplaceJoinRequest.findMany({
+        where: {
+          specialistId: specialist.id,
+          status: SpecialistWorkplaceJoinRequestStatus.pending,
+        },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              publicationModerationStatus: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+    const employedOrgIdSet = new Set(employedOrgIds);
+    const pendingJoinRows = pendingJoinRowsRaw.filter(
+      (row) => !employedOrgIdSet.has(row.organizationId),
+    );
+    const orgIds = [
+      ...new Set([
+        ...employedOrgIds,
+        ...pendingJoinRows.map((r) => r.organizationId),
+      ]),
+    ];
     const latestPendingByOrgId = new Map<
       string,
       { revisionId: string; name: string }
@@ -160,30 +187,64 @@ export class SpecialistWorkplaceService {
     }
 
     return {
-      organizations: employments.map((e) => {
-        const pending = latestPendingByOrgId.get(e.organization.id);
-        const salonCabinetPreview =
-          pending != null
-            ? {
-                revisionId: pending.revisionId,
-                name: pending.name,
-                coverImageUrl:
-                  coverUrlByRevisionId.get(pending.revisionId) ?? null,
-              }
-            : null;
-        return {
-          id: e.organization.id,
-          name: e.organization.name,
-          role: e.role,
-          isActiveWorkplace:
-            specialist.activeOrganizationId === e.organization.id,
-          publicationModerationStatus:
-            e.organization.publicationModerationStatus,
-          salonCabinetPreview,
-          publishedCoverImageUrl:
-            publishedCoverUrlByOrgId.get(e.organization.id) ?? null,
-        };
-      }),
+      organizations: [
+        ...employments.map((e) => {
+          const pending = latestPendingByOrgId.get(e.organization.id);
+          const salonCabinetPreview =
+            pending != null
+              ? {
+                  revisionId: pending.revisionId,
+                  name: pending.name,
+                  coverImageUrl:
+                    coverUrlByRevisionId.get(pending.revisionId) ?? null,
+                }
+              : null;
+          return {
+            id: e.organization.id,
+            name: e.organization.name,
+            membershipStatus: 'employed' as const,
+            workplaceJoinRequestId: null,
+            role: e.role,
+            isActiveWorkplace:
+              specialist.activeOrganizationId === e.organization.id,
+            publicationModerationStatus:
+              pending != null
+                ? PublicationModerationStatus.pending_review
+                : e.organization.publicationModerationStatus,
+            salonCabinetPreview,
+            publishedCoverImageUrl:
+              publishedCoverUrlByOrgId.get(e.organization.id) ?? null,
+          };
+        }),
+        ...pendingJoinRows.map((row) => {
+          const org = row.organization;
+          const pendingRev = latestPendingByOrgId.get(org.id);
+          const salonCabinetPreview =
+            pendingRev != null
+              ? {
+                  revisionId: pendingRev.revisionId,
+                  name: pendingRev.name,
+                  coverImageUrl:
+                    coverUrlByRevisionId.get(pendingRev.revisionId) ?? null,
+                }
+              : null;
+          return {
+            id: org.id,
+            name: org.name,
+            membershipStatus: 'pending_join' as const,
+            workplaceJoinRequestId: row.id,
+            role: null,
+            isActiveWorkplace: false,
+            publicationModerationStatus:
+              pendingRev != null
+                ? PublicationModerationStatus.pending_review
+                : org.publicationModerationStatus,
+            salonCabinetPreview,
+            publishedCoverImageUrl:
+              publishedCoverUrlByOrgId.get(org.id) ?? null,
+          };
+        }),
+      ],
       activeOrganizationId: specialist.activeOrganizationId,
     };
   }
@@ -322,7 +383,10 @@ export class SpecialistWorkplaceService {
   async setActiveOrganization(
     userId: string,
     body: PatchSpecialistActiveOrganizationBody,
-  ): Promise<{ activeOrganizationId: string | null; cancelledBookingsCount: number }> {
+  ): Promise<{
+    activeOrganizationId: string | null;
+    cancelledBookingsCount: number;
+  }> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
       select: { id: true, activeOrganizationId: true },

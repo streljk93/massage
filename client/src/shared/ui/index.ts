@@ -33,6 +33,7 @@ export {
   DropdownMenuTrigger,
 } from "./shadcn/dropdown-menu";
 export { Separator } from "./shadcn/separator";
+export { Textarea } from "./shadcn/textarea";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";
 export { Input, type InputProps } from "./input";
@@ -52,6 +53,8 @@ export {
   collectImageFilesFromList,
   ORG_SALON_GALLERY_MAX_FILES,
   ImageMediaDropzone,
+  isMarketplacePhotoMime,
+  MARKETPLACE_PHOTO_ACCEPT,
   pickFirstImageFile,
   type ImageMediaDropzoneMultipleProps,
   type ImageMediaDropzoneProps,

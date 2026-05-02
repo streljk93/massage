@@ -94,13 +94,20 @@ enum OrganizationProfileRevisionStatus {
   superseded
 }
 
+enum SpecialistProfileRevisionStatus {
+  pending_review
+  published
+  rejected
+  superseded
+}
+
 /// Область привязки галереи (расширяется: главная, новости и т.д.).
 enum GalleryOwnerKind {
   organization
   organization_profile_revision
 }
 
-/// Тип модерируемой сущности; `subjectId` — id строки (`organization_profile` = `OrganizationProfileRevision.id`; `specialist_profile` = `Specialist.id`).
+/// Тип модерируемой сущности; `subjectId` — id строки (`organization_profile` = `OrganizationProfileRevision.id`; `specialist_profile` = `SpecialistProfileRevision.id`).
 /// Новые виды добавляются сюда — без новых столбцов в таблице кейсов.
 enum ContentModerationCaseKind {
   organization_profile
@@ -559,6 +566,28 @@ model OrganizationReview {
   @@index([authorUserId])
 }
 
+/// Черновик витринного профиля мастера (`listingName`, `bio`, фото); промоут копирует в строку `Specialist`.
+model SpecialistProfileRevision {
+  id           String                        @id @default(uuid())
+  specialistId String
+  specialist   Specialist                    @relation("SpecialistProfileRevisions", fields: [specialistId], references: [id], onDelete: Cascade)
+
+  status SpecialistProfileRevisionStatus @default(pending_review)
+
+  listingName String?
+  bio         String?
+  imageUrl    String?
+  imageAlt    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  publishedOnSpecialist Specialist[] @relation("SpecialistPublishedRevision")
+
+  @@index([specialistId])
+  @@index([specialistId, status])
+}
+
 /// Профиль специалиста (мастер), 1:1 с пользователем со «статусом специалиста».
 model Specialist {
   id     String @id @default(uuid())
@@ -575,7 +604,11 @@ model Specialist {
   imageUrl      String?
   imageAlt      String?
 
-  /// Публикация полей профиля для каталога: одобрено / на модерации; при правках после одобрения гости видят снимок в `catalogListed*`.
+  /// Уже промодерированный снимок витрины для гостей; черновик правок — в `SpecialistProfileRevision` до промоута.
+  publishedProfileRevisionId String? @unique
+  publishedProfileRevision   SpecialistProfileRevision? @relation("SpecialistPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
+
+  /// Публикация полей профиля для каталога: одобрено / на модерации; legacy-заморозка в `catalogListed*` при миграции со старой модели.
   profilePublicationModerationStatus PublicationModerationStatus @default(approved)
   catalogListedBio               String?
   catalogListedListingName       String?
@@ -600,6 +633,8 @@ model Specialist {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+
+  profileRevisions SpecialistProfileRevision[] @relation("SpecialistProfileRevisions")
 
   employments         SpecialistOrganizationEmployment[]
   workplaceJoinRequests SpecialistWorkplaceJoinRequest[]

@@ -358,7 +358,12 @@ export function SpecialistProfilePage({
   return (
     <div className="flex min-h-screen flex-col bg-surface-background">
       {/* Hero: мягкий градиент + «ореол» */}
-      <div className="relative overflow-hidden pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
+      <div
+        className={cn(
+          "relative overflow-hidden",
+          "pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]",
+        )}
+      >
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_100%_-10%,var(--ds-primary)_0%,transparent_55%)] opacity-[0.11]"
           aria-hidden

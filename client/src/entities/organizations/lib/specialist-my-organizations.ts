@@ -46,5 +46,11 @@ export function pickActiveWorkplaceOrganization(
   if (aid == null) {
     return null;
   }
-  return data.organizations.find((o) => o.id === aid) ?? null;
+  return (
+    data.organizations.find(
+      (o) =>
+        o.id === aid &&
+        o.membershipStatus === "employed",
+    ) ?? null
+  );
 }

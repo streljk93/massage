@@ -104,6 +104,16 @@ const specialistListedHydrationSelect = {
   catalogListedImageUrl: true,
 } as const;
 
+const specialistProfileRevisionHydrationSelect = {
+  id: true,
+  specialistId: true,
+  listingName: true,
+  bio: true,
+  imageUrl: true,
+  imageAlt: true,
+  status: true,
+} as const;
+
 const userHydrationSelect = {
   id: true,
   name: true,
@@ -128,6 +138,10 @@ type SpecialistReviewHydrationRow = Prisma.SpecialistReviewGetPayload<{
 type SpecialistListedHydrationRow = Prisma.SpecialistGetPayload<{
   select: typeof specialistListedHydrationSelect;
 }>;
+type SpecialistProfileRevisionHydrationRow =
+  Prisma.SpecialistProfileRevisionGetPayload<{
+    select: typeof specialistProfileRevisionHydrationSelect;
+  }>;
 type UserHydrationRow = Prisma.UserGetPayload<{
   select: typeof userHydrationSelect;
 }>;
@@ -286,7 +300,7 @@ export async function hydrateContentModerationCaseRows<
     orgs,
     orgReviews,
     spReviews,
-    specialistProfiles,
+    specialistProfileRevisions,
     users,
   ] = await Promise.all([
     orgIdsFromRevisions.length > 0
@@ -322,11 +336,11 @@ export async function hydrateContentModerationCaseRows<
         })
       : ([] as SpecialistReviewHydrationRow[]),
     specialistProfileSubjectIds.length > 0
-      ? prisma.specialist.findMany({
+      ? prisma.specialistProfileRevision.findMany({
           where: { id: { in: specialistProfileSubjectIds } },
-          select: specialistListedHydrationSelect,
+          select: specialistProfileRevisionHydrationSelect,
         })
-      : ([] as SpecialistListedHydrationRow[]),
+      : ([] as SpecialistProfileRevisionHydrationRow[]),
     displayNameUserIds.length > 0
       ? prisma.user.findMany({
           where: { id: { in: displayNameUserIds } },
@@ -335,11 +349,25 @@ export async function hydrateContentModerationCaseRows<
       : ([] as UserHydrationRow[]),
   ]);
 
+  const specialistIdsFromProfileRevisions = [
+    ...new Set(specialistProfileRevisions.map((r) => r.specialistId)),
+  ];
+  const specialistsForProfileCases =
+    specialistIdsFromProfileRevisions.length > 0
+      ? await prisma.specialist.findMany({
+          where: { id: { in: specialistIdsFromProfileRevisions } },
+          select: specialistListedHydrationSelect,
+        })
+      : ([] as SpecialistListedHydrationRow[]);
+
   const orgMap = new Map(orgs.map((o) => [o.id, o] as const));
   const orgRevMap = new Map(orgReviews.map((r) => [r.id, r] as const));
   const spRevMap = new Map(spReviews.map((r) => [r.id, r] as const));
-  const specProfileMap = new Map(
-    specialistProfiles.map((s) => [s.id, s] as const),
+  const specialistProfileRevisionById = new Map(
+    specialistProfileRevisions.map((r) => [r.id, r] as const),
+  );
+  const specialistRowById = new Map(
+    specialistsForProfileCases.map((s) => [s.id, s] as const),
   );
   const userMap = new Map(users.map((u) => [u.id, u] as const));
 
@@ -393,7 +421,30 @@ export async function hydrateContentModerationCaseRows<
         : null,
     specialistListedProfile:
       row.kind === CONTENT_MOD_KIND_SPECIALIST_PROFILE
-        ? (specProfileMap.get(row.subjectId) ?? null)
+        ? (() => {
+            const rev = specialistProfileRevisionById.get(row.subjectId);
+            if (rev == null) {
+              return null;
+            }
+            const sp = specialistRowById.get(rev.specialistId);
+            if (sp == null) {
+              return null;
+            }
+            return {
+              id: sp.id,
+              userId: sp.userId,
+              listingName: rev.listingName,
+              bio: rev.bio,
+              experienceYears: sp.experienceYears,
+              imageUrl: rev.imageUrl,
+              imageAlt: rev.imageAlt,
+              profilePublicationModerationStatus:
+                sp.profilePublicationModerationStatus,
+              catalogListedBio: sp.catalogListedBio,
+              catalogListedListingName: sp.catalogListedListingName,
+              catalogListedImageUrl: sp.catalogListedImageUrl,
+            };
+          })()
         : null,
     targetUser:
       row.kind === ContentModerationCaseKind.user_display_name

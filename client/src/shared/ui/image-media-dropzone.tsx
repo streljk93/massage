@@ -4,17 +4,29 @@ import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { cn, motion } from "@/shared/lib";
 
-const DEFAULT_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+/** Распространённые форматы фото маркетплейсов (MIME); без GIF и анимации. */
+export const MARKETPLACE_PHOTO_ACCEPT =
+  "image/jpeg,image/png,image/webp" as const;
+
+const ALLOWED_MARKETPLACE_PHOTO_TYPES = new Set<string>([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+export function isMarketplacePhotoMime(mime: string): boolean {
+  return ALLOWED_MARKETPLACE_PHOTO_TYPES.has(mime);
+}
 
 export function pickFirstImageFile(fileList: FileList | undefined): File | undefined {
   const f = fileList?.[0];
-  if (!f?.type.startsWith("image/")) {
+  if (!f || !isMarketplacePhotoMime(f.type)) {
     return undefined;
   }
   return f;
 }
 
-/** Извлекает из списка только изображения, не больше `max` штук. */
+/** Извлекает из списка только JPEG/PNG/WebP, не больше `max` штук. */
 export function collectImageFilesFromList(fileList: FileList | undefined, max: number): File[] {
   const out: File[] = [];
   if (!fileList || max <= 0) {
@@ -22,7 +34,7 @@ export function collectImageFilesFromList(fileList: FileList | undefined, max: n
   }
   for (let i = 0; i < fileList.length; i++) {
     const f = fileList[i];
-    if (f?.type.startsWith("image/")) {
+    if (f?.type && isMarketplacePhotoMime(f.type)) {
       out.push(f);
       if (out.length >= max) {
         break;
@@ -95,7 +107,7 @@ function ImageMediaDropzoneSingle({
   pendingNote,
   dropzoneAriaLabel,
   onFileChosen,
-  accept = DEFAULT_ACCEPT,
+  accept = MARKETPLACE_PHOTO_ACCEPT,
   className,
 }: ImageMediaDropzoneSingleProps) {
   const [dragActive, setDragActive] = useState(false);
@@ -222,7 +234,7 @@ function ImageMediaDropzoneMultiple({
   dropzoneAriaLabel,
   addMoreAriaLabel,
   removeItemAriaLabel,
-  accept = DEFAULT_ACCEPT,
+  accept = MARKETPLACE_PHOTO_ACCEPT,
   className,
 }: ImageMediaDropzoneMultipleProps) {
   const [dragActive, setDragActive] = useState(false);

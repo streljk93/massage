@@ -36,7 +36,10 @@ export function useSpecialistOnboardingCatalogCategories(enabled: boolean) {
       return data.categories.map((x) => ({
         id: x.id,
         slug: x.slug,
-        label: x.shortName,
+        name: x.name,
+        shortName: x.shortName,
+        description: x.description,
+        label: x.name,
       }));
     },
   });

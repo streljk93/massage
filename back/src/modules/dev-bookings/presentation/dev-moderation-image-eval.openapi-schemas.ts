@@ -26,7 +26,7 @@ export const devModerationImageEvalMultipartRequestSchema = {
       type: 'string',
       format: 'binary',
       description:
-        'Изображение (jpeg, png, webp или gif до 10 МБ). То же multipart-поле, что для `POST /files/public`.',
+        'Фото (jpeg, png или webp до 10 МБ; без gif). То же multipart-поле, что для `POST /files/public`.',
     },
   },
 };

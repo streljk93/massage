@@ -1,5 +1,6 @@
 import {
   bookingCardI18n,
+  bookingDoneVisitReviewSummaryI18n,
   bookingHistoryCardI18n,
   bookingListCardI18n,
 } from "@/entities/booking";
@@ -20,7 +21,10 @@ import {
   bookingsPageI18n,
   visitRatePageI18n,
 } from "@/views/bookings";
-import { businessAppSubpagesI18n } from "@/views/business/subpages";
+import {
+  businessAppSubpagesI18n,
+  businessServicesPageI18n,
+} from "@/views/business/subpages";
 import { businessOnboardingPageI18n } from "@/views/business/onboarding";
 import {
   specialistAccountSetupPageI18n,
@@ -82,6 +86,7 @@ const bundles: ColocatedI18nBundle[] = [
   specialistAccountSetupPageI18n,
   specialistOnboardingWizardI18n,
   businessAppSubpagesI18n,
+  businessServicesPageI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,
@@ -89,6 +94,7 @@ const bundles: ColocatedI18nBundle[] = [
   bookingCardI18n,
   bookingListCardI18n,
   bookingHistoryCardI18n,
+  bookingDoneVisitReviewSummaryI18n,
   bookingCancelDialogI18n,
   bookingsPageI18n,
   visitRatePageI18n,

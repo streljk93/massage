@@ -181,6 +181,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     queryFn: async () => {
       const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
         client: sdk,
+        query: { locale },
       });
       if (error || !data) {
         throw new Error("onboarding");
@@ -296,7 +297,10 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setFormError(null);
     setIntroSubmitting(true);
     try {
-      const { error } = await specialistsCabinetPostEnsureSpecialist({ client: sdk });
+      const { error } = await specialistsCabinetPostEnsureSpecialist({
+        client: sdk,
+        query: { locale },
+      });
       if (error) {
         setFormError(t("vErrName"));
         return;
@@ -352,6 +356,10 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
           bio: pBio.trim(),
           experienceYears: keyToYears(pExp),
           ...(imageUrl != null ? { imageUrl } : {}),
+          massage: {
+            pressureLevel: strength,
+            pressureAdaptsToClient: adapt,
+          },
         },
       });
       if (error) {
@@ -405,19 +413,6 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setFormError(null);
     setServicesSubmitting(true);
     try {
-      const p1 = await specialistsCabinetPatchSpecialistProfile({
-        client: sdk,
-        body: {
-          massage: {
-            pressureLevel: strength,
-            pressureAdaptsToClient: adapt,
-          },
-        },
-      });
-      if (p1.error) {
-        setFormError(t("vErrService"));
-        return;
-      }
       for (const s of services) {
         const priceOptions = s.durationPrices.map((d) => ({
           durationMinutes: d.minutes,

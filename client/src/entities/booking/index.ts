@@ -1,4 +1,5 @@
 export { default as bookingCardI18n } from "./model/booking-card.i18n.json";
+export { default as bookingDoneVisitReviewSummaryI18n } from "./model/booking-done-visit-review-summary.i18n.json";
 export { default as bookingHistoryCardI18n } from "./model/booking-history-card.i18n.json";
 export { default as bookingListCardI18n } from "./model/booking-list-card.i18n.json";
 export {
@@ -41,6 +42,10 @@ export {
   BookingHistoryCard,
   type BookingHistoryCardProps,
 } from "./ui/booking-history-card";
+export {
+  BookingDoneVisitReviewSummary,
+  type BookingDoneVisitReviewSummaryProps,
+} from "./ui/booking-done-visit-review-summary";
 export {
   BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
   BookingListCard,

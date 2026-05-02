@@ -415,7 +415,7 @@
     },
     "/files/public": {
       "post": {
-        "description": "Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Типы: jpeg, png, webp, gif, pdf; до 10 МБ.",
+        "description": "Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.",
         "operationId": "Files_uploadPublic",
         "parameters": [],
         "requestBody": {
@@ -502,7 +502,7 @@
     },
     "/files/private": {
       "post": {
-        "description": "Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`.",
+        "description": "Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.",
         "operationId": "Files_uploadPrivate",
         "parameters": [],
         "requestBody": {
@@ -630,6 +630,12 @@
                   "type": "string",
                   "format": "binary"
                 }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
               }
             }
           }
@@ -671,6 +677,12 @@
                 }
               },
               "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -1963,6 +1975,8 @@
                         "required": [
                           "id",
                           "name",
+                          "membershipStatus",
+                          "workplaceJoinRequestId",
                           "role",
                           "isActiveWorkplace",
                           "publicationModerationStatus",
@@ -1977,18 +1991,45 @@
                           "name": {
                             "type": "string"
                           },
-                          "role": {
+                          "membershipStatus": {
                             "type": "string",
                             "enum": [
-                              "owner",
-                              "admin",
-                              "specialist"
+                              "employed",
+                              "pending_join"
                             ],
-                            "description": "Роль мастера в этой организации."
+                            "description": "employed — мастер в штате; pending_join — подана заявка на вступление, членства ещё нет."
+                          },
+                          "workplaceJoinRequestId": {
+                            "description": "Идентификатор `SpecialistWorkplaceJoinRequest` для строки с pending_join; для employed — null.",
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "role": {
+                            "description": "Роль в организации для employed; для pending_join — null до принятия заявки.",
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "owner",
+                                  "admin",
+                                  "specialist"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "isActiveWorkplace": {
                             "type": "boolean",
-                            "description": "Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины."
+                            "description": "Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false."
                           },
                           "publicationModerationStatus": {
                             "type": "string",
@@ -2058,7 +2099,7 @@
             "access-token": []
           }
         ],
-        "summary": "Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.",
+        "summary": "Организации мастера: активные членства и салоны с поданной заявкой на вступление (pending). Отмечается текущее место приёма.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2352,7 +2393,14 @@
                           "endsAt",
                           "pendingExpiresAt",
                           "cancelReason",
-                          "cancellationComment"
+                          "cancellationComment",
+                          "visitReviewComplete",
+                          "visitReviewOrganizationRating",
+                          "visitReviewSpecialistRating",
+                          "visitReviewDisplayRating",
+                          "visitReviewOrganizationExcerpt",
+                          "visitReviewSpecialistExcerpt",
+                          "visitReviewExcerpt"
                         ],
                         "properties": {
                           "id": {
@@ -2433,6 +2481,40 @@
                           "cancellationComment": {
                             "type": "string",
                             "nullable": true
+                          },
+                          "visitReviewComplete": {
+                            "type": "boolean",
+                            "description": "Оба отзыва по визиту (салон + мастер) созданы клиентом после статуса `done`."
+                          },
+                          "visitReviewOrganizationRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Оценка салона (1–5), если отзыв уже есть."
+                          },
+                          "visitReviewSpecialistRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Оценка мастера (1–5), если отзыв уже есть."
+                          },
+                          "visitReviewDisplayRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Среднее двух оценок для краткого превью; заполнено при `visitReviewComplete === true`."
+                          },
+                          "visitReviewOrganizationExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Комментарий отзыва о салоне (черновик модерации важнее опубликованного)."
+                          },
+                          "visitReviewSpecialistExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Комментарий отзыва о мастере (черновик модерации важнее опубликованного)."
+                          },
+                          "visitReviewExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Краткое объединённое превью для совместимости: комментарий о мастере или о салоне."
                           }
                         }
                       }
@@ -2552,7 +2634,22 @@
     "/specialists/me/ensure": {
       "post": {
         "operationId": "SpecialistsCabinet_postEnsureSpecialist",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2605,7 +2702,22 @@
     "/specialists/me/onboarding": {
       "get": {
         "operationId": "SpecialistsCabinet_getSpecialistOnboarding",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
@@ -2959,6 +3071,125 @@
       }
     },
     "/specialists/me/services/{serviceId}": {
+      "patch": {
+        "operationId": "SpecialistsCabinet_patchSpecialistPersonalService",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "required": true,
+            "in": "path",
+            "description": "Идентификатор услуги",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "categoryId",
+                  "priceOptions"
+                ],
+                "properties": {
+                  "categoryId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 4000
+                  },
+                  "priceOptions": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "durationMinutes",
+                        "priceAmount"
+                      ],
+                      "properties": {
+                        "durationMinutes": {
+                          "type": "integer",
+                          "minimum": 15,
+                          "maximum": 1440
+                        },
+                        "priceAmount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "currency": {
+                          "type": "string",
+                          "minLength": 3,
+                          "maxLength": 3
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "serviceId"
+                  ],
+                  "properties": {
+                    "serviceId": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Категория или валюта"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля мастера нет или услуга не найдена / не личная"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Обновить личную услугу мастера (категория, описание, варианты цены). Идентификатор услуги сохраняется.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      },
       "delete": {
         "operationId": "SpecialistsCabinet_deleteSpecialistPersonalService",
         "parameters": [
@@ -3202,7 +3433,13 @@
                           "currency",
                           "startsAt",
                           "endsAt",
-                          "visitReviewComplete"
+                          "visitReviewComplete",
+                          "visitReviewOrganizationRating",
+                          "visitReviewSpecialistRating",
+                          "visitReviewDisplayRating",
+                          "visitReviewOrganizationExcerpt",
+                          "visitReviewSpecialistExcerpt",
+                          "visitReviewExcerpt"
                         ],
                         "properties": {
                           "id": {
@@ -3284,15 +3521,35 @@
                             "type": "boolean",
                             "description": "Оба отзыва по визиту (салон + мастер) созданы. До отправки `POST .../visit-reviews` — `false`."
                           },
+                          "visitReviewOrganizationRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Оценка салона (1–5), если отзыв уже есть."
+                          },
+                          "visitReviewSpecialistRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Оценка мастера (1–5), если отзыв уже есть."
+                          },
                           "visitReviewDisplayRating": {
                             "type": "number",
                             "nullable": true,
                             "description": "Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`."
                           },
+                          "visitReviewOrganizationExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Комментарий отзыва о салоне (черновик модерации важнее опубликованного)."
+                          },
+                          "visitReviewSpecialistExcerpt": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Комментарий отзыва о мастере (черновик модерации важнее опубликованного)."
+                          },
                           "visitReviewExcerpt": {
                             "type": "string",
                             "nullable": true,
-                            "description": "Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`."
+                            "description": "Краткое объединённое превью: комментарий о мастере или о салоне."
                           }
                         }
                       }
@@ -5088,7 +5345,7 @@
             "description": "Профиля специалиста или организации нет"
           },
           "409": {
-            "description": "Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член (ALREADY_ORGANIZATION_MEMBER)"
+            "description": "Уже активный член этой организации (ALREADY_ORGANIZATION_MEMBER)"
           }
         },
         "security": [
@@ -5259,6 +5516,84 @@
           }
         ],
         "summary": "Заявки мастеров в салон (владелец организации или мастер owner/admin).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/workplace-join-applicants/{specialistId}/cabinet-profile": {
+      "get": {
+        "description": "Доступно только при наличии **pending** заявки этого мастера в указанную организацию; иначе 404.",
+        "operationId": "OrganizationsCabinet_getWorkplaceJoinApplicantCabinetProfile",
+        "parameters": [
+          {
+            "name": "specialistId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "specialist"
+                  ],
+                  "properties": {
+                    "specialist": {
+                      "type": "object",
+                      "description": "Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)"
+          },
+          "404": {
+            "description": "Организация, заявка или профиль мастера не найдены (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Профиль мастера для решения по заявке (как экран «Мой профиль» в кабинете мастера).",
         "tags": [
           "cabinet-organizations"
         ]
@@ -8578,7 +8913,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "Изображение (jpeg, png, webp или gif до 10 МБ). То же multipart-поле, что для `POST /files/public`."
+                    "description": "Фото (jpeg, png или webp до 10 МБ; без gif). То же multipart-поле, что для `POST /files/public`."
                   }
                 }
               }

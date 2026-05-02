@@ -9,6 +9,7 @@ import {
   GalleryOwnerKind,
   OrganizationProfileRevisionStatus,
   PublicationModerationStatus,
+  SpecialistProfileRevisionStatus,
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
@@ -18,15 +19,6 @@ import { hydrateContentModerationCaseRows } from './hydrate-content-moderation-c
 
 const CONTENT_MOD_KIND_SPECIALIST_PROFILE =
   'specialist_profile' as ContentModerationCaseKind;
-
-const specialistModerationProfileSelect = {
-  listingName: true,
-  bio: true,
-  imageUrl: true,
-  catalogListedBio: true,
-  catalogListedListingName: true,
-  catalogListedImageUrl: true,
-} as const;
 
 @Injectable()
 export class ContentModerationService {
@@ -230,32 +222,19 @@ export class ContentModerationService {
     const needsManualReview =
       galleryProblems.length > 0 || textEval.verdict !== 'pass';
 
-    const orgHead = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: {
-        publicationModerationStatus: true,
-        publishedProfileRevisionId: true,
-      },
-    });
-
     if (!needsManualReview) {
       await this.promoteOrganizationProfileRevision(revisionId);
       return;
     }
 
-    const isFollowUpEdit =
-      orgHead?.publishedProfileRevisionId != null &&
-      orgHead.publishedProfileRevisionId !== revisionId;
-
-    if (!isFollowUpEdit) {
-      await this.prisma.organization.update({
-        where: { id: organizationId },
-        data: {
-          publicationModerationStatus:
-            PublicationModerationStatus.pending_review,
-        },
-      });
-    }
+    /** Первая подача и правки после publish — как у профиля мастера: строка организации в pending_review, пока кейс открыт. */
+    await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        publicationModerationStatus:
+          PublicationModerationStatus.pending_review,
+      },
+    });
 
     const chunks: string[] = [];
     if (galleryProblems.length > 0) {
@@ -414,33 +393,45 @@ export class ContentModerationService {
   }
 
   /**
-   * Предмодерация профиля мастера в каталоге: имя на витрине (`listingName`), `bio`, фото (`imageUrl`).
-   * Остальные поля профиля (опыт — выбор, alt и т.д.) не проверяем.
-   * Кейсы: `subjectId` = `Specialist.id`. При правках после одобрения гости видят снимок в `catalogListed*`.
+   * Предмодерация черновика профиля мастера: тексты и аватар из снимка ревизии.
+   * Кейсы: `subjectId` = `SpecialistProfileRevision.id`. Живая строка `Specialist` для гостей обновляется после промоута.
    */
-  async moderateSpecialistProfile(specialistId: string): Promise<void> {
-    const row = await this.prisma.specialist.findFirst({
-      where: { id: specialistId, deletedAt: null },
-      select: specialistModerationProfileSelect,
+  async moderateSpecialistProfileRevision(revisionId: string): Promise<void> {
+    const revision = await this.prisma.specialistProfileRevision.findFirst({
+      where: { id: revisionId },
+      select: {
+        id: true,
+        specialistId: true,
+        status: true,
+        listingName: true,
+        bio: true,
+        imageUrl: true,
+        imageAlt: true,
+      },
     });
-    if (row == null) {
+    if (!revision) {
+      return;
+    }
+    if (revision.status !== SpecialistProfileRevisionStatus.pending_review) {
       return;
     }
 
-    const nameTrim = (row.listingName ?? '').trim();
-    const bioTrim = (row.bio ?? '').trim();
-    const imageUrl = row.imageUrl;
+    const specialistId = revision.specialistId;
+
+    const nameTrim = (revision.listingName ?? '').trim();
+    const bioTrim = (revision.bio ?? '').trim();
+    const imageUrl = revision.imageUrl;
     const hasImage = imageUrl != null && imageUrl.trim().length > 0;
 
     const textParts: { label: string; text: string }[] = [];
     if (nameTrim.length > 0) {
       textParts.push({
         label: 'specialist_listing_name',
-        text: row.listingName ?? '',
+        text: revision.listingName ?? '',
       });
     }
     if (bioTrim.length > 0) {
-      textParts.push({ label: 'specialist_bio', text: row.bio ?? '' });
+      textParts.push({ label: 'specialist_bio', text: revision.bio ?? '' });
     }
 
     const galleryProblems: string[] = [];
@@ -476,20 +467,11 @@ export class ContentModerationService {
       galleryProblems.length > 0 || textEval.verdict !== 'pass';
 
     if (!needsManualReview) {
-      await this.prisma.specialist.update({
-        where: { id: specialistId },
-        data: {
-          profilePublicationModerationStatus:
-            PublicationModerationStatus.approved,
-          catalogListedBio: null,
-          catalogListedListingName: null,
-          catalogListedImageUrl: null,
-        },
-      });
+      await this.promoteSpecialistProfileRevision(revisionId);
       await this.prisma.contentModerationCase.updateMany({
         where: {
           kind: CONTENT_MOD_KIND_SPECIALIST_PROFILE,
-          subjectId: specialistId,
+          subjectId: revisionId,
           status: ContentModerationCaseStatus.open,
         },
         data: {
@@ -503,6 +485,15 @@ export class ContentModerationService {
       });
       return;
     }
+
+    /** И первичная подача, и правки после publish — строка специалиста в состоянии «на модерации», пока кейс открыт. */
+    await this.prisma.specialist.update({
+      where: { id: specialistId },
+      data: {
+        profilePublicationModerationStatus:
+          PublicationModerationStatus.pending_review,
+      },
+    });
 
     const chunks: string[] = [];
     if (galleryProblems.length > 0) {
@@ -520,19 +511,11 @@ export class ContentModerationService {
       );
     }
 
-    await this.prisma.specialist.update({
-      where: { id: specialistId },
-      data: {
-        profilePublicationModerationStatus:
-          PublicationModerationStatus.pending_review,
-      },
-    });
-
     const summaryPayload = chunks.join('\n\n---\n\n').slice(0, 6500);
     const existingCase = await this.prisma.contentModerationCase.findFirst({
       where: {
         kind: CONTENT_MOD_KIND_SPECIALIST_PROFILE,
-        subjectId: specialistId,
+        subjectId: revisionId,
         status: ContentModerationCaseStatus.open,
       },
       select: { id: true },
@@ -540,16 +523,14 @@ export class ContentModerationService {
     if (existingCase != null) {
       await this.prisma.contentModerationCase.update({
         where: { id: existingCase.id },
-        data: {
-          aiSummary: summaryPayload,
-        },
+        data: { aiSummary: summaryPayload },
       });
     } else {
       await this.prisma.contentModerationCase.create({
         data: {
           kind: CONTENT_MOD_KIND_SPECIALIST_PROFILE,
           status: ContentModerationCaseStatus.open,
-          subjectId: specialistId,
+          subjectId: revisionId,
           aiSummary: summaryPayload,
         },
       });
@@ -640,16 +621,7 @@ export class ContentModerationService {
         }
       }
       if (c.kind === CONTENT_MOD_KIND_SPECIALIST_PROFILE) {
-        await tx.specialist.update({
-          where: { id: c.subjectId },
-          data: {
-            profilePublicationModerationStatus:
-              PublicationModerationStatus.approved,
-            catalogListedBio: null,
-            catalogListedListingName: null,
-            catalogListedImageUrl: null,
-          },
-        });
+        await this.applyPromoteSpecialistProfileRevision(c.subjectId, tx);
       }
       if (c.kind === ContentModerationCaseKind.user_display_name) {
         await tx.user.update({
@@ -772,13 +744,37 @@ export class ContentModerationService {
         }
       }
       if (c.kind === CONTENT_MOD_KIND_SPECIALIST_PROFILE) {
-        await tx.specialist.update({
+        const revision = await tx.specialistProfileRevision.findFirst({
           where: { id: c.subjectId },
-          data: {
-            profilePublicationModerationStatus:
-              PublicationModerationStatus.rejected,
-          },
+          select: { specialistId: true },
         });
+        if (revision) {
+          const specRow = await tx.specialist.findFirst({
+            where: { id: revision.specialistId },
+            select: { publishedProfileRevisionId: true },
+          });
+          const isFollowUp =
+            specRow?.publishedProfileRevisionId != null &&
+            specRow.publishedProfileRevisionId !== c.subjectId;
+          if (isFollowUp) {
+            await tx.specialistProfileRevision.update({
+              where: { id: c.subjectId },
+              data: { status: SpecialistProfileRevisionStatus.rejected },
+            });
+          } else {
+            await tx.specialist.update({
+              where: { id: revision.specialistId },
+              data: {
+                profilePublicationModerationStatus:
+                  PublicationModerationStatus.rejected,
+              },
+            });
+            await tx.specialistProfileRevision.update({
+              where: { id: c.subjectId },
+              data: { status: SpecialistProfileRevisionStatus.rejected },
+            });
+          }
+        }
       }
       if (c.kind === ContentModerationCaseKind.user_display_name) {
         await tx.user.update({
@@ -793,6 +789,58 @@ export class ContentModerationService {
     await this.prisma.$transaction((tx) =>
       this.applyPromoteOrganizationProfileRevision(revisionId, tx),
     );
+  }
+
+  async promoteSpecialistProfileRevision(revisionId: string): Promise<void> {
+    await this.prisma.$transaction((tx) =>
+      this.applyPromoteSpecialistProfileRevision(revisionId, tx),
+    );
+  }
+
+  private async applyPromoteSpecialistProfileRevision(
+    revisionId: string,
+    tx: Prisma.TransactionClient,
+  ): Promise<void> {
+    const rev = await tx.specialistProfileRevision.findFirst({
+      where: { id: revisionId },
+    });
+    if (!rev) {
+      return;
+    }
+    const specialistId = rev.specialistId;
+
+    const head = await tx.specialist.findFirst({
+      where: { id: specialistId, deletedAt: null },
+      select: { publishedProfileRevisionId: true },
+    });
+    const prevPublishedId = head?.publishedProfileRevisionId ?? null;
+    if (prevPublishedId != null && prevPublishedId !== revisionId) {
+      await tx.specialistProfileRevision.update({
+        where: { id: prevPublishedId },
+        data: { status: SpecialistProfileRevisionStatus.superseded },
+      });
+    }
+
+    await tx.specialist.update({
+      where: { id: specialistId },
+      data: {
+        listingName: rev.listingName,
+        bio: rev.bio,
+        imageUrl: rev.imageUrl,
+        imageAlt: rev.imageAlt,
+        profilePublicationModerationStatus:
+          PublicationModerationStatus.approved,
+        publishedProfileRevisionId: revisionId,
+        catalogListedBio: null,
+        catalogListedListingName: null,
+        catalogListedImageUrl: null,
+      },
+    });
+
+    await tx.specialistProfileRevision.update({
+      where: { id: revisionId },
+      data: { status: SpecialistProfileRevisionStatus.published },
+    });
   }
 
   private async applyPromoteOrganizationProfileRevision(

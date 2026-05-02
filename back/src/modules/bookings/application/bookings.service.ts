@@ -58,6 +58,12 @@ function bookingReviewMergedExcerpt(
   return merged;
 }
 
+type VisitReviewSnapshotRow = {
+  rating: number;
+  publishedComment: string | null;
+  pendingCommentDraft: string | null;
+};
+
 /** Кто может нажать «принять / отклонить» в кабинете: принимающий мастер или owner/admin салона из брони. */
 const SALON_SIDE_PENDING_ACTOR_ROLES: OrganizationMembershipRole[] = [
   OrganizationMembershipRole.owner,
@@ -363,23 +369,10 @@ export class BookingsService {
     const labelMap = buildBookingStatusLabelMap(localeRows);
     return {
       bookings: rows.map((b) => {
-        const orgRev = b.organizationReview;
-        const spRev = b.specialistReview;
-        const visitReviewComplete = orgRev != null && spRev != null;
-        const visitReviewExcerpt = visitReviewComplete
-          ? bookingReviewMergedExcerpt(
-              spRev.pendingCommentDraft,
-              spRev.publishedComment,
-            ) ||
-            bookingReviewMergedExcerpt(
-              orgRev.pendingCommentDraft,
-              orgRev.publishedComment,
-            ) ||
-            null
-          : null;
-        const visitReviewDisplayRating = visitReviewComplete
-          ? Math.round(((orgRev.rating + spRev.rating) / 2) * 10) / 10
-          : null;
+        const preview = this.buildVisitReviewPreview(
+          b.organizationReview ?? null,
+          b.specialistReview ?? null,
+        );
 
         return {
           id: b.id,
@@ -398,9 +391,7 @@ export class BookingsService {
           pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
           cancelReason: b.cancelReason,
           cancellationComment: b.cancellationComment,
-          visitReviewComplete,
-          visitReviewDisplayRating,
-          visitReviewExcerpt,
+          ...preview,
         };
       }),
     };
@@ -1094,6 +1085,50 @@ export class BookingsService {
     );
   }
 
+  private buildVisitReviewPreview(
+    orgRev: VisitReviewSnapshotRow | null,
+    spRev: VisitReviewSnapshotRow | null,
+  ): {
+    visitReviewComplete: boolean;
+    visitReviewOrganizationRating: number | null;
+    visitReviewSpecialistRating: number | null;
+    visitReviewDisplayRating: number | null;
+    visitReviewOrganizationExcerpt: string | null;
+    visitReviewSpecialistExcerpt: string | null;
+    visitReviewExcerpt: string | null;
+  } {
+    const visitReviewOrganizationExcerpt = orgRev
+      ? bookingReviewMergedExcerpt(
+          orgRev.pendingCommentDraft,
+          orgRev.publishedComment,
+        )
+      : null;
+    const visitReviewSpecialistExcerpt = spRev
+      ? bookingReviewMergedExcerpt(
+          spRev.pendingCommentDraft,
+          spRev.publishedComment,
+        )
+      : null;
+    const visitReviewComplete = orgRev != null && spRev != null;
+    const visitReviewExcerpt = visitReviewComplete
+      ? visitReviewSpecialistExcerpt ||
+        visitReviewOrganizationExcerpt ||
+        null
+      : null;
+    const visitReviewDisplayRating = visitReviewComplete
+      ? Math.round(((orgRev!.rating + spRev!.rating) / 2) * 10) / 10
+      : null;
+    return {
+      visitReviewComplete,
+      visitReviewOrganizationRating: orgRev?.rating ?? null,
+      visitReviewSpecialistRating: spRev?.rating ?? null,
+      visitReviewDisplayRating,
+      visitReviewOrganizationExcerpt,
+      visitReviewSpecialistExcerpt,
+      visitReviewExcerpt,
+    };
+  }
+
   private mapSalonCabinetBookingRow(
     row: SalonCabinetBookingRow,
     locale: ApiLocale,
@@ -1105,6 +1140,10 @@ export class BookingsService {
       '—';
     const clientDisplayName =
       row.client.name?.trim() ? row.client.name.trim() : '—';
+    const preview = this.buildVisitReviewPreview(
+      row.organizationReview ?? null,
+      row.specialistReview ?? null,
+    );
     return {
       id: row.id,
       status: row.status,
@@ -1127,6 +1166,7 @@ export class BookingsService {
       pendingExpiresAt: row.pendingExpiresAt?.toISOString() ?? null,
       cancelReason: row.cancelReason ?? null,
       cancellationComment: row.cancellationComment ?? null,
+      ...preview,
     };
   }
 }

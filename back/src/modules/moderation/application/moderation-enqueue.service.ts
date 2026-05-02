@@ -4,6 +4,7 @@ import type { Queue } from 'bullmq';
 import { ContentModerationService } from './content-moderation.service';
 import {
   CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE,
+  CONTENT_MODERATION_JOB_SPECIALIST_PROFILE,
   CONTENT_MODERATION_QUEUE,
 } from '../queue/content-moderation-queue.const';
 
@@ -54,6 +55,44 @@ export class ModerationEnqueueService {
     ) {
       this.logger.warn(
         'MODERATION_QUEUE_ENABLED не выключен, но очередь BullMQ не сконфигурирована — модерация профиля выполнена синхронно.',
+      );
+    }
+  }
+
+  /**
+   * После сохранения черновика витрины мастера: job в BullMQ при наличии очереди, иначе
+   * `moderateSpecialistProfileRevision` в этом процессе (как у организаций).
+   */
+  async enqueueSpecialistProfileModeration(
+    specialistProfileRevisionId: string,
+  ): Promise<void> {
+    if (this.queue) {
+      try {
+        await this.queue.add(CONTENT_MODERATION_JOB_SPECIALIST_PROFILE, {
+          specialistProfileRevisionId,
+        });
+        return;
+      } catch (err: unknown) {
+        const cause = err instanceof Error ? err.message : String(err);
+        this.logger.warn(
+          `Не удалось добавить job в BullMQ (модерация профиля мастера, revision=${specialistProfileRevisionId}); выполняем moderateSpecialistProfileRevision в этом процессе. Причина: ${cause}`,
+        );
+        await this.contentModeration.moderateSpecialistProfileRevision(
+          specialistProfileRevisionId,
+        );
+        return;
+      }
+    }
+    await this.contentModeration.moderateSpecialistProfileRevision(
+      specialistProfileRevisionId,
+    );
+    if (
+      process.env.MODERATION_QUEUE_ENABLED !== 'false' &&
+      !this.queue &&
+      nodeEnvAllowsWarn()
+    ) {
+      this.logger.warn(
+        'MODERATION_QUEUE_ENABLED не выключен, но очередь BullMQ не сконфигурирована — модерация профиля мастера выполнена синхронно.',
       );
     }
   }

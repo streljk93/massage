@@ -9,12 +9,11 @@ import { ObjectStorageService } from '../../../infrastructure/storage/object-sto
 
 export type FileVisibility = 'public' | 'private';
 
+/** Фото для витрины/аватаров: как у типичных маркетплейсов — JPEG, PNG, WebP (без GIF и без PDF). */
 const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': '.jpg',
   'image/png': '.png',
   'image/webp': '.webp',
-  'image/gif': '.gif',
-  'application/pdf': '.pdf',
 };
 
 const ALLOWED_MIME = new Set(Object.keys(MIME_TO_EXT));

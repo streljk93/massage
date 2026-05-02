@@ -6,10 +6,9 @@
         "drawerTitle": "Business area",
         "dashboard": "Dashboard",
         "organizations": "My organizations",
-        "organizationsSubmenuExpandAria": "Expand organization shortcuts",
-        "organizationsSubmenuCollapseAria": "Collapse organization shortcuts",
         "bookings": "Bookings",
-        "profile": "Profile",
+        "services": "Services",
+        "profile": "Specialist profile",
         "activeWorkplaceBarLabel": "Active workplace"
       }
     },
@@ -19,10 +18,8 @@
         "drawerTitle": "Khu vực doanh nghiệp",
         "dashboard": "Bảng điều khiển",
         "organizations": "Tổ chức của tôi",
-        "organizationsSubmenuExpandAria": "Mở các lối tắt tổ chức",
-        "organizationsSubmenuCollapseAria": "Thu gọn các lối tắt tổ chức",
         "bookings": "Lịch hẹn",
-        "profile": "Hồ sơ",
+        "profile": "Hồ sơ chuyên viên",
         "activeWorkplaceBarLabel": "Nơi làm việc hiện tại"
       }
     },
@@ -32,10 +29,9 @@
         "drawerTitle": "Бизнес-кабинет",
         "dashboard": "Панель",
         "organizations": "Мои организации",
-        "organizationsSubmenuExpandAria": "Показать пункты организаций",
-        "organizationsSubmenuCollapseAria": "Скрыть пункты организаций",
         "bookings": "Записи",
-        "profile": "Профиль",
+        "services": "Услуги",
+        "profile": "Профиль специалиста",
         "activeWorkplaceBarLabel": "Текущее место приёма"
       }
     }

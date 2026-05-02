@@ -142,7 +142,9 @@ export function BusinessOrganizationEditPage() {
   );
 
   const canManage =
-    membership != null ? roleAllowsSalonCabinetEditing(membership.role) : false;
+    membership != null &&
+    membership.membershipStatus === "employed" &&
+    roleAllowsSalonCabinetEditing(membership.role as "owner" | "admin" | "specialist");
 
   const cabinetProfileQuery = useQuery({
     queryKey: [...CABINET_EDIT_QK, organizationId, accessToken, locale] as const,

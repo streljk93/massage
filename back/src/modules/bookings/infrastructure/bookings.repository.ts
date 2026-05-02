@@ -69,6 +69,22 @@ const salonCabinetBookingSelect = {
     },
   },
   organization: { select: { id: true, name: true } },
+  organizationReview: {
+    where: { deletedAt: null },
+    select: {
+      rating: true,
+      publishedComment: true,
+      pendingCommentDraft: true,
+    },
+  },
+  specialistReview: {
+    where: { deletedAt: null },
+    select: {
+      rating: true,
+      publishedComment: true,
+      pendingCommentDraft: true,
+    },
+  },
 } satisfies Prisma.BookingSelect;
 
 export type SalonCabinetBookingRow = Prisma.BookingGetPayload<{

@@ -7,6 +7,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { parseISO } from "date-fns";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
+  BookingDoneVisitReviewSummary,
   BookingShowcaseCard,
   BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
   bookingHistoryDateTagsMuted,
@@ -220,6 +221,22 @@ function SalonBookingRowCard({
       </div>
     : null;
 
+  const doneVisitReviewFooter =
+    row.status === "done" &&
+    (row.visitReviewOrganizationRating != null ||
+      row.visitReviewSpecialistRating != null ||
+      (row.visitReviewOrganizationExcerpt != null &&
+        row.visitReviewOrganizationExcerpt.trim() !== "") ||
+      (row.visitReviewSpecialistExcerpt != null &&
+        row.visitReviewSpecialistExcerpt.trim() !== "")) ?
+      <BookingDoneVisitReviewSummary
+        organizationRating={row.visitReviewOrganizationRating}
+        specialistRating={row.visitReviewSpecialistRating}
+        organizationExcerpt={row.visitReviewOrganizationExcerpt}
+        specialistExcerpt={row.visitReviewSpecialistExcerpt}
+      />
+    : undefined;
+
   return (
     <BookingShowcaseCard
       variant="light"
@@ -234,10 +251,11 @@ function SalonBookingRowCard({
       })}
       guestCaption={guestCaption}
       statusFooter={statusFooter}
-      statusFooterSuccess={row.status === "confirmed"}
+      statusFooterSuccess={row.status === "confirmed" || row.status === "done"}
       statusFooterInProgress={row.status === "in_progress"}
       dateTagsMuted={bookingHistoryDateTagsMuted(row.status)}
       actions={pendingActions ?? confirmedActions}
+      footerExtra={doneVisitReviewFooter}
     />
   );
 }
@@ -290,7 +308,12 @@ export function BusinessBookingsPage() {
   });
 
   const canSeeManagedTab = useMemo(
-    () => (orgsQuery.data?.organizations ?? []).some((o) => isOrgManagerRole(o.role)),
+    () =>
+      (orgsQuery.data?.organizations ?? []).some(
+        (o) =>
+          o.membershipStatus === "employed" &&
+          isOrgManagerRole(o.role as string),
+      ),
     [orgsQuery.data?.organizations],
   );
 
@@ -683,11 +706,11 @@ export function BusinessBookingsPage() {
         ) : (
           <div key={effectiveScope} className="space-y-4" aria-label={t("bookingsListAria")}>
             {newSectionCards.length > 0 ? (
-              <Collapsible defaultOpen className="group w-full overflow-hidden rounded-2xl bg-muted/45 p-3">
+              <Collapsible defaultOpen className="group w-full overflow-hidden p-0">
                 <CollapsibleTrigger
                   className={cn(
                     motion.interactivePressStrong,
-                    "flex w-full touch-manipulation items-center justify-between gap-2 px-1 py-1 text-left outline-none rounded-xl hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/45",
+                    "flex w-full touch-manipulation items-center justify-between gap-2 px-0 py-1 text-left outline-none rounded-lg hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
                   )}
                   id={`salon-bookings-${effectiveScope}-new-heading`}
                 >
@@ -744,11 +767,11 @@ export function BusinessBookingsPage() {
             ) : null}
 
             {historySectionCards.length > 0 ? (
-              <Collapsible defaultOpen={newSectionCards.length === 0} className="group w-full overflow-hidden rounded-2xl bg-muted/45 p-3">
+              <Collapsible defaultOpen={newSectionCards.length === 0} className="group w-full overflow-hidden p-0">
                 <CollapsibleTrigger
                   className={cn(
                     motion.interactivePressStrong,
-                    "flex w-full touch-manipulation items-center justify-between gap-2 px-1 py-1 text-left outline-none rounded-xl hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/45",
+                    "flex w-full touch-manipulation items-center justify-between gap-2 px-0 py-1 text-left outline-none rounded-lg hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
                   )}
                   id={`salon-bookings-${effectiveScope}-history-heading`}
                 >

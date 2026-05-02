@@ -166,4 +166,127 @@ export class SpecialistPersonalCatalogService {
 
     return { ok: true as const };
   }
+
+  /**
+   * Обновление личной услуги: категория, описание и полный набор вариантов цены/длительности.
+   * Идентификатор услуги не меняется (важно для уже созданных броней).
+   */
+  async updatePersonalService(
+    userId: string,
+    serviceId: string,
+    body: CreateSpecialistPersonalServiceBody,
+    _locale: ApiLocale,
+  ): Promise<{ serviceId: string }> {
+    void _locale;
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+
+    const category = await this.prisma.serviceCategory.findFirst({
+      where: { id: body.categoryId, deletedAt: null, isActive: true },
+    });
+    if (!category) {
+      throw new BadRequestException({
+        code: 'SERVICE_CATEGORY_NOT_FOUND',
+        message: 'Category not found or inactive',
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const svc = await tx.service.findFirst({
+        where: {
+          id: serviceId,
+          specialistId: specialist.id,
+          organizationId: null,
+          deletedAt: null,
+        },
+        select: { id: true, categoryId: true },
+      });
+      if (!svc) {
+        throw new NotFoundException({
+          code: 'SERVICE_NOT_FOUND',
+          message: 'Personal service not found or already deleted',
+        });
+      }
+
+      const oldCategoryId = svc.categoryId;
+      const newCategoryId = body.categoryId;
+      const newSlug =
+        oldCategoryId === newCategoryId
+          ? undefined
+          : makeServiceSlug(category.slug, svc.id);
+
+      await tx.service.update({
+        where: { id: svc.id },
+        data: {
+          categoryId: newCategoryId,
+          ...(newSlug != null ? { slug: newSlug } : {}),
+          description: body.description ?? null,
+        },
+      });
+
+      await tx.servicePriceOption.deleteMany({
+        where: { serviceId: svc.id },
+      });
+      for (const opt of body.priceOptions) {
+        const currency = opt.currency ?? 'VND';
+        await tx.servicePriceOption.create({
+          data: {
+            serviceId: svc.id,
+            durationMinutes: opt.durationMinutes,
+            priceAmount: opt.priceAmount,
+            currency,
+          },
+        });
+      }
+
+      if (oldCategoryId !== newCategoryId) {
+        const remainingOld = await tx.service.count({
+          where: {
+            specialistId: specialist.id,
+            categoryId: oldCategoryId,
+            organizationId: null,
+            deletedAt: null,
+          },
+        });
+        if (remainingOld === 0) {
+          await tx.specialistServiceCategory.deleteMany({
+            where: {
+              specialistId: specialist.id,
+              serviceCategoryId: oldCategoryId,
+            },
+          });
+        }
+        await tx.specialistServiceCategory.upsert({
+          where: {
+            specialistId_serviceCategoryId: {
+              specialistId: specialist.id,
+              serviceCategoryId: newCategoryId,
+            },
+          },
+          create: {
+            specialistId: specialist.id,
+            serviceCategoryId: newCategoryId,
+          },
+          update: {},
+        });
+      }
+
+      if (specialist.activeOrganizationId != null) {
+        await syncOrganizationServiceCategoriesFromSpecialistServices(
+          tx,
+          specialist.activeOrganizationId,
+        );
+      }
+    });
+
+    return { serviceId };
+  }
 }

@@ -5,12 +5,11 @@ import {
   ArrowLeft,
   Building2,
   CalendarDays,
-  ChevronDown,
   LayoutDashboard,
+  ListChecks,
   Menu,
   UserRound,
 } from "lucide-react";
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/app/i18n/navigation";
 import {
@@ -23,11 +22,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/shared/ui/shadcn/drawer";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/shared/ui/shadcn/collapsible";
 import { Button } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 
@@ -35,7 +29,12 @@ import { cn, motion } from "@/shared/lib";
 export type CabinetDrawerNavItem = {
   id: string;
   icon: LucideIcon;
-  href: "/business" | "/business/bookings" | "/business/profile";
+  href:
+    | "/business"
+    | "/business/bookings"
+    | "/business/services"
+    | "/business/profile"
+    | "/business/organizations";
   /** Ключ строки из `businessAppNav` */
   labelKey: string;
 };
@@ -58,10 +57,22 @@ const CABINET_DRAWER_NAV: readonly CabinetDrawerNavSection[] = [
         labelKey: "dashboard",
       },
       {
+        id: "organizations",
+        icon: Building2,
+        href: "/business/organizations",
+        labelKey: "organizations",
+      },
+      {
         id: "bookings",
         icon: CalendarDays,
         href: "/business/bookings",
         labelKey: "bookings",
+      },
+      {
+        id: "services",
+        icon: ListChecks,
+        href: "/business/services",
+        labelKey: "services",
       },
       {
         id: "profile",
@@ -83,27 +94,13 @@ function resolveActiveId(pathname: string): string | null {
   if (pathname.startsWith("/business/bookings")) {
     return "bookings";
   }
+  if (pathname.startsWith("/business/services")) {
+    return "services";
+  }
   if (pathname.startsWith("/business/profile")) {
     return "profile";
   }
   return null;
-}
-
-function orgSubActive(pathname: string): "create" | "join" | "requests" | null {
-  if (pathname.startsWith("/business/organizations/new")) {
-    return "create";
-  }
-  if (pathname.startsWith("/business/organizations/join")) {
-    return "join";
-  }
-  if (pathname.startsWith("/business/organizations/requests")) {
-    return "requests";
-  }
-  return null;
-}
-
-function orgListHrefActive(pathname: string): boolean {
-  return pathname === "/business/organizations" || pathname === "/business/organizations/";
 }
 
 function DrawerNavRows({
@@ -151,130 +148,9 @@ function DrawerNavRows({
   );
 }
 
-function OrganizationsDrawerGroup({
-  pathname,
-  activeId,
-  tNav,
-  tPages,
-}: {
-  pathname: string;
-  activeId: string | null;
-  tNav: (key: string) => string;
-  tPages: (key: string) => string;
-}) {
-  const orgsSectionActive = pathname.startsWith("/business/organizations");
-  const [open, setOpen] = useState(orgsSectionActive);
-  const parentNavActive = activeId === "organizations";
-  const listPageActive = orgListHrefActive(pathname);
-  const sub = orgSubActive(pathname);
-  const headingId = "cabinet-nav-organizations-heading";
-  const subId = "cabinet-nav-organizations-sub";
-
-  const subLinkClass = (isActive: boolean) =>
-    cn(
-      motion.interactive,
-      "flex min-h-9 w-full items-center rounded-md py-1.5 pr-2.5 pl-9 text-left text-[0.8125rem] leading-snug tracking-tight transition-colors",
-      isActive ? "font-medium text-foreground" : "text-foreground/75 hover:bg-muted/30",
-    );
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-md">
-      <div
-        className={cn(
-          "flex min-h-9 w-full items-stretch gap-0.5 rounded-md",
-          parentNavActive ? "bg-muted/15" : "hover:bg-muted/10",
-        )}
-      >
-        <DrawerClose asChild>
-          <Link
-            href="/business/organizations"
-            className={cn(
-              motion.interactive,
-              "group/nav-item flex min-h-9 min-w-0 flex-1 items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-[0.875rem] leading-snug tracking-tight transition-colors",
-              listPageActive ? "font-medium text-foreground" : "text-foreground/80 hover:bg-muted/25",
-            )}
-            aria-current={listPageActive ? "page" : undefined}
-            id={headingId}
-          >
-            <Building2
-              className={cn(
-                "size-[1.0625rem] shrink-0",
-                parentNavActive ? "text-foreground/90" : "text-muted-foreground group-hover/nav-item:text-foreground/55",
-              )}
-              strokeWidth={parentNavActive ? 2.125 : 1.75}
-              aria-hidden
-            />
-            <span className="min-w-0 flex-1">{tNav("organizations")}</span>
-          </Link>
-        </DrawerClose>
-        <CollapsibleTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              motion.interactive,
-              "flex size-9 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted/30 hover:text-foreground/80",
-              "focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:outline-none",
-            )}
-            aria-expanded={open}
-            aria-controls={subId}
-            aria-label={open ? tNav("organizationsSubmenuCollapseAria") : tNav("organizationsSubmenuExpandAria")}
-          >
-            <ChevronDown
-              className={cn(
-                "size-[1.0625rem] shrink-0 transition-transform duration-200 ease-out",
-                open && "rotate-180",
-              )}
-              strokeWidth={2}
-              aria-hidden
-            />
-          </button>
-        </CollapsibleTrigger>
-      </div>
-      <CollapsibleContent id={subId} role="region" aria-labelledby={headingId}>
-        <ul className="mt-px flex flex-col gap-px pb-1" role="list">
-          <li>
-            <DrawerClose asChild>
-              <Link
-                href="/business/organizations/new"
-                className={subLinkClass(sub === "create")}
-                aria-current={sub === "create" ? "page" : undefined}
-              >
-                {tPages("createOrganization")}
-              </Link>
-            </DrawerClose>
-          </li>
-          <li>
-            <DrawerClose asChild>
-              <Link
-                href="/business/organizations/join"
-                className={subLinkClass(sub === "join")}
-                aria-current={sub === "join" ? "page" : undefined}
-              >
-                {tPages("findJoinOrganization")}
-              </Link>
-            </DrawerClose>
-          </li>
-          <li>
-            <DrawerClose asChild>
-              <Link
-                href="/business/organizations/requests"
-                className={subLinkClass(sub === "requests")}
-                aria-current={sub === "requests" ? "page" : undefined}
-              >
-                {tPages("organizationRequestsNav")}
-              </Link>
-            </DrawerClose>
-          </li>
-        </ul>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
 /** Боковое меню кабинета: разделы + «Обратно в приложение». */
 export function BusinessCabinetNavDrawerTrigger() {
   const tNav = useTranslations("businessAppNav");
-  const tPages = useTranslations("businessAppSubpages");
   const tHeader = useTranslations("businessScreenHeader");
   const pathname = usePathname();
   const activeId = resolveActiveId(pathname);
@@ -283,8 +159,6 @@ export function BusinessCabinetNavDrawerTrigger() {
   if (!mainItems) {
     return null;
   }
-  const beforeOrgs = mainItems.filter((i) => i.id === "dashboard");
-  const afterOrgs = mainItems.filter((i) => i.id !== "dashboard");
 
   return (
     <Drawer direction="left">
@@ -314,15 +188,7 @@ export function BusinessCabinetNavDrawerTrigger() {
           aria-label={tNav("barLabel")}
         >
           <section className="space-y-1">
-            <DrawerNavRows items={beforeOrgs} activeId={activeId} tNav={tNav} />
-            <OrganizationsDrawerGroup
-              key={pathname.startsWith("/business/organizations") ? "in-orgs" : "out-orgs"}
-              pathname={pathname}
-              activeId={activeId}
-              tNav={tNav}
-              tPages={tPages}
-            />
-            <DrawerNavRows items={afterOrgs} activeId={activeId} tNav={tNav} />
+            <DrawerNavRows items={mainItems} activeId={activeId} tNav={tNav} />
           </section>
         </nav>
         <div className="shrink-0 border-t border-border/15 bg-muted/10 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

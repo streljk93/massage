@@ -101,6 +101,8 @@ export const specialistMyOrganizationsResponseSchema = {
         required: [
           'id',
           'name',
+          'membershipStatus',
+          'workplaceJoinRequestId',
           'role',
           'isActiveWorkplace',
           'publicationModerationStatus',
@@ -110,15 +112,32 @@ export const specialistMyOrganizationsResponseSchema = {
         properties: {
           id: { type: 'string', format: 'uuid' },
           name: { type: 'string' },
-          role: {
+          membershipStatus: {
             type: 'string',
-            enum: ['owner', 'admin', 'specialist'],
-            description: 'Роль мастера в этой организации.',
+            enum: ['employed', 'pending_join'],
+            description:
+              'employed — мастер в штате; pending_join — подана заявка на вступление, членства ещё нет.',
+          },
+          workplaceJoinRequestId: {
+            description:
+              'Идентификатор `SpecialistWorkplaceJoinRequest` для строки с pending_join; для employed — null.',
+            oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
+          },
+          role: {
+            description:
+              'Роль в организации для employed; для pending_join — null до принятия заявки.',
+            oneOf: [
+              {
+                type: 'string',
+                enum: ['owner', 'admin', 'specialist'],
+              },
+              { type: 'null' },
+            ],
           },
           isActiveWorkplace: {
             type: 'boolean',
             description:
-              'Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.',
+              'Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false.',
           },
           publicationModerationStatus: {
             type: 'string',
@@ -227,6 +246,10 @@ export const createSpecialistPersonalServiceResponseSchema = {
   },
 };
 
+/** Тело PATCH совпадает с POST: полная замена редактируемых полей и набора priceOptions. */
+export const patchSpecialistPersonalServiceRequestSchema =
+  createSpecialistPersonalServiceRequestSchema;
+
 export const deleteSpecialistPersonalServiceResponseSchema = {
   type: 'object',
   required: ['ok'],
@@ -307,6 +330,13 @@ export const specialistSalonCabinetBookingItemSchema = {
     'pendingExpiresAt',
     'cancelReason',
     'cancellationComment',
+    'visitReviewComplete',
+    'visitReviewOrganizationRating',
+    'visitReviewSpecialistRating',
+    'visitReviewDisplayRating',
+    'visitReviewOrganizationExcerpt',
+    'visitReviewSpecialistExcerpt',
+    'visitReviewExcerpt',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -335,6 +365,45 @@ export const specialistSalonCabinetBookingItemSchema = {
     pendingExpiresAt: { type: 'string', format: 'date-time', nullable: true },
     cancelReason: { type: 'string', nullable: true },
     cancellationComment: { type: 'string', nullable: true },
+    visitReviewComplete: {
+      type: 'boolean',
+      description:
+        'Оба отзыва по визиту (салон + мастер) созданы клиентом после статуса `done`.',
+    },
+    visitReviewOrganizationRating: {
+      type: 'number',
+      nullable: true,
+      description: 'Оценка салона (1–5), если отзыв уже есть.',
+    },
+    visitReviewSpecialistRating: {
+      type: 'number',
+      nullable: true,
+      description: 'Оценка мастера (1–5), если отзыв уже есть.',
+    },
+    visitReviewDisplayRating: {
+      type: 'number',
+      nullable: true,
+      description:
+        'Среднее двух оценок для краткого превью; заполнено при `visitReviewComplete === true`.',
+    },
+    visitReviewOrganizationExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Комментарий отзыва о салоне (черновик модерации важнее опубликованного).',
+    },
+    visitReviewSpecialistExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Комментарий отзыва о мастере (черновик модерации важнее опубликованного).',
+    },
+    visitReviewExcerpt: {
+      type: 'string',
+      nullable: true,
+      description:
+        'Краткое объединённое превью для совместимости: комментарий о мастере или о салоне.',
+    },
   },
 };
 

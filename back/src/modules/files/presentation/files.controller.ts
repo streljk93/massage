@@ -57,7 +57,7 @@ export class FilesController {
   @ApiOperation({
     summary: 'Загрузить публичный файл',
     description:
-      'Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Типы: jpeg, png, webp, gif, pdf; до 10 МБ.',
+      'Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody(uploadMultipartBody)
@@ -78,7 +78,7 @@ export class FilesController {
   @ApiOperation({
     summary: 'Загрузить приватный файл',
     description:
-      'Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`.',
+      'Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody(uploadMultipartBody)
@@ -103,7 +103,12 @@ export class FilesController {
     name: 'filename',
     example: 'uploads-550e8400-e29b-41d4-a716-446655440000.jpg',
   })
-  @ApiProduces('application/octet-stream', 'image/jpeg', 'image/png')
+  @ApiProduces(
+    'application/octet-stream',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  )
   @ApiOkResponse({
     description: 'Тело файла',
     schema: { type: 'string', format: 'binary' },
@@ -133,7 +138,12 @@ export class FilesController {
     name: 'filename',
     example: 'uploads-550e8400-e29b-41d4-a716-446655440000.jpg',
   })
-  @ApiProduces('application/octet-stream', 'image/jpeg', 'image/png')
+  @ApiProduces(
+    'application/octet-stream',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+  )
   @ApiOkResponse({
     description: 'Тело файла',
     schema: { type: 'string', format: 'binary' },

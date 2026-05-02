@@ -14,7 +14,11 @@ import { ProfileSubpageShell } from "./profile-subpage-shell";
 import { profileUserDemo } from "../lib/mock-data";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { UserAvatar } from "@/shared/ui";
+import {
+  MARKETPLACE_PHOTO_ACCEPT,
+  pickFirstImageFile,
+  UserAvatar,
+} from "@/shared/ui";
 import { cn, resolveApiResourceUrl } from "@/shared/lib";
 import {
   createBrowserSdkClient,
@@ -24,18 +28,7 @@ import {
 } from "@/shared/api";
 const labelClass = "text-xs font-medium text-muted-foreground";
 
-const acceptImage =
-  "image/jpeg,image/png,image/webp,image/gif" as const;
-
 type LoadState = "idle" | "loading" | "ready" | "error" | "demo";
-
-function pickFirstImageFile(fileList: FileList | undefined): File | undefined {
-  const f = fileList?.[0];
-  if (!f?.type.startsWith("image/")) {
-    return undefined;
-  }
-  return f;
-}
 
 export function ProfileEditPage() {
   const t = useTranslations("profileEdit");
@@ -221,7 +214,7 @@ export function ProfileEditPage() {
           <input
             ref={fileInputRef}
             type="file"
-            accept={acceptImage}
+            accept={MARKETPLACE_PHOTO_ACCEPT}
             className="sr-only"
             tabIndex={-1}
             disabled={!canUseApi || saving}

@@ -134,7 +134,7 @@ export class DevModerationController {
       throw new BadRequestException({
         code: 'IMAGE_FILE_REQUIRED',
         message:
-          'multipart field `file` must be an image (jpeg, png, webp, gif)',
+          'multipart field `file` must be a photo (jpeg, png or webp; no gif)',
       });
     }
 

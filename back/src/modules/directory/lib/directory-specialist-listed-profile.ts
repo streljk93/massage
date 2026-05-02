@@ -9,6 +9,9 @@ export function specialistProfileListingWhereInput(): Prisma.SpecialistWhereInpu
       { catalogListedListingName: { not: null } },
     ],
   };
+  const hasPublishedRevisionPointer: Prisma.SpecialistWhereInput = {
+    publishedProfileRevisionId: { not: null },
+  };
   return {
     OR: [
       {
@@ -21,7 +24,9 @@ export function specialistProfileListingWhereInput(): Prisma.SpecialistWhereInpu
             profilePublicationModerationStatus:
               PublicationModerationStatus.pending_review,
           },
-          hasFrozenVitrineSnapshot,
+          {
+            OR: [hasFrozenVitrineSnapshot, hasPublishedRevisionPointer],
+          },
         ],
       },
       {
@@ -30,14 +35,16 @@ export function specialistProfileListingWhereInput(): Prisma.SpecialistWhereInpu
             profilePublicationModerationStatus:
               PublicationModerationStatus.rejected,
           },
-          hasFrozenVitrineSnapshot,
+          {
+            OR: [hasFrozenVitrineSnapshot, hasPublishedRevisionPointer],
+          },
         ],
       },
     ],
   };
 }
 
-/** Мастер в каталоге: при одобренном профиле — живое `listingName`; при правке на модерации — заморозка `catalogListedListingName`. */
+/** Мастер в каталоге: при одобренном профиле — живое `listingName`; при правке на модерации — заморозка `catalogListedListingName` или опубликованная строка по `publishedProfileRevisionId`. */
 export function directoryListedSpecialistListingNameWhereInput(): Prisma.SpecialistWhereInput {
   return {
     OR: [
@@ -65,10 +72,32 @@ export function directoryListedSpecialistListingNameWhereInput(): Prisma.Special
         AND: [
           {
             profilePublicationModerationStatus:
+              PublicationModerationStatus.pending_review,
+          },
+          { publishedProfileRevisionId: { not: null } },
+          { listingName: { not: null } },
+          { NOT: { listingName: '' } },
+        ],
+      },
+      {
+        AND: [
+          {
+            profilePublicationModerationStatus:
               PublicationModerationStatus.rejected,
           },
           { catalogListedListingName: { not: null } },
           { NOT: { catalogListedListingName: '' } },
+        ],
+      },
+      {
+        AND: [
+          {
+            profilePublicationModerationStatus:
+              PublicationModerationStatus.rejected,
+          },
+          { publishedProfileRevisionId: { not: null } },
+          { listingName: { not: null } },
+          { NOT: { listingName: '' } },
         ],
       },
     ],

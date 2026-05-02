@@ -33,7 +33,10 @@ import {
   bookingsList,
   createBrowserSdkClient,
 } from "@/shared/api";
-import type { BookingsCancelData } from "@/shared/api/generated/sdk/types.gen";
+import type {
+  BookingsCancelData,
+  BookingsListResponse,
+} from "@/shared/api/generated/sdk/types.gen";
 import { FCM_CLIENT_BOOKINGS_LIST_REFETCH } from "@/shared/lib/bookings/fcm-list-refetch";
 import { parseISO } from "date-fns";
 import {
@@ -58,26 +61,7 @@ import {
 /** Чуть дольше `--motion-duration-slow`, чтобы успели grid + fade на карточке. */
 const BOOKING_CANCEL_EXIT_MS = 360;
 
-type ApiBooking = {
-  id: string;
-  status: string;
-  specialistId: string;
-  specialistName: string;
-  organizationName: string | null;
-  specialistImageUrl?: string | null;
-  categoryShortName: string;
-  amount: number | null;
-  currency: string;
-  startsAt: string;
-  endsAt: string;
-  pendingExpiresAt?: string | null;
-  cancelReason?: string | null;
-  cancellationComment?: string | null;
-  statusLabel: string;
-  visitReviewComplete: boolean;
-  visitReviewDisplayRating?: number | null;
-  visitReviewExcerpt?: string | null;
-};
+type ApiBooking = BookingsListResponse["bookings"][number];
 
 function specialistAvatarSrc(url: string | null | undefined): string | undefined {
   if (url == null || url === "") {
@@ -413,9 +397,14 @@ export function BookingsPage() {
         specialistProfileHref: `/specialists/${row.specialistId}`,
         dateTagsMuted: bookingHistoryDateTagsMuted(row.status),
         statusLabel: row.statusLabel,
-        statusFooterSuccess: row.status === "confirmed",
+        statusFooterSuccess:
+          row.status === "confirmed" || row.status === "done",
         systemNote,
         visitReviewComplete: row.visitReviewComplete,
+        visitReviewOrganizationRating: row.visitReviewOrganizationRating,
+        visitReviewSpecialistRating: row.visitReviewSpecialistRating,
+        visitReviewOrganizationExcerpt: row.visitReviewOrganizationExcerpt,
+        visitReviewSpecialistExcerpt: row.visitReviewSpecialistExcerpt,
         visitReviewDisplayRating: row.visitReviewDisplayRating,
         visitReviewExcerpt: row.visitReviewExcerpt,
         rateVisitHref: canRate
@@ -589,6 +578,10 @@ export function BookingsPage() {
                     reviewEligible={row.apiStatus === "done"}
                     reviewed={row.visitReviewComplete}
                     rateVisitHref={row.rateVisitHref}
+                    visitReviewOrganizationRating={row.visitReviewOrganizationRating}
+                    visitReviewSpecialistRating={row.visitReviewSpecialistRating}
+                    visitReviewOrganizationExcerpt={row.visitReviewOrganizationExcerpt}
+                    visitReviewSpecialistExcerpt={row.visitReviewSpecialistExcerpt}
                     rating={row.visitReviewDisplayRating ?? undefined}
                     reviewExcerpt={row.visitReviewExcerpt ?? undefined}
                   />

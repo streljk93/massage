@@ -912,11 +912,19 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
             id: string;
             name: string;
             /**
-             * Роль мастера в этой организации.
+             * employed — мастер в штате; pending_join — подана заявка на вступление, членства ещё нет.
              */
-            role: 'owner' | 'admin' | 'specialist';
+            membershipStatus: 'employed' | 'pending_join';
             /**
-             * Совпадает с `activeOrganizationId` мастера — новые брони и адрес витрины.
+             * Идентификатор `SpecialistWorkplaceJoinRequest` для строки с pending_join; для employed — null.
+             */
+            workplaceJoinRequestId: string | unknown;
+            /**
+             * Роль в организации для employed; для pending_join — null до принятия заявки.
+             */
+            role: 'owner' | 'admin' | 'specialist' | unknown;
+            /**
+             * Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false.
              */
             isActiveWorkplace: boolean;
             /**
@@ -1096,6 +1104,34 @@ export type SpecialistsCabinetGetSpecialistSalonBookingsResponses = {
             pendingExpiresAt: string | null;
             cancelReason: string | null;
             cancellationComment: string | null;
+            /**
+             * Оба отзыва по визиту (салон + мастер) созданы клиентом после статуса `done`.
+             */
+            visitReviewComplete: boolean;
+            /**
+             * Оценка салона (1–5), если отзыв уже есть.
+             */
+            visitReviewOrganizationRating: number | null;
+            /**
+             * Оценка мастера (1–5), если отзыв уже есть.
+             */
+            visitReviewSpecialistRating: number | null;
+            /**
+             * Среднее двух оценок для краткого превью; заполнено при `visitReviewComplete === true`.
+             */
+            visitReviewDisplayRating: number | null;
+            /**
+             * Комментарий отзыва о салоне (черновик модерации важнее опубликованного).
+             */
+            visitReviewOrganizationExcerpt: string | null;
+            /**
+             * Комментарий отзыва о мастере (черновик модерации важнее опубликованного).
+             */
+            visitReviewSpecialistExcerpt: string | null;
+            /**
+             * Краткое объединённое превью для совместимости: комментарий о мастере или о салоне.
+             */
+            visitReviewExcerpt: string | null;
         }>;
     };
 };
@@ -1147,7 +1183,12 @@ export type SpecialistsCabinetPatchSpecialistActiveOrganizationResponse = Specia
 export type SpecialistsCabinetPostEnsureSpecialistData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
     url: '/specialists/me/ensure';
 };
 
@@ -1178,7 +1219,12 @@ export type SpecialistsCabinetPostEnsureSpecialistResponse = SpecialistsCabinetP
 export type SpecialistsCabinetGetSpecialistOnboardingData = {
     body?: never;
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
     url: '/specialists/me/onboarding';
 };
 
@@ -1371,6 +1417,54 @@ export type SpecialistsCabinetDeleteSpecialistPersonalServiceResponses = {
 
 export type SpecialistsCabinetDeleteSpecialistPersonalServiceResponse = SpecialistsCabinetDeleteSpecialistPersonalServiceResponses[keyof SpecialistsCabinetDeleteSpecialistPersonalServiceResponses];
 
+export type SpecialistsCabinetPatchSpecialistPersonalServiceData = {
+    body: {
+        categoryId: string;
+        description?: string;
+        priceOptions: Array<{
+            durationMinutes: number;
+            priceAmount: number;
+            currency?: string;
+        }>;
+    };
+    path: {
+        /**
+         * Идентификатор услуги
+         */
+        serviceId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/services/{serviceId}';
+};
+
+export type SpecialistsCabinetPatchSpecialistPersonalServiceErrors = {
+    /**
+     * Категория или валюта
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля мастера нет или услуга не найдена / не личная
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetPatchSpecialistPersonalServiceResponses = {
+    200: {
+        serviceId: string;
+    };
+};
+
+export type SpecialistsCabinetPatchSpecialistPersonalServiceResponse = SpecialistsCabinetPatchSpecialistPersonalServiceResponses[keyof SpecialistsCabinetPatchSpecialistPersonalServiceResponses];
+
 export type BookingsListData = {
     body?: never;
     path?: never;
@@ -1436,13 +1530,29 @@ export type BookingsListResponses = {
              */
             visitReviewComplete: boolean;
             /**
+             * Оценка салона (1–5), если отзыв уже есть.
+             */
+            visitReviewOrganizationRating: number | null;
+            /**
+             * Оценка мастера (1–5), если отзыв уже есть.
+             */
+            visitReviewSpecialistRating: number | null;
+            /**
              * Среднее двух оценок (1–5) для превью; заполнено при `visitReviewComplete === true`.
              */
-            visitReviewDisplayRating?: number | null;
+            visitReviewDisplayRating: number | null;
             /**
-             * Короткий текст: комментарий о мастере, иначе о салоне. При отсутствии текста — `null`.
+             * Комментарий отзыва о салоне (черновик модерации важнее опубликованного).
              */
-            visitReviewExcerpt?: string | null;
+            visitReviewOrganizationExcerpt: string | null;
+            /**
+             * Комментарий отзыва о мастере (черновик модерации важнее опубликованного).
+             */
+            visitReviewSpecialistExcerpt: string | null;
+            /**
+             * Краткое объединённое превью: комментарий о мастере или о салоне.
+             */
+            visitReviewExcerpt: string | null;
         }>;
     };
 };
@@ -2273,7 +2383,7 @@ export type OrganizationsCabinetPostRequestWorkplaceJoinErrors = {
      */
     404: unknown;
     /**
-     * Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член (ALREADY_ORGANIZATION_MEMBER)
+     * Уже активный член этой организации (ALREADY_ORGANIZATION_MEMBER)
      */
     409: unknown;
 };
@@ -2349,6 +2459,49 @@ export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses
 };
 
 export type OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponse = OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses[keyof OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses];
+
+export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData = {
+    body?: never;
+    path: {
+        specialistId: unknown;
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}/workplace-join-applicants/{specialistId}/cabinet-profile';
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)
+     */
+    403: unknown;
+    /**
+     * Организация, заявка или профиль мастера не найдены (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses = {
+    200: {
+        /**
+         * Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).
+         */
+        specialist: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponse = OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses[keyof OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses];
 
 export type OrganizationsCabinetPostReviewWorkplaceJoinRequestData = {
     body: {
@@ -3620,7 +3773,7 @@ export type DevModerationOllamaEvalResponse = DevModerationOllamaEvalResponses[k
 export type DevModerationImageEvalData = {
     body: {
         /**
-         * Изображение (jpeg, png, webp или gif до 10 МБ). То же multipart-поле, что для `POST /files/public`.
+         * Фото (jpeg, png или webp до 10 МБ; без gif). То же multipart-поле, что для `POST /files/public`.
          */
         file: Blob | File;
     };

@@ -6,6 +6,7 @@ import { Link } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib";
 import { BOOKING_ACTION_OUTLINE_BUTTON_CLASS } from "./booking-list-card";
+import { BookingDoneVisitReviewSummary } from "./booking-done-visit-review-summary";
 import { BookingShowcaseCard } from "./booking-showcase-card";
 
 function HistoryStars({
@@ -54,7 +55,7 @@ export type BookingHistoryCardProps = {
   specialistProfileHref?: string;
   /** Приглушить дату/время (отмена, истечение и т.п.). */
   dateTagsMuted?: boolean;
-  /** Фон полосы статуса в стиле успеха (например «Подтверждено»). */
+  /** Фон полосы статуса в стиле успеха (например «Подтверждено», завершённый визит). */
   statusFooterSuccess?: boolean;
   /** Системное пояснение (например авто-отмена из-за отсутствия подтверждения). */
   systemNote?: string;
@@ -67,9 +68,14 @@ export type BookingHistoryCardProps = {
   reviewed: boolean;
   /** URL страницы оценки визита (например `/bookings/{id}/rate`). */
   rateVisitHref?: string;
-  /** 1–5 при `reviewed`. */
+  /** Раздельные данные после оценки визита (актуальный API). */
+  visitReviewOrganizationRating?: number | null;
+  visitReviewSpecialistRating?: number | null;
+  visitReviewOrganizationExcerpt?: string | null;
+  visitReviewSpecialistExcerpt?: string | null;
+  /** Fallback: средняя оценка (1–5), если раздельные поля недоступны. */
   rating?: number;
-  /** Текст отзыва (превью), если `reviewed`. */
+  /** Fallback: объединённое превью комментария. */
   reviewExcerpt?: string;
   className?: string;
 };
@@ -88,6 +94,10 @@ export function BookingHistoryCard({
   reviewEligible = false,
   reviewed,
   rateVisitHref,
+  visitReviewOrganizationRating,
+  visitReviewSpecialistRating,
+  visitReviewOrganizationExcerpt,
+  visitReviewSpecialistExcerpt,
   rating = 0,
   reviewExcerpt,
   className,
@@ -111,42 +121,58 @@ export function BookingHistoryCard({
       <p className="font-medium text-foreground">{resolvedStatusLabel}</p>
     );
 
-  const actions = reviewEligible ? (
-    <div className="border-t border-border/50 pt-3">
-      {!reviewed && rateVisitHref != null && rateVisitHref !== "" ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
-          <Button
-            asChild
-            type="button"
-            variant="ghost"
-            className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
-          >
-            <Link
-              href={rateVisitHref}
-              aria-label={t("rateVisitAria", { name: providerName })}
+  const hasSplitVisitReviews =
+    visitReviewOrganizationRating != null ||
+    visitReviewSpecialistRating != null ||
+    (visitReviewOrganizationExcerpt?.trim() ?? "").length > 0 ||
+    (visitReviewSpecialistExcerpt?.trim() ?? "").length > 0;
+
+  /** Как в ЛК салона: под полосой статуса через `footerExtra` (`mt-2`), не внутри `actions`. */
+  const doneVisitReviewFooter =
+    reviewEligible && reviewed && hasSplitVisitReviews ?
+      <BookingDoneVisitReviewSummary
+        organizationRating={visitReviewOrganizationRating}
+        specialistRating={visitReviewSpecialistRating}
+        organizationExcerpt={visitReviewOrganizationExcerpt}
+        specialistExcerpt={visitReviewSpecialistExcerpt}
+      />
+    : undefined;
+
+  const actions =
+    reviewEligible && !(reviewed && hasSplitVisitReviews) ?
+      <div className="border-t border-border/50 pt-3">
+        {!reviewed && rateVisitHref != null && rateVisitHref !== "" ?
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
+            <Button
+              asChild
+              type="button"
+              variant="ghost"
+              className={BOOKING_ACTION_OUTLINE_BUTTON_CLASS}
             >
-              {t("rateVisit")}
-            </Link>
-          </Button>
-        </div>
-      ) : !reviewed ? (
-        <div className="space-y-2">
-          <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
-          <HistoryStars filledCount={0} emptyOutlined />
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          <HistoryStars filledCount={stars} />
-          {reviewExcerpt ? (
-            <p className="line-clamp-2 text-xs text-muted-foreground">
-              {reviewExcerpt}
-            </p>
-          ) : null}
-        </div>
-      )}
-    </div>
-  ) : undefined;
+              <Link
+                href={rateVisitHref}
+                aria-label={t("rateVisitAria", { name: providerName })}
+              >
+                {t("rateVisit")}
+              </Link>
+            </Button>
+          </div>
+        : !reviewed ?
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">{t("reviewMe")}</p>
+            <HistoryStars filledCount={0} emptyOutlined />
+          </div>
+        : (
+          <div className="space-y-1.5">
+            <HistoryStars filledCount={stars} />
+            {reviewExcerpt ?
+              <p className="line-clamp-2 text-xs text-muted-foreground">{reviewExcerpt}</p>
+            : null}
+          </div>
+        )}
+      </div>
+    : undefined;
 
   return (
     <BookingShowcaseCard
@@ -165,6 +191,7 @@ export function BookingHistoryCard({
       }
       statusFooter={statusFooter}
       statusFooterSuccess={statusFooterSuccess}
+      footerExtra={doneVisitReviewFooter}
       actions={actions}
       dateTagsMuted={dateTagsMuted}
     />

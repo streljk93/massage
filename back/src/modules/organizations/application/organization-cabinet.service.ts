@@ -354,6 +354,7 @@ export class OrganizationCabinetService {
 
   /**
    * Заявка мастера «хочу работать в этой организации» (без членства до решения owner/admin).
+   * Текущее место приёма не ограничивает отправку заявок в другие салоны.
    */
   async requestWorkplaceJoin(userId: string, organizationId: string) {
     const specialist = await this.prisma.specialist.findFirst({
@@ -363,12 +364,6 @@ export class OrganizationCabinetService {
       throw new NotFoundException({
         code: 'SPECIALIST_PROFILE_NOT_FOUND',
         message: 'Specialist profile not found for this user',
-      });
-    }
-    if (specialist.activeOrganizationId != null) {
-      throw new ConflictException({
-        code: 'WORKPLACE_ALREADY_SET',
-        message: 'Active organization is already set',
       });
     }
     const org = await this.prisma.organization.findFirst({
@@ -550,6 +545,50 @@ export class OrganizationCabinetService {
         specialist: r.specialist,
       })),
     };
+  }
+
+  /**
+   * Карточка мастера для владельца/админа салона: только при активной pending-заявке в эту организацию.
+   * Формат `specialist` совпадает с GET /specialists/me/onboarding.
+   */
+  async getWorkplaceJoinApplicantCabinetProfile(
+    managerUserId: string,
+    organizationId: string,
+    applicantSpecialistId: string,
+    locale: ApiLocale,
+  ): Promise<{ specialist: Record<string, unknown> }> {
+    await this.assertUserCanManageOrgWorkplaceJoinRequests(
+      managerUserId,
+      organizationId,
+    );
+    const pending =
+      await this.prisma.specialistWorkplaceJoinRequest.findFirst({
+        where: {
+          organizationId,
+          specialistId: applicantSpecialistId,
+          status: SpecialistWorkplaceJoinRequestStatus.pending,
+        },
+        select: { id: true },
+      });
+    if (!pending) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_JOIN_REQUEST_NOT_FOUND',
+        message:
+          'Pending workplace join request not found for this specialist',
+      });
+    }
+    const specialist =
+      await this.specialistOnboarding.buildSpecialistCabinetSnapshotForSpecialistId(
+        applicantSpecialistId,
+        locale,
+      );
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found',
+      });
+    }
+    return { specialist };
   }
 
   async reviewWorkplaceJoinRequest(

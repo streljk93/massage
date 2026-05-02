@@ -4,6 +4,7 @@ import type { Job } from 'bullmq';
 import { ContentModerationService } from '../application/content-moderation.service';
 import {
   CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE,
+  CONTENT_MODERATION_JOB_SPECIALIST_PROFILE,
   CONTENT_MODERATION_QUEUE,
 } from './content-moderation-queue.const';
 
@@ -18,8 +19,20 @@ export class ContentModerationProcessor extends WorkerHost {
     job: Job<{
       organizationProfileRevisionId?: string;
       organizationId?: string;
+      specialistProfileRevisionId?: string;
     }>,
   ): Promise<void> {
+    if (job.name === CONTENT_MODERATION_JOB_SPECIALIST_PROFILE) {
+      const revisionIdRaw = job.data.specialistProfileRevisionId?.trim();
+      if (revisionIdRaw == null || revisionIdRaw.length === 0) {
+        throw new Error('specialistProfileRevisionId missing in job data');
+      }
+      await this.contentModeration.moderateSpecialistProfileRevision(
+        revisionIdRaw,
+      );
+      return;
+    }
+
     if (job.name !== CONTENT_MODERATION_JOB_ORGANIZATION_PROFILE) {
       throw new Error(`Unknown moderation job name: ${job.name}`);
     }

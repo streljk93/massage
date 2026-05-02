@@ -52,6 +52,7 @@ import {
   createSpecialistPersonalServiceRequestSchema,
   createSpecialistPersonalServiceResponseSchema,
   deleteSpecialistPersonalServiceResponseSchema,
+  patchSpecialistPersonalServiceRequestSchema,
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
   patchSpecialistProfileRequestSchema,
@@ -84,7 +85,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Организации, где мастер состоит в штате (активные членства). Отмечается текущее место приёма.',
+      'Организации мастера: активные членства и салоны с поданной заявкой на вступление (pending). Отмечается текущее место приёма.',
   })
   @ApiOkResponse({ schema: specialistMyOrganizationsResponseSchema })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
@@ -215,11 +216,15 @@ export class SpecialistsCabinetController {
     summary:
       'Создать профиль специалиста, если ещё нет (без привязки к организации, не в витрине).',
   })
+  @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async postEnsureSpecialist(@Req() req: AuthedRequest) {
+  async postEnsureSpecialist(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+  ) {
     await this.specialistOnboardingService.ensureSpecialist(req.user.id);
-    return this.specialistOnboardingService.getOnboarding(req.user.id);
+    return this.specialistOnboardingService.getOnboarding(req.user.id, locale);
   }
 
   @Get('me/onboarding')
@@ -229,10 +234,14 @@ export class SpecialistsCabinetController {
     summary:
       'Состояние онбординга мастера (карта шагов 1, 3, 4, 5, 6 для первого входа).',
   })
+  @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async getSpecialistOnboarding(@Req() req: AuthedRequest) {
-    return this.specialistOnboardingService.getOnboarding(req.user.id);
+  async getSpecialistOnboarding(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+  ) {
+    return this.specialistOnboardingService.getOnboarding(req.user.id, locale);
   }
 
   @Patch('me/profile')
@@ -291,6 +300,41 @@ export class SpecialistsCabinetController {
   ) {
     return this.specialistPersonalCatalogService.createPersonalService(
       req.user.id,
+      body,
+      locale,
+    );
+  }
+
+  @Patch('me/services/:serviceId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Обновить личную услугу мастера (категория, описание, варианты цены). Идентификатор услуги сохраняется.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiParam({
+    name: 'serviceId',
+    format: 'uuid',
+    description: 'Идентификатор услуги',
+  })
+  @ApiBody({ schema: patchSpecialistPersonalServiceRequestSchema })
+  @ApiOkResponse({ schema: createSpecialistPersonalServiceResponseSchema })
+  @ApiBadRequestResponse({ description: 'Категория или валюта' })
+  @ApiNotFoundResponse({
+    description: 'Профиля мастера нет или услуга не найдена / не личная',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async patchSpecialistPersonalService(
+    @Req() req: AuthedRequest,
+    @Param('serviceId', ParseUUIDPipe) serviceId: string,
+    @RequestLocale() locale: ApiLocale,
+    @Body(new ZodValidationPipe(createSpecialistPersonalServiceBodySchema))
+    body: CreateSpecialistPersonalServiceBody,
+  ) {
+    return this.specialistPersonalCatalogService.updatePersonalService(
+      req.user.id,
+      serviceId,
       body,
       locale,
     );

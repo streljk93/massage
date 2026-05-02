@@ -51,6 +51,7 @@ import {
   organizationCabinetDeleteBookingsPreviewResponseSchema,
   organizationCabinetDeleteOrganizationResponseSchema,
   organizationCabinetEditProfileResponseSchema,
+  workplaceJoinApplicantCabinetProfileResponseSchema,
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
   workplaceJoinRequestReviewResponseSchema,
@@ -278,7 +279,7 @@ export class OrganizationsCabinetController {
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiConflictResponse({
     description:
-      'Уже выбрано место работы (WORKPLACE_ALREADY_SET) или уже активный член (ALREADY_ORGANIZATION_MEMBER)',
+      'Уже активный член этой организации (ALREADY_ORGANIZATION_MEMBER)',
   })
   @ApiNotFoundResponse({
     description: 'Профиля специалиста или организации нет',
@@ -332,6 +333,45 @@ export class OrganizationsCabinetController {
       req.user.id,
       organizationId,
       query,
+    );
+  }
+
+  @Get(':organizationId/workplace-join-applicants/:specialistId/cabinet-profile')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Профиль мастера для решения по заявке (как экран «Мой профиль» в кабинете мастера).',
+    description:
+      'Доступно только при наличии **pending** заявки этого мастера в указанную организацию; иначе 404.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'specialistId', format: 'uuid' })
+  @ApiOkResponse({
+    schema: workplaceJoinApplicantCabinetProfileResponseSchema,
+  })
+  @ApiForbiddenResponse({
+    description: 'Нет прав управлять заявками (NOT_ORGANIZATION_MANAGER)',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'Организация, заявка или профиль мастера не найдены (WORKPLACE_JOIN_REQUEST_NOT_FOUND и др.)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getWorkplaceJoinApplicantCabinetProfile(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Param('specialistId', new ParseUUIDPipe({ version: '4' }))
+    specialistId: string,
+  ) {
+    return this.organizationCabinet.getWorkplaceJoinApplicantCabinetProfile(
+      req.user.id,
+      organizationId,
+      specialistId,
+      locale,
     );
   }
 

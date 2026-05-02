@@ -37,6 +37,8 @@ export type BookingShowcaseCardProps = {
   dateTagsMuted?: boolean;
   /** Вместо чипов даты и времени (тот же ряд и стилистика тегов). */
   dateTagsReplacement?: ReactNode;
+  /** Дополнительный блок под полосой статуса (например оценки после визита в истории салона). */
+  footerExtra?: ReactNode;
 };
 
 /**
@@ -59,6 +61,7 @@ export function BookingShowcaseCard({
   actions,
   dateTagsMuted,
   dateTagsReplacement,
+  footerExtra,
 }: BookingShowcaseCardProps) {
   const isDark = variant === "dark";
 
@@ -172,6 +175,8 @@ export function BookingShowcaseCard({
       {statusFooter ? (
         <div className={footerWrapClass}>{statusFooter}</div>
       ) : null}
+
+      {footerExtra ? <div className="mt-2">{footerExtra}</div> : null}
 
       {actions ? (
         <div className="mt-3 space-y-2">{actions}</div>

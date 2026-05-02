@@ -47,6 +47,7 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
     queryFn: async () => {
       const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
         client: createBrowserSdkClient(accessToken, { locale }),
+        query: { locale },
       });
       if (error || !data) {
         throw new Error("onboarding");

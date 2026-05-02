@@ -1,0 +1,25 @@
+{
+  "messages": {
+    "en": {
+      "bookingDoneVisitReview": {
+        "sectionAria": "Guest ratings after the completed visit",
+        "salonLabel": "Salon",
+        "specialistLabel": "Specialist"
+      }
+    },
+    "vi": {
+      "bookingDoneVisitReview": {
+        "sectionAria": "Đánh giá của khách sau buổi hẹn đã hoàn thành",
+        "salonLabel": "Salon",
+        "specialistLabel": "Chuyên gia"
+      }
+    },
+    "ru": {
+      "bookingDoneVisitReview": {
+        "sectionAria": "Оценки гостя после завершённого визита",
+        "salonLabel": "Салон",
+        "specialistLabel": "Мастер"
+      }
+    }
+  }
+}
