@@ -3,7 +3,6 @@
  * Обновляет общие секреты в корневом `.env` (монорепо + Docker Compose):
  *   JWT_SECRET  → сервис `back`
  *   AUTH_SECRET → сервис `client` (Auth.js)
- *   AUTH_URL    → сервис `client`, дефолт `http://localhost:3000` (на VPS задайте вручную или через --force)
  *
  *   npm run docker:env
  *   node scripts/generate-docker-env.mjs --force   — заменить даже непустые значения
@@ -108,10 +107,6 @@ r = upsertLine(text, "AUTH_SECRET", auth);
 text = r.text;
 if (!r.didWrite) skipped.push("AUTH_SECRET");
 
-r = upsertLine(text, "AUTH_URL", "http://localhost:3000");
-text = r.text;
-if (!r.didWrite) skipped.push("AUTH_URL");
-
 if (!text.endsWith("\n")) text += "\n";
 
 fs.mkdirSync(path.dirname(envPath), { recursive: true });
@@ -123,7 +118,7 @@ if (skipped.length > 0) {
     `Пропущено (уже заданы непустые значения): ${skipped.join(", ")} — --force для замены.`,
   );
 } else {
-  console.log("JWT_SECRET, AUTH_SECRET обновлены; AUTH_URL установлен, если был пуст.");
+  console.log("JWT_SECRET и AUTH_SECRET обновлены.");
 }
 
 process.exit(0);
