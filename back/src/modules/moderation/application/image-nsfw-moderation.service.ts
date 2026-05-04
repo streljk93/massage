@@ -36,8 +36,9 @@ export class ImageNsfwModerationService {
 
   /**
    * Контейнер image-moderation качает по URL; `127.0.0.1`/`localhost` там — не хост с Nest.
-   * Подмена на `host.docker.internal` (см. extra_hosts в compose; Linux: host-gateway).
-   * Отключить: `MODERATION_FETCH_USE_HOST_ALIAS=false`
+   * В compose по умолчанию `MODERATION_FILE_FETCH_ORIGIN=http://back:3001` (сеть `internal`).
+   * Nest на хосте — часто `http://host.docker.internal:3001` (Docker Desktop) или IP хоста.
+   * Отключить подмену алиаса: `MODERATION_FETCH_USE_HOST_ALIAS=false`
    */
   private normalizeFileFetchOriginForDockerSidecar(raw: string): string {
     const t = raw.trim().replace(/\/+$/, '');

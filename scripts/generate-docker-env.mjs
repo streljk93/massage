@@ -3,6 +3,7 @@
  * Обновляет общие секреты в корневом `.env` (монорепо + Docker Compose):
  *   JWT_SECRET  → сервис `back`
  *   AUTH_SECRET → сервис `client` (Auth.js)
+ * Остальные ключи для compose (Postgres, Redis, MinIO, публичные URL) — см. корневой `.env.example`, допишите вручную или скопируйте шаблон.
  *
  *   npm run docker:env
  *   node scripts/generate-docker-env.mjs --force   — заменить даже непустые значения

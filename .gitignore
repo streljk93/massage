@@ -17,3 +17,6 @@ pnpm-debug.log*
 
 # Playwright MCP (локальные снимки страниц из Cursor)
 .playwright-mcp/
+
+# Локальные дампы БД (scripts/pg-backup-once.sh)
+/backups/

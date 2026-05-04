@@ -118,7 +118,8 @@ export class ModerationOllamaService {
 
   /**
    * Оценка текста витрины: текст в промпт уходит **как пришёл** (без trim/NFKC/normalize перед Ollama).
-   * Если `OLLAMA_BASE_URL` пуст или запрос упал — `verdict: review`; `infraUnavailable: true` при infra.
+   * Если `OLLAMA_BASE_URL` пуст, `ENABLE_OLLAMA=false` или запрос упал — `verdict: review`;
+   * `infraUnavailable: true` при инфраструктурных причинах.
    */
   async evaluateTexts(
     parts: ReadonlyArray<{ label: string; text: string }>,
@@ -140,6 +141,15 @@ export class ModerationOllamaService {
 
     if (userPayload.length === 0) {
       return { verdict: 'pass', rawSummary: null, infraUnavailable: false };
+    }
+
+    if (!this.config.get<boolean>('moderation.ollamaEnabled')) {
+      this.log.debug('ENABLE_OLLAMA=false — пропуск вызова Ollama');
+      return {
+        verdict: 'review',
+        rawSummary: 'Ollama disabled (ENABLE_OLLAMA)',
+        infraUnavailable: true,
+      };
     }
 
     const base = this.baseUrl();

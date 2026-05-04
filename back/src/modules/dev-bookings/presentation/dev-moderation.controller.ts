@@ -88,7 +88,7 @@ export class DevModerationController {
     description:
       'Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. ' +
       'Вызывает `ModerationOllamaService.evaluateTexts` без записи в БД (как в проде). ' +
-      'Без JWT. Нужен `OLLAMA_BASE_URL`; иначе `verdict: review`, `infraUnavailable: true`.',
+      'Нужны `ENABLE_OLLAMA=true` и `OLLAMA_BASE_URL`; иначе `verdict: review`, `infraUnavailable: true`.',
     operationId: 'devModeration_ollamaEval',
   })
   @ApiBody({ schema: devModerationOllamaEvalRequestSchema })

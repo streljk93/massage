@@ -1,58 +1,110 @@
-# Полный стек: Postgres + Nest (back) + Next.js (client).
+# =============================================================================
+# DEVELOPMENT — локальная разработка и `npm run init`
+# =============================================================================
+# Production: `docker-compose.prod.yml` → `docker compose -f docker-compose.prod.yml up --build -d`
+# `npm run init` поднимает `dev` + `ai` (полный стек с Ollama и MailHog); ручной `docker:up` — только `dev`.
 #
-# Первый раз с нуля (зависимости, секреты, Docker, OpenAPI-типы):
-#   npm run init
+# Запуск:
+#   npm run docker:up              — профиль `dev` (MailHog), без контейнера Ollama (симметрия с prod)
+#   npm run docker:up:dev:ai       — `dev` + `ai` (Ollama) + ENABLE_OLLAMA=true для `back`
+#   docker compose --profile dev up --build -d
+#   npm run docker:env             — JWT / AUTH в корневой `.env`
 #
-# Запуск из корня репозитория:
-#   npm run docker:env         — создать/обновить .env с JWT_SECRET + AUTH_SECRET для compose
-#   npm run docker:bootstrap   — docker:env + поднять стек
-#   docker compose up --build -d
-#   npm run docker:up          — поднять стек (если .env уже есть)
+# MailHog: профиль `dev`. Ollama: профиль `ai` (как в prod); порт на хост :11435.
+# Back: `ENABLE_OLLAMA` по умолчанию `false`; с AI задайте `true` или используйте `docker:up:dev:ai`.
+# image-moderation: только внутри сети `internal` (:8085 не снаружи); локальный Nest — см.
+# `back/.env.local.example` и при необходимости `docker-compose.override.yml` с пробросом 8085.
+# Postgres / Redis: порты на хост для локального Nest/Prisma с `127.0.0.1` в `back/.env.local` (`DATABASE_URL`, `REDIS_*`).
 #
-# Данные PostgreSQL лежат в именованном volume `postgres_data` (см. внизу файла).
-#   • `docker compose down` — останавливает контейнеры, **данные БД сохраняются**.
-#   • `docker compose down -v` — удаляет volumes и **обнуляет БД** (осторожно).
-#   • Редеплой образов: `docker compose up --build -d` — снова поднимается с тем же volume.
+# Лимиты CPU/RAM — `cpus` / `mem_limit` (поддерживаются engine + compose; не путать с `deploy.resources` в Swarm).
+# Логи — json-file + rotate; централизованно (Loki/ELK) — отдельная инфраструктура.
+# Rate limit / CORS — в Nest (`ThrottlerModule`, `enableCors` в `main.ts`).
 #
-# Только база (для локальной разработки без сервисов из compose):
-#   docker compose up postgres -d
+# Бэкапы: профиль Compose `backup` (сервис `postgres-backup`, том `postgres_backups`) или
+# хостовый cron → `npm run docker:pg-backup:dev` / `docker:pg-backup` (one-shot в ./backups/postgres/).
 #
-# Почта: в `NODE_ENV=production` back шлёт только через Resend; в dev — только SMTP (MailHog).
-# Локальная песочница: UI http://localhost:8025, SMTP 1025 — `docker compose up mailhog -d`
-# back на хосте: в .env `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025` (без RESEND).
-# Сервис `back` в compose ниже с NODE_ENV=development, чтобы письма шли в MailHog; реальный deploy — production + RESEND.
+# MinIO health: TCP `:9000` через `bash /dev/tcp` — без curl/wget/nc (в официальном образе `nc` нет).
 #
-# Объекты (файлы) — MinIO: API http://localhost:9000, консоль http://localhost:9001
-#   Логин/пароль по умолчанию: minioadmin / minioadmin
+# Архитектура: back сейчас знает S3 / Ollama / image-moderation напрямую; при выносе AI — разумный
+# следующий шаг — отдельный шлюз (ai-gateway), чтобы back не оставался «god service».
 #
-# Предмодерация текста — Ollama в Docker слушает с хоста http://localhost:11435 (внутри контейнера :11434, см. проброс ниже — не пересекается с нативным Ollama на :11434). Модель — entrypoint контейнера + `npm run init`.
+# Ollama health: в образе нет curl/wget — проверка через `ollama list` (gRPC/HTTP к локальному serve).
+# `start_period` увеличен из‑за `ollama pull` в entrypoint.
 #
-# Отдельно — NSFW-бинарный классификатор для картинок витрины (docker/nsfw-image-moderation): http://localhost:8085,
-# задаётся `IMAGE_MODERATION_BASE_URL`; Nest добавляет модерацию текстов тем же профилём после успешной проверки фото.
+# NEXT_PUBLIC_* — build-args образа `client` (см. `client/Dockerfile` и `build.args` ниже); значения — из корневого `.env` при интерполяции compose.
+# Смена без пересборки client не попадёт в бандл → `docker compose build client` (или `up --build`).
+# Новый публичный ключ: добавьте ARG + ENV в Dockerfile и строку в `build.args` здесь и в `docker-compose.prod.yml`.
 #
-# Очередь BullMQ (фон модерации профиля организации): Redis `:6379` в compose как `redis`; `back` задаёт REDIS_HOST=redis при `MODERATION_QUEUE_ENABLED=true`.
+# Усиление (опционально, после проверки образов): `read_only: true` + tmpfs для `/tmp`;
+# `user: "uid:gid"` — если процесс в образе не требует root.
+#
+# Postgres `PGDATA` в подкаталоге: новый том ок; существующий том с данными в корне volume —
+# перенесите кластер или используйте новый том (см. документацию образа postgres).
 
 name: services-app
 
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   minio:
+    <<: *service-defaults
     image: minio/minio:latest
     command: server /data --console-address ":9001"
-    restart: unless-stopped
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     volumes:
       - minio_data:/data
+    networks:
+      - internal
+    cpus: 1.0
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ce 'echo > /dev/tcp/127.0.0.1/9000'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
-  # Локальная LLM для предмодерации UGC (Nest → OLLAMA_BASE_URL в сервисе `back`).
-  # Entrypoint поднимает сервер и выполняет `ollama pull` (OLLAMA_MODEL, по умолчанию llama3.2 — см. moderation-defaults.const.ts).
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      S3_BUCKET: ${S3_BUCKET:-services-uploads}
+    networks:
+      - internal
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+          sleep 2
+        done
+        if ! mc ls "local/$$S3_BUCKET" >/dev/null 2>&1; then
+          mc mb -p "local/$$S3_BUCKET"
+        fi
+
   ollama:
+    <<: *service-defaults
+    profiles:
+      - ai
+    init: true
     image: ollama/ollama:latest
-    restart: unless-stopped
     ports:
       - "11435:11434"
     environment:
@@ -61,133 +113,245 @@ services:
       - ollama_data:/root/.ollama
       - ./docker/ollama-compose-entrypoint.sh:/usr/local/bin/ollama-compose-entrypoint.sh:ro
     entrypoint: ["/bin/sh", "/usr/local/bin/ollama-compose-entrypoint.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 240s
+    networks:
+      - internal
+    cpus: 2.0
+    mem_limit: 6g
 
-  # NSFW (NudeNet) + pairwise CLIP (violence…) для галереи салона — docker/nsfw-image-moderation, CPU.
   image-moderation:
+    <<: *service-defaults
+    init: true
     build:
       context: ./docker/nsfw-image-moderation
       dockerfile: Dockerfile
-    restart: unless-stopped
-    # Чтобы было имя хоста `host.docker.internal` (скачать файлы у Nest на хосте через MODERATION_FILE_FETCH_ORIGIN)
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - "8085:8085"
     environment:
       PORT: "8085"
       FETCH_TIMEOUT_SEC: "45"
       MAX_IMAGE_BYTES: "12582912"
       MODERATION_CLIP_REVIEW_THRESHOLD: ${MODERATION_CLIP_REVIEW_THRESHOLD:-0.7}
       IMAGE_MODERATION_CLIP_ENABLED: ${IMAGE_MODERATION_CLIP_ENABLED:-true}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8085/healthz\")"',
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    networks:
+      - internal
+    cpus: 2.0
+    mem_limit: 2g
 
   mailhog:
+    <<: *service-defaults
+    profiles:
+      - dev
     image: mailhog/mailhog:latest
-    restart: unless-stopped
     ports:
       - "1025:1025"
       - "8025:8025"
+    networks:
+      - internal
 
   redis:
+    <<: *service-defaults
     image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
+    command:
+      - sh
+      - -c
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --appendfsync everysec --maxmemory "$${REDIS_MAXMEMORY:-256mb}" --maxmemory-policy allkeys-lru
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
+    ports:
+      - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG',
+        ]
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - internal
+    cpus: 0.5
+    mem_limit: 512m
 
   postgres:
+    <<: *service-defaults
     image: postgres:16-alpine
-    restart: unless-stopped
+    shm_size: 256mb
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: services
+      TZ: UTC
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-services}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    volumes:
-      # Персистентное хранилище: переживает `docker compose down` и пересборки образов
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d services"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
+    cpus: 1.0
+    mem_limit: 1g
+
+  postgres-backup:
+    <<: *service-defaults
+    profiles:
+      - backup
+    image: postgres:16-alpine
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-postgres}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      PGDATABASE: ${POSTGRES_DB:-services}
+      BACKUP_INTERVAL_SEC: ${POSTGRES_BACKUP_INTERVAL_SEC:-86400}
+      POSTGRES_BACKUP_KEEP: ${POSTGRES_BACKUP_KEEP:-7}
+    volumes:
+      - postgres_backups:/backups
+    networks:
+      - internal
+    cpus: 0.25
+    mem_limit: 256m
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        mkdir -p /backups
+        while true; do
+          ts=$$(date +%Y%m%d_%H%M%S)
+          outfile="/backups/$${PGDATABASE}_$$ts.sql.gz"
+          echo "[postgres-backup] $$outfile"
+          pg_dump -h "$$PGHOST" -p "$$PGPORT" -U "$$PGUSER" "$$PGDATABASE" | gzip -c > "$$outfile"
+          KEEP="$${POSTGRES_BACKUP_KEEP:-7}"
+          cd /backups || exit 1
+          ls -1t | awk -v "k=$$KEEP" 'NR>k {print}' | while IFS= read -r f; do
+            rm -f "$$f"
+          done
+          sleep "$$BACKUP_INTERVAL_SEC"
+        done
 
   back:
+    <<: *service-defaults
+    init: true
     build:
       context: ./back
       dockerfile: Dockerfile
-    restart: unless-stopped
     ports:
       - "3001:3001"
-    # ADMIN_MASTER_* и прочие секреты Nest — в back/.env (`npm run init` дописывает суперадмина).
     env_file:
       - path: ./back/.env
         required: false
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/services?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-services}?schema=public
       PORT: "3001"
-      # dev: письма только через SMTP → MailHog. В K8s/prod оставьте NODE_ENV=production и RESEND_API_KEY.
-      NODE_ENV: development
-      # Публичный URL фронта (браузер). На VPS задайте в корневом `.env`: CLIENT_ORIGIN=http://IP:3000
-      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:3000}
-      # В production JWT_SECRET обязателен; для локального compose — дефолт (смените в деплое)
-      JWT_SECRET: ${JWT_SECRET:-local-docker-jwt-secret-replace-in-real-deploy}
+      NODE_ENV: ${NODE_ENV:-development}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:?CLIENT_ORIGIN is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
-      S3_BUCKET: services-uploads
-      S3_REGION: us-east-1
-      # Dev-only в коде: OTP через SMTP; MailHog в сети compose. Не production + Resend.
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      S3_BUCKET: ${S3_BUCKET:-services-uploads}
+      S3_REGION: ${S3_REGION:-us-east-1}
       SMTP_HOST: ${SMTP_HOST:-mailhog}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_SECURE: "false"
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+      ENABLE_OLLAMA: ${ENABLE_OLLAMA:-false}
       IMAGE_MODERATION_BASE_URL: ${IMAGE_MODERATION_BASE_URL:-http://image-moderation:8085}
       MODERATION_CLIP_REVIEW_THRESHOLD: ${MODERATION_CLIP_REVIEW_THRESHOLD:-0.7}
       MODERATION_FILE_FETCH_ORIGIN: ${MODERATION_FILE_FETCH_ORIGIN:-http://back:3001}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MODERATION_QUEUE_ENABLED: ${MODERATION_QUEUE_ENABLED:-true}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(\"http\").get(\"http://127.0.0.1:3001/v1/health\", r => process.exit(r.statusCode===200?0:1)).on(\"error\",()=>process.exit(1))"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
       ollama:
-        condition: service_started
+        condition: service_healthy
+        required: false
       image-moderation:
-        condition: service_started
-      mailhog:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - internal
+    cpus: 1.0
+    mem_limit: 512m
 
   client:
+    <<: *service-defaults
+    init: true
     build:
       context: ./client
       dockerfile: Dockerfile
       args:
-        # Запекается в клиентский бандл при build. На VPS: в корневом `.env` NEXT_PUBLIC_API_URL=http://IP:3001 и `docker compose build client`
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
-    restart: unless-stopped
+        NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID:-}
+        NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:-}
+        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:-}
+        NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
+        NEXT_PUBLIC_FIREBASE_VAPID_KEY: ${NEXT_PUBLIC_FIREBASE_VAPID_KEY:-}
     ports:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      # Сервер Next (proxy /api/auth/register, Auth.js authorize) ходит в back по имени сервиса
       AUTH_BACKEND_URL: http://back:3001
-      # Auth.js: канонический URL сайта. На VPS: AUTH_URL=http://IP:3000 в корневом `.env`
       AUTH_URL: ${AUTH_URL:-http://localhost:3000}
-      AUTH_SECRET: ${AUTH_SECRET:-local-docker-authsecret-replace-in-real-deploy}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
     depends_on:
-      - back
+      back:
+        condition: service_healthy
+    networks:
+      - internal
+    cpus: 1.0
+    mem_limit: 512m
+
+networks:
+  internal:
+    driver: bridge
 
 volumes:
   postgres_data:
@@ -198,3 +362,5 @@ volumes:
     name: services-app_ollama_data
   redis_data:
     name: services-app_redis_data
+  postgres_backups:
+    name: services-app_postgres_backups

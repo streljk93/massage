@@ -837,7 +837,7 @@ export const devModerationGetQueue = <ThrowOnError extends boolean = false>(opti
 /**
  * [Dev] Прогон текста через Ollama модерацию
  *
- * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. Вызывает `ModerationOllamaService.evaluateTexts` без записи в БД (как в проде). Без JWT. Нужен `OLLAMA_BASE_URL`; иначе `verdict: review`, `infraUnavailable: true`.
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`; иначе **404**. Вызывает `ModerationOllamaService.evaluateTexts` без записи в БД (как в проде). Нужны `ENABLE_OLLAMA=true` и `OLLAMA_BASE_URL`; иначе `verdict: review`, `infraUnavailable: true`.
  */
 export const devModerationOllamaEval = <ThrowOnError extends boolean = false>(options: Options<DevModerationOllamaEvalData, ThrowOnError>) => (options.client ?? client).post<DevModerationOllamaEvalResponses, unknown, ThrowOnError>({
     url: '/dev/moderation/ollama-eval',

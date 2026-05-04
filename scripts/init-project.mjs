@@ -5,17 +5,21 @@
  * Запуск из корня репозитория:
  *   npm run init
  *
+ * Production-стек: `docker-compose.prod.yml` (`npm run docker:up:prod`), не `npm run init`.
+ * Локальный Ollama в prod — опционально, профиль `ai` (`npm run docker:up:prod:ai`, в скрипте `ENABLE_OLLAMA=true`).
+ *
  * Флаги:
  *   --skip-docker     не поднимать docker compose
  *   --skip-openapi    не вызывать openapi:sync
  *   --deps-only       только npm install в back и client
  *   --skip-ollama-pull не удалять локальный образ с предыдущим именем модели перед pull, не выполнять ollama pull (долго при первой загрузке)
  *
- * При полном прогоне поднимается стек из docker-compose (Postgres, MinIO, Ollama, image-moderation, Redis, MailHog, back, client),
- * ожидается готовность Postgres, MinIO, Ollama, Redis и веб-UI MailHog, при необходимости дописываются S3_*, SMTP_*, REDIS_* и OLLAMA_* в
- * `back/.env`; при необходимости синхронизируются или дописываются `ADMIN_MASTER_*` (**только в back/.env**); мигрируют устаревший `OLLAMA_BASE_URL=http://127.0.0.1:11434` → `:11435` (проброс в compose совпадает с `OLLAMA_DOCKER_PUBLISH_PORT` в этом скрипте);
+ * При полном прогоне поднимается **dev**-стек из `docker-compose.yml` с профилями **`dev` + `ai`**
+ * (Postgres, MinIO, Ollama, image-moderation, Redis, MailHog, back, client),
+ * ожидается готовность Postgres, MinIO, Ollama, Redis и веб-UI MailHog; в корневом `.env` должны быть заданы
+ * `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `MINIO_ROOT_*`, `CLIENT_ORIGIN` (см. корневой `.env.example`). При необходимости дописываются S3_*, SMTP_*, REDIS_* и OLLAMA_* в `back/.env`; при необходимости синхронизируются или дописываются `ADMIN_MASTER_*` (**только в back/.env**); мигрируют устаревший `OLLAMA_BASE_URL=http://127.0.0.1:11434` → `:11435` (проброс в compose совпадает с `OLLAMA_DOCKER_PUBLISH_PORT` в этом скрипте);
  * если было имя модели без суффикса (типично `llama3`), замена на актуальный тег (сейчас «llama3.2», см. moderation-defaults);
- * при необходимости в контейнере удаляется старый образ перед загрузкой новой модели; затем migrate + seed + openapi:sync.
+ * при необходимости в контейнере удаляется старый образ перед загрузкой новой модели; миграции/сид в entrypoint `back`; затем OpenAPI/SDK с уже поднятого API (HTTP).
  */
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -38,6 +42,127 @@ const DEFAULT_OLLAMA_MODEL = "llama3.2";
 const LEGACY_OLLAMA_MODEL = "llama3";
 /** Порт на хосте для сервиса `ollama` в docker compose (проброс host:CONTAINER на 11434). Нативный Ollama на macOS занимает 11434 — не ставим второй процесс там. */
 const OLLAMA_DOCKER_PUBLISH_PORT = "11435";
+
+/**
+ * Простой разбор `.env` (KEY=VAL, без многострочных значений).
+ */
+function parseDotEnvFile(filePath) {
+  /** @type {Record<string, string>} */
+  const out = {};
+  let text = "";
+  try {
+    text = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return out;
+  }
+  for (const rawLine of text.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+    const eq = line.indexOf("=");
+    if (eq <= 0) {
+      continue;
+    }
+    const key = line.slice(0, eq).trim();
+    let val = line.slice(eq + 1).trim();
+    if (
+      (val.startsWith('"') && val.endsWith('"')) ||
+      (val.startsWith("'") && val.endsWith("'"))
+    ) {
+      val = val.slice(1, -1);
+    }
+    out[key] = val;
+  }
+  return out;
+}
+
+/**
+ * Креды из корневого `.env` (docker compose exec: pg_isready, redis-cli и блоки в back/.env).
+ */
+function getComposeRelatedEnvFromRoot() {
+  const rootEnvPath = path.join(repoRoot, ".env");
+  const fromFile = parseDotEnvFile(rootEnvPath);
+  const pgUser =
+    fromFile.POSTGRES_USER || process.env.POSTGRES_USER || "postgres";
+  const pgPass =
+    fromFile.POSTGRES_PASSWORD || process.env.POSTGRES_PASSWORD || "postgres";
+  const pgDb = fromFile.POSTGRES_DB || process.env.POSTGRES_DB || "services";
+  const redisPass =
+    fromFile.REDIS_PASSWORD || process.env.REDIS_PASSWORD || "";
+  const minioUser =
+    fromFile.MINIO_ROOT_USER || process.env.MINIO_ROOT_USER || "minioadmin";
+  const minioPass =
+    fromFile.MINIO_ROOT_PASSWORD ||
+    process.env.MINIO_ROOT_PASSWORD ||
+    "minioadmin";
+  return {
+    fromFile,
+    pgUser,
+    pgPass,
+    pgDb,
+    redisPass,
+    minioUser,
+    minioPass,
+  };
+}
+
+
+async function waitBackHttpReady(timeoutMs = 300000) {
+  const url = "http://127.0.0.1:3001/v1/health";
+  const stepMs = 2000;
+  const start = Date.now();
+  log("Ожидание готовности Nest API (GET /v1/health; миграции/сид в entrypoint контейнера back)…");
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const j = await res.json().catch(() => ({}));
+        if (j && j.status === "ok") {
+          log("Back готов.");
+          return true;
+        }
+      }
+    } catch {
+      /* контейнер ещё поднимается */
+    }
+    process.stdout.write(".");
+    await wait(stepMs);
+  }
+  console.log("");
+  return false;
+}
+
+/**
+ * Prisma на хосте не используем (порт Postgres в compose не пробрасывается): OpenAPI забираем с уже запущенного API.
+ */
+async function syncOpenApiSdkFromRunningBack() {
+  const tryUrls = [
+    "http://127.0.0.1:3001/v1/docs/openapi.json",
+    "http://127.0.0.1:3001/v1/docs-json",
+  ];
+  let text = "";
+  let usedUrl = "";
+  for (const docUrl of tryUrls) {
+    log(`Скачивание OpenAPI: ${docUrl}`);
+    const res = await fetch(docUrl, { signal: AbortSignal.timeout(60_000) });
+    if (res.ok) {
+      text = await res.text();
+      usedUrl = docUrl;
+      break;
+    }
+  }
+  if (!text.trim()) {
+    throw new Error(
+      "Не удалось скачать OpenAPI ни с одного из путей (docs/openapi.json, docs-json).",
+    );
+  }
+  const outPath = path.join(repoRoot, "back", "openapi", "openapi.json");
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  fs.writeFileSync(outPath, `${text.replace(/\s*$/, "")}\n`, "utf8");
+  log(`OpenAPI записан (${usedUrl}) → ${path.relative(repoRoot, outPath)}`);
+  run("api:sdk", "npm", ["run", "api:sdk"], path.join(repoRoot, "client"));
+}
 
 function log(msg) {
   console.log(`\n[init] ${msg}`);
@@ -87,6 +212,7 @@ function wait(ms) {
 async function waitPostgresReady(timeoutMs = 120000) {
   const stepMs = 2000;
   const start = Date.now();
+  const { pgUser, pgDb } = getComposeRelatedEnvFromRoot();
   log("Ожидание готовности PostgreSQL (docker compose)…");
   while (Date.now() - start < timeoutMs) {
     const r = spawnSync(
@@ -98,9 +224,9 @@ async function waitPostgresReady(timeoutMs = 120000) {
         "postgres",
         "pg_isready",
         "-U",
-        "postgres",
+        pgUser,
         "-d",
-        "services",
+        pgDb,
       ],
       { cwd: repoRoot, encoding: "utf8" },
     );
@@ -125,7 +251,9 @@ async function waitMinioReady(timeoutMs = 120000) {
         signal: AbortSignal.timeout(4000),
       });
       if (res.ok) {
-        log("MinIO готов (консоль: http://localhost:9001, логин minioadmin / minioadmin).");
+        log(
+          "MinIO готов (консоль: http://localhost:9001; логин и пароль — MINIO_ROOT_* в корневом .env).",
+        );
         return true;
       }
     } catch {
@@ -192,23 +320,26 @@ async function waitOllamaReady(timeoutMs = 180000) {
 async function waitImageModerationReady(timeoutMs = 120000) {
   const stepMs = 2000;
   const start = Date.now();
-  log("Ожидание сервиса модерации картинок (HTTP :8085, /healthz)…");
+  log("Ожидание image-moderation (/healthz внутри контейнера, порт :8085 не на хост)…");
   while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch("http://127.0.0.1:8085/healthz", {
-        signal: AbortSignal.timeout(4000),
-      });
-      if (res.ok) {
-        const j = await res.json().catch(() => ({}));
-        if (j && j.status === "ok") {
-          log(
-            "image-moderation готов (NSFW-сервис: POST /v1/score; см. docker/nsfw-image-moderation).",
-          );
-          return true;
-        }
-      }
-    } catch {
-      /* образ ещё собирается / контейнер стартует */
+    const r = spawnSync(
+      "docker",
+      [
+        "compose",
+        "exec",
+        "-T",
+        "image-moderation",
+        "python",
+        "-c",
+        "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8085/healthz')",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+    if (r.status === 0) {
+      log(
+        "image-moderation готов (внутри сети: http://image-moderation:8085; POST /v1/score).",
+      );
+      return true;
     }
     process.stdout.write(".");
     await wait(stepMs);
@@ -220,11 +351,21 @@ async function waitImageModerationReady(timeoutMs = 120000) {
 async function waitRedisReady(timeoutMs = 60000) {
   const stepMs = 2000;
   const start = Date.now();
+  const { redisPass } = getComposeRelatedEnvFromRoot();
   log("Ожидание готовности Redis (BullMQ, redis-cli ping)…");
   while (Date.now() - start < timeoutMs) {
     const r = spawnSync(
       "docker",
-      ["compose", "exec", "-T", "redis", "redis-cli", "ping"],
+      [
+        "compose",
+        "exec",
+        "-T",
+        "-e",
+        `REDISCLI_AUTH=${redisPass}`,
+        "redis",
+        "redis-cli",
+        "ping",
+      ],
       { cwd: repoRoot, encoding: "utf8" },
     );
     const out = (r.stdout ?? "").trim().toUpperCase();
@@ -240,6 +381,9 @@ async function waitRedisReady(timeoutMs = 60000) {
 }
 
 function ensureBackEnvMinioLocal() {
+  const { minioUser, minioPass, fromFile } = getComposeRelatedEnvFromRoot();
+  const bucket = fromFile.S3_BUCKET || "services-uploads";
+  const region = fromFile.S3_REGION || "us-east-1";
   const p = path.join(repoRoot, "back", ".env");
   let text = "";
   try {
@@ -251,12 +395,12 @@ function ensureBackEnvMinioLocal() {
     return;
   }
   const block =
-    "\n# init-project — MinIO из docker compose (сервис minio)\n" +
+    "\n# init-project — MinIO из docker compose (сервис minio); совпадает с MINIO_ROOT_* в корневом .env\n" +
     "S3_ENDPOINT=http://127.0.0.1:9000\n" +
-    "S3_ACCESS_KEY=minioadmin\n" +
-    "S3_SECRET_KEY=minioadmin\n" +
-    "S3_BUCKET=services-uploads\n" +
-    "S3_REGION=us-east-1\n";
+    `S3_ACCESS_KEY=${minioUser}\n` +
+    `S3_SECRET_KEY=${minioPass}\n` +
+    `S3_BUCKET=${bucket}\n` +
+    `S3_REGION=${region}\n`;
   const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
   fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
   log("Добавлены S3_* в back/.env для загрузки файлов через localhost:9000.");
@@ -274,10 +418,12 @@ function ensureBackEnvRedisLocal() {
   if (/(?:^|\n)\s*REDIS_HOST\s*=/.test(text)) {
     return;
   }
+  const { redisPass } = getComposeRelatedEnvFromRoot();
   const block =
     "\n# init-project — Redis из docker compose (сервис redis, BullMQ / модерация профиля организации)\n" +
     "REDIS_HOST=127.0.0.1\n" +
     "REDIS_PORT=6379\n" +
+    `REDIS_PASSWORD=${redisPass}\n` +
     "MODERATION_QUEUE_ENABLED=true\n";
   const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
   fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
@@ -310,8 +456,8 @@ function ensureBackEnvOllamaLocal() {
 
 /**
  * Сервер предмодерации фото (docker-compose: image-moderation).
- * Nest на хосте: контейнер скачивает файлы через host.docker.internal (Docker Desktop).
- * При Linux без host.docker.internal смените на http://172.17.0.1:3001 или см. доку compose.
+ * В compose сервис без порта на хост — URL для Nest в контейнере задаётся в docker-compose (`IMAGE_MODERATION_BASE_URL`).
+ * Nest на хосте: пробросьте 8085 в `docker-compose.override.yml` или задайте URL вручную; Python скачивает файлы через MODERATION_FILE_FETCH_ORIGIN.
  */
 function ensureBackEnvImageModerationLocal() {
   const p = path.join(repoRoot, "back", ".env");
@@ -325,14 +471,14 @@ function ensureBackEnvImageModerationLocal() {
     return;
   }
   const block =
-    "\n# init-project — модерация фото через docker compose (сервис image-moderation, порт :8085)\n" +
+    "\n# init-project — image-moderation в Docker без published port : на хосте нужен override 8085:8085 или иной URL\n" +
     "IMAGE_MODERATION_BASE_URL=http://127.0.0.1:8085\n" +
-    "# откуда Python-контейнер тянет GET /v1/files/… (Nest на хосте; Linux: при необходимости 172.17.0.1:PORT)\n" +
+    "# откуда контейнер модерации GET /v1/files/… (Nest на хосте)\n" +
     "MODERATION_FILE_FETCH_ORIGIN=http://host.docker.internal:3001\n";
   const prefix = text.length && !text.endsWith("\n") ? "\n" : "";
   fs.writeFileSync(p, `${text}${prefix}${block}`, "utf8");
   log(
-    "Добавлены IMAGE_MODERATION_BASE_URL (+ MODERATION_FILE_FETCH_ORIGIN) в back/.env для локального контейнера image-moderation.",
+    "Добавлены IMAGE_MODERATION_BASE_URL (+ MODERATION_FILE_FETCH_ORIGIN) в back/.env — для Nest на хосте добавьте проброс :8085 в override при необходимости.",
   );
 }
 
@@ -667,9 +813,7 @@ async function main() {
       );
     }
     log(
-      "Далее: docker compose up -d (postgres + redis + minio + ollama + image-moderation + mailhog + …), см. docker-compose.yml; MinIO :9000, Redis :6379, MailHog :8025, Ollama через хост :" +
-        OLLAMA_DOCKER_PUBLISH_PORT +
-        ", NSFW-картинки :8085.",
+      "Далее: docker compose --profile dev [--profile ai] up -d (см. docker-compose.yml); Postgres/Redis без порта на хост — prisma/openapi из init после старта API.",
     );
     process.exit(0);
   }
@@ -681,7 +825,13 @@ async function main() {
     process.exit(1);
   }
 
-  run("docker:up", "docker", ["compose", "up", "--build", "-d"], repoRoot);
+  run(
+    "docker:up",
+    "docker",
+    ["compose", "--profile", "dev", "--profile", "ai", "up", "--build", "-d"],
+    repoRoot,
+    { ...process.env, ENABLE_OLLAMA: "true" },
+  );
 
   if (!(await waitPostgresReady())) {
     console.error(
@@ -739,38 +889,24 @@ async function main() {
 
   await wait(5000);
 
-  const dbUrl =
-    "postgresql://postgres:postgres@127.0.0.1:5432/services?schema=public";
-  run(
-    "prisma migrate deploy",
-    "npm",
-    ["run", "prisma:deploy"],
-    path.join(repoRoot, "back"),
-    { ...process.env, DATABASE_URL: dbUrl },
-  );
-  run(
-    "prisma db seed",
-    "npm",
-    ["run", "prisma:seed"],
-    path.join(repoRoot, "back"),
-    { ...process.env, DATABASE_URL: dbUrl },
-  );
+  if (!(await waitBackHttpReady())) {
+    console.error(
+      "\n[init] Таймаут ожидания back (http://127.0.0.1:3001/v1/health). Проверьте: docker compose ps, docker compose logs back",
+    );
+    process.exit(1);
+  }
 
   if (!skipOpenapi) {
-    log("openapi:sync…");
-    const r = spawnSync("npm", ["run", "openapi:sync"], {
-      cwd: repoRoot,
-      stdio: "inherit",
-      shell: process.platform === "win32",
-      env: { ...process.env, DATABASE_URL: dbUrl },
-    });
-    if (r.status !== 0) {
+    try {
+      await syncOpenApiSdkFromRunningBack();
+    } catch (e) {
       console.warn(
-        "\n[init] openapi:sync завершился с ошибкой — позже: npm run openapi:sync",
+        "\n[init] Синхронизация OpenAPI/SDK с running back не удалась — позже: npm run openapi:sync (или поднимите API и повторите).",
       );
+      console.warn(e);
     }
   } else {
-    log("Пропуск openapi:sync (--skip-openapi).");
+    log("Пропуск openapi (--skip-openapi).");
   }
 
   console.log(`
@@ -779,11 +915,11 @@ async function main() {
   • Фронт (Docker):  http://localhost:3000
   • API (Docker):    http://localhost:3001
   • Swagger:         http://localhost:3001/v1/docs
-  • Postgres:        localhost:5432 (см. docker-compose)
-  • MinIO (S3):      http://localhost:9000  • консоль http://localhost:9001 (minioadmin / minioadmin)
-  • Redis (BullMQ):  localhost:6379 (фон модерации; init дописывает REDIS_* в back/.env, если нет REDIS_HOST)
+  • Postgres:        только внутри Docker-сети (порт на хост не проброшен); docker compose exec postgres psql …
+  • MinIO (S3):      http://localhost:9000  • консоль http://localhost:9001  • креды: MINIO_ROOT_* в корневом .env
+  • Redis (BullMQ):  только внутри compose; с хоста для back — см. back/.env (init дописывает REDIS_* при необходимости)
   • Ollama (хост для docker): http://localhost:${OLLAMA_DOCKER_PUBLISH_PORT} • init: миграция back/.env, rm старого тега, pull ${DEFAULT_OLLAMA_MODEL}; иначе npm run init -- --skip-ollama-pull
-  • Модерация фото:  http://localhost:8085/healthz • POST /v1/score (docker: image-moderation; при необходимости MODERATION_FILE_FETCH_ORIGIN в back/.env)
+  • Модерация фото:  внутри compose http://image-moderation:8085 (на хост не опубликовано; Nest на хосте — override или см. init)
   • MailHog:         http://localhost:8025 (входящие письма; OTP при регистрации при SMTP в back/.env, см. init)
   • Файлы (MinIO): POST /v1/files/public | POST /v1/files/private (Bearer); GET /v1/files/public/:filename | GET /v1/files/private/:filename (Bearer)
 

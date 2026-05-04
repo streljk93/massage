@@ -8,6 +8,21 @@ function positiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
 }
 
+/** Включение вызовов Ollama (`ENABLE_OLLAMA`); пустое значение → fallback. */
+function envBool(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw.trim() === '') {
+    return fallback;
+  }
+  const v = raw.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(v)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(v)) {
+    return false;
+  }
+  return fallback;
+}
+
 /** Порог NSFW (картинки): 0..1, по умолчанию 0.5 (выше → ручная проверка). NudeNet даёт ~0..1 по «телесным» классам; при необходимости MODERATION_IMAGE_UNSAFE_THRESHOLD=0.65. */
 function moderationUnsafeThreshold(
   raw: string | undefined,
@@ -205,6 +220,11 @@ export default () => ({
   moderation: {
     /** `false` у `MODERATION_QUEUE_ENABLED` — без BullMQ: синхронно в HTTP, без Redis. */
     useContentQueue: process.env.MODERATION_QUEUE_ENABLED !== 'false',
+    /**
+     * `ENABLE_OLLAMA=false` — не вызывать Ollama (тексты модерации уходят в review без HTTP к LLM;
+     * безопасно при отсутствующем сервисе `ollama` в Docker при непустом `OLLAMA_BASE_URL`).
+     */
+    ollamaEnabled: envBool(process.env.ENABLE_OLLAMA, true),
     ollamaBaseUrl: (process.env.OLLAMA_BASE_URL ?? '').trim(),
     ollamaModel: (
       process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODERATION_MODEL
@@ -217,10 +237,10 @@ export default () => ({
     /**
      * Автомодерация **только изображений** витрины: контейнер `image-moderation` (POST …/v1/score).
      * Тексты по-прежнему через Ollama — картинки туда не передаются.
-     * `IMAGE_MODERATION_BASE_URL` не задан (undefined) → в non-production localhost:8085; пустая строка явно отключает; в production без URL — галерея в ручную очередь.
+     * `IMAGE_MODERATION_BASE_URL` не задан (undefined) → в non-production `http://127.0.0.1:8085` (нужен проброс порта или override; в compose для `back` задаётся `http://image-moderation:8085`).
      */
     imageModeration: {
-      /** Пустая строка в .env явно отключает. Не задано — в non-production см. ниже (локальный :8085). */
+      /** Пустая строка в .env явно отключает. Не задано — в non-production см. ниже. */
       baseUrl: (() => {
         const raw = process.env.IMAGE_MODERATION_BASE_URL;
         if (raw !== undefined) {
@@ -229,7 +249,7 @@ export default () => ({
         if (process.env.NODE_ENV === 'production') {
           return '';
         }
-        /* Локально: `docker compose up image-moderation` пробрасывает 8085 на хост; совпадает с `scripts/init-project.mjs`. */
+        /* Без переменной в non-production: хост Nest и override `8085:8085`; полный стек в Docker — URL из compose. */
         return 'http://127.0.0.1:8085';
       })(),
       /** Origin Nest для GET `/v1/files/...`; контейнер `image-moderation` должен достучаться до хоста (не 127.0.0.1 внутри контейнера). В compose задаётся `http://back:3001`; локально см. `.env.example`. */

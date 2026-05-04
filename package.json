@@ -18,10 +18,20 @@
     "openapi:sync": "node scripts/openapi.mjs sync",
     "docker:env": "node scripts/generate-docker-env.mjs",
     "docker:env:force": "node scripts/generate-docker-env.mjs --force",
-    "docker:bootstrap": "node scripts/generate-docker-env.mjs && docker compose up --build -d",
-    "docker:up": "docker compose up --build -d",
+    "docker:bootstrap": "node scripts/generate-docker-env.mjs && docker compose --profile dev up --build -d",
+    "docker:bootstrap:dev:ai": "node scripts/generate-docker-env.mjs && env ENABLE_OLLAMA=true docker compose --profile dev --profile ai up --build -d",
+    "docker:up": "docker compose --profile dev up --build -d",
+    "docker:up:dev:ai": "env ENABLE_OLLAMA=true docker compose --profile dev --profile ai up --build -d",
+    "docker:bootstrap:prod": "node scripts/generate-docker-env.mjs && docker compose -f docker-compose.prod.yml up --build -d",
+    "docker:up:prod": "docker compose -f docker-compose.prod.yml up --build -d",
+    "docker:up:prod:ai": "env ENABLE_OLLAMA=true docker compose -f docker-compose.prod.yml --profile ai up --build -d",
+    "docker:up:prod:backup": "docker compose -f docker-compose.prod.yml --profile backup up -d postgres-backup",
+    "docker:pg-backup": "sh scripts/pg-backup-once.sh docker-compose.prod.yml",
+    "docker:pg-backup:dev": "sh scripts/pg-backup-once.sh docker-compose.yml",
+    "docker:down:prod": "docker compose -f docker-compose.prod.yml down",
+    "docker:logs:prod": "docker compose -f docker-compose.prod.yml logs -f",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:psql": "docker compose exec postgres psql -U postgres -d services"
+    "docker:psql": "docker compose exec postgres sh -c 'psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"'"
   }
 }
