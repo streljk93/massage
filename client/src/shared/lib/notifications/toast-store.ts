@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { randomUuid } from "../random-uuid";
+
 import type { NotificationKind } from "./types";
 
 const TOAST_LIMIT = 5;
@@ -41,9 +43,7 @@ function mapKindToDuration(): number {
 export const useNotificationToastStore = create<ToastState>((set) => ({
   toasts: [],
   push: ({ title, description, kind, duration }) => {
-    const id =
-      globalThis.crypto?.randomUUID() ??
-      `toast-${Math.random().toString(36).slice(2, 11)}`;
+    const id = randomUuid();
     const next: ToastItem = {
       id,
       title,

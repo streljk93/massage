@@ -165,7 +165,7 @@ export function SpecialistPersonalServiceFields({
       <Button
         type="button"
         variant="ghost"
-        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-0 bg-muted/45 px-3 text-sm font-medium text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground/80 focus-visible:ring-2 focus-visible:ring-ring/35 sm:w-auto"
+        className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-0 bg-muted/45 px-3 text-sm font-medium text-muted-foreground shadow-none hover:bg-muted/50 hover:text-foreground/80 focus-visible:ring-2 focus-visible:ring-ring/35"
         disabled={disabled}
         onClick={() => {
           const next = [

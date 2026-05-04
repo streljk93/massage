@@ -14,7 +14,7 @@ import {
   Input,
   ORG_SALON_GALLERY_MAX_FILES,
 } from "@/shared/ui";
-import { cn, previewSrcForPersistedGalleryUrl } from "@/shared/lib";
+import { cn, previewSrcForPersistedGalleryUrl, randomUuid } from "@/shared/lib";
 import { AddressMapPickerDialog } from "@/widgets/address-map-picker";
 import { OrgContactFields } from "./org-contact-fields";
 import { validateOrgContactForSubmit } from "../lib/organization-contact-form";
@@ -238,7 +238,7 @@ export function OrganizationSalonCabinetForm({
       for (const file of imageFiles) {
         next.push({
           kind: "local",
-          id: crypto.randomUUID(),
+          id: randomUuid(),
           file,
           previewUrl: URL.createObjectURL(file),
           name: file.name,
@@ -544,7 +544,14 @@ export function OrganizationSalonCabinetForm({
           </div>
         }
       </div>
-      <div className={cn("flex flex-col gap-2 pt-1 sm:flex-row sm:justify-end", footerActions && "flex-wrap")}>
+      <div
+        className={cn(
+          "flex gap-2 pt-1",
+          footerActions ?
+            "flex-col"
+          : "flex-col sm:flex-row sm:justify-end",
+        )}
+      >
         {footerActions}
         <Button
           type="button"

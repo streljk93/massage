@@ -1,10 +1,9 @@
+import { randomUuid } from "../random-uuid";
+
 const STORAGE_KEY = "pzn_sid_v1";
 
 function randomId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `pzn_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 14)}`;
+  return randomUuid();
 }
 
 /**

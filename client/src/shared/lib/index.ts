@@ -1,4 +1,5 @@
 export { cn } from "./utils";
+export { randomUuid } from "./random-uuid";
 export { useUserGeolocation } from "./use-user-geolocation";
 export { listExitRowClassNames, motion } from "./motion";
 export {

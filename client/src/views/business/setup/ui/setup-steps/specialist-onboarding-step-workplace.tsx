@@ -121,7 +121,7 @@ export default function SpecialistOnboardingStepWorkplace() {
             <Button
               type="button"
               variant="secondary"
-              className="h-12 w-full rounded-full sm:w-auto"
+              className="h-12 w-full rounded-full"
               disabled={createOrgSubmitting}
               onClick={() => {
                 setFormError(null);

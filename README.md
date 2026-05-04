@@ -37,7 +37,7 @@ npm run init
 | MinIO (файлы, S3 API) | http://localhost:9000 • консоль http://localhost:9001 (`minioadmin` / `minioadmin`) |
 | **MailHog** (входящие письма в dev) | http://localhost:8025 — SMTP `127.0.0.1:1025` (или `mailhog:1025` из контейнера `back`) |
 | **Ollama** (предмодерация текста UGC для Nest) | с хоста: **http://localhost:11435** (:11434 внутри образа; не конфликтует с нативным Ollama на :11434) |
-| **image-moderation** (NSFW score для галереи) | HTTP **localhost:8085** (`POST /v1/score`), код в `docker/nsfw-image-moderation/` |
+| **image-moderation** (NSFW score для галереи) | Внутри Docker-сети: **http://image-moderation:8085** (`POST /v1/score`), код в `docker/nsfw-image-moderation/` |
 | **Redis** (очереди BullMQ для фон модерации) | с хоста: **localhost:6379**, том данных `redis_data`; внутри compose `back` ходит по имени **`redis`** |
 
 ### Сервисы Docker Compose (контейнеры)
@@ -55,7 +55,7 @@ npm run init
 | **back** | Nest API; зависит от БД, MinIO, Ollama, image-moderation, MailHog и **Redis** (последний со **healthcheck**). |
 | **client** | Next.js во фронтенд-слое приложения (зависит от `back`). |
 
-Проброс портов и переменные по умолчанию — в **`docker-compose.yml`**; если Nest запущен **на хосте** без контейнеров, см. **`back/.env.example`** (`REDIS_*`, `OLLAMA_*`, `IMAGE_MODERATION_*`).
+Проброс портов и переменные по умолчанию — в **`docker-compose.yml`**; если Nest запущен **на хосте** без контейнеров, см. **`back/.env.example`** (`REDIS_*`, `OLLAMA_*`, `IMAGE_MODERATION_*`). По умолчанию `image-moderation` наружу не публикуется, для хостового Nest нужен override с портом `8085:8085` или внешний URL в `IMAGE_MODERATION_BASE_URL`.
 
 **Почта и регистрация с OTP:** в **development** бэк шлёт письма **только по SMTP** (в т.ч. в MailHog); в **production** — **только через Resend** (`RESEND_API_KEY`), SMTP для OTP тогда не используется. Реализация: `back/src/infrastructure/mail/mail.service.ts`, переменные — `back/.env.example`.
 
@@ -114,9 +114,9 @@ npm run openapi:sync
 
 | Файл | Назначение |
 |------|------------|
-| **Корень `.env` / `.env.example`** | Общие для compose секреты: `JWT_SECRET` (Nest) и `AUTH_SECRET` (Auth.js в Next). `npm run docker:env` пишет в корень `.env` (при первом запуске копирует структуру из `.env.example`). Файла `.env` в git нет. |
-| **`client/.env.local`** | Локальный Next (`AUTH_BACKEND_URL`, `NEXT_PUBLIC_*` и т.д.). `AUTH_SECRET` дублируйте из корня или через `npm run auth:secret`. Шаблон: `client/.env.example`. |
-| **`back/.env`** | Только параметры Nest: `DATABASE_URL`, S3, модерация, почта. **`JWT_SECRET`** для локального `start:dev` — тот же, что в корневом `.env` после `docker:env`; в шаблоне указано в блоке Core. Подробно: `back/.env.example`. |
+| **Корень `.env` / `.env.example`** | Основной файл для `docker-compose.yml` и `docker-compose.prod.yml`: обязательный минимум (`JWT_SECRET`, `AUTH_SECRET`, `CLIENT_ORIGIN`, `AUTH_URL`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `MINIO_ROOT_*`) + опциональные `NEXT_PUBLIC_*`, AI/moderation и prod-ключи (`RESEND_API_KEY`, `MAIL_FROM`). |
+| **`back/.env`** | Backend-специфика для Nest: `DATABASE_URL`, `ADMIN_MASTER_*`, локальные `REDIS_*`, `S3_*`, moderation, SMTP/Resend и интеграции (`FIREBASE_SERVICE_ACCOUNT_JSON`, `GOOGLE_OAUTH_CLIENT_ID`). Для host-only оверрайдов используйте `back/.env.local` (шаблон: `back/.env.local.example`). |
+| **`client/.env.local`** | Локальный Next (`AUTH_SECRET`, `AUTH_URL`, `AUTH_BACKEND_URL`, `NEXT_PUBLIC_API_URL`, OAuth/Firebase). Шаблон: `client/.env.local.example` (или `client/.env.example` как совместимый минимальный набор). |
 
 Секреты для сессий: из корня можно выполнить `npm run auth:secret` или `npm run auth:secret:write` (дописать в `client/.env.local`).
 

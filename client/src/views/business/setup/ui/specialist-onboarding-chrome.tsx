@@ -104,7 +104,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full max-w-md flex-1 flex-col">
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
       <div
         ref={topChromeRef}
         className="fixed left-0 right-0 top-0 z-50 border-b border-border/40 bg-surface-light/95 pt-[max(0.5rem,env(safe-area-inset-top,0px))] backdrop-blur-sm supports-[backdrop-filter]:bg-surface-light/90"

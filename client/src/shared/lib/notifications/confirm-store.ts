@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { randomUuid } from "../random-uuid";
+
 import type { ConfirmActionOptions } from "./confirm-options";
 
 type ConfirmSession = (ConfirmActionOptions & { id: string }) | null;
@@ -25,9 +27,7 @@ export const useConfirmActionStore = create<ConfirmState>((set) => ({
         pending.resolve(false);
       }
       pending = { resolve };
-      const id =
-        globalThis.crypto?.randomUUID() ??
-        `confirm-${Math.random().toString(36).slice(2, 11)}`;
+      const id = randomUuid();
       set({
         open: true,
         session: { ...options, id },
