@@ -24,5 +24,5 @@ pipelines:
                 git fetch origin main
                 git checkout main
                 git pull --ff-only origin main
-                npm run docker:up:prod
+                ENABLE_OLLAMA=true docker compose -f docker-compose.prod.yml --profile ai --profile backup up --build -d
               "
