@@ -10,11 +10,18 @@ pipelines:
             - test -n "$DEPLOY_HOST"
             - test -n "$DEPLOY_USER"
             - test -n "$DEPLOY_PATH"
-            - test -n "$SSH_PRIVATE_KEY_B64"
             - export DEPLOY_PORT="${DEPLOY_PORT:-22}"
             - mkdir -p ~/.ssh
             - chmod 700 ~/.ssh
-            - echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+            - |
+              if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
+                printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+              elif [ -n "${SSH_PRIVATE_KEY_B64:-}" ]; then
+                echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+              else
+                echo "Set SSH_PRIVATE_KEY (raw) or SSH_PRIVATE_KEY_B64 (base64)." >&2
+                exit 1
+              fi
             - chmod 600 ~/.ssh/id_ed25519
             - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
             - |
