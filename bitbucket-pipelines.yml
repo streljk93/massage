@@ -1,0 +1,28 @@
+image: atlassian/default-image:4
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Deploy to production server
+          deployment: production
+          script:
+            - test -n "$DEPLOY_HOST"
+            - test -n "$DEPLOY_USER"
+            - test -n "$DEPLOY_PATH"
+            - test -n "$SSH_PRIVATE_KEY_B64"
+            - export DEPLOY_PORT="${DEPLOY_PORT:-22}"
+            - mkdir -p ~/.ssh
+            - chmod 700 ~/.ssh
+            - echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+            - chmod 600 ~/.ssh/id_ed25519
+            - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+            - |
+              ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+                set -eu
+                cd '$DEPLOY_PATH'
+                git fetch origin main
+                git checkout main
+                git pull --ff-only origin main
+                npm run docker:up:prod
+              "
