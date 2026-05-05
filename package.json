@@ -26,6 +26,7 @@
     "docker:up:prod": "docker compose -f docker-compose.prod.yml up --build -d",
     "docker:up:prod:ai": "env ENABLE_OLLAMA=true docker compose -f docker-compose.prod.yml --profile ai up --build -d",
     "docker:up:prod:backup": "docker compose -f docker-compose.prod.yml --profile backup up -d postgres-backup",
+    "nginx:setup:host": "sh scripts/setup-host-nginx.sh",
     "docker:pg-backup": "sh scripts/pg-backup-once.sh docker-compose.prod.yml",
     "docker:pg-backup:dev": "sh scripts/pg-backup-once.sh docker-compose.yml",
     "docker:down:prod": "docker compose -f docker-compose.prod.yml down",

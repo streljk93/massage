@@ -80,6 +80,39 @@ npm run docker:up           # docker compose up --build -d
 
 Или одной строкой: `npm run docker:bootstrap`.
 
+### Production HTTPS на домене (Nginx на хосте + Docker Compose)
+
+Рекомендуемая схема для VPS: Nginx работает **на хосте** (порт 80/443), а приложение остаётся в Docker (`client:3000`, `back:3001`) только на `127.0.0.1`.
+
+1. Поднимите production-стек:
+
+```bash
+npm run docker:up:prod
+```
+
+2. Убедитесь, что DNS домена смотрит на IP сервера (для `bukvu.com` и `www.bukvu.com`).
+
+3. Примените Nginx-конфиг и выпустите Let's Encrypt:
+
+```bash
+sudo npm run nginx:setup:host -- --domain bukvu.com --email admin@bukvu.com
+```
+
+Скрипт:
+- установит `nginx`/`certbot` при отсутствии;
+- развернёт конфиг из `deploy/nginx/services-app.conf.template`;
+- выпустит сертификаты (`bukvu.com`, `www.bukvu.com`) и включит redirect на HTTPS;
+- включит `certbot.timer` для автообновления сертификатов.
+
+Если нужен только конфиг без сертификата:
+
+```bash
+sudo npm run nginx:setup:host -- --domain bukvu.com --skip-certbot
+```
+
+> Для кастомных upstream используйте `--client-upstream` и `--back-upstream`.
+> По умолчанию: `http://127.0.0.1:3000` и `http://127.0.0.1:3001`.
+
 ### Только PostgreSQL (например, для локальной разработки API)
 
 ```bash

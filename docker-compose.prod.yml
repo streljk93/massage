@@ -14,7 +14,8 @@
 #   RESEND_API_KEY, MAIL_FROM (OTP в production; см. back mail.service),
 #   при необходимости OLLAMA_*, MODERATION_*, S3_BUCKET, S3_REGION.
 #
-# Снаружи обычно reverse-proxy на client / back; порты по умолчанию 3000 / 3001 — при параллельном
+# Снаружи обычно reverse-proxy на client / back; publish-порты в production привязаны к localhost
+# (127.0.0.1:3000/3001) и предназначены для Nginx/Caddy на хосте. При параллельном
 # dev-стеке на том же хосте задайте CLIENT_PUBLISH_PORT / BACK_PUBLISH_PORT в `.env`.
 # MinIO — только внутри сети (minio:9000).
 # Ollama: профиль `ai` (сервис тяжёлый, ~6g RAM). Без `--profile ai` задайте `ENABLE_OLLAMA=true`
@@ -237,7 +238,7 @@ services:
       context: ./back
       dockerfile: Dockerfile
     ports:
-      - "${BACK_PUBLISH_PORT:-3001}:3001"
+      - "127.0.0.1:${BACK_PUBLISH_PORT:-3001}:3001"
     env_file:
       - path: ./back/.env
         required: false
@@ -308,7 +309,7 @@ services:
         NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:-}
         NEXT_PUBLIC_FIREBASE_VAPID_KEY: ${NEXT_PUBLIC_FIREBASE_VAPID_KEY:-}
     ports:
-      - "${CLIENT_PUBLISH_PORT:-3000}:3000"
+      - "127.0.0.1:${CLIENT_PUBLISH_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       AUTH_BACKEND_URL: http://back:3001
