@@ -4,6 +4,22 @@ import { NextResponse } from "next/server";
 const FIREBASE_JS_VERSION = "11.10.0";
 
 /**
+ * Общая оболочка PWA и FCM в одном SW (scope `/`): иначе две регистрации конфликтуют.
+ * Критерий установки (Chrome/Android): активный обработчик `fetch`.
+ */
+const PWA_SERVICE_WORKER_BOOTSTRAP = `
+self.addEventListener("install", (event) => {
+  event.waitUntil(Promise.resolve().then(() => self.skipWaiting()));
+});
+self.addEventListener("activate", (event) => {
+  event.waitUntil(Promise.resolve().then(() => self.clients.claim()));
+});
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
+`;
+
+/**
  * FCM service worker: должен отдаваться с корня origin как `/firebase-messaging-sw.js`.
  * Конфиг подставляется из тех же `NEXT_PUBLIC_FIREBASE_*`, что и в клиентском бандле.
  */
@@ -17,7 +33,7 @@ export async function GET() {
 
   if (!apiKey || !projectId || !messagingSenderId || !appId) {
     return new NextResponse(
-      "console.warn('[FCM] Missing NEXT_PUBLIC_FIREBASE_* in env');\n",
+      `${PWA_SERVICE_WORKER_BOOTSTRAP}console.warn('[FCM] Missing NEXT_PUBLIC_FIREBASE_* in env');\n`,
       {
         status: 200,
         headers: {
@@ -37,7 +53,7 @@ export async function GET() {
     appId,
   };
 
-  const body = `importScripts('https://www.gstatic.com/firebasejs/${FIREBASE_JS_VERSION}/firebase-app-compat.js');
+  const body = `${PWA_SERVICE_WORKER_BOOTSTRAP}importScripts('https://www.gstatic.com/firebasejs/${FIREBASE_JS_VERSION}/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/${FIREBASE_JS_VERSION}/firebase-messaging-compat.js');
 firebase.initializeApp(${JSON.stringify(config)});
 const messaging = firebase.messaging();
@@ -49,7 +65,7 @@ messaging.onBackgroundMessage((payload) => {
   const options = {
     body: String(body),
     data: payload.data || {},
-    icon: '/massage.png',
+    icon: '/pwa/icon-192.png',
     tag: 'fcm-' + (d.type || 'push'),
   };
   var showPromise = self.registration.showNotification(String(title), options);

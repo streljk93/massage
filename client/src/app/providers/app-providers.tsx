@@ -14,6 +14,8 @@ import { SyncUserLocaleWithApp } from "@/features/user-locale-sync";
 // import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
 import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
 
+import { PwaServiceWorkerRegistrar } from "./pwa-service-worker-registrar";
+
 const NotificationToaster = dynamic(
   () =>
     import("@/shared/ui/notification-toaster").then((m) => ({
@@ -39,6 +41,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <NotificationToaster />
         <ConfirmActionHost />
         <PortraitOrientationLock />
+        <PwaServiceWorkerRegistrar />
         <ComingSoonDialogHost />
         {children}
         </ThemePreferenceProvider>

@@ -19,6 +19,10 @@ export const viewport: Viewport = {
   minimumScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#379f94" },
+    { media: "(prefers-color-scheme: dark)", color: "#4db0a6" },
+  ],
 };
 
 export function generateStaticParams() {
@@ -32,11 +36,37 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "meta" });
 
   return {
+    applicationName: t("siteName"),
     title: {
       default: t("siteName"),
       template: `%s · ${t("siteName")}`,
     },
     description: t("siteDescription"),
+    appleWebApp: {
+      capable: true,
+      title: t("siteName"),
+      statusBarStyle: "default",
+    },
+    icons: {
+      icon: [
+        {
+          url: "/pwa/favicon-32.png",
+          sizes: "32x32",
+          type: "image/png",
+        },
+        {
+          url: "/pwa/icon-192.png",
+          sizes: "192x192",
+          type: "image/png",
+        },
+        {
+          url: "/pwa/icon-512.png",
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+      apple: [{ url: "/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    },
   };
 }
 
