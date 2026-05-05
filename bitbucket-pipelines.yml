@@ -18,7 +18,7 @@ pipelines:
             - chmod 600 ~/.ssh/id_ed25519
             - ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
             - |
-              ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
+              ssh -i ~/.ssh/id_ed25519 -o IdentitiesOnly=yes -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "
                 set -eu
                 cd '$DEPLOY_PATH'
                 git fetch origin main
