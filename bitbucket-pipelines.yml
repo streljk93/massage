@@ -15,9 +15,9 @@ pipelines:
             - chmod 700 ~/.ssh
             - |
               if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
-                printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+                printf '%b' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
               elif [ -n "${SSH_PRIVATE_KEY_B64:-}" ]; then
-                echo "$SSH_PRIVATE_KEY_B64" | base64 -d > ~/.ssh/id_ed25519
+                printf '%s' "$SSH_PRIVATE_KEY_B64" | tr -d '\r\n ' | base64 -d > ~/.ssh/id_ed25519
               else
                 echo "Set SSH_PRIVATE_KEY (raw) or SSH_PRIVATE_KEY_B64 (base64)." >&2
                 exit 1
