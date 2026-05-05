@@ -12,12 +12,15 @@ export type ProfileSubpageShellProps = {
   title: string;
   children: ReactNode;
   className?: string;
+  /** Явный маршрут для кнопки «назад» (без префикса локали). */
+  backHref?: string;
 };
 
 export function ProfileSubpageShell({
   title,
   children,
   className,
+  backHref,
 }: ProfileSubpageShellProps) {
   const t = useTranslations("profileShell");
   const router = useRouter();
@@ -32,6 +35,10 @@ export function ProfileSubpageShell({
             className="size-11 shrink-0 rounded-full px-0"
             aria-label={t("backAria")}
             onClick={() => {
+              if (backHref) {
+                router.replace(backHref);
+                return;
+              }
               goBackOrFallback(router, "/profile");
             }}
           >

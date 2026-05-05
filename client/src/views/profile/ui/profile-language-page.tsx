@@ -20,7 +20,7 @@ export function ProfileLanguagePage() {
   const accessToken = session?.accessToken;
 
   return (
-    <ProfileSubpageShell title={t("title")}>
+    <ProfileSubpageShell title={t("title")} backHref="/profile">
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">{t("hint")}</p>
         <ul
