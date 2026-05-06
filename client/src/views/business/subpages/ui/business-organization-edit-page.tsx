@@ -84,6 +84,10 @@ function cabinetProfileToFormInitialValues(
     website: profile.website ?? "",
     years,
     categoryIds: [...profile.serviceCategoryIds],
+    additionalMajorCategorySlugs: [
+      ...((profile as { additionalMajorCategorySlugs?: string[] })
+        .additionalMajorCategorySlugs ?? []),
+    ],
     gallery: profile.galleryItems.map((g) => ({
       url: g.url,
       alt: g.alt,
@@ -119,6 +123,14 @@ export function BusinessOrganizationEditPage() {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const additionalMajorOptions = useMemo(
+    () => [
+      { slug: "nail", label: t("majorCategoryNail") },
+      { slug: "hair", label: t("majorCategoryHair") },
+      { slug: "spa", label: t("majorCategorySpa") },
+    ],
+    [t],
+  );
 
   const membershipsQuery = useQuery({
     queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
@@ -185,6 +197,54 @@ export function BusinessOrganizationEditPage() {
         body,
       });
       if (error) {
+        const confirmPayload = error as {
+          code?: string;
+          affectedServices?: Array<{ id: string; categoryName?: string | null }>;
+        };
+        if (
+          confirmPayload.code === "ADDITIONAL_MAJOR_DISABLE_CONFIRM_REQUIRED" &&
+          Array.isArray(confirmPayload.affectedServices) &&
+          confirmPayload.affectedServices.length > 0
+        ) {
+          const list = confirmPayload.affectedServices
+            .slice(0, 8)
+            .map((s) => `• ${s.categoryName ?? s.id}`)
+            .join("\n");
+          const confirmed = window.confirm(
+            `${tPage("organizationEditDisableServicesConfirmTitle")}\n\n${list}`,
+          );
+          if (confirmed) {
+            const retry = await organizationsCabinetPatchOrganization({
+              client: sdk,
+              path: { organizationId },
+              query: { locale },
+              body: {
+                ...body,
+                confirmDisableServiceIds: confirmPayload.affectedServices.map(
+                  (s) => s.id,
+                ),
+              } as OrganizationSalonCabinetSubmitBody,
+            });
+            if (!retry.error) {
+              await Promise.all([
+                queryClient.invalidateQueries({
+                  predicate: (q) =>
+                    Array.isArray(q.queryKey) &&
+                    q.queryKey[0] ===
+                      SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX[0],
+                }),
+                queryClient.invalidateQueries({
+                  predicate: (q) =>
+                    Array.isArray(q.queryKey) &&
+                    q.queryKey[0] === CABINET_EDIT_QK[0] &&
+                    q.queryKey[1] === organizationId,
+                }),
+              ]);
+              router.replace("/business/organizations");
+              return;
+            }
+          }
+        }
         setFormError(t("vErrCreateOrg"));
         return;
       }
@@ -349,6 +409,7 @@ export function BusinessOrganizationEditPage() {
         client={sdk}
         locale={locale}
         categories={categories}
+        additionalMajorOptions={additionalMajorOptions}
         categoriesLoading={categoriesLoading}
         initialSyncKey={`${organizationId}:${cabinetProfileQuery.dataUpdatedAt}`}
         initialValues={initialValues}

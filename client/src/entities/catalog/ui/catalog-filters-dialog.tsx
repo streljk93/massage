@@ -28,6 +28,7 @@ import {
   EmptyTitle,
 } from "@/shared/ui/shadcn/empty";
 import { cn } from "@/shared/lib";
+import { BodyZonesSelector, type BodyZoneOption } from "@/entities/body-zones";
 
 /** Radix Select не принимает `value=""` у пункта — в сторе фильтра остаётся `""`. */
 const CATALOG_FILTERS_SLOT_ANY = "__cf_slotAny__";
@@ -53,10 +54,17 @@ export type CatalogSlotTimeFilterValue = {
 type CatalogFiltersDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onApplyFilters?: () => void;
   selectedCategorySlugs: string[];
   onToggleCategory: (slug: string) => void;
   onResetFilters: () => void;
   categoryOptions: CatalogFilterCategoryOption[];
+  bodyZoneOptions?: BodyZoneOption[];
+  selectedBodyZoneSlugs?: string[];
+  onChangeBodyZoneSlugs?: (slugs: string[]) => void;
+  genderOptions?: Array<"male" | "female">;
+  selectedGender?: "male" | "female" | null;
+  onSelectGender?: (gender: "male" | "female" | null) => void;
   priceFilter: CatalogFiltersPriceConfig | null;
   /**
    * Фильтр «свободный слот в этот день/время» (поиск). Пустые строки — «не задано».
@@ -89,10 +97,17 @@ type CatalogFiltersDialogProps = {
 export function CatalogFiltersDialog({
   open,
   onOpenChange,
+  onApplyFilters,
   selectedCategorySlugs,
   onToggleCategory,
   onResetFilters,
   categoryOptions,
+  bodyZoneOptions = [],
+  selectedBodyZoneSlugs = [],
+  onChangeBodyZoneSlugs,
+  genderOptions = [],
+  selectedGender = null,
+  onSelectGender,
   priceFilter,
   showPriceDataUnavailable = false,
   readOnlyVndLine = null,
@@ -347,6 +362,51 @@ export function CatalogFiltersDialog({
             </div>
           )}
         </div>
+        {bodyZoneOptions.length > 0 && onChangeBodyZoneSlugs ? (
+          <div className="border-t border-border/25 px-5 pt-3 pb-4">
+            <BodyZonesSelector
+              zones={bodyZoneOptions}
+              selectedSlugs={selectedBodyZoneSlugs}
+              onChangeSelectedSlugs={onChangeBodyZoneSlugs}
+            />
+          </div>
+        ) : null}
+        {genderOptions.length > 0 && onSelectGender ? (
+          <div className="border-t border-border/25 px-5 pt-3 pb-4">
+            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              {t("gender")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectGender(null)}
+                className={cn(
+                  "rounded-full border px-3.5 py-2 text-sm",
+                  selectedGender == null
+                    ? "border-primary/40 bg-primary/10 text-foreground"
+                    : "border-border/55 bg-card text-foreground",
+                )}
+              >
+                {t("genderAny")}
+              </button>
+              {genderOptions.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => onSelectGender(g)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-2 text-sm",
+                    selectedGender === g
+                      ? "border-primary/40 bg-primary/10 text-foreground"
+                      : "border-border/55 bg-card text-foreground",
+                  )}
+                >
+                  {g === "male" ? t("genderMale") : t("genderFemale")}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         </div>
         <DialogFooter
           className={cn(
@@ -368,6 +428,7 @@ export function CatalogFiltersDialog({
               type="button"
               className="h-11 flex-1 rounded-full font-medium shadow-sm"
               onClick={() => {
+                onApplyFilters?.();
                 onOpenChange(false);
               }}
             >

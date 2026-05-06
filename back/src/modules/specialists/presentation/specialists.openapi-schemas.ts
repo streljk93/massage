@@ -8,7 +8,7 @@ export const specialistOnboardingResponseSchema = {
       type: 'integer',
       enum: [1, 3, 4, 5, 6],
       description:
-        '1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.',
+        '1 — профиль; 4 — организация; 3 — услуги; 5 — финальный экран; 6 — готово.',
     },
     specialist: {
       type: 'object',
@@ -193,6 +193,11 @@ export const patchSpecialistProfileRequestSchema = {
       description:
         'Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`.',
     },
+    gender: {
+      type: 'string',
+      enum: ['male', 'female'],
+      description: 'Пол специалиста для клиентского фильтра в поиске.',
+    },
     phone: {
       oneOf: [
         { type: 'string', minLength: 1, maxLength: 32 },
@@ -220,6 +225,21 @@ export const createSpecialistPersonalServiceRequestSchema = {
   required: ['categoryId', 'priceOptions'],
   properties: {
     categoryId: { type: 'string', format: 'uuid' },
+    kind: { type: 'string', enum: ['standard', 'combo'] },
+    comboCategoryIds: {
+      type: 'array',
+      maxItems: 20,
+      items: { type: 'string', format: 'uuid' },
+      description:
+        'Состав combo-услуги: набор категорий, которые специалист включает в пакет.',
+    },
+    bodyZoneSlugs: {
+      type: 'array',
+      maxItems: 24,
+      items: { type: 'string' },
+      description:
+        'Зоны анатомии по slug (только для категорий в major massage).',
+    },
     description: { type: 'string', maxLength: 4000 },
     priceOptions: {
       type: 'array',

@@ -30,7 +30,9 @@ import {
 } from '../../../common/i18n';
 import {
   parseListCategorySlugsCsv,
+  parseListBodyZoneSlugsCsv,
   parseListSearchQ,
+  parseOptionalSpecialistGender,
   parseOptionalMajorCategorySlug,
   parseOptionalVndPriceRange,
 } from '../../../common/pagination/directory-list-search-query.parse';
@@ -117,6 +119,18 @@ export class SpecialistsController {
     example: 'neck,foot',
   })
   @ApiQuery({
+    name: 'bodyZones',
+    required: false,
+    description: 'Slug зон анатомии через запятую (для majorSlug=massage).',
+    example: 'neck,back-upper',
+  })
+  @ApiQuery({
+    name: 'gender',
+    required: false,
+    description: 'Фильтр пола специалиста: male или female. Без параметра — все.',
+    schema: { type: 'string', enum: ['male', 'female'] },
+  })
+  @ApiQuery({
     name: 'priceMinVnd',
     required: false,
     description:
@@ -160,6 +174,8 @@ export class SpecialistsController {
     @Query('majorSlug') majorSlugRaw?: string,
     @Query('q') qRaw?: string,
     @Query('categories') categoriesRaw?: string,
+    @Query('bodyZones') bodyZonesRaw?: string,
+    @Query('gender') genderRaw?: string,
     @Query('priceMinVnd') priceMinVndRaw?: string,
     @Query('priceMaxVnd') priceMaxVndRaw?: string,
     @Query('radiusM') radiusMRaw?: string,
@@ -184,6 +200,8 @@ export class SpecialistsController {
       majorCategorySlug: parseOptionalMajorCategorySlug(majorSlugRaw),
       q: parseListSearchQ(qRaw),
       categorySlugs: parseListCategorySlugsCsv(categoriesRaw),
+      bodyZoneSlugs: parseListBodyZoneSlugsCsv(bodyZonesRaw),
+      gender: parseOptionalSpecialistGender(genderRaw),
       priceMinVnd,
       priceMaxVnd,
       radius:

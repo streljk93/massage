@@ -23,8 +23,11 @@ export type DirectoryFetchAllListQuery = {
   q?: string;
   /** CSV slug категорий */
   categories?: string;
+  /** CSV slug анатомических зон. */
+  bodyZones?: string;
   priceMinVnd?: number | null;
   priceMaxVnd?: number | null;
+  gender?: "male" | "female" | null;
 };
 
 async function fetchAllPaged<T extends { cursorPage: { hasMore: boolean; nextCursor: string | null } }>(
@@ -120,8 +123,10 @@ export async function fetchAllSpecialistsPages(options: {
           ...(cursor ? { cursor } : {}),
           ...(lq?.q?.trim() ? { q: lq.q.trim() } : {}),
           ...(lq?.categories ? { categories: lq.categories } : {}),
+          ...(lq?.bodyZones ? ({ bodyZones: lq.bodyZones } as Record<string, unknown>) : {}),
           ...(lq?.priceMinVnd != null ? { priceMinVnd: lq.priceMinVnd } : {}),
           ...(lq?.priceMaxVnd != null ? { priceMaxVnd: lq.priceMaxVnd } : {}),
+          ...(lq?.gender != null ? ({ gender: lq.gender } as Record<string, unknown>) : {}),
           ...(r != null ?
             { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
           : {}),
@@ -158,6 +163,7 @@ export async function fetchAllOrganizationsPages(options: {
           ...(cursor ? { cursor } : {}),
           ...(lq?.q?.trim() ? { q: lq.q.trim() } : {}),
           ...(lq?.categories ? { categories: lq.categories } : {}),
+          ...(lq?.bodyZones ? ({ bodyZones: lq.bodyZones } as Record<string, unknown>) : {}),
           ...(r != null ?
             { radiusM: r.radiusM, radiusLat: r.radiusLat, radiusLng: r.radiusLng }
           : {}),

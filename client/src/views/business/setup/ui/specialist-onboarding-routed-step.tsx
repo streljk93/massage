@@ -27,8 +27,8 @@ const StepDone = dynamic(
 const byUi = {
   1: StepIntro,
   2: StepProfile,
-  3: StepServices,
-  4: StepWorkplace,
+  3: StepWorkplace,
+  4: StepServices,
   5: StepDone,
 } as const;
 

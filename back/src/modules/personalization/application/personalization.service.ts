@@ -496,6 +496,8 @@ export class PersonalizationService {
       majorCategorySlug: majorForList,
       q: null,
       categorySlugs: catForApi,
+      bodyZoneSlugs: [],
+      gender: null,
       priceMinVnd,
       priceMaxVnd,
       radius: options.radius,
@@ -509,6 +511,7 @@ export class PersonalizationService {
       majorCategorySlug: majorForList,
       q: null,
       categorySlugs: catForApi,
+      bodyZoneSlugs: [],
       radius: options.radius,
       userId,
     });

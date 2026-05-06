@@ -6,6 +6,8 @@ export type SpecialistListApiFilters = {
   majorCategorySlug: string | null;
   q: string | null;
   categorySlugs: string[];
+  bodyZoneSlugs: string[];
+  gender: 'male' | 'female' | null;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
   locale: ApiLocale;
@@ -15,6 +17,7 @@ export type OrganizationListApiFilters = {
   majorCategorySlug: string | null;
   q: string | null;
   categorySlugs: string[];
+  bodyZoneSlugs: string[];
   locale: ApiLocale;
 };
 
@@ -108,6 +111,32 @@ export function specialistListFiltersWhere(
           },
         },
       },
+    });
+  }
+
+  if (f.bodyZoneSlugs.length > 0) {
+    and.push({
+      services: {
+        some: {
+          deletedAt: null,
+          isActive: true,
+          bodyZones: {
+            some: {
+              bodyZone: {
+                deletedAt: null,
+                isActive: true,
+                slug: { in: [...f.bodyZoneSlugs, 'full-body'] },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  if (f.gender != null) {
+    and.push({
+      gender: f.gender,
     });
   }
 

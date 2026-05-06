@@ -4,6 +4,9 @@ export type SpecialistCabinetPersonalServiceRow = {
   id: string;
   categoryId: string;
   categoryName: string;
+  kind: "standard" | "combo";
+  comboCategoryIds: string[];
+  bodyZoneSlugs: string[];
   priceOptions: Array<{
     durationMinutes: number;
     priceAmount: number;
@@ -31,6 +34,13 @@ export function specialistPersonalServicesFromCabinetBlob(
     const categoryId = typeof r.categoryId === "string" ? r.categoryId.trim() : "";
     const categoryName =
       typeof r.categoryName === "string" ? r.categoryName.trim() : "";
+    const kind = r.kind === "combo" ? "combo" : "standard";
+    const comboCategoryIds = Array.isArray(r.comboCategoryIds)
+      ? r.comboCategoryIds.filter((v): v is string => typeof v === "string")
+      : [];
+    const bodyZoneSlugs = Array.isArray(r.bodyZoneSlugs)
+      ? r.bodyZoneSlugs.filter((v): v is string => typeof v === "string")
+      : [];
     const poRaw = r.priceOptions;
     if (!id || !categoryId || !categoryName || !Array.isArray(poRaw)) {
       continue;
@@ -61,6 +71,9 @@ export function specialistPersonalServicesFromCabinetBlob(
       id,
       categoryId,
       categoryName,
+      kind,
+      comboCategoryIds,
+      bodyZoneSlugs,
       priceOptions,
     });
   }

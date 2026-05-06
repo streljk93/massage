@@ -65,6 +65,7 @@ export function BusinessProfileEditPage() {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [pName, setPName] = useState("");
+  const [pGender, setPGender] = useState<"male" | "female" | null>(null);
   const [pPhoneLocal, setPPhoneLocal] = useState("");
   const [pBio, setPBio] = useState("");
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
@@ -98,6 +99,11 @@ export function BusinessProfileEditPage() {
         : "";
     const userNm = String(specialist.userName ?? "").trim();
     setPName(listing || userNm);
+    setPGender(
+      specialist.gender === "male" || specialist.gender === "female"
+        ? specialist.gender
+        : null,
+    );
     setPPhoneLocal(
       parseVnLocalForInput(
         specialist.userPhone == null ? null : String(specialist.userPhone),
@@ -144,7 +150,7 @@ export function BusinessProfileEditPage() {
   ).toUpperCase();
 
   const onSubmit = async () => {
-    if (!pName.trim() || !pBio.trim() || pExp == null) {
+    if (!pName.trim() || !pBio.trim() || pExp == null || pGender == null) {
       setFormError(tOnb("vErrName"));
       return;
     }
@@ -172,6 +178,7 @@ export function BusinessProfileEditPage() {
         client: sdk,
         body: {
           name: pName.trim(),
+          gender: pGender,
           phone: toE164Vietnam(pPhoneLocal),
           bio: pBio.trim(),
           experienceYears: keyToYears(pExp),
@@ -180,7 +187,7 @@ export function BusinessProfileEditPage() {
             pressureLevel: strength,
             pressureAdaptsToClient: adapt,
           },
-        },
+      } as Record<string, unknown>,
       });
       if (error) {
         setFormError(tOnb("vErrName"));
@@ -274,6 +281,8 @@ export function BusinessProfileEditPage() {
             onPhotoFileChosen={setPendingPhotoFile}
             name={pName}
             onNameChange={setPName}
+            gender={pGender}
+            onGenderChange={setPGender}
             phoneLocal={pPhoneLocal}
             onPhoneLocalChange={setPPhoneLocal}
             bio={pBio}

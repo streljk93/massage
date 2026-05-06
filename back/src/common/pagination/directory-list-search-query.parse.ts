@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 
 const MAX_SEARCH_Q_LEN = 200;
 const MAX_CATEGORY_SLUGS = 24;
+const MAX_BODY_ZONE_SLUGS = 24;
 /** Латиница, цифры, дефис (slug подкатегории или большой категории). */
 const CATEGORY_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -55,6 +56,55 @@ export function parseListCategorySlugsCsv(raw?: string): string[] {
     }
   }
   return out;
+}
+
+export function parseListBodyZoneSlugsCsv(raw?: string): string[] {
+  if (!raw?.trim()) {
+    return [];
+  }
+  const parts = raw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const p of parts) {
+    if (seen.has(p)) {
+      continue;
+    }
+    if (!CATEGORY_SLUG_RE.test(p)) {
+      throw new BadRequestException({
+        code: 'INVALID_BODY_ZONE_SLUG',
+        message: 'Invalid body zone slug in bodyZones parameter',
+      });
+    }
+    seen.add(p);
+    out.push(p);
+    if (out.length >= MAX_BODY_ZONE_SLUGS) {
+      break;
+    }
+  }
+  // "full-body" трактуем как "все зоны" — отдельный slug без дополнительного сужения выборки.
+  if (out.includes('full-body')) {
+    return [];
+  }
+  return out;
+}
+
+export function parseOptionalSpecialistGender(
+  raw?: string,
+): 'male' | 'female' | null {
+  const t = raw?.trim().toLowerCase();
+  if (!t) {
+    return null;
+  }
+  if (t !== 'male' && t !== 'female') {
+    throw new BadRequestException({
+      code: 'INVALID_SPECIALIST_GENDER',
+      message: 'gender must be male or female',
+    });
+  }
+  return t;
 }
 
 function parseOptionalNonNegInt(raw?: string): number | null {

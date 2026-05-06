@@ -1,53 +1,52 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Baby,
+  Circle,
+  Droplets,
+  FlaskConical,
+  Footprints,
+  Hand,
+  HeartPulse,
+  Leaf,
+  Sparkles,
+  Target,
+  UserRound,
+  Waves,
+} from "lucide-react";
+
 /**
- * Иконки для подкатегорий «Массаж» на главной: по `slug` из каталога, иначе — циклический запасной набор.
- * Слуги совпадают с `massageCategorySeeds` / `serviceCategoryI18n` в `back/prisma/seed-catalog-i18n.mjs`.
+ * Иконки подкатегорий «Массаж» на главной: по `slug` из каталога,
+ * иначе — циклический запасной набор.
  */
-const MASSAGE_CATEGORY_EMOJI_BY_SLUG: Record<string, string> = {
-  neck: "🤲",
-  body: "🧴",
-  legs: "🦵",
-  spa: "🛁",
-  back: "🖐️",
-  arms: "💪",
-  face: "✨",
-  relaxing: "🌙",
-  sports: "🏃",
-  head: "💆",
-  lymphatic: "💧",
-  thai: "🙏",
-  "hot-stone": "🪨",
-  "anti-cellulite": "🎯",
-  honey: "🍯",
-  "feet-reflexology": "🦶",
-  pressotherapy: "💨",
-  pregnancy: "🤰",
-  aroma: "🌿",
-  classic: "✋",
+const MASSAGE_CATEGORY_ICON_BY_SLUG: Record<string, LucideIcon> = {
+  "thai-massage": Sparkles,
+  "aroma-massage": FlaskConical,
+  "herbal-massage": Leaf,
+  "deep-tissue-massage": Target,
+  "hot-stone-massage": Circle,
+  "foot-massage": Footprints,
+  "hair-wash": Droplets,
+  "prenatal-massage": HeartPulse,
+  "kids-massage": Baby,
+  "neck-shoulder-back-therapy": UserRound,
+  combo: Sparkles,
 };
 
-const FALLBACK_EMOJIS = [
-  "💆",
-  "🧴",
-  "🦵",
-  "🛁",
-  "🤲",
-  "🌿",
-  "✨",
-  "🙏",
-  "💧",
-  "🪨",
+const FALLBACK_ICONS: readonly LucideIcon[] = [
+  Hand,
+  Leaf,
+  Footprints,
+  Waves,
+  Sparkles,
+  UserRound,
 ] as const;
 
-export function categoryEmojiFromIndex(index: number): string {
-  return FALLBACK_EMOJIS[index % FALLBACK_EMOJIS.length]!;
+export function categoryIconFromIndex(index: number): LucideIcon {
+  return FALLBACK_ICONS[index % FALLBACK_ICONS.length]!;
 }
 
-/** Эмодзи для чипа категории массажа: по slug, иначе по индексу в запасном наборе. */
-export function massageCategoryEmoji(slug: string, index: number): string {
+/** Иконка для категории массажа: по slug, иначе по индексу. */
+export function massageCategoryIcon(slug: string, index: number): LucideIcon {
   const key = slug.trim().toLowerCase();
-  const bySlug = MASSAGE_CATEGORY_EMOJI_BY_SLUG[key];
-  if (bySlug) {
-    return bySlug;
-  }
-  return categoryEmojiFromIndex(index);
+  return MASSAGE_CATEGORY_ICON_BY_SLUG[key] ?? categoryIconFromIndex(index);
 }

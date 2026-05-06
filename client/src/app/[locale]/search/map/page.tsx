@@ -25,6 +25,8 @@ export default async function Page({ searchParams }: PageProps) {
   const listSort = searchDirectoryListSortForPublicApi(f.sort);
   const orgCategoriesCsv = searchCategoriesQueryCsv(f.orgCategorySlugs);
   const specCategoriesCsv = searchCategoriesQueryCsv(f.specCategorySlugs);
+  const orgBodyZonesCsv = searchCategoriesQueryCsv(f.orgBodyZoneSlugs);
+  const specBodyZonesCsv = searchCategoriesQueryCsv(f.specBodyZoneSlugs);
   const hasRadius =
     f.radiusM != null && f.radiusLat != null && f.radiusLng != null;
   const radius =
@@ -39,13 +41,18 @@ export default async function Page({ searchParams }: PageProps) {
     sort: listSort,
     ...(f.q.trim() ? { q: f.q.trim() } : {}),
     ...(orgCategoriesCsv ? { categories: orgCategoriesCsv } : {}),
+    ...(orgBodyZonesCsv ? ({ bodyZones: orgBodyZonesCsv } as Record<string, unknown>) : {}),
   };
   const specListQuery = {
     sort: listSort,
     ...(f.q.trim() ? { q: f.q.trim() } : {}),
     ...(specCategoriesCsv ? { categories: specCategoriesCsv } : {}),
+    ...(specBodyZonesCsv ? ({ bodyZones: specBodyZonesCsv } as Record<string, unknown>) : {}),
     ...(f.priceMinVnd != null ? { priceMinVnd: f.priceMinVnd } : {}),
     ...(f.priceMaxVnd != null ? { priceMaxVnd: f.priceMaxVnd } : {}),
+    ...(f.specialistGender != null ?
+      ({ gender: f.specialistGender } as Record<string, unknown>)
+    : {}),
   };
   const sdkClient = createServerSdkClient();
   let initialOrganizations = null;

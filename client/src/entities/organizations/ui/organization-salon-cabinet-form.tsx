@@ -20,7 +20,10 @@ import { OrgContactFields } from "./org-contact-fields";
 import { validateOrgContactForSubmit } from "../lib/organization-contact-form";
 
 export type OrganizationSalonCabinetSubmitBody =
-  OrganizationsCabinetPostCreateOrganizationData["body"];
+  OrganizationsCabinetPostCreateOrganizationData["body"] & {
+    additionalMajorCategorySlugs?: string[];
+    confirmDisableServiceIds?: string[];
+  };
 
 export type OrganizationSalonCabinetFormInitialValues = {
   name: string;
@@ -42,6 +45,7 @@ export type OrganizationSalonCabinetFormInitialValues = {
   website: string;
   years: string;
   categoryIds: string[];
+  additionalMajorCategorySlugs?: string[];
   gallery: Array<{ url: string; alt?: string | null }>;
 };
 
@@ -99,6 +103,7 @@ export type OrganizationSalonCabinetFormProps = {
   client: Client;
   locale: AppLocale;
   categories: Array<{ id: string; label: string }>;
+  additionalMajorOptions?: Array<{ slug: string; label: string }>;
   categoriesLoading: boolean;
   /** Ключ для полного сброса состояния: `"create"` или id организации */
   initialSyncKey: string;
@@ -125,6 +130,7 @@ export function OrganizationSalonCabinetForm({
   client,
   locale,
   categories,
+  additionalMajorOptions,
   categoriesLoading,
   initialSyncKey,
   initialValues,
@@ -154,6 +160,9 @@ export function OrganizationSalonCabinetForm({
   const [description, setDescription] = useState("");
   const [years, setYears] = useState("");
   const [categoryIds, setCategoryIds] = useState<Set<string>>(new Set());
+  const [additionalMajorSlugs, setAdditionalMajorSlugs] = useState<Set<string>>(
+    new Set(),
+  );
   const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
   const galleryRowsRef = useRef<GalleryRow[]>([]);
   useEffect(() => {
@@ -178,6 +187,7 @@ export function OrganizationSalonCabinetForm({
       setYears("");
       setGalleryRows([]);
       setCategoryIds(new Set());
+      setAdditionalMajorSlugs(new Set());
       return;
     }
     setName(initialValues.name);
@@ -191,6 +201,7 @@ export function OrganizationSalonCabinetForm({
     setYears(initialValues.years);
     const nextCats = new Set(initialValues.categoryIds);
     setCategoryIds(nextCats.size > 0 ? nextCats : new Set());
+    setAdditionalMajorSlugs(new Set(initialValues.additionalMajorCategorySlugs ?? []));
     setGalleryRows(
       initialValues.gallery.map((g, idx) =>
         galleryRowFromRemote(g.url, g.alt ?? null, idx),
@@ -387,6 +398,9 @@ export function OrganizationSalonCabinetForm({
         { galleryImageUrls }
       : {}),
       serviceCategoryIds: Array.from(categoryIds),
+      ...(additionalMajorSlugs.size > 0 ?
+        { additionalMajorCategorySlugs: Array.from(additionalMajorSlugs).sort() }
+      : {}),
       ...(placeReference != null ?
         mapPinCoords != null ?
           {
@@ -544,6 +558,42 @@ export function OrganizationSalonCabinetForm({
           </div>
         }
       </div>
+      {additionalMajorOptions != null && additionalMajorOptions.length > 0 ? (
+        <div className="space-y-2">
+          <span className="text-sm font-medium">{t("orgFormAdditionalMajorCategories")}</span>
+          <p className="text-pretty text-xs text-muted-foreground">
+            {t("orgFormAdditionalMajorCategoriesHint")}
+          </p>
+          <div className="flex flex-col gap-2">
+            {additionalMajorOptions.map((m) => {
+              const checked = additionalMajorSlugs.has(m.slug);
+              return (
+                <label
+                  key={m.slug}
+                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={submitting}
+                    onCheckedChange={() => {
+                      setAdditionalMajorSlugs((prev) => {
+                        const n = new Set(prev);
+                        if (n.has(m.slug)) {
+                          n.delete(m.slug);
+                        } else {
+                          n.add(m.slug);
+                        }
+                        return n;
+                      });
+                    }}
+                  />
+                  <span className="text-sm">{m.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <div
         className={cn(
           "flex gap-2 pt-1",

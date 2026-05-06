@@ -11,6 +11,8 @@ export default function SpecialistOnboardingStepProfile() {
     setPendingPhotoFile,
     pName,
     setPName,
+    pGender,
+    setPGender,
     pPhoneLocal,
     setPPhoneLocal,
     pBio,
@@ -32,6 +34,8 @@ export default function SpecialistOnboardingStepProfile() {
       onPhotoFileChosen={setPendingPhotoFile}
       name={pName}
       onNameChange={setPName}
+      gender={pGender}
+      onGenderChange={setPGender}
       phoneLocal={pPhoneLocal}
       onPhoneLocalChange={setPPhoneLocal}
       bio={pBio}

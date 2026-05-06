@@ -12,6 +12,8 @@ export type SpecialistOccupiedSlotKeysEntryDto = {
 export type OrganizationListItemDto = {
   id: string;
   slug: string;
+  primaryMajorCategorySlug: string | null;
+  additionalMajorCategorySlugs: string[];
   name: string;
   description: string | null;
   city: string | null;

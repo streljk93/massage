@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Sparkles } from "lucide-react";
 import { organizationCardSeedFromApi } from "@/entities/organizations";
 import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { OrganizationCard } from "@/entities/organizations";
@@ -24,13 +23,6 @@ import {
   parseSearchUrlFilters,
 } from "@/views/search/lib/search-url-filters";
 import { cn } from "@/shared/lib";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/shared/ui/shadcn/empty";
 
 const LIST_LIMIT = 3;
 
@@ -89,6 +81,9 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
   const { specialists, organizations } = data;
   const listIsEmpty =
     specialists.length === 0 && organizations.length === 0;
+  if (listIsEmpty) {
+    return null;
+  }
 
   return (
     <section
@@ -101,53 +96,40 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
       >
         {t("title")}
       </h2>
-      {listIsEmpty ?
-        <Empty className="rounded-2xl py-6">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Sparkles aria-hidden />
-            </EmptyMedia>
-            <EmptyTitle>{t("emptyTitle")}</EmptyTitle>
-            <EmptyDescription className="max-w-xs">
-              {t("emptyHint")}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      : <div className="space-y-2.5">
-          {specialists.map((s) => {
-            const card = specialistCardSeedFromApi(s, listingNow);
-            return (
-              <SpecialistCard
-                key={card.id}
-                {...card}
-                imageAlt={card.name}
-                profileHref={`/specialists/${s.id}`}
-                slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                  locale,
-                  maxGroups: 5,
-                  now: listingNow,
-                })}
-              />
-            );
-          })}
-          {organizations.map((o) => {
-            const card = organizationCardSeedFromApi(o, listingNow);
-            return (
-              <OrganizationCard
-                key={card.id}
-                {...card}
-                imageAlt={card.name}
-                profileHref={`/organizations/${o.id}`}
-                slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                  locale,
-                  maxGroups: 5,
-                  now: listingNow,
-                })}
-              />
-            );
-          })}
-        </div>
-      }
+      <div className="space-y-2.5">
+        {specialists.map((s) => {
+          const card = specialistCardSeedFromApi(s, listingNow);
+          return (
+            <SpecialistCard
+              key={card.id}
+              {...card}
+              imageAlt={card.name}
+              profileHref={`/specialists/${s.id}`}
+              slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                locale,
+                maxGroups: 5,
+                now: listingNow,
+              })}
+            />
+          );
+        })}
+        {organizations.map((o) => {
+          const card = organizationCardSeedFromApi(o, listingNow);
+          return (
+            <OrganizationCard
+              key={card.id}
+              {...card}
+              imageAlt={card.name}
+              profileHref={`/organizations/${o.id}`}
+              slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                locale,
+                maxGroups: 5,
+                now: listingNow,
+              })}
+            />
+          );
+        })}
+      </div>
       <Button
         variant="secondary"
         tone="light"

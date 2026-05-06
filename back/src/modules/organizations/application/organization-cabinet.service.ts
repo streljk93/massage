@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import {
@@ -48,6 +49,8 @@ const CABINET_ALLOWED_PLACE_PROVIDERS = new Set<
 >(['locationiq', 'geoapify', 'opencage', 'nominatim']);
 
 export type OrganizationCabinetEditProfileDto = {
+  primaryMajorCategorySlug: string;
+  additionalMajorCategorySlugs: string[];
   name: string;
   description: string | null;
   phone: string | null;
@@ -68,6 +71,8 @@ export type OrganizationCabinetEditProfileDto = {
 
 @Injectable()
 export class OrganizationCabinetService {
+  private readonly logger = new Logger(OrganizationCabinetService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly addressResolution: AddressResolutionService,
@@ -722,6 +727,53 @@ export class OrganizationCabinetService {
     return base.length > 0 ? base : 'salon';
   }
 
+  private async resolveMajorCategoriesForOrganization(
+    slugs: string[] | undefined,
+  ): Promise<{
+    primaryMajorCategoryId: string;
+    additionalMajorCategoryIds: string[];
+    additionalMajorCategorySlugs: string[];
+  }> {
+    const primary = await this.prisma.majorServiceCategory.findFirst({
+      where: { slug: 'massage', deletedAt: null, isActive: true },
+      select: { id: true, slug: true },
+    });
+    if (!primary) {
+      throw new BadRequestException({
+        code: 'PRIMARY_MAJOR_CATEGORY_NOT_FOUND',
+        message: 'Primary major category massage is not configured',
+      });
+    }
+    const uniqSlugs = [...new Set((slugs ?? []).map((s) => s.trim().toLowerCase()))]
+      .filter((s) => s.length > 0 && s !== primary.slug);
+    if (uniqSlugs.length === 0) {
+      return {
+        primaryMajorCategoryId: primary.id,
+        additionalMajorCategoryIds: [],
+        additionalMajorCategorySlugs: [],
+      };
+    }
+    const rows = await this.prisma.majorServiceCategory.findMany({
+      where: {
+        slug: { in: uniqSlugs },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: { id: true, slug: true },
+    });
+    if (rows.length !== uniqSlugs.length) {
+      throw new BadRequestException({
+        code: 'INVALID_ADDITIONAL_MAJOR_CATEGORIES',
+        message: 'One or more additional major category slugs are invalid',
+      });
+    }
+    return {
+      primaryMajorCategoryId: primary.id,
+      additionalMajorCategoryIds: rows.map((r) => r.id),
+      additionalMajorCategorySlugs: rows.map((r) => r.slug),
+    };
+  }
+
   /**
    * Создать салон: текущий пользователь — владелец в БД (`Organization.ownerUserId`),
    * мастер получает роль owner в новой организации.
@@ -742,6 +794,9 @@ export class OrganizationCabinetService {
       });
     }
     const hadActiveWorkplace = specialist.activeOrganizationId != null;
+    const majors = await this.resolveMajorCategoriesForOrganization(
+      body.additionalMajorCategorySlugs,
+    );
     const categories = await this.prisma.serviceCategory.findMany({
       where: {
         id: { in: body.serviceCategoryIds },
@@ -870,6 +925,7 @@ export class OrganizationCabinetService {
           email: norm(body.email),
           website: norm(body.website),
           addressId: addr.id,
+          primaryMajorServiceCategoryId: majors.primaryMajorCategoryId,
           yearsInBusiness: body.yearsInBusiness ?? null,
           publicationModerationStatus:
             PublicationModerationStatus.pending_review,
@@ -945,6 +1001,14 @@ export class OrganizationCabinetService {
           },
         });
       }
+      if (majors.additionalMajorCategoryIds.length > 0) {
+        await tx.organizationAdditionalMajorCategory.createMany({
+          data: majors.additionalMajorCategoryIds.map((majorServiceCategoryId) => ({
+            organizationId: orgId,
+            majorServiceCategoryId,
+          })),
+        });
+      }
 
       const startDate = new Date();
       await tx.specialistOrganizationEmployment.create({
@@ -1003,6 +1067,10 @@ export class OrganizationCabinetService {
     const org = await this.prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
       select: {
+        primaryMajorServiceCategory: { select: { slug: true } },
+        additionalMajorCategories: {
+          include: { majorServiceCategory: { select: { slug: true } } },
+        },
         name: true,
         description: true,
         phone: true,
@@ -1124,6 +1192,11 @@ export class OrganizationCabinetService {
       })) ?? [];
 
     return {
+      primaryMajorCategorySlug:
+        org.primaryMajorServiceCategory?.slug ?? 'massage',
+      additionalMajorCategorySlugs: org.additionalMajorCategories.map(
+        (row) => row.majorServiceCategory.slug,
+      ),
       name,
       description,
       phone: useDraft ? pendingRevision.phone : org.phone,
@@ -1164,6 +1237,9 @@ export class OrganizationCabinetService {
     await this.assertUserCanManageOrgWorkplaceJoinRequests(
       userId,
       organizationId,
+    );
+    const majors = await this.resolveMajorCategoriesForOrganization(
+      body.additionalMajorCategorySlugs,
     );
     const categories = await this.prisma.serviceCategory.findMany({
       where: {
@@ -1234,12 +1310,94 @@ export class OrganizationCabinetService {
     await this.prisma.$transaction(async (tx) => {
       const head = await tx.organization.findFirst({
         where: { id: organizationId, deletedAt: null },
-        select: { id: true },
+        select: {
+          id: true,
+          primaryMajorServiceCategoryId: true,
+          additionalMajorCategories: {
+            select: { majorServiceCategoryId: true },
+          },
+        },
       });
       if (!head) {
         throw new NotFoundException({
           code: 'ORGANIZATION_NOT_FOUND',
           message: 'Organization not found',
+        });
+      }
+      const prevAdditionalIds = new Set(
+        head.additionalMajorCategories.map((row) => row.majorServiceCategoryId),
+      );
+      const nextAdditionalIds = new Set(majors.additionalMajorCategoryIds);
+      const removedAdditionalIds = [...prevAdditionalIds].filter(
+        (id) => !nextAdditionalIds.has(id),
+      );
+      if (removedAdditionalIds.length > 0) {
+        const affected = await tx.service.findMany({
+          where: {
+            organizationId,
+            deletedAt: null,
+            isActive: true,
+            category: {
+              deletedAt: null,
+              majorServiceCategoryId: { in: removedAdditionalIds },
+            },
+          },
+          select: {
+            id: true,
+            category: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+                slug: true,
+              },
+            },
+          },
+        });
+        if (affected.length > 0) {
+          const provided = new Set(body.confirmDisableServiceIds ?? []);
+          const allConfirmed = affected.every((row) => provided.has(row.id));
+          if (!allConfirmed) {
+            throw new ConflictException({
+              code: 'ADDITIONAL_MAJOR_DISABLE_CONFIRM_REQUIRED',
+              message:
+                'Removing additional major categories requires confirmation for affected active services',
+              affectedServices: affected.map((row) => ({
+                id: row.id,
+                categoryId: row.category.id,
+                categorySlug: row.category.slug,
+                categoryName: row.category.shortName ?? row.category.name,
+              })),
+            });
+          }
+          await tx.service.updateMany({
+            where: {
+              id: { in: affected.map((row) => row.id) },
+              deletedAt: null,
+              isActive: true,
+            },
+            data: { isActive: false },
+          });
+          this.logger.warn(
+            `additional major categories removed at organization ${organizationId}; deactivated services: ${affected
+              .map((row) => row.id)
+              .join(', ')}`,
+          );
+        }
+      }
+      await tx.organization.update({
+        where: { id: organizationId },
+        data: { primaryMajorServiceCategoryId: majors.primaryMajorCategoryId },
+      });
+      await tx.organizationAdditionalMajorCategory.deleteMany({
+        where: { organizationId },
+      });
+      if (majors.additionalMajorCategoryIds.length > 0) {
+        await tx.organizationAdditionalMajorCategory.createMany({
+          data: majors.additionalMajorCategoryIds.map((majorServiceCategoryId) => ({
+            organizationId,
+            majorServiceCategoryId,
+          })),
         });
       }
 

@@ -113,6 +113,7 @@ export function searchSortMessageKey(
 export type SearchOrganizationsListApiFilters = {
   q: string;
   categorySlugs: string[];
+  bodyZoneSlugs: string[];
   sort: SearchDirectoryListSort;
   /** Согласовано с `search-url-filters`: все три вместе, иначе null. */
   radiusM: number | null;
@@ -124,6 +125,7 @@ export type SearchOrganizationsListApiFilters = {
 export type SearchSpecialistsListApiFilters = SearchOrganizationsListApiFilters & {
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
+  gender: "male" | "female" | null;
 };
 
 export function searchDirectoryRadiusActive(f: {
@@ -140,6 +142,7 @@ export function searchOrganizationsFiltersEmpty(
   return (
     !f.q.trim() &&
     f.categorySlugs.length === 0 &&
+    f.bodyZoneSlugs.length === 0 &&
     !searchDirectoryRadiusActive(f) &&
     f.sort === SEARCH_DIRECTORY_DEFAULT_SORT
   );
@@ -150,6 +153,7 @@ export function searchSpecialistsFiltersEmpty(
 ): boolean {
   return (
     searchOrganizationsFiltersEmpty(f) &&
+    f.gender == null &&
     f.priceMinVnd == null &&
     f.priceMaxVnd == null
   );

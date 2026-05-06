@@ -60,6 +60,7 @@ export type SpecialistOnboardingSpec = {
   imageUrl?: string | null;
   /** Имя мастера на витрине (каталог). */
   listingName?: string | null;
+  gender?: "male" | "female" | null;
   /** Личное имя аккаунта (`User.name`). */
   userName?: string;
   userPhone?: string | null;
@@ -95,6 +96,8 @@ export type SpecialistOnboardingContextValue = {
   setPName: (v: string) => void;
   pPhoneLocal: string;
   setPPhoneLocal: (v: string) => void;
+  pGender: "male" | "female" | null;
+  setPGender: (v: "male" | "female" | null) => void;
   pBio: string;
   setPBio: (v: string) => void;
   pendingPhotoFile: File | null;
@@ -196,6 +199,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [formError, setFormError] = useState<string | null>(null);
   const [pName, setPName] = useState("");
   const [pPhoneLocal, setPPhoneLocal] = useState("");
+  const [pGender, setPGender] = useState<"male" | "female" | null>(null);
   const [pBio, setPBio] = useState("");
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [pendingPhotoObjectUrl, setPendingPhotoObjectUrl] = useState<string | null>(
@@ -231,6 +235,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       prev ? prev : (spec.listingName ?? spec.userName ?? "").trim() || "",
     );
     setPPhoneLocal((prev) => (prev ? prev : parseVnLocalForInput(spec.userPhone)));
+    setPGender((prev) => prev ?? (spec.gender ?? null));
     setPBio((prev) => (prev ? prev : spec.bio?.trim() ?? ""));
     setPExp((prev) => (prev ?? yearsToKey(spec.experienceYears)));
     const m = spec.massage;
@@ -309,9 +314,9 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       const stepAfter = (fresh?.onboardingStep ?? 1) as number;
       if (stepAfter === 1) {
         setStep(2, stepAfter);
-      } else if (stepAfter === 3) {
-        setStep(3, stepAfter);
       } else if (stepAfter === 4) {
+        setStep(3, stepAfter);
+      } else if (stepAfter === 3) {
         setStep(4, stepAfter);
       } else if (stepAfter === 5) {
         setStep(5, stepAfter);
@@ -324,7 +329,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   };
 
   const onProfileContinue = async () => {
-    if (!pName.trim() || !pBio.trim() || pExp == null) {
+    if (!pName.trim() || !pBio.trim() || pExp == null || pGender == null) {
       setFormError(t("vErrName"));
       return;
     }
@@ -352,6 +357,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         client: sdk,
         body: {
           name: pName.trim(),
+          gender: pGender,
           phone: toE164Vietnam(pPhoneLocal),
           bio: pBio.trim(),
           experienceYears: keyToYears(pExp),
@@ -360,7 +366,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
             pressureLevel: strength,
             pressureAdaptsToClient: adapt,
           },
-        },
+        } as Record<string, unknown>,
       });
       if (error) {
         setFormError(t("vErrName"));
@@ -369,7 +375,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       setPendingPhotoFile(null);
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
-      if (o2 && (o2.onboardingStep as number) < 3) {
+      if (o2 && (o2.onboardingStep as number) < 4) {
         setFormError(t("vErrName"));
         return;
       }
@@ -385,6 +391,9 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     }
     for (const s of services) {
       if (!s.categoryId || s.durationPrices.length === 0) {
+        return false;
+      }
+      if (s.kind === "combo" && s.comboCategoryIds.length < 1) {
         return false;
       }
       for (const d of s.durationPrices) {
@@ -420,13 +429,23 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
             Number(String(d.priceVnd).replace(/\D/g, "")),
           ),
         }));
+        const serviceBody = {
+          categoryId: s.categoryId,
+          kind: s.kind,
+          ...(s.comboCategoryIds.length > 0 ?
+            ({ comboCategoryIds: s.comboCategoryIds } as Record<string, unknown>)
+          : {}),
+          ...(s.bodyZoneSlugs.length > 0 ?
+            ({ bodyZoneSlugs: s.bodyZoneSlugs } as Record<string, unknown>)
+          : {}),
+          priceOptions: priceOptions.map((o) => ({ ...o, currency: "VND" })),
+        } as unknown as NonNullable<
+          Parameters<typeof specialistsCabinetPostSpecialistPersonalService>[0]["body"]
+        >;
         const { error } = await specialistsCabinetPostSpecialistPersonalService({
           client: sdk,
           query: { locale },
-          body: {
-            categoryId: s.categoryId,
-            priceOptions: priceOptions.map((o) => ({ ...o, currency: "VND" })),
-          },
+          body: serviceBody,
         });
         if (error) {
           setFormError(t("vErrService"));
@@ -435,20 +454,20 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
-      setStep(4, o2?.onboardingStep);
+      setStep(5, o2?.onboardingStep);
     } finally {
       setServicesSubmitting(false);
     }
   };
 
   useEffect(() => {
-    if (activeUi === 4) {
+    if (activeUi === 3) {
       setOrgSuggestOpen(true);
     }
   }, [activeUi]);
 
   useEffect(() => {
-    if (activeUi !== 4) {
+    if (activeUi !== 3) {
       return;
     }
     const q = orgQ.trim();
@@ -502,7 +521,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
-      setStep(5, o2?.onboardingStep);
+      setStep(4, o2?.onboardingStep);
     } finally {
       setWorkplaceSubmitting(false);
     }
@@ -525,7 +544,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setCreateSalonOpen(false);
         await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
         const { data: o2 } = await refetch();
-        setStep(5, o2?.onboardingStep);
+        setStep(4, o2?.onboardingStep);
       } finally {
         setCreateOrgSubmitting(false);
       }
@@ -614,6 +633,8 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setPName,
     pPhoneLocal,
     setPPhoneLocal,
+    pGender,
+    setPGender,
     pBio,
     setPBio,
     pendingPhotoFile,

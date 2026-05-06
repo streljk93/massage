@@ -22,7 +22,7 @@ import {
   HomeScreenHeader,
 } from "@/widgets/home";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
-import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
+import { massageCategoryIcon } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { HomeForYouSection } from "./home-for-you-section";
 import {
@@ -176,7 +176,7 @@ export async function HomePage() {
       catalog.categories.map((c, index) => ({
         key: c.id,
         label: c.shortName,
-        emoji: massageCategoryEmoji(c.slug, index),
+        Icon: massageCategoryIcon(c.slug, index),
         href: `/search?category=${encodeURIComponent(c.slug)}`,
       }))
     : [];
@@ -245,7 +245,7 @@ export async function HomePage() {
                     key={c.key}
                     href={c.href}
                     label={c.label}
-                    icon={<span className="text-2xl">{c.emoji}</span>}
+                    icon={<c.Icon className="size-5" aria-hidden />}
                   />
                 ))}
               </div>

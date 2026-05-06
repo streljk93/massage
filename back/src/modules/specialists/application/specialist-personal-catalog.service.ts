@@ -8,6 +8,10 @@ import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
 import type { ApiLocale } from '../../../common/i18n';
 import type { CreateSpecialistPersonalServiceBody } from '../dto/specialist-body.schema';
+import {
+  getAllowedBodyZoneSlugsForCategories,
+  isBodyZoneApplicableForMajor,
+} from '../domain/body-zone-compatibility';
 
 function makeServiceSlug(categorySlug: string, id: string): string {
   const base = categorySlug
@@ -21,6 +25,68 @@ function makeServiceSlug(categorySlug: string, id: string): string {
 @Injectable()
 export class SpecialistPersonalCatalogService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeBodyZoneSlugs(rawSlugs: string[] | undefined): string[] {
+    const unique = [...new Set(rawSlugs ?? [])];
+    if (unique.includes('full-body')) {
+      return ['full-body'];
+    }
+    return unique;
+  }
+
+  private async resolveValidatedBodyZones(args: {
+    majorSlug: string;
+    categorySlugs: string[];
+    bodyZoneSlugs: string[];
+  }): Promise<Array<{ id: string; slug: string }>> {
+    if (args.bodyZoneSlugs.length === 0) {
+      return [];
+    }
+    if (!isBodyZoneApplicableForMajor(args.majorSlug)) {
+      throw new BadRequestException({
+        code: 'BODY_ZONES_NOT_APPLICABLE_FOR_MAJOR',
+        message: `Body zones are not supported for major category ${args.majorSlug}`,
+      });
+    }
+    const allowed = getAllowedBodyZoneSlugsForCategories({
+      majorSlug: args.majorSlug,
+      categorySlugs: args.categorySlugs,
+    });
+    if (allowed.length === 0) {
+      throw new BadRequestException({
+        code: 'BODY_ZONES_NOT_ALLOWED_FOR_CATEGORY',
+        message: 'Body zones are not allowed for this service category',
+      });
+    }
+    const allowedSet = new Set(allowed);
+    const invalidInput = args.bodyZoneSlugs.find((slug) => !allowedSet.has(slug));
+    if (invalidInput != null) {
+      throw new BadRequestException({
+        code: 'BODY_ZONES_NOT_ALLOWED_FOR_CATEGORY',
+        message: `Body zone ${invalidInput} is not allowed for selected categories`,
+      });
+    }
+    const bodyZones = await this.prisma.bodyZone.findMany({
+      where: {
+        slug: { in: args.bodyZoneSlugs },
+        deletedAt: null,
+        isActive: true,
+        majorServiceCategory: {
+          slug: args.majorSlug,
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      select: { id: true, slug: true },
+    });
+    if (bodyZones.length !== args.bodyZoneSlugs.length) {
+      throw new BadRequestException({
+        code: 'INVALID_BODY_ZONES',
+        message: 'One or more body zones are invalid',
+      });
+    }
+    return bodyZones;
+  }
 
   async createPersonalService(
     userId: string,
@@ -40,6 +106,9 @@ export class SpecialistPersonalCatalogService {
     }
     const category = await this.prisma.serviceCategory.findFirst({
       where: { id: body.categoryId, deletedAt: null, isActive: true },
+      include: {
+        majorServiceCategory: { select: { slug: true } },
+      },
     });
     if (!category) {
       throw new BadRequestException({
@@ -47,6 +116,39 @@ export class SpecialistPersonalCatalogService {
         message: 'Category not found or inactive',
       });
     }
+    const kind = body.kind ?? 'standard';
+    const comboCategoryIds = [...new Set(body.comboCategoryIds ?? [])];
+    let comboRows: Array<{ id: string; slug: string; majorServiceCategoryId: string }> = [];
+    if (kind === 'combo' && comboCategoryIds.length > 0) {
+      comboRows = await this.prisma.serviceCategory.findMany({
+        where: { id: { in: comboCategoryIds }, deletedAt: null, isActive: true },
+        select: { id: true, slug: true, majorServiceCategoryId: true },
+      });
+      if (comboRows.length !== comboCategoryIds.length) {
+        throw new BadRequestException({
+          code: 'INVALID_COMBO_CATEGORIES',
+          message: 'One or more combo categories are invalid',
+        });
+      }
+      const hasMajorMismatch = comboRows.some(
+        (row) => row.majorServiceCategoryId !== category.majorServiceCategoryId,
+      );
+      if (hasMajorMismatch) {
+        throw new BadRequestException({
+          code: 'INVALID_COMBO_CATEGORIES_MAJOR_MISMATCH',
+          message: 'Combo categories must belong to the same major category',
+        });
+      }
+    }
+    const bodyZoneSlugs = this.normalizeBodyZoneSlugs(body.bodyZoneSlugs);
+    const bodyZones = await this.resolveValidatedBodyZones({
+      majorSlug: category.majorServiceCategory.slug,
+      categorySlugs: [
+        category.slug,
+        ...(kind === 'combo' ? comboRows.map((row) => row.slug) : []),
+      ],
+      bodyZoneSlugs,
+    });
     const serviceId = await this.prisma.$transaction(async (tx) => {
       const id = randomUUID();
       const slug = makeServiceSlug(category.slug, id);
@@ -56,10 +158,30 @@ export class SpecialistPersonalCatalogService {
           organizationId: null,
           specialistId: specialist.id,
           categoryId: body.categoryId,
+          kind,
           slug,
           description: body.description ?? null,
         },
       });
+      if (kind === 'combo') {
+        for (let i = 0; i < comboCategoryIds.length; i += 1) {
+          await tx.serviceComboItem.create({
+            data: {
+              comboServiceId: id,
+              itemServiceCategoryId: comboCategoryIds[i]!,
+              sortOrder: i,
+            },
+          });
+        }
+      }
+      for (const z of bodyZones) {
+        await tx.serviceBodyZone.create({
+          data: {
+            serviceId: id,
+            bodyZoneId: z.id,
+          },
+        });
+      }
       for (const opt of body.priceOptions) {
         const currency = opt.currency ?? 'VND';
         await tx.servicePriceOption.create({
@@ -191,6 +313,9 @@ export class SpecialistPersonalCatalogService {
 
     const category = await this.prisma.serviceCategory.findFirst({
       where: { id: body.categoryId, deletedAt: null, isActive: true },
+      include: {
+        majorServiceCategory: { select: { slug: true } },
+      },
     });
     if (!category) {
       throw new BadRequestException({
@@ -198,6 +323,39 @@ export class SpecialistPersonalCatalogService {
         message: 'Category not found or inactive',
       });
     }
+    const kind = body.kind ?? 'standard';
+    const comboCategoryIds = [...new Set(body.comboCategoryIds ?? [])];
+    let comboRows: Array<{ id: string; slug: string; majorServiceCategoryId: string }> = [];
+    if (kind === 'combo' && comboCategoryIds.length > 0) {
+      comboRows = await this.prisma.serviceCategory.findMany({
+        where: { id: { in: comboCategoryIds }, deletedAt: null, isActive: true },
+        select: { id: true, slug: true, majorServiceCategoryId: true },
+      });
+      if (comboRows.length !== comboCategoryIds.length) {
+        throw new BadRequestException({
+          code: 'INVALID_COMBO_CATEGORIES',
+          message: 'One or more combo categories are invalid',
+        });
+      }
+      const hasMajorMismatch = comboRows.some(
+        (row) => row.majorServiceCategoryId !== category.majorServiceCategoryId,
+      );
+      if (hasMajorMismatch) {
+        throw new BadRequestException({
+          code: 'INVALID_COMBO_CATEGORIES_MAJOR_MISMATCH',
+          message: 'Combo categories must belong to the same major category',
+        });
+      }
+    }
+    const bodyZoneSlugs = this.normalizeBodyZoneSlugs(body.bodyZoneSlugs);
+    const bodyZones = await this.resolveValidatedBodyZones({
+      majorSlug: category.majorServiceCategory.slug,
+      categorySlugs: [
+        category.slug,
+        ...(kind === 'combo' ? comboRows.map((row) => row.slug) : []),
+      ],
+      bodyZoneSlugs,
+    });
 
     await this.prisma.$transaction(async (tx) => {
       const svc = await tx.service.findFirst({
@@ -227,10 +385,36 @@ export class SpecialistPersonalCatalogService {
         where: { id: svc.id },
         data: {
           categoryId: newCategoryId,
+          kind,
           ...(newSlug != null ? { slug: newSlug } : {}),
           description: body.description ?? null,
         },
       });
+      await tx.serviceComboItem.deleteMany({
+        where: { comboServiceId: svc.id },
+      });
+      if (kind === 'combo') {
+        for (let i = 0; i < comboCategoryIds.length; i += 1) {
+          await tx.serviceComboItem.create({
+            data: {
+              comboServiceId: svc.id,
+              itemServiceCategoryId: comboCategoryIds[i]!,
+              sortOrder: i,
+            },
+          });
+        }
+      }
+      await tx.serviceBodyZone.deleteMany({
+        where: { serviceId: svc.id },
+      });
+      for (const z of bodyZones) {
+        await tx.serviceBodyZone.create({
+          data: {
+            serviceId: svc.id,
+            bodyZoneId: z.id,
+          },
+        });
+      }
 
       await tx.servicePriceOption.deleteMany({
         where: { serviceId: svc.id },

@@ -5,6 +5,7 @@ import {
   bookingListCardI18n,
 } from "@/entities/booking";
 import { catalogFiltersDialogI18n } from "@/entities/catalog";
+import { bodyZonesSelectorI18n } from "@/entities/body-zones";
 import {
   businessActiveOrganizationContextCardI18n,
   organizationCardI18n,
@@ -110,6 +111,7 @@ const bundles: ColocatedI18nBundle[] = [
   profileTermsPageI18n,
   profileThemePageI18n,
   catalogFiltersDialogI18n,
+  bodyZonesSelectorI18n,
   searchPageI18n,
   searchMapPageI18n,
   specialistProfilePageI18n,

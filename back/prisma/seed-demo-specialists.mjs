@@ -380,13 +380,14 @@ export async function seedDemoSpecialists(prisma) {
   }
 
   const categorySlugs = [
-    'neck',
-    'back',
-    'sports',
-    'relaxing',
-    'feet-reflexology',
-    'body',
-    'thai',
+    'neck-shoulder-back-therapy',
+    'deep-tissue-massage',
+    'thai-massage',
+    'herbal-massage',
+    'foot-massage',
+    'aroma-massage',
+    'hot-stone-massage',
+    'hair-wash',
   ];
   const categories = await prisma.serviceCategory.findMany({
     where: {
@@ -412,10 +413,10 @@ export async function seedDemoSpecialists(prisma) {
       specialistId: { in: [ownerSpecialist.id, workerSpecialist.id] },
     },
   });
-  const ownerPick = ['neck', 'back', 'sports']
+  const ownerPick = ['neck-shoulder-back-therapy', 'deep-tissue-massage', 'thai-massage']
     .map((s) => bySlug[s])
     .filter(Boolean);
-  const workerPick = ['relaxing', 'feet-reflexology', 'neck']
+  const workerPick = ['herbal-massage', 'foot-massage', 'neck-shoulder-back-therapy']
     .map((s) => bySlug[s])
     .filter(Boolean);
   for (const c of ownerPick) {
@@ -459,7 +460,7 @@ export async function seedDemoSpecialists(prisma) {
   const serviceSeedRows = [
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: 'neck',
+      categorySlug: 'neck-shoulder-back-therapy',
       slug: 'demo-seed-owner-neck',
       sortOrder: 0,
       priceTiers: [
@@ -470,7 +471,7 @@ export async function seedDemoSpecialists(prisma) {
     },
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: 'back',
+      categorySlug: 'deep-tissue-massage',
       slug: 'demo-seed-owner-back',
       sortOrder: 1,
       priceTiers: [
@@ -481,7 +482,7 @@ export async function seedDemoSpecialists(prisma) {
     },
     {
       specialistId: ownerSpecialist.id,
-      categorySlug: 'sports',
+      categorySlug: 'thai-massage',
       slug: 'demo-seed-owner-sports',
       sortOrder: 2,
       priceTiers: [
@@ -492,7 +493,7 @@ export async function seedDemoSpecialists(prisma) {
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: 'relaxing',
+      categorySlug: 'herbal-massage',
       slug: 'demo-seed-worker-relax',
       sortOrder: 0,
       priceTiers: [
@@ -503,7 +504,7 @@ export async function seedDemoSpecialists(prisma) {
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: 'feet-reflexology',
+      categorySlug: 'foot-massage',
       slug: 'demo-seed-worker-foot',
       sortOrder: 1,
       priceTiers: [
@@ -514,7 +515,7 @@ export async function seedDemoSpecialists(prisma) {
     },
     {
       specialistId: workerSpecialist.id,
-      categorySlug: 'neck',
+      categorySlug: 'neck-shoulder-back-therapy',
       slug: 'demo-seed-worker-neck',
       sortOrder: 2,
       priceTiers: [
@@ -855,7 +856,13 @@ async function getOrgCategoryRows(prisma, organizationId, bySlug) {
   if (links.length > 0) {
     return links.map((l) => l.serviceCategory);
   }
-  const slugs = ['neck', 'back', 'sports', 'relaxing', 'feet-reflexology'];
+  const slugs = [
+    'neck-shoulder-back-therapy',
+    'deep-tissue-massage',
+    'thai-massage',
+    'herbal-massage',
+    'foot-massage',
+  ];
   const rows = slugs.map((s) => bySlug[s]).filter(Boolean);
   for (const c of rows) {
     await prisma.organizationServiceCategory.upsert({
@@ -959,7 +966,7 @@ async function topUpOriginalSalon(prisma, ctx) {
       data: { activeOrganizationId: org.id },
     });
 
-    const pick = ['relaxing', 'back', 'neck']
+    const pick = ['herbal-massage', 'deep-tissue-massage', 'neck-shoulder-back-therapy']
       .map((s) => ctx.bySlug[s])
       .filter(Boolean);
     await prisma.specialistServiceCategory.deleteMany({
@@ -1162,11 +1169,11 @@ async function upsertFullSalon(prisma, args) {
   }
 
   const orgCategorySlugs = [
-    'neck',
-    'back',
-    'sports',
-    'relaxing',
-    'feet-reflexology',
+    'neck-shoulder-back-therapy',
+    'deep-tissue-massage',
+    'thai-massage',
+    'herbal-massage',
+    'foot-massage',
   ];
   await prisma.organizationServiceCategory.deleteMany({
     where: { organizationId: org.id },
@@ -1188,7 +1195,13 @@ async function upsertFullSalon(prisma, args) {
     });
   }
 
-  const categoryRot = ['sports', 'relaxing', 'neck', 'back', 'thai'];
+  const categoryRot = [
+    'thai-massage',
+    'herbal-massage',
+    'neck-shoulder-back-therapy',
+    'deep-tissue-massage',
+    'foot-massage',
+  ];
 
   for (let i = 0; i < allSpecs.length; i++) {
     const spec = allSpecs[i];

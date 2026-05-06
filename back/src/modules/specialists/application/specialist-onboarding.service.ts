@@ -29,6 +29,16 @@ type CabinetVitrine = {
   imageAlt: string | null;
 };
 
+function joinComboServiceDisplayName(args: {
+  baseName: string;
+  comboNames: string[];
+}): string {
+  return [args.baseName, ...args.comboNames]
+    .map((s) => s.trim())
+    .filter((s, idx, arr) => s.length > 0 && arr.indexOf(s) === idx)
+    .join(' + ');
+}
+
 @Injectable()
 export class SpecialistOnboardingService {
   constructor(
@@ -68,9 +78,9 @@ export class SpecialistOnboardingService {
   private isProfileComplete(
     user: { phone: string | null },
     vitrine: CabinetVitrine,
-    spec: { experienceYears: number | null },
+    spec: { experienceYears: number | null; gender: 'male' | 'female' | null },
   ): boolean {
-    if (!vitrine.listingName?.trim() || !user.phone?.trim()) {
+    if (!vitrine.listingName?.trim() || !user.phone?.trim() || !spec.gender) {
       return false;
     }
     if (!vitrine.bio?.trim() || spec.experienceYears == null) {
@@ -114,26 +124,24 @@ export class SpecialistOnboardingService {
     if (!this.isProfileComplete(user, vitrine, spec)) {
       return { step: 1, specialistId: spec.id };
     }
-    const svcCount = await this.countPersonalServices(spec.id);
-    if (svcCount < 1) {
-      return { step: 3, specialistId: spec.id };
-    }
+    const pendingJoin = await this.prisma.specialistWorkplaceJoinRequest.findFirst(
+      {
+        where: {
+          specialistId: spec.id,
+          status: SpecialistWorkplaceJoinRequestStatus.pending,
+        },
+        orderBy: { updatedAt: 'desc' },
+      },
+    );
     if (!spec.onboardingCompletedAt) {
-      if (spec.activeOrganizationId) {
-        return { step: 5, specialistId: spec.id };
+      if (!spec.activeOrganizationId && !pendingJoin) {
+        return { step: 4, specialistId: spec.id };
       }
-      const pendingJoin =
-        await this.prisma.specialistWorkplaceJoinRequest.findFirst({
-          where: {
-            specialistId: spec.id,
-            status: SpecialistWorkplaceJoinRequestStatus.pending,
-          },
-          orderBy: { updatedAt: 'desc' },
-        });
-      if (pendingJoin) {
-        return { step: 5, specialistId: spec.id };
+      const svcCount = await this.countPersonalServices(spec.id);
+      if (svcCount < 1) {
+        return { step: 3, specialistId: spec.id };
       }
-      return { step: 4, specialistId: spec.id };
+      return { step: 5, specialistId: spec.id };
     }
     return { step: 6, specialistId: spec.id };
   }
@@ -206,17 +214,64 @@ export class SpecialistOnboardingService {
             currency: true,
           },
         },
+        comboItems: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            itemServiceCategoryId: true,
+            itemServiceCategory: {
+              include: {
+                locales: {
+                  select: {
+                    locale: true,
+                    name: true,
+                    shortName: true,
+                    description: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        bodyZones: {
+          select: {
+            bodyZone: {
+              select: { slug: true },
+            },
+          },
+        },
       },
     });
 
     const personalServices = personalServiceRows.map((row) => ({
+      // В кабинете показываем читаемое имя combo как "Услуга + Услуга".
+      ...(() => {
+        const base = pickLocalizedServiceCategoryFields(
+          row.category as CategoryLocaleShape,
+          locale,
+        );
+        const comboNames =
+          row.kind === 'combo'
+            ? row.comboItems.map((item) =>
+                pickLocalizedServiceCategoryFields(
+                  item.itemServiceCategory as CategoryLocaleShape,
+                  locale,
+                ).name,
+              )
+            : [];
+        return {
+          categoryName: joinComboServiceDisplayName({
+            baseName: base.name,
+            comboNames,
+          }),
+          comboCategoryNames: comboNames,
+        };
+      })(),
       id: row.id,
       categoryId: row.categoryId,
-      categoryName: pickLocalizedServiceCategoryFields(
-        row.category as CategoryLocaleShape,
-        locale,
-      ).name,
       description: row.description,
+      kind: row.kind,
+      comboCategoryIds: row.comboItems.map((item) => item.itemServiceCategoryId),
+      bodyZoneSlugs: row.bodyZones.map((item) => item.bodyZone.slug),
       priceOptions: row.priceOptions.map((o) => ({
         durationMinutes: o.durationMinutes,
         priceAmount: o.priceAmount,
@@ -247,6 +302,7 @@ export class SpecialistOnboardingService {
       imageAlt: vitrine.imageAlt,
       profilePublicationModerationStatus:
         profilePublicationModerationStatusForCabinet,
+      gender: spec.gender,
       massage: spec.massageProfile
         ? {
             pressureLevel: spec.massageProfile.pressureLevel,
@@ -427,9 +483,13 @@ export class SpecialistOnboardingService {
 
       const specData: {
         experienceYears?: number;
+        gender?: 'male' | 'female';
       } = {};
       if (body.experienceYears !== undefined) {
         specData.experienceYears = body.experienceYears;
+      }
+      if (body.gender !== undefined) {
+        specData.gender = body.gender;
       }
       if (Object.keys(specData).length > 0) {
         await tx.specialist.update({

@@ -9,6 +9,15 @@ const directoryCategoryTagSchema = {
   },
 };
 
+const directoryBodyZoneTagSchema = {
+  type: 'object',
+  required: ['slug', 'name'],
+  properties: {
+    slug: { type: 'string', example: 'neck' },
+    name: { type: 'string', example: 'Neck' },
+  },
+};
+
 const listingSlotGroupItemSchema = {
   type: 'object',
   required: ['calendarDate', 'times'],
@@ -94,6 +103,7 @@ export const specialistListItemSchema = {
     'categories',
     'slotGroups',
     'bookableServices',
+    'gender',
     'autoConfirmBookings',
     'listingWorkdayStartMinute',
     'listingWorkdayEndMinute',
@@ -136,6 +146,10 @@ export const specialistListItemSchema = {
     },
     imageUrl: { type: 'string', nullable: true, format: 'uri' },
     imageAlt: { type: 'string', nullable: true },
+    gender: {
+      oneOf: [{ type: 'string', enum: ['male', 'female'] }, { type: 'null' }],
+      description: 'Пол специалиста для фильтра каталога.',
+    },
     metaLine: { type: 'string', example: '~ 1 km | ул. Нгуен Тхай Хок' },
     servicesLine: { type: 'string', example: 'Классический массаж, спорт' },
     categories: {
@@ -219,6 +233,8 @@ export const organizationListItemSchema = {
   required: [
     'id',
     'slug',
+    'primaryMajorCategorySlug',
+    'additionalMajorCategorySlugs',
     'name',
     'ratingAverage',
     'rating',
@@ -237,6 +253,11 @@ export const organizationListItemSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     slug: { type: 'string', example: 'demo-salon-seed' },
+    primaryMajorCategorySlug: { type: 'string', nullable: true },
+    additionalMajorCategorySlugs: {
+      type: 'array',
+      items: { type: 'string' },
+    },
     name: { type: 'string' },
     description: { type: 'string', nullable: true },
     city: { type: 'string', nullable: true },
@@ -324,11 +345,19 @@ const organizationStaffMemberSchema = {
 
 export const catalogFilterOptionsResponseSchema = {
   type: 'object',
-  required: ['categories', 'priceRangeVnd'],
+  required: ['categories', 'bodyZones', 'genders', 'priceRangeVnd'],
   properties: {
     categories: {
       type: 'array',
       items: directoryCategoryTagSchema,
+    },
+    bodyZones: {
+      type: 'array',
+      items: directoryBodyZoneTagSchema,
+    },
+    genders: {
+      type: 'array',
+      items: { type: 'string', enum: ['male', 'female'] },
     },
     priceRangeVnd: {
       type: 'object',

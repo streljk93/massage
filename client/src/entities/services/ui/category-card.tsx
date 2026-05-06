@@ -19,16 +19,16 @@ export function CategoryCard({
 }: CategoryCardProps) {
   const cardClassName = cn(
     motion.interactivePress,
-    "flex w-[4.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl bg-card p-3 text-center hover:bg-muted/60 sm:w-[5rem]",
+    "flex h-[4.65rem] w-[3.9rem] shrink-0 flex-col items-center justify-between rounded-xl bg-card px-2 py-2 text-center hover:bg-muted/60 sm:h-[5rem] sm:w-[4.3rem]",
     className,
   );
 
   const contents = (
     <>
-      <span className="flex size-10 items-center justify-center text-foreground sm:size-11">
+      <span className="flex size-8 items-center justify-center text-foreground sm:size-9">
         {icon}
       </span>
-      <span className="text-[0.7rem] leading-tight font-medium text-muted-foreground sm:text-xs">
+      <span className="line-clamp-2 text-[0.72rem] leading-[0.96rem] font-medium text-muted-foreground sm:text-[0.8rem]">
         {label}
       </span>
     </>

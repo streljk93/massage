@@ -25,9 +25,9 @@ export function defaultWizardStepForApiStep(apiStep: number): number {
   switch (apiStep) {
     case 1:
       return 1;
-    case 3:
-      return 3;
     case 4:
+      return 3;
+    case 3:
       return 4;
     case 5:
     case 6:
@@ -42,9 +42,9 @@ export function maxUiStepAllowed(apiStep: 1 | 3 | 4 | 5 | 6): number {
   switch (apiStep) {
     case 1:
       return 2;
-    case 3:
-      return 3;
     case 4:
+      return 3;
+    case 3:
       return 4;
     case 5:
     case 6:

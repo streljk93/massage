@@ -1,9 +1,15 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import { useLocale } from "next-intl";
+import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { ChevronDown, Plus, Sparkles } from "lucide-react";
-import { SpecialistPersonalServiceFields } from "@/entities/specialists";
+import {
+  SpecialistPersonalServiceFields,
+} from "@/entities/specialists";
+import { defaultBodyZoneSlugsForCategorySlug } from "@/entities/body-zones";
 import { cn } from "@/shared/lib";
 import {
   Button,
@@ -15,9 +21,14 @@ import {
 import { defaultSvc } from "../../lib/specialist-onboarding-utils";
 import { useSpecialistOnboardingCatalogCategories } from "../../lib/use-specialist-onboarding-catalog-categories";
 import { useSpecialistOnboarding } from "../specialist-onboarding-context";
+import { createBrowserSdkClient, directoryGetCatalogFilterOptions } from "@/shared/api";
+import type { AppLocale } from "@/app/i18n/routing";
 
 export default function SpecialistOnboardingStepServices() {
   const t = useTranslations("specialistOnboarding");
+  const locale = useLocale() as AppLocale;
+  const { data: session } = useSession();
+  const accessToken = session?.accessToken ?? "";
   const { data: categories = [], isLoading } =
     useSpecialistOnboardingCatalogCategories(true);
   const {
@@ -30,13 +41,35 @@ export default function SpecialistOnboardingStepServices() {
     isServicePanelOpen,
     setServicePanelOpen,
   } = useSpecialistOnboarding();
+  const bodyZonesQuery = useQuery({
+    queryKey: ["onboardingBodyZones", locale, accessToken],
+    enabled: accessToken.length > 0,
+    queryFn: async () => {
+      const { data, error } = await directoryGetCatalogFilterOptions({
+        client: createBrowserSdkClient(accessToken, { locale }),
+        query: { locale, tab: "specialists" },
+      });
+      if (error || !data) {
+        throw new Error("body-zones");
+      }
+      return (data as { bodyZones?: Array<{ slug: string; name: string }> }).bodyZones ?? [];
+    },
+  });
+  const bodyZoneOptions = bodyZonesQuery.data ?? [];
 
   useLayoutEffect(() => {
     if (!categories.length) {
       return;
     }
     setServices((prev) =>
-      prev.length > 0 ? prev : [defaultSvc(categories[0]!.id)],
+      prev.length > 0 ?
+        prev
+      : [
+          {
+            ...defaultSvc(categories[0]!.id),
+            bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlug(categories[0]!.slug),
+          },
+        ],
     );
   }, [categories, setServices]);
 
@@ -99,6 +132,7 @@ export default function SpecialistOnboardingStepServices() {
                   value={s}
                   disabled={servicesSubmitting}
                   categoryLabelVariant="prominent"
+                  bodyZoneOptions={bodyZoneOptions}
                   onChange={(next) => updateSvc(si, next)}
                 />
                 {services.length > 1 ? (

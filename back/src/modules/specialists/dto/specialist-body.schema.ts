@@ -11,6 +11,7 @@ const specialistOnboardingMassageBodySchema = z
 
 export const patchSpecialistProfileBodySchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  gender: z.enum(['male', 'female']).optional(),
   phone: z.union([phoneSchema, z.null()]).optional(),
   bio: z.string().min(1).max(4000).optional(),
   experienceYears: z.number().int().min(0).max(80).optional(),
@@ -27,6 +28,12 @@ export type PatchSpecialistProfileBody = z.infer<
 export const createSpecialistPersonalServiceBodySchema = z
   .object({
     categoryId: z.string().uuid(),
+    kind: z.enum(['standard', 'combo']).optional(),
+    comboCategoryIds: z.array(z.string().uuid()).max(20).optional(),
+    bodyZoneSlugs: z
+      .array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
+      .max(24)
+      .optional(),
     description: z.string().max(4000).optional(),
     priceOptions: z
       .array(
@@ -39,7 +46,21 @@ export const createSpecialistPersonalServiceBodySchema = z
       .min(1)
       .max(20),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const isCombo = (data.kind ?? 'standard') === 'combo';
+    if (!isCombo) {
+      return;
+    }
+    const combo = data.comboCategoryIds ?? [];
+    if (combo.length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['comboCategoryIds'],
+        message: 'comboCategoryIds must contain at least one item for combo',
+      });
+    }
+  });
 
 export type CreateSpecialistPersonalServiceBody = z.infer<
   typeof createSpecialistPersonalServiceBodySchema

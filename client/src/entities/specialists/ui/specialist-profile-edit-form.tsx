@@ -19,6 +19,8 @@ export type SpecialistProfileEditFormProps = {
   onPhotoFileChosen: (file: File | null) => void;
   name: string;
   onNameChange: (value: string) => void;
+  gender: "male" | "female" | null;
+  onGenderChange: (value: "male" | "female") => void;
   phoneLocal: string;
   onPhoneLocalChange: (value: string) => void;
   bio: string;
@@ -40,6 +42,8 @@ export function SpecialistProfileEditForm({
   onPhotoFileChosen,
   name,
   onNameChange,
+  gender,
+  onGenderChange,
   phoneLocal,
   onPhoneLocalChange,
   bio,
@@ -84,6 +88,33 @@ export function SpecialistProfileEditForm({
           disabled={profileSaving}
           onChange={(e) => onNameChange(e.target.value)}
         />
+      </div>
+      <div className="space-y-2">
+        <span className="text-sm font-medium">{t("fieldGender")}</span>
+        <div className="flex gap-2">
+          {([
+            { id: "male", label: t("genderMale") },
+            { id: "female", label: t("genderFemale") },
+          ] as const).map((opt) => {
+            const selected = gender === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                disabled={profileSaving}
+                onClick={() => onGenderChange(opt.id)}
+                className={cn(
+                  "touch-target rounded-full border px-3.5 py-2 text-sm disabled:opacity-50",
+                  selected
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-muted/30",
+                )}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="space-y-1.5">
         <span className="text-sm font-medium">{t("fieldPhone")}</span>

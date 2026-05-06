@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/shared/lib";
@@ -13,6 +14,13 @@ import {
   SelectValue,
 } from "@/shared/ui";
 import {
+  BodyZonesSelector,
+  defaultBodyZoneSlugsForCategorySlugs,
+  getAllowedBodyZoneSlugsForCategorySlugs,
+  normalizeBodyZoneSlugsForCategories,
+  type BodyZoneOption,
+} from "@/entities/body-zones";
+import {
   DURATION_MINUTES_MAX,
   DURATION_MINUTES_MIN,
   digitsFromVndPriceInput,
@@ -22,11 +30,19 @@ import {
   type SvcForm,
 } from "../lib/personal-service-catalog-draft";
 
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((v, i) => v === b[i]);
+}
+
 export type SpecialistPersonalServiceFieldsProps = {
   categories: Cat[];
   value: SvcForm;
   onChange: (next: SvcForm) => void;
   disabled?: boolean;
+  bodyZoneOptions?: BodyZoneOption[];
   /**
    * Подпись категории: как на шаге 3 онбординга (`prominent`) или как в кабинете (`compact`).
    */
@@ -42,9 +58,47 @@ export function SpecialistPersonalServiceFields({
   value,
   onChange,
   disabled = false,
+  bodyZoneOptions = [],
   categoryLabelVariant = "prominent",
 }: SpecialistPersonalServiceFieldsProps) {
   const tOnb = useTranslations("specialistOnboarding");
+  const selectedCategorySlug = categories.find((c) => c.id === value.categoryId)?.slug ?? null;
+  const comboCategorySlugs = useMemo(
+    () =>
+      categories
+        .filter((c) => value.comboCategoryIds.includes(c.id))
+        .map((c) => c.slug),
+    [categories, value.comboCategoryIds],
+  );
+  const activeCategorySlugs = useMemo(
+    () =>
+      value.kind === "combo" ?
+        [selectedCategorySlug, ...comboCategorySlugs]
+      : [selectedCategorySlug],
+    [comboCategorySlugs, selectedCategorySlug, value.kind],
+  );
+  const allowedBodyZoneSlugs = useMemo(
+    () => getAllowedBodyZoneSlugsForCategorySlugs(activeCategorySlugs),
+    [activeCategorySlugs],
+  );
+  const allowedBodyZoneSlugSet = useMemo(
+    () => new Set(allowedBodyZoneSlugs),
+    [allowedBodyZoneSlugs],
+  );
+  const allowedBodyZoneOptions = useMemo(
+    () => bodyZoneOptions.filter((z) => allowedBodyZoneSlugSet.has(z.slug)),
+    [bodyZoneOptions, allowedBodyZoneSlugSet],
+  );
+
+  useEffect(() => {
+    const normalized = normalizeBodyZoneSlugsForCategories({
+      selectedSlugs: value.bodyZoneSlugs,
+      categorySlugs: activeCategorySlugs,
+    });
+    if (!arraysEqual(normalized, value.bodyZoneSlugs)) {
+      onChange({ ...value, bodyZoneSlugs: normalized });
+    }
+  }, [activeCategorySlugs, onChange, value]);
 
   return (
     <div className="space-y-4">
@@ -61,7 +115,21 @@ export function SpecialistPersonalServiceFields({
         <Select
           value={value.categoryId}
           disabled={disabled}
-          onValueChange={(v) => onChange({ ...value, categoryId: v })}
+          onValueChange={(v) => {
+            const nextCategorySlug = categories.find((c) => c.id === v)?.slug ?? null;
+            const nextBodyZoneSlugs =
+              defaultBodyZoneSlugsForCategorySlugs(
+                value.kind === "combo" ?
+                  [
+                    nextCategorySlug,
+                    ...categories
+                      .filter((c) => value.comboCategoryIds.includes(c.id))
+                      .map((c) => c.slug),
+                  ]
+                : [nextCategorySlug],
+              );
+            onChange({ ...value, categoryId: v, bodyZoneSlugs: nextBodyZoneSlugs });
+          }}
         >
           <SelectTrigger className="h-12 w-full min-w-0 rounded-2xl border-0 bg-muted/45">
             <SelectValue />
@@ -85,6 +153,97 @@ export function SpecialistPersonalServiceFields({
           </SelectContent>
         </Select>
       </div>
+
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-foreground">{tOnb("serviceKind")}</span>
+        <div className="flex gap-2">
+          {(["standard", "combo"] as const).map((k) => {
+            const selected = value.kind === k;
+            return (
+              <button
+                key={k}
+                type="button"
+                disabled={disabled}
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    kind: k,
+                    comboCategoryIds: k === "combo" ? value.comboCategoryIds : [],
+                    bodyZoneSlugs:
+                      k === "combo" ?
+                        defaultBodyZoneSlugsForCategorySlugs([
+                          selectedCategorySlug,
+                          ...comboCategorySlugs,
+                        ])
+                      : defaultBodyZoneSlugsForCategorySlugs([selectedCategorySlug]),
+                  })
+                }
+                className={cn(
+                  "rounded-full border px-3.5 py-2 text-sm disabled:opacity-60",
+                  selected
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-muted/20",
+                )}
+              >
+                {k === "combo" ? tOnb("serviceKindCombo") : tOnb("serviceKindStandard")}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {value.kind === "combo" ? (
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-foreground">{tOnb("comboIncludes")}</span>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/20 p-2.5">
+            {categories
+              .filter((c) => c.id !== value.categoryId)
+              .map((c) => {
+                const selected = value.comboCategoryIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => {
+                      const next = selected
+                        ? value.comboCategoryIds.filter((id) => id !== c.id)
+                        : [...value.comboCategoryIds, c.id];
+                      const nextComboCategorySlugs = categories
+                        .filter((cat) => next.includes(cat.id))
+                        .map((cat) => cat.slug);
+                      onChange({
+                        ...value,
+                        comboCategoryIds: next,
+                        bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlugs([
+                          selectedCategorySlug,
+                          ...nextComboCategorySlugs,
+                        ]),
+                      });
+                    }}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs disabled:opacity-60",
+                      selected
+                        ? "border-primary/40 bg-primary/10 text-foreground"
+                        : "border-border/55 bg-card text-foreground",
+                    )}
+                  >
+                    {c.shortName || c.name}
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      ) : null}
+      {allowedBodyZoneOptions.length > 0 ? (
+        <BodyZonesSelector
+          zones={allowedBodyZoneOptions}
+          selectedSlugs={value.bodyZoneSlugs}
+          onChangeSelectedSlugs={(next) => {
+            onChange({ ...value, bodyZoneSlugs: next });
+          }}
+          disabled={disabled}
+        />
+      ) : null}
 
       <p className="text-xs leading-relaxed text-muted-foreground">{tOnb("addDurationHint")}</p>
 

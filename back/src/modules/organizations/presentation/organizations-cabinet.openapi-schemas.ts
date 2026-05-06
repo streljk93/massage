@@ -12,6 +12,8 @@ export const organizationCabinetEditProfileResponseSchema = {
     'latitude',
     'longitude',
     'placeReference',
+    'primaryMajorCategorySlug',
+    'additionalMajorCategorySlugs',
     'serviceCategoryIds',
     'galleryItems',
   ],
@@ -42,6 +44,15 @@ export const organizationCabinetEditProfileResponseSchema = {
         },
         placeId: { type: 'string' },
       },
+    },
+    primaryMajorCategorySlug: {
+      type: 'string',
+      description: 'Основная большая категория организации (MVP: massage).',
+    },
+    additionalMajorCategorySlugs: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Дополнительные большие категории организации.',
     },
     serviceCategoryIds: {
       type: 'array',
@@ -123,6 +134,19 @@ export const createOrganizationRequestSchema = {
       minItems: 1,
       maxItems: 40,
       items: { type: 'string', format: 'uuid' },
+    },
+    additionalMajorCategorySlugs: {
+      type: 'array',
+      maxItems: 10,
+      items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+      description: 'Дополнительные большие категории по slug.',
+    },
+    confirmDisableServiceIds: {
+      type: 'array',
+      maxItems: 200,
+      items: { type: 'string', format: 'uuid' },
+      description:
+        'Подтверждение деактивации услуг при снятии additional major categories.',
     },
   },
   description:

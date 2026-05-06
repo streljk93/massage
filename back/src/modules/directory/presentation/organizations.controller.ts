@@ -30,6 +30,7 @@ import {
 } from '../../../common/i18n';
 import {
   parseListCategorySlugsCsv,
+  parseListBodyZoneSlugsCsv,
   parseListSearchQ,
   parseOptionalMajorCategorySlug,
 } from '../../../common/pagination/directory-list-search-query.parse';
@@ -116,6 +117,13 @@ export class OrganizationsController {
     example: 'neck,foot',
   })
   @ApiQuery({
+    name: 'bodyZones',
+    required: false,
+    description:
+      'Slug зон анатомии через запятую (для majorSlug=massage; салон матчится по услугам мастеров).',
+    example: 'neck,back-upper',
+  })
+  @ApiQuery({
     name: 'radiusM',
     required: false,
     description:
@@ -146,6 +154,7 @@ export class OrganizationsController {
     @Query('majorSlug') majorSlugRaw?: string,
     @Query('q') qRaw?: string,
     @Query('categories') categoriesRaw?: string,
+    @Query('bodyZones') bodyZonesRaw?: string,
     @Query('radiusM') radiusMRaw?: string,
     @Query('radiusLat') radiusLatRaw?: string,
     @Query('radiusLng') radiusLngRaw?: string,
@@ -162,6 +171,7 @@ export class OrganizationsController {
       majorCategorySlug: parseOptionalMajorCategorySlug(majorSlugRaw),
       q: parseListSearchQ(qRaw),
       categorySlugs: parseListCategorySlugsCsv(categoriesRaw),
+      bodyZoneSlugs: parseListBodyZoneSlugsCsv(bodyZonesRaw),
       radius:
         radius == null
           ? null

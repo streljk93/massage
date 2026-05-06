@@ -40,6 +40,7 @@ export type SpecialistListItemDto = {
   phone: string | null;
   imageUrl: string | null;
   imageAlt: string | null;
+  gender: 'male' | 'female' | null;
   metaLine: string;
   servicesLine: string;
   /** Выбранные подкатегории каталога (`?locale` влияет на `shortName`). */

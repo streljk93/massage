@@ -18,6 +18,10 @@
         "slotDay": "Date",
         "slotTime": "Time",
         "slotAny": "—",
+        "gender": "Specialist gender",
+        "genderAny": "Any",
+        "genderMale": "Male",
+        "genderFemale": "Female",
         "reset": "Reset",
         "done": "Done"
       }
@@ -40,6 +44,10 @@
         "slotDay": "Ngày",
         "slotTime": "Giờ",
         "slotAny": "—",
+        "gender": "Giới tính chuyên viên",
+        "genderAny": "Tất cả",
+        "genderMale": "Nam",
+        "genderFemale": "Nữ",
         "reset": "Đặt lại",
         "done": "Xong"
       }
@@ -62,6 +70,10 @@
         "slotDay": "Дата",
         "slotTime": "Время",
         "slotAny": "—",
+        "gender": "Пол специалиста",
+        "genderAny": "Любой",
+        "genderMale": "Мужчина",
+        "genderFemale": "Женщина",
         "reset": "Сбросить",
         "done": "Готово"
       }

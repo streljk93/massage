@@ -128,6 +128,14 @@ const directoryServiceInclude = {
   include: {
     priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
     category: { include: { locales: true } },
+    comboItems: {
+      orderBy: { sortOrder: 'asc' as const },
+      include: {
+        itemServiceCategory: {
+          include: { locales: true },
+        },
+      },
+    },
   },
 } satisfies Prisma.ServiceFindManyArgs;
 
@@ -180,6 +188,10 @@ function specialistListInclude() {
 
 function organizationListInclude() {
   return {
+    primaryMajorServiceCategory: { select: { slug: true } },
+    additionalMajorCategories: {
+      include: { majorServiceCategory: { select: { slug: true } } },
+    },
     locales: true,
     serviceCategories: serviceCategoryWithLocales,
     address: { select: directoryAddressForListSelect },
@@ -475,6 +487,7 @@ export class DirectoryRepository {
     const hasCat =
       (filters.majorCategorySlug != null && filters.majorCategorySlug !== '') ||
       filters.categorySlugs.length > 0;
+    const hasBodyZones = filters.bodyZoneSlugs.length > 0;
     const q = filters.q?.trim() ?? '';
 
     if (hasCat) {
@@ -506,6 +519,40 @@ export class DirectoryRepository {
         { id: { in: catHitIds } },
       ];
       andParts.push({ OR: branches });
+    }
+
+    if (hasBodyZones) {
+      andParts.push({
+        specialistEmployments: {
+          some: {
+            isActive: true,
+            specialist: {
+              deletedAt: null,
+              listedInDirectory: true,
+              activeOrganizationId: { not: null },
+              activeOrganization: {
+                deletedAt: null,
+                publicationModerationStatus: PublicationModerationStatus.approved,
+              },
+              services: {
+                some: {
+                  deletedAt: null,
+                  isActive: true,
+                  bodyZones: {
+                    some: {
+                      bodyZone: {
+                        deletedAt: null,
+                        isActive: true,
+                        slug: { in: [...filters.bodyZoneSlugs, 'full-body'] },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
     }
 
     return andParts;
@@ -1104,6 +1151,53 @@ export class DirectoryRepository {
     return queryDistinctStorefrontOrganizationServiceCategoryIds(this.prisma);
   }
 
+  async findDistinctBodyZoneIdsForListingSpecialists(): Promise<string[]> {
+    const rows = await this.prisma.serviceBodyZone.findMany({
+      where: {
+        service: {
+          deletedAt: null,
+          isActive: true,
+          specialistId: { not: null },
+          specialist: {
+            deletedAt: null,
+            listedInDirectory: true,
+          },
+        },
+        bodyZone: {
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      select: { bodyZoneId: true },
+      distinct: ['bodyZoneId'],
+    });
+    return rows.map((r) => r.bodyZoneId);
+  }
+
+  async findDistinctBodyZoneIdsForListingOrganizations(): Promise<string[]> {
+    const rows = await this.prisma.serviceBodyZone.findMany({
+      where: {
+        service: {
+          deletedAt: null,
+          isActive: true,
+          specialistId: { not: null },
+          specialist: {
+            deletedAt: null,
+            listedInDirectory: true,
+            activeOrganizationId: { not: null },
+          },
+        },
+        bodyZone: {
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      select: { bodyZoneId: true },
+      distinct: ['bodyZoneId'],
+    });
+    return rows.map((r) => r.bodyZoneId);
+  }
+
   findServiceCategoriesByIds(ids: string[]) {
     if (ids.length === 0) {
       return Promise.resolve([]);
@@ -1111,6 +1205,48 @@ export class DirectoryRepository {
     return this.prisma.serviceCategory.findMany({
       where: { id: { in: ids }, deletedAt: null, isActive: true },
       include: { locales: { orderBy: { locale: 'asc' } } },
+    });
+  }
+
+  findServiceCategoriesByMajorSlug(majorSlug: string) {
+    return this.prisma.serviceCategory.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        majorServiceCategory: {
+          slug: majorSlug,
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      include: { locales: { orderBy: { locale: 'asc' } } },
+      orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+    });
+  }
+
+  findBodyZonesByIds(ids: string[]) {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.bodyZone.findMany({
+      where: { id: { in: ids }, deletedAt: null, isActive: true },
+      include: { locales: { orderBy: { locale: 'asc' } } },
+    });
+  }
+
+  findBodyZonesByMajorSlug(majorSlug: string) {
+    return this.prisma.bodyZone.findMany({
+      where: {
+        deletedAt: null,
+        isActive: true,
+        majorServiceCategory: {
+          slug: majorSlug,
+          deletedAt: null,
+          isActive: true,
+        },
+      },
+      include: { locales: { orderBy: { locale: 'asc' } } },
+      orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
     });
   }
 

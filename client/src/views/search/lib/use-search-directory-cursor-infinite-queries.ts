@@ -34,6 +34,7 @@ function getNextCursorPageParam(last: CursorPagePayload): string | undefined {
 export type SearchOrganizationsListPrefetchSnapshot = {
   q: string;
   categoryCsv: string;
+  bodyZoneCsv: string;
   sort: SearchDirectoryListSort;
   radiusM: number | null;
   radiusLat: number | null;
@@ -43,9 +44,11 @@ export type SearchOrganizationsListPrefetchSnapshot = {
 export type SearchSpecialistsListPrefetchSnapshot = {
   q: string;
   categoryCsv: string;
+  bodyZoneCsv: string;
   sort: SearchDirectoryListSort;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
+  gender: "male" | "female" | null;
   radiusM: number | null;
   radiusLat: number | null;
   radiusLng: number | null;
@@ -60,9 +63,11 @@ function organizationsInitialPageMatchesSnapshot(
   }
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
+  const bodyZoneCsv = searchCategoriesQueryCsv(filters.bodyZoneSlugs);
   return (
     qTrim === snapshot.q.trim() &&
     categoryCsv === snapshot.categoryCsv &&
+    bodyZoneCsv === snapshot.bodyZoneCsv &&
     filters.sort === snapshot.sort &&
     filters.radiusM === snapshot.radiusM &&
     filters.radiusLat === snapshot.radiusLat &&
@@ -81,6 +86,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
   const filtersEmpty = searchOrganizationsFiltersEmpty(filters);
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
+  const bodyZoneCsv = searchCategoriesQueryCsv(filters.bodyZoneSlugs);
   const radiusQ = searchDirectoryRadiusActive(filters);
   const useInitialPage =
     initialPage != null &&
@@ -94,6 +100,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
       CATALOG_MAJOR_CATEGORY_SLUG,
       qTrim,
       categoryCsv,
+      bodyZoneCsv,
       filters.sort,
       radiusQ ? (filters.radiusM ?? "x") : "noR",
       radiusQ ? (filters.radiusLat ?? "x") : "noR",
@@ -118,6 +125,7 @@ export function useSearchOrganizationsCursorInfiniteQuery(
           ...(pageParam ? { cursor: String(pageParam) } : {}),
           ...(qTrim ? { q: qTrim } : {}),
           ...(categoryCsv ? { categories: categoryCsv } : {}),
+          ...(bodyZoneCsv ? ({ bodyZones: bodyZoneCsv } as Record<string, unknown>) : {}),
           sort: filters.sort,
           ...(radiusQ ?
             {
@@ -146,13 +154,16 @@ function specialistsInitialPageMatchesSnapshot(
   }
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
+  const bodyZoneCsv = searchCategoriesQueryCsv(filters.bodyZoneSlugs);
   const { priceMinVnd, priceMaxVnd } = filters;
   return (
     qTrim === snapshot.q.trim() &&
     categoryCsv === snapshot.categoryCsv &&
+    bodyZoneCsv === snapshot.bodyZoneCsv &&
     filters.sort === snapshot.sort &&
     priceMinVnd === snapshot.priceMinVnd &&
     priceMaxVnd === snapshot.priceMaxVnd &&
+    filters.gender === snapshot.gender &&
     filters.radiusM === snapshot.radiusM &&
     filters.radiusLat === snapshot.radiusLat &&
     filters.radiusLng === snapshot.radiusLng
@@ -170,6 +181,7 @@ export function useSearchSpecialistsCursorInfiniteQuery(
   const filtersEmpty = searchSpecialistsFiltersEmpty(filters);
   const qTrim = filters.q.trim();
   const categoryCsv = searchCategoriesQueryCsv(filters.categorySlugs);
+  const bodyZoneCsv = searchCategoriesQueryCsv(filters.bodyZoneSlugs);
   const { priceMinVnd, priceMaxVnd } = filters;
   const radiusQ = searchDirectoryRadiusActive(filters);
   const useInitialPage =
@@ -184,9 +196,11 @@ export function useSearchSpecialistsCursorInfiniteQuery(
       CATALOG_MAJOR_CATEGORY_SLUG,
       qTrim,
       categoryCsv,
+      bodyZoneCsv,
       filters.sort,
       priceMinVnd ?? "none",
       priceMaxVnd ?? "none",
+      filters.gender ?? "any",
       radiusQ ? (filters.radiusM ?? "x") : "noR",
       radiusQ ? (filters.radiusLat ?? "x") : "noR",
       radiusQ ? (filters.radiusLng ?? "x") : "noR",
@@ -210,9 +224,11 @@ export function useSearchSpecialistsCursorInfiniteQuery(
           ...(pageParam ? { cursor: String(pageParam) } : {}),
           ...(qTrim ? { q: qTrim } : {}),
           ...(categoryCsv ? { categories: categoryCsv } : {}),
+          ...(bodyZoneCsv ? ({ bodyZones: bodyZoneCsv } as Record<string, unknown>) : {}),
           sort: filters.sort,
           ...(priceMinVnd != null ? { priceMinVnd } : {}),
           ...(priceMaxVnd != null ? { priceMaxVnd } : {}),
+          ...(filters.gender != null ? ({ gender: filters.gender } as Record<string, unknown>) : {}),
           ...(radiusQ ?
             {
               radiusM: filters.radiusM as number,

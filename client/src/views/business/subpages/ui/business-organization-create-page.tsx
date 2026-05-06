@@ -41,6 +41,14 @@ export function BusinessOrganizationCreatePage() {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
+  const additionalMajorOptions = useMemo(
+    () => [
+      { slug: "nail", label: t("majorCategoryNail") },
+      { slug: "hair", label: t("majorCategoryHair") },
+      { slug: "spa", label: t("majorCategorySpa") },
+    ],
+    [t],
+  );
 
   const backToOrgs = {
     href: "/business/organizations",
@@ -124,6 +132,7 @@ export function BusinessOrganizationCreatePage() {
         client={sdk}
         locale={locale}
         categories={categories}
+        additionalMajorOptions={additionalMajorOptions}
         categoriesLoading={categoriesLoading}
         initialSyncKey="create"
         initialValues={null}

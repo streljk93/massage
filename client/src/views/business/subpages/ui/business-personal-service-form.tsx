@@ -8,10 +8,11 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { useRouter } from "@/app/i18n/navigation";
 import {
   createBrowserSdkClient,
+  directoryGetCatalogFilterOptions,
   specialistsCabinetPatchSpecialistPersonalService,
   specialistsCabinetPostSpecialistPersonalService,
 } from "@/shared/api";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Separator } from "@/shared/ui";
 import {
   SpecialistPersonalServiceFields,
@@ -21,6 +22,7 @@ import {
   type DurPrice,
   type SvcForm,
 } from "@/entities/specialists";
+import { defaultBodyZoneSlugsForCategorySlug } from "@/entities/body-zones";
 import { useBusinessCabinetCatalogCategories } from "../lib/use-business-catalog-categories";
 
 const ONB_QK = ["specialistOnboarding"] as const;
@@ -30,12 +32,18 @@ export type BusinessPersonalServiceFormProps = {
   serviceId?: string;
   initial?: {
     categoryId: string;
+    kind?: "standard" | "combo";
+    comboCategoryIds?: string[];
+    bodyZoneSlugs?: string[];
     priceOptions: Array<{ durationMinutes: number; priceAmount: number }>;
   };
 };
 
 function isValidDraft(s: SvcForm): boolean {
   if (!s.categoryId || s.durationPrices.length === 0) {
+    return false;
+  }
+  if (s.kind === "combo" && s.comboCategoryIds.length < 1) {
     return false;
   }
   for (const d of s.durationPrices) {
@@ -90,6 +98,21 @@ export function BusinessPersonalServiceForm({
   );
 
   const categories = catalogQuery.data ?? [];
+  const bodyZonesQuery = useQuery({
+    queryKey: ["businessServiceBodyZones", locale, accessToken],
+    enabled: status === "authenticated" && accessToken.length > 0,
+    queryFn: async () => {
+      const { data, error } = await directoryGetCatalogFilterOptions({
+        client: sdk,
+        query: { locale, tab: "specialists" },
+      });
+      if (error || !data) {
+        throw new Error("body-zones");
+      }
+      return (data as { bodyZones?: Array<{ slug: string; name: string }> }).bodyZones ?? [];
+    },
+  });
+  const bodyZoneOptions = bodyZonesQuery.data ?? [];
 
   const [draft, setDraft] = useState<SvcForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -106,6 +129,9 @@ export function BusinessPersonalServiceForm({
     if (mode === "edit" && initial != null) {
       setDraft({
         categoryId: initial.categoryId,
+        kind: initial.kind ?? "standard",
+        comboCategoryIds: initial.comboCategoryIds ?? [],
+        bodyZoneSlugs: initial.bodyZoneSlugs ?? [],
         durationPrices:
           initial.priceOptions.length > 0 ?
             priceOptionsFromInitial(initial.priceOptions)
@@ -115,7 +141,11 @@ export function BusinessPersonalServiceForm({
       return;
     }
     if (mode === "create") {
-      setDraft(defaultSvc(categories[0]!.id));
+      const first = categories[0]!;
+      setDraft({
+        ...defaultSvc(first.id),
+        bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlug(first.slug),
+      });
       hydratedRef.current = true;
     }
   }, [categories, mode, initial]);
@@ -131,8 +161,13 @@ export function BusinessPersonalServiceForm({
       }));
       const body = {
         categoryId: draft.categoryId,
+        kind: draft.kind,
+        ...(draft.comboCategoryIds.length > 0 ? ({ comboCategoryIds: draft.comboCategoryIds } as Record<string, unknown>) : {}),
+        ...(draft.bodyZoneSlugs.length > 0 ? ({ bodyZoneSlugs: draft.bodyZoneSlugs } as Record<string, unknown>) : {}),
         priceOptions: priceOptions.map((o) => ({ ...o, currency: "VND" as const })),
-      };
+      } as unknown as NonNullable<
+        Parameters<typeof specialistsCabinetPostSpecialistPersonalService>[0]["body"]
+      >;
       if (mode === "edit") {
         if (serviceId == null || serviceId.length === 0) {
           throw new Error("validation");
@@ -205,6 +240,7 @@ export function BusinessPersonalServiceForm({
           disabled={submitMutation.isPending}
           categoryLabelVariant="compact"
           onChange={setDraft}
+          bodyZoneOptions={bodyZoneOptions}
         />
       </div>
 

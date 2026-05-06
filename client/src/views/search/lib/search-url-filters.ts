@@ -15,6 +15,9 @@ export type SearchUrlFilters = {
   q: string;
   orgCategorySlugs: string[];
   specCategorySlugs: string[];
+  orgBodyZoneSlugs: string[];
+  specBodyZoneSlugs: string[];
+  specialistGender: "male" | "female" | null;
   /** Общий для обеих вкладок (салоны / специалисты). */
   sort: SearchDirectoryListSort;
   priceMinVnd: number | null;
@@ -113,6 +116,10 @@ export function parseSearchUrlFiltersFromRecord(
     "orgCat",
     "specCat",
     "category",
+    "orgBodyZones",
+    "specBodyZones",
+    "bodyZones",
+    "gender",
     "priceMin",
     "priceMax",
     "slotDay",
@@ -148,6 +155,23 @@ export function parseSearchUrlFilters(
     orgCategorySlugs = [legacy];
     specCategorySlugs = [legacy];
   }
+  let orgBodyZoneSlugs = parseCategorySlugsParam(
+    getParam(searchParams, "orgBodyZones"),
+  );
+  let specBodyZoneSlugs = parseCategorySlugsParam(
+    getParam(searchParams, "specBodyZones"),
+  );
+  const legacyBodyZones = getParam(searchParams, "bodyZones").trim().toLowerCase();
+  if (orgBodyZoneSlugs.length === 0 && specBodyZoneSlugs.length === 0 && legacyBodyZones) {
+    const both = parseCategorySlugsParam(legacyBodyZones);
+    orgBodyZoneSlugs = both;
+    specBodyZoneSlugs = both;
+  }
+  const rawGender = getParam(searchParams, "gender").trim().toLowerCase();
+  const specialistGender =
+    rawGender === "male" || rawGender === "female" ?
+      (rawGender as "male" | "female")
+    : null;
   let priceMinVnd = parsePrice(getParam(searchParams, "priceMin"));
   let priceMaxVnd = parsePrice(getParam(searchParams, "priceMax"));
   if (priceMinVnd != null && priceMaxVnd != null && priceMinVnd > priceMaxVnd) {
@@ -178,6 +202,9 @@ export function parseSearchUrlFilters(
     q,
     orgCategorySlugs,
     specCategorySlugs,
+    orgBodyZoneSlugs,
+    specBodyZoneSlugs,
+    specialistGender,
     sort,
     priceMinVnd,
     priceMaxVnd,
@@ -198,6 +225,12 @@ export function applySearchUrlPatch(
     q: patch.q !== undefined ? patch.q : current.q,
     orgCategorySlugs: patch.orgCategorySlugs ?? current.orgCategorySlugs,
     specCategorySlugs: patch.specCategorySlugs ?? current.specCategorySlugs,
+    orgBodyZoneSlugs: patch.orgBodyZoneSlugs ?? current.orgBodyZoneSlugs,
+    specBodyZoneSlugs: patch.specBodyZoneSlugs ?? current.specBodyZoneSlugs,
+    specialistGender:
+      patch.specialistGender !== undefined ?
+        patch.specialistGender
+      : current.specialistGender,
     sort: patch.sort !== undefined ? patch.sort : current.sort,
     priceMinVnd:
       patch.priceMinVnd !== undefined ? patch.priceMinVnd : current.priceMinVnd,
@@ -236,6 +269,17 @@ export function buildSearchQueryString(
   const specCsv = searchCategoriesQueryCsv(f.specCategorySlugs);
   if (specCsv) {
     sp.set("specCat", specCsv);
+  }
+  const orgBodyCsv = searchCategoriesQueryCsv(f.orgBodyZoneSlugs);
+  if (orgBodyCsv) {
+    sp.set("orgBodyZones", orgBodyCsv);
+  }
+  const specBodyCsv = searchCategoriesQueryCsv(f.specBodyZoneSlugs);
+  if (specBodyCsv) {
+    sp.set("specBodyZones", specBodyCsv);
+  }
+  if (f.specialistGender != null) {
+    sp.set("gender", f.specialistGender);
   }
   if (f.priceMinVnd != null) {
     sp.set("priceMin", String(f.priceMinVnd));

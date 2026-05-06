@@ -97,9 +97,6 @@ import {
   type CatalogSlotTimeFilterValue,
 } from "@/entities/catalog";
 
-/** Запись цены в URL (и запрос списка) не чаще этого интервала при движении слайдера. */
-const SEARCH_PRICE_URL_DEBOUNCE_MS = 450;
-
 export type SearchPageClientProps = {
   initialOrganizationsPage: OrganizationsListResponse | null;
   initialSpecialistsPage: SpecialistsListResponse | null;
@@ -220,19 +217,6 @@ export function SearchPageClient({
     return urlFilters.sort;
   }, [urlFilters.sort, showRecommendedSortOption, listSortEffective]);
 
-  const [slotPick, setSlotPick] = useState<CatalogSlotTimeFilterValue>({
-    day: "",
-    time: "",
-  });
-  useLayoutEffect(() => {
-    queueMicrotask(() => {
-      setSlotPick({
-        day: urlFilters.slotDay ?? "",
-        time: urlFilters.slotTime ?? "",
-      });
-    });
-  }, [urlFilters.slotDay, urlFilters.slotTime]);
-
   const replaceUrlFilters = useCallback(
     (next: SearchUrlFilters) => {
       const qs = buildSearchQueryString(next);
@@ -246,12 +230,23 @@ export function SearchPageClient({
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- открыть фильтры по `filters=1` при возврате с карты; сразу убираем параметр из URL
+    setDraftOrgCategorySlugs(urlFilters.orgCategorySlugs);
+    setDraftSpecCategorySlugs(urlFilters.specCategorySlugs);
+    setDraftOrgBodyZoneSlugs(urlFilters.orgBodyZoneSlugs);
+    setDraftSpecBodyZoneSlugs(urlFilters.specBodyZoneSlugs);
+    setDraftSpecialistGender(urlFilters.specialistGender);
+    setDraftSlotPick({
+      day: urlFilters.slotDay ?? "",
+      time: urlFilters.slotTime ?? "",
+    });
+    setDraftSpecPriceRange(null);
+    setDraftResetRequested(false);
     setFiltersOpen(true);
     const next = new URLSearchParams(searchParams.toString());
     next.delete("filters");
     const q = next.toString();
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, urlFilters]);
 
   const urlFiltersRef = useRef(urlFilters);
 
@@ -261,10 +256,21 @@ export function SearchPageClient({
 
   const [qDraft, setQDraft] = useState(urlFilters.q);
   const qDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [priceDraft, setPriceDraft] = useState<[number, number] | null>(null);
-  const priceDraftRef = useRef<[number, number] | null>(null);
-  const priceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [draftOrgCategorySlugs, setDraftOrgCategorySlugs] = useState<string[]>([]);
+  const [draftSpecCategorySlugs, setDraftSpecCategorySlugs] = useState<string[]>([]);
+  const [draftOrgBodyZoneSlugs, setDraftOrgBodyZoneSlugs] = useState<string[]>([]);
+  const [draftSpecBodyZoneSlugs, setDraftSpecBodyZoneSlugs] = useState<string[]>([]);
+  const [draftSpecialistGender, setDraftSpecialistGender] = useState<
+    "male" | "female" | null
+  >(null);
+  const [draftSlotPick, setDraftSlotPick] = useState<CatalogSlotTimeFilterValue>({
+    day: "",
+    time: "",
+  });
+  const [draftSpecPriceRange, setDraftSpecPriceRange] = useState<[number, number] | null>(
+    null,
+  );
+  const [draftResetRequested, setDraftResetRequested] = useState(false);
 
   // Синхронизация черновика строки поиска с URL (назад/вперёд, обновление query не из поля).
   useLayoutEffect(() => {
@@ -272,19 +278,10 @@ export function SearchPageClient({
     setQDraft(urlFilters.q);
   }, [urlFilters.q]);
 
-  useLayoutEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- слайдер после обновления price* в URL
-    setPriceDraft(null);
-    priceDraftRef.current = null;
-  }, [urlFilters.priceMinVnd, urlFilters.priceMaxVnd]);
-
   useEffect(() => {
     return () => {
       if (qDebounceRef.current != null) {
         clearTimeout(qDebounceRef.current);
-      }
-      if (priceDebounceRef.current != null) {
-        clearTimeout(priceDebounceRef.current);
       }
     };
   }, []);
@@ -327,12 +324,6 @@ export function SearchPageClient({
         clearTimeout(qDebounceRef.current);
         qDebounceRef.current = null;
       }
-      if (priceDebounceRef.current != null) {
-        clearTimeout(priceDebounceRef.current);
-        priceDebounceRef.current = null;
-      }
-      setPriceDraft(null);
-      priceDraftRef.current = null;
       replaceUrlFilters(next);
     },
     [replaceUrlFilters],
@@ -371,26 +362,6 @@ export function SearchPageClient({
     }
   }, [urlFilters.sort, accessToken, recMeta, commitUrlFilters]);
 
-  const onSlotTimeFilterChange = useCallback(
-    (next: CatalogSlotTimeFilterValue) => {
-      setSlotPick(next);
-      const base = urlFiltersRef.current;
-      if (next.day && next.time) {
-        commitUrlFilters(
-          applySearchUrlPatch(base, {
-            slotDay: next.day,
-            slotTime: next.time,
-          }),
-        );
-      } else {
-        commitUrlFilters(
-          applySearchUrlPatch(base, { slotDay: null, slotTime: null }),
-        );
-      }
-    },
-    [commitUrlFilters],
-  );
-
   const filterPriceByTab = useMemo(
     () => ({
       organizations: null as null,
@@ -406,11 +377,20 @@ export function SearchPageClient({
     tab === "organizations" ?
       urlFilters.orgCategorySlugs
     : urlFilters.specCategorySlugs;
+  const filterBodyZoneSlugs =
+    tab === "organizations" ?
+      urlFilters.orgBodyZoneSlugs
+    : urlFilters.specBodyZoneSlugs;
+  const dialogCategorySlugs =
+    tab === "organizations" ? draftOrgCategorySlugs : draftSpecCategorySlugs;
+  const dialogBodyZoneSlugs =
+    tab === "organizations" ? draftOrgBodyZoneSlugs : draftSpecBodyZoneSlugs;
 
   const orgApiFilters = useMemo((): SearchOrganizationsListApiFilters => {
     return {
       q: urlFilters.q,
       categorySlugs: urlFilters.orgCategorySlugs,
+      bodyZoneSlugs: urlFilters.orgBodyZoneSlugs,
       sort: listSortEffective,
       radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
       radiusLat: hasRadiusFilter ? urlFilters.radiusLat : null,
@@ -419,6 +399,7 @@ export function SearchPageClient({
   }, [
     urlFilters.q,
     urlFilters.orgCategorySlugs,
+    urlFilters.orgBodyZoneSlugs,
     listSortEffective,
     hasRadiusFilter,
     urlFilters.radiusM,
@@ -430,9 +411,11 @@ export function SearchPageClient({
     return {
       q: urlFilters.q,
       categorySlugs: urlFilters.specCategorySlugs,
+      bodyZoneSlugs: urlFilters.specBodyZoneSlugs,
       sort: listSortEffective,
       priceMinVnd: urlFilters.priceMinVnd,
       priceMaxVnd: urlFilters.priceMaxVnd,
+      gender: urlFilters.specialistGender,
       radiusM: hasRadiusFilter ? urlFilters.radiusM : null,
       radiusLat: hasRadiusFilter ? urlFilters.radiusLat : null,
       radiusLng: hasRadiusFilter ? urlFilters.radiusLng : null,
@@ -440,9 +423,11 @@ export function SearchPageClient({
   }, [
     urlFilters.q,
     urlFilters.specCategorySlugs,
+    urlFilters.specBodyZoneSlugs,
     listSortEffective,
     urlFilters.priceMinVnd,
     urlFilters.priceMaxVnd,
+    urlFilters.specialistGender,
     hasRadiusFilter,
     urlFilters.radiusM,
     urlFilters.radiusLat,
@@ -580,6 +565,15 @@ export function SearchPageClient({
     return categoryOptionsFallback;
   }, [catalogFilterApi, categoryOptionsFallback]);
 
+  const bodyZoneOptions = useMemo(() => {
+    const apiZones = (catalogFilterApi as { bodyZones?: Array<{ slug: string; name: string }> } | undefined)?.bodyZones;
+    return apiZones ?? [];
+  }, [catalogFilterApi]);
+  const genderOptions = useMemo(() => {
+    const apiGenders = (catalogFilterApi as { genders?: Array<"male" | "female"> } | undefined)?.genders;
+    return apiGenders ?? [];
+  }, [catalogFilterApi]);
+
   const priceSpecialistBounds = useMemo(
     () => specialistListPriceBounds(specialists),
     [specialists],
@@ -591,11 +585,6 @@ export function SearchPageClient({
     );
   }, [catalogFilterApi?.priceRangeVnd, priceSpecialistBounds]);
 
-  const specialistPriceExtentRef = useRef<typeof specialistPriceExtent>(null);
-  useEffect(() => {
-    specialistPriceExtentRef.current = specialistPriceExtent;
-  }, [specialistPriceExtent]);
-
   const priceFilterForDialog = useMemo(() => {
     if (tab !== "specialists") {
       return null;
@@ -604,47 +593,26 @@ export function SearchPageClient({
       return null;
     }
     const ext = specialistPriceExtent;
-    const stored = filterPriceByTab.specialists;
-    const fromUrl: [number, number] = [
+    const storedMin = urlFilters.priceMinVnd;
+    const storedMax = urlFilters.priceMaxVnd;
+    const fromApplied: [number, number] = [
       Math.max(
         ext.min,
-        Math.min(stored?.min ?? ext.min, ext.max),
+        Math.min(storedMin ?? ext.min, ext.max),
       ),
       Math.max(
         ext.min,
-        Math.min(stored?.max ?? ext.max, ext.max),
+        Math.min(storedMax ?? ext.max, ext.max),
       ),
     ];
-    const value = priceDraft ?? fromUrl;
+    const value = draftSpecPriceRange ?? fromApplied;
     return {
       extent: ext,
       value,
       step: priceSliderStep(ext.min, ext.max),
       onValueChange: (v: [number, number]) => {
-        setPriceDraft(v);
-        priceDraftRef.current = v;
-        if (priceDebounceRef.current != null) {
-          clearTimeout(priceDebounceRef.current);
-        }
-        priceDebounceRef.current = setTimeout(() => {
-          priceDebounceRef.current = null;
-          const base = urlFiltersRef.current;
-          const extent = specialistPriceExtentRef.current;
-          if (!extent) {
-            return;
-          }
-          const next =
-            v[0] <= extent.min && v[1] >= extent.max ?
-              applySearchUrlPatch(base, {
-                priceMinVnd: null,
-                priceMaxVnd: null,
-              })
-            : applySearchUrlPatch(base, {
-                priceMinVnd: v[0],
-                priceMaxVnd: v[1],
-              });
-          replaceUrlFilters(next);
-        }, SEARCH_PRICE_URL_DEBOUNCE_MS);
+        setDraftResetRequested(false);
+        setDraftSpecPriceRange(v);
       },
       formatValue: (n: number) =>
         format.number(n, {
@@ -656,10 +624,10 @@ export function SearchPageClient({
   }, [
     tab,
     specialistPriceExtent,
-    filterPriceByTab.specialists,
-    priceDraft,
+    urlFilters.priceMinVnd,
+    urlFilters.priceMaxVnd,
+    draftSpecPriceRange,
     format,
-    replaceUrlFilters,
   ]);
 
   const readOnlyOrgVndLine = useMemo(() => {
@@ -701,6 +669,8 @@ export function SearchPageClient({
 
   const hasActiveFilters =
     filterCategorySlugs.length > 0 ||
+    filterBodyZoneSlugs.length > 0 ||
+    (tab === "specialists" && urlFilters.specialistGender != null) ||
     hasActivePriceFilter ||
     hasActiveSlotFilter ||
     hasRadiusFilter;
@@ -722,53 +692,100 @@ export function SearchPageClient({
   }, [format, hasRadiusFilter, urlFilters.radiusM]);
 
   function toggleFilterCategory(slug: string) {
-    const base = urlFiltersRef.current;
+    setDraftResetRequested(false);
     if (tab === "organizations") {
-      const current = base.orgCategorySlugs;
-      const next = current.includes(slug) ?
+      setDraftOrgCategorySlugs((current) =>
+        current.includes(slug) ?
           current.filter((s) => s !== slug)
-        : [...current, slug];
-      commitUrlFilters(applySearchUrlPatch(base, { orgCategorySlugs: next }));
+        : [...current, slug],
+      );
     } else {
-      const current = base.specCategorySlugs;
-      const next = current.includes(slug) ?
+      setDraftSpecCategorySlugs((current) =>
+        current.includes(slug) ?
           current.filter((s) => s !== slug)
-        : [...current, slug];
-      commitUrlFilters(applySearchUrlPatch(base, { specCategorySlugs: next }));
+        : [...current, slug],
+      );
+    }
+  }
+
+  function setFilterBodyZones(next: string[]) {
+    setDraftResetRequested(false);
+    if (tab === "organizations") {
+      setDraftOrgBodyZoneSlugs(next);
+    } else {
+      setDraftSpecBodyZoneSlugs(next);
     }
   }
 
   function resetAllFilters() {
-    const base = urlFiltersRef.current;
-    setSlotPick({ day: "", time: "" });
+    setDraftResetRequested(true);
+    setDraftSlotPick({ day: "", time: "" });
+    // Сброс категорий делаем для обеих вкладок, чтобы legacy-вход с `category`
+    // (из главной) не оставлял скрытый фильтр во второй вкладке.
+    setDraftOrgCategorySlugs([]);
+    setDraftSpecCategorySlugs([]);
     if (tab === "organizations") {
-      commitUrlFilters(
-        applySearchUrlPatch(base, {
-          orgCategorySlugs: [],
-          sort: SEARCH_DIRECTORY_DEFAULT_SORT,
-          slotDay: null,
-          slotTime: null,
-          radiusM: null,
-          radiusLat: null,
-          radiusLng: null,
-        }),
-      );
+      setDraftOrgBodyZoneSlugs([]);
     } else {
-      commitUrlFilters(
-        applySearchUrlPatch(base, {
-          specCategorySlugs: [],
-          sort: SEARCH_DIRECTORY_DEFAULT_SORT,
-          priceMinVnd: null,
-          priceMaxVnd: null,
-          slotDay: null,
-          slotTime: null,
-          radiusM: null,
-          radiusLat: null,
-          radiusLng: null,
-        }),
-      );
+      setDraftSpecBodyZoneSlugs([]);
+      setDraftSpecialistGender(null);
+      if (specialistPriceExtent != null) {
+        setDraftSpecPriceRange([
+          specialistPriceExtent.min,
+          specialistPriceExtent.max,
+        ]);
+      } else {
+        setDraftSpecPriceRange(null);
+      }
     }
   }
+
+  const openFiltersDialog = () => {
+    setDraftOrgCategorySlugs(urlFiltersRef.current.orgCategorySlugs);
+    setDraftSpecCategorySlugs(urlFiltersRef.current.specCategorySlugs);
+    setDraftOrgBodyZoneSlugs(urlFiltersRef.current.orgBodyZoneSlugs);
+    setDraftSpecBodyZoneSlugs(urlFiltersRef.current.specBodyZoneSlugs);
+    setDraftSpecialistGender(urlFiltersRef.current.specialistGender);
+    setDraftSlotPick({
+      day: urlFiltersRef.current.slotDay ?? "",
+      time: urlFiltersRef.current.slotTime ?? "",
+    });
+    setDraftSpecPriceRange(null);
+    setDraftResetRequested(false);
+    setFiltersOpen(true);
+  };
+
+  const applyDraftFilters = () => {
+    const base = urlFiltersRef.current;
+    let next = applySearchUrlPatch(base, {
+      orgCategorySlugs: draftOrgCategorySlugs,
+      specCategorySlugs: draftSpecCategorySlugs,
+      orgBodyZoneSlugs: draftOrgBodyZoneSlugs,
+      specBodyZoneSlugs: draftSpecBodyZoneSlugs,
+      specialistGender: draftSpecialistGender,
+      slotDay: draftSlotPick.day && draftSlotPick.time ? draftSlotPick.day : null,
+      slotTime:
+        draftSlotPick.day && draftSlotPick.time ? draftSlotPick.time : null,
+    });
+    if (tab === "specialists" && specialistPriceExtent != null) {
+      const v = draftSpecPriceRange;
+      next = applySearchUrlPatch(
+        next,
+        v == null || (v[0] <= specialistPriceExtent.min && v[1] >= specialistPriceExtent.max) ?
+          { priceMinVnd: null, priceMaxVnd: null }
+        : { priceMinVnd: v[0], priceMaxVnd: v[1] },
+      );
+    }
+    if (draftResetRequested) {
+      next = applySearchUrlPatch(next, {
+        sort: SEARCH_DIRECTORY_DEFAULT_SORT,
+        radiusM: null,
+        radiusLat: null,
+        radiusLng: null,
+      });
+    }
+    commitUrlFilters(next);
+  };
 
   /**
    * Только «первичная» загрузка (нет данных в кэше RQ + идёт fetch).
@@ -896,7 +913,7 @@ export function SearchPageClient({
             aria-label={tSearch("filtersAria")}
             aria-expanded={filtersOpen}
             onClick={() => {
-              setFiltersOpen(true);
+              openFiltersDialog();
             }}
           >
             {hasActiveFilters ? (
@@ -1114,44 +1131,34 @@ export function SearchPageClient({
       <HomeBottomNav activeId="search" />
       <CatalogFiltersDialog
         open={filtersOpen}
+        onApplyFilters={applyDraftFilters}
         onOpenChange={(open) => {
-          if (!open) {
-            if (priceDebounceRef.current != null) {
-              clearTimeout(priceDebounceRef.current);
-              priceDebounceRef.current = null;
-            }
-            const extent = specialistPriceExtentRef.current;
-            const draft = priceDraftRef.current;
-            if (extent && draft) {
-              const v = draft;
-              replaceUrlFilters(
-                applySearchUrlPatch(
-                  urlFiltersRef.current,
-                  v[0] <= extent.min && v[1] >= extent.max ?
-                    {
-                      priceMinVnd: null,
-                      priceMaxVnd: null,
-                    }
-                  : {
-                      priceMinVnd: v[0],
-                      priceMaxVnd: v[1],
-                    },
-                ),
-              );
-            }
-            setPriceDraft(null);
-            priceDraftRef.current = null;
-          }
           setFiltersOpen(open);
         }}
-        selectedCategorySlugs={filterCategorySlugs}
+        selectedCategorySlugs={dialogCategorySlugs}
         onToggleCategory={toggleFilterCategory}
+        selectedBodyZoneSlugs={dialogBodyZoneSlugs}
+        bodyZoneOptions={bodyZoneOptions}
+        onChangeBodyZoneSlugs={setFilterBodyZones}
+        genderOptions={tab === "specialists" ? genderOptions : []}
+        selectedGender={tab === "specialists" ? draftSpecialistGender : null}
+        onSelectGender={
+          tab === "specialists"
+            ? (gender) => {
+                setDraftResetRequested(false);
+                setDraftSpecialistGender(gender);
+              }
+            : undefined
+        }
         onResetFilters={resetAllFilters}
         categoryOptions={categoryOptions}
         priceFilter={priceFilterForDialog}
         slotTimeFilter={{
-          value: slotPick,
-          onChange: onSlotTimeFilterChange,
+          value: draftSlotPick,
+          onChange: (next) => {
+            setDraftResetRequested(false);
+            setDraftSlotPick(next);
+          },
           dayOptions: slotDayOptions,
           timeOptions: slotTimeOptionsStatic,
         }}

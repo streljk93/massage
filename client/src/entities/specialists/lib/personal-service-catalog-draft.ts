@@ -9,7 +9,13 @@ export type Cat = {
 };
 
 export type DurPrice = { minutes: number; priceVnd: string };
-export type SvcForm = { categoryId: string; durationPrices: DurPrice[] };
+export type SvcForm = {
+  categoryId: string;
+  kind: "standard" | "combo";
+  comboCategoryIds: string[];
+  bodyZoneSlugs: string[];
+  durationPrices: DurPrice[];
+};
 
 /** Состояние хранит только цифры; в поле — группы по 3 с пробелом (500 000). */
 export function formatVndPriceForInput(digits: string): string {
@@ -27,6 +33,9 @@ export function digitsFromVndPriceInput(raw: string): string {
 export function defaultSvc(catId: string): SvcForm {
   return {
     categoryId: catId,
+    kind: "standard",
+    comboCategoryIds: [],
+    bodyZoneSlugs: [],
     durationPrices: [
       { minutes: 60, priceVnd: "" },
       { minutes: 90, priceVnd: "" },

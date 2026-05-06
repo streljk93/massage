@@ -151,6 +151,9 @@ export function BusinessServiceEditPage() {
           serviceId={serviceId}
           initial={{
             categoryId: row.categoryId,
+            kind: row.kind,
+            comboCategoryIds: row.comboCategoryIds,
+            bodyZoneSlugs: row.bodyZoneSlugs,
             priceOptions: row.priceOptions.map((o) => ({
               durationMinutes: o.durationMinutes,
               priceAmount: o.priceAmount,

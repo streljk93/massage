@@ -36,6 +36,7 @@ import {
 import type { ApiLocale } from '../../../common/i18n';
 import {
   pickLocalizedOrganizationListItem,
+  resolveLocalizedString,
   pickLocalizedServiceCategoryFields,
   type CategoryLocaleShape,
   type OrganizationLocaleListShape,
@@ -43,6 +44,7 @@ import {
 import { buildListingSlotGroupsFromOccupiedKeys } from '../domain/build-occupied-listing-slot-groups';
 import { mergeBookingsToOccupiedKeysPerSpecialist } from '../domain/workday-free-slots';
 import type { CatalogFilterOptionsResponseDto } from '../dto/catalog-filter-options-response.dto';
+import type { DirectoryBodyZoneTagDto } from '../dto/directory-body-zone-tag.dto';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
 import type {
   OrganizationDetailResponseDto,
@@ -69,6 +71,8 @@ function specialistListFiltersOrNull(
   majorCategorySlug: string | null,
   q: string | null,
   categorySlugs: string[],
+  bodyZoneSlugs: string[],
+  gender: 'male' | 'female' | null,
   priceMinVnd: number | null,
   priceMaxVnd: number | null,
 ): SpecialistListApiFilters | null {
@@ -77,6 +81,8 @@ function specialistListFiltersOrNull(
     hasMajor ||
     (q != null && q !== '') ||
     categorySlugs.length > 0 ||
+    bodyZoneSlugs.length > 0 ||
+    gender != null ||
     priceMinVnd != null ||
     priceMaxVnd != null;
   if (!has) {
@@ -86,6 +92,8 @@ function specialistListFiltersOrNull(
     majorCategorySlug: hasMajor ? majorCategorySlug : null,
     q,
     categorySlugs,
+    bodyZoneSlugs,
+    gender,
     priceMinVnd,
     priceMaxVnd,
     locale,
@@ -97,9 +105,14 @@ function organizationListFiltersOrNull(
   majorCategorySlug: string | null,
   q: string | null,
   categorySlugs: string[],
+  bodyZoneSlugs: string[],
 ): OrganizationListApiFilters | null {
   const hasMajor = majorCategorySlug != null && majorCategorySlug !== '';
-  const has = hasMajor || (q != null && q !== '') || categorySlugs.length > 0;
+  const has =
+    hasMajor ||
+    (q != null && q !== '') ||
+    categorySlugs.length > 0 ||
+    bodyZoneSlugs.length > 0;
   if (!has) {
     return null;
   }
@@ -107,6 +120,7 @@ function organizationListFiltersOrNull(
     majorCategorySlug: hasMajor ? majorCategorySlug : null,
     q,
     categorySlugs,
+    bodyZoneSlugs,
     locale,
   };
 }
@@ -164,9 +178,25 @@ function mapServiceRowsToBookable(
     if (vndOpts.length === 0) {
       continue;
     }
-    const categoryShortName = svc.category
+    const baseShortName = svc.category
       ? pickLocalizedServiceCategoryFields(svc.category, locale).shortName
       : '';
+    const comboShortNames =
+      svc.kind === 'combo'
+        ? (svc.comboItems ?? [])
+            .map((item) =>
+              pickLocalizedServiceCategoryFields(
+                item.itemServiceCategory as CategoryLocaleShape,
+                locale,
+              ).shortName,
+            )
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+        : [];
+    const categoryShortName = [baseShortName, ...comboShortNames]
+      .map((s) => s.trim())
+      .filter((s, idx, arr) => s.length > 0 && arr.indexOf(s) === idx)
+      .join(' + ');
     out.push({
       id: svc.id,
       categoryShortName,
@@ -242,6 +272,7 @@ function mapSpecialistRowToListItem(
     phone,
     imageUrl: listedImg,
     imageAlt: listedImgAlt,
+    gender: s.gender ?? null,
     metaLine,
     servicesLine,
     categories: mapDirectoryCategoryTags(s.serviceCategories, locale),
@@ -298,6 +329,10 @@ function mapOrganizationRowToListItem(
   return {
     id: localized.id,
     slug: o.slug,
+    primaryMajorCategorySlug: o.primaryMajorServiceCategory?.slug ?? null,
+    additionalMajorCategorySlugs: o.additionalMajorCategories.map(
+      (row) => row.majorServiceCategory.slug,
+    ),
     name: localized.name,
     description: localized.description,
     city: localized.city,
@@ -498,6 +533,8 @@ export class DirectoryService {
       majorCategorySlug: string | null;
       q: string | null;
       categorySlugs: string[];
+      bodyZoneSlugs: string[];
+      gender: 'male' | 'female' | null;
       priceMinVnd: number | null;
       priceMaxVnd: number | null;
       radius: DirectoryListRadiusFilter | null;
@@ -572,6 +609,8 @@ export class DirectoryService {
       options.majorCategorySlug,
       options.q,
       options.categorySlugs,
+      options.bodyZoneSlugs,
+      options.gender,
       listPriceMin,
       listPriceMax,
     );
@@ -627,6 +666,7 @@ export class DirectoryService {
       majorCategorySlug: string | null;
       q: string | null;
       categorySlugs: string[];
+      bodyZoneSlugs: string[];
       radius: DirectoryListRadiusFilter | null;
       userId: string | null;
     },
@@ -682,6 +722,7 @@ export class DirectoryService {
       options.majorCategorySlug,
       options.q,
       options.categorySlugs,
+      options.bodyZoneSlugs,
     );
     const rows = await this.directoryRepository.findOrganizationsPage({
       take: limit + 1,
@@ -1003,13 +1044,10 @@ export class DirectoryService {
     locale: ApiLocale,
     tab: 'organizations' | 'specialists',
   ): Promise<CatalogFilterOptionsResponseDto> {
-    const categoryIds =
-      tab === 'specialists'
-        ? await this.directoryRepository.findDistinctServiceCategoryIdsForListingSpecialists()
-        : await this.directoryRepository.findDistinctServiceCategoryIdsForListingOrganizations();
-
+    // Для UX фильтров показываем полный справочник активных категорий текущей вертикали,
+    // даже если по части категорий пока нет карточек в выдаче.
     const rows =
-      await this.directoryRepository.findServiceCategoriesByIds(categoryIds);
+      await this.directoryRepository.findServiceCategoriesByMajorSlug('massage');
     const tags: DirectoryCategoryTagDto[] = rows
       .map((cat) => {
         const t = pickLocalizedServiceCategoryFields(cat, locale);
@@ -1017,6 +1055,22 @@ export class DirectoryService {
       })
       .sort((a, b) =>
         a.shortName.localeCompare(b.shortName, locale, { sensitivity: 'base' }),
+      );
+
+    const bodyZoneRows =
+      await this.directoryRepository.findBodyZonesByMajorSlug('massage');
+    const bodyZones: DirectoryBodyZoneTagDto[] = bodyZoneRows
+      .map((z) => ({
+        slug: z.slug,
+        name: resolveLocalizedString(
+          locale,
+          z.locales,
+          (l) => l.name,
+          z.slug,
+        ),
+      }))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, locale, { sensitivity: 'base' }),
       );
 
     const priceRows =
@@ -1040,7 +1094,12 @@ export class DirectoryService {
       }
     }
 
-    return { categories: tags, priceRangeVnd };
+    return {
+      categories: tags,
+      bodyZones,
+      genders: ['male', 'female'],
+      priceRangeVnd,
+    };
   }
 
   /**

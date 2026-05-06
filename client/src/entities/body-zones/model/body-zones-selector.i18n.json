@@ -1,0 +1,31 @@
+{
+  "messages": {
+    "en": {
+      "bodyZonesSelector": {
+        "title": "Body zones",
+        "description": "Choose zones on the body map or from tags. Selection is synced both ways.",
+        "front": "Front",
+        "back": "Back",
+        "noZones": "No body zones available"
+      }
+    },
+    "vi": {
+      "bodyZonesSelector": {
+        "title": "Vùng cơ thể",
+        "description": "Chọn vùng trên sơ đồ cơ thể hoặc bằng thẻ. Hai cách luôn đồng bộ.",
+        "front": "Mặt trước",
+        "back": "Mặt sau",
+        "noZones": "Chưa có vùng cơ thể"
+      }
+    },
+    "ru": {
+      "bodyZonesSelector": {
+        "title": "Зоны тела",
+        "description": "Выбирайте зоны на схеме тела или в тегах. Выбор синхронизируется в обе стороны.",
+        "front": "Вид спереди",
+        "back": "Вид сзади",
+        "noZones": "Пока нет доступных зон"
+      }
+    }
+  }
+}

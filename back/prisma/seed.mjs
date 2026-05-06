@@ -14,8 +14,12 @@ import { seedAdvertising } from './seed-advertising.mjs';
 import { seedBookingStatusLocales } from './seed-booking-status-locale.mjs';
 import { seedDemoSpecialists } from './seed-demo-specialists.mjs';
 import {
+  bodyZoneI18n,
+  majorNailI18n,
   majorMassageI18n,
+  massageBodyZoneSeeds,
   massageCategorySeeds,
+  nailCategorySeeds,
   SUPPORTED_CATALOG_LOCALES,
   serviceCategoryI18n,
 } from './seed-catalog-i18n.mjs';
@@ -41,73 +45,123 @@ if (!connectionString) {
 const pool = new Pool({ connectionString });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
-async function main() {
-  const massage = await prisma.majorServiceCategory.upsert({
-    where: { slug: 'massage' },
+/**
+ * @param {import('@prisma/client').PrismaClient} db
+ * @param {{
+ *   majorSlug: string;
+ *   majorI18n: Record<string, string>;
+ *   sortOrder: number;
+ *   categorySeeds: Array<{ slug: string; sortOrder: number }>;
+ * }} args
+ */
+async function seedMajorWithCategories(db, args) {
+  const major = await db.majorServiceCategory.upsert({
+    where: { slug: args.majorSlug },
     create: {
-      name: majorMassageI18n.en,
-      slug: 'massage',
-      sortOrder: 0,
+      name: args.majorI18n.en,
+      slug: args.majorSlug,
+      sortOrder: args.sortOrder,
       isActive: true,
+      deletedAt: null,
     },
     update: {
-      name: majorMassageI18n.en,
+      name: args.majorI18n.en,
+      sortOrder: args.sortOrder,
       isActive: true,
+      deletedAt: null,
     },
   });
 
   for (const loc of SUPPORTED_CATALOG_LOCALES) {
-    await prisma.majorServiceCategoryLocale.upsert({
+    await db.majorServiceCategoryLocale.upsert({
       where: {
         majorServiceCategoryId_locale: {
-          majorServiceCategoryId: massage.id,
+          majorServiceCategoryId: major.id,
           locale: loc,
         },
       },
       create: {
-        majorServiceCategoryId: massage.id,
+        majorServiceCategoryId: major.id,
         locale: loc,
-        name: majorMassageI18n[loc],
+        name: args.majorI18n[loc],
       },
       update: {
-        name: majorMassageI18n[loc],
+        name: args.majorI18n[loc],
       },
     });
   }
 
-  for (const row of massageCategorySeeds) {
+  const allowedCategorySlugs = new Set(args.categorySeeds.map((row) => row.slug));
+  const deprecatedCategories = await db.serviceCategory.findMany({
+    where: {
+      majorServiceCategoryId: major.id,
+      slug: { notIn: [...allowedCategorySlugs] },
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  const deprecatedCategoryIds = deprecatedCategories.map((row) => row.id);
+  await db.serviceCategory.updateMany({
+    where: {
+      id: { in: deprecatedCategoryIds },
+    },
+    data: {
+      isActive: false,
+      deletedAt: new Date(),
+    },
+  });
+  if (deprecatedCategoryIds.length > 0) {
+    await db.organizationServiceCategory.deleteMany({
+      where: { serviceCategoryId: { in: deprecatedCategoryIds } },
+    });
+    await db.specialistServiceCategory.deleteMany({
+      where: { serviceCategoryId: { in: deprecatedCategoryIds } },
+    });
+    await db.service.updateMany({
+      where: {
+        categoryId: { in: deprecatedCategoryIds },
+        deletedAt: null,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+  }
+
+  for (const row of args.categorySeeds) {
     const i18n = serviceCategoryI18n[row.slug];
     if (!i18n) {
       throw new Error(`[seed] Нет переводов для slug=${row.slug}`);
     }
     const en = i18n.en;
-
-    const cat = await prisma.serviceCategory.upsert({
+    const cat = await db.serviceCategory.upsert({
       where: {
         majorServiceCategoryId_slug: {
-          majorServiceCategoryId: massage.id,
+          majorServiceCategoryId: major.id,
           slug: row.slug,
         },
       },
       create: {
-        majorServiceCategoryId: massage.id,
+        majorServiceCategoryId: major.id,
         name: en.name,
         shortName: en.shortName,
         slug: row.slug,
         sortOrder: row.sortOrder,
         isActive: true,
+        deletedAt: null,
       },
       update: {
         name: en.name,
         shortName: en.shortName,
         sortOrder: row.sortOrder,
         isActive: true,
+        deletedAt: null,
       },
     });
 
     for (const loc of SUPPORTED_CATALOG_LOCALES) {
       const t = i18n[loc];
-      await prisma.serviceCategoryLocale.upsert({
+      await db.serviceCategoryLocale.upsert({
         where: {
           serviceCategoryId_locale: {
             serviceCategoryId: cat.id,
@@ -130,8 +184,69 @@ async function main() {
     }
   }
 
+  return major;
+}
+
+async function main() {
+  const massage = await seedMajorWithCategories(prisma, {
+    majorSlug: 'massage',
+    majorI18n: majorMassageI18n,
+    sortOrder: 0,
+    categorySeeds: massageCategorySeeds,
+  });
+  const nail = await seedMajorWithCategories(prisma, {
+    majorSlug: 'nail',
+    majorI18n: majorNailI18n,
+    sortOrder: 1,
+    categorySeeds: nailCategorySeeds,
+  });
+
+  for (const row of massageBodyZoneSeeds) {
+    const i18n = bodyZoneI18n[row.slug];
+    if (!i18n) {
+      throw new Error(`[seed] Нет переводов body zone для slug=${row.slug}`);
+    }
+    const en = i18n.en;
+    const zone = await prisma.bodyZone.upsert({
+      where: {
+        majorServiceCategoryId_slug: {
+          majorServiceCategoryId: massage.id,
+          slug: row.slug,
+        },
+      },
+      create: {
+        majorServiceCategoryId: massage.id,
+        slug: row.slug,
+        sortOrder: row.sortOrder,
+        isActive: true,
+      },
+      update: {
+        sortOrder: row.sortOrder,
+        isActive: true,
+      },
+    });
+    for (const loc of SUPPORTED_CATALOG_LOCALES) {
+      await prisma.bodyZoneLocale.upsert({
+        where: {
+          bodyZoneId_locale: {
+            bodyZoneId: zone.id,
+            locale: loc,
+          },
+        },
+        create: {
+          bodyZoneId: zone.id,
+          locale: loc,
+          name: i18n[loc].name,
+        },
+        update: {
+          name: i18n[loc].name,
+        },
+      });
+    }
+  }
+
   console.log(
-    `[seed] Каталог: «${massage.slug}» (${massage.id}), подкатегорий: ${massageCategorySeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(', ')}.`,
+    `[seed] Каталог: «${massage.slug}» (${massage.id}) категорий: ${massageCategorySeeds.length}, «${nail.slug}» (${nail.id}) категорий: ${nailCategorySeeds.length}, зон massage: ${massageBodyZoneSeeds.length}, локали: ${SUPPORTED_CATALOG_LOCALES.join(', ')}.`,
   );
 
   await seedBookingStatusLocales(prisma);

@@ -31,6 +31,8 @@ export default async function Page({ searchParams }: PageProps) {
     f.radiusLng != null;
   const orgCategoriesCsv = searchCategoriesQueryCsv(f.orgCategorySlugs);
   const specCategoriesCsv = searchCategoriesQueryCsv(f.specCategorySlugs);
+  const orgBodyZonesCsv = searchCategoriesQueryCsv(f.orgBodyZoneSlugs);
+  const specBodyZonesCsv = searchCategoriesQueryCsv(f.specBodyZoneSlugs);
 
   const sdkClient = createServerSdkClient();
   let initialOrganizationsPage = null;
@@ -46,6 +48,7 @@ export default async function Page({ searchParams }: PageProps) {
           sort: listSort,
           ...(f.q.trim() ? { q: f.q.trim() } : {}),
           ...(orgCategoriesCsv ? { categories: orgCategoriesCsv } : {}),
+          ...(orgBodyZonesCsv ? ({ bodyZones: orgBodyZonesCsv } as Record<string, unknown>) : {}),
           ...(hasRadius ?
             {
               radiusM: f.radiusM as number,
@@ -65,8 +68,12 @@ export default async function Page({ searchParams }: PageProps) {
           sort: listSort,
           ...(f.q.trim() ? { q: f.q.trim() } : {}),
           ...(specCategoriesCsv ? { categories: specCategoriesCsv } : {}),
+          ...(specBodyZonesCsv ? ({ bodyZones: specBodyZonesCsv } as Record<string, unknown>) : {}),
           ...(f.priceMinVnd != null ? { priceMinVnd: f.priceMinVnd } : {}),
           ...(f.priceMaxVnd != null ? { priceMaxVnd: f.priceMaxVnd } : {}),
+          ...(f.specialistGender != null ?
+            ({ gender: f.specialistGender } as Record<string, unknown>)
+          : {}),
           ...(hasRadius ?
             {
               radiusM: f.radiusM as number,
@@ -89,6 +96,7 @@ export default async function Page({ searchParams }: PageProps) {
   const initialOrgListPrefetch = {
     q: f.q.trim(),
     categoryCsv: orgCategoriesCsv,
+    bodyZoneCsv: orgBodyZonesCsv,
     sort: listSort,
     radiusM: hasRadius ? f.radiusM : null,
     radiusLat: hasRadius ? f.radiusLat : null,
@@ -97,9 +105,11 @@ export default async function Page({ searchParams }: PageProps) {
   const initialSpecListPrefetch = {
     q: f.q.trim(),
     categoryCsv: specCategoriesCsv,
+    bodyZoneCsv: specBodyZonesCsv,
     sort: listSort,
     priceMinVnd: f.priceMinVnd,
     priceMaxVnd: f.priceMaxVnd,
+    gender: f.specialistGender,
     radiusM: hasRadius ? f.radiusM : null,
     radiusLat: hasRadius ? f.radiusLat : null,
     radiusLng: hasRadius ? f.radiusLng : null,

@@ -42,6 +42,15 @@ export const createOrganizationBodySchema = z
     galleryImageUrls: z.array(z.string().min(1).max(2048)).max(24).optional(),
     /** Подкатегории витрины (каталог) — не меньше одной, все должны существовать и быть активны. */
     serviceCategoryIds: z.array(z.string().uuid()).min(1).max(40),
+    /**
+     * Дополнительные большие категории (кроме primary=massage на MVP).
+     * Храним slug для обратной совместимости API и удобства формы.
+     */
+    additionalMajorCategorySlugs: z
+      .array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
+      .max(10)
+      .optional(),
+    confirmDisableServiceIds: z.array(z.string().uuid()).max(200).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {

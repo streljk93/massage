@@ -56,6 +56,18 @@ enum PlatformRole {
   master
 }
 
+/// Пол специалиста для клиентского фильтра.
+enum SpecialistGender {
+  male
+  female
+}
+
+/// Тип услуги в личном каталоге специалиста.
+enum ServiceKind {
+  standard
+  combo
+}
+
 /// Заявка мастера на работу в существующем салоне (онбординг / смена места).
 enum SpecialistWorkplaceJoinRequestStatus {
   pending
@@ -127,24 +139,24 @@ enum ContentModerationCaseStatus {
 
 /// Учётная запись пользователя. Пароль только для email-входа; OAuth — `UserOAuthAccount`.
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
+  id                         String    @id @default(uuid())
+  email                      String    @unique
   /// Отображаемое имя (редактируемое пользователем).
-  name         String
+  name                       String
   /// Последнее имя, допущенное ко витрине; пока имя «на модерации», в каталоге показываем это (или синхрон с `name` при отсутствии правок).
-  catalogListedName String?
+  catalogListedName          String?
   /// Argon2/bcrypt-хэш; null если пользователь только через OAuth (будущее).
-  passwordHash String?
+  passwordHash               String?
   /// Телефон (редактируемый профиль).
-  phone        String?
+  phone                      String?
   /// URL аватара.
-  avatarUrl    String?
+  avatarUrl                  String?
   /// Предпочитаемая локаль UI (например vi, en, ru).
-  locale       String?
+  locale                     String?
   /// Push: напоминание клиенту о визите за N минут до `startsAt` (только `bookingReminderEnabled`).
-  bookingReminderEnabled     Boolean @default(true)
+  bookingReminderEnabled     Boolean   @default(true)
   /// Допустимые значения: 15, 30, 60 (валидация в API).
-  bookingReminderLeadMinutes Int     @default(60)
+  bookingReminderLeadMinutes Int       @default(60)
   /// Регистрация по паролю: дата проставляется при создании `User` (после OTP). Null — для будущих сценариев (напр. OAuth).
   emailVerifiedAt            DateTime?
 
@@ -152,38 +164,38 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  specialistProfile    Specialist?
-  clientBookings    Booking[]              @relation("ClientBookings")
-  bookingChanges    BookingStatusHistory[]
-  orgReviews        OrganizationReview[]
-  specialistReviews SpecialistReview[]
-  ownedOrganizations Organization[]        @relation("OrganizationOwner")
-  fcmTokens            UserFcmToken[]
-  favorites            UserFavorite[]
-  behaviorEvents       UserBehaviorEvent[]
-  preferenceProfile    UserPreferenceProfile?
-  oAuthAccounts        UserOAuthAccount[]
+  specialistProfile  Specialist?
+  clientBookings     Booking[]              @relation("ClientBookings")
+  bookingChanges     BookingStatusHistory[]
+  orgReviews         OrganizationReview[]
+  specialistReviews  SpecialistReview[]
+  ownedOrganizations Organization[]         @relation("OrganizationOwner")
+  fcmTokens          UserFcmToken[]
+  favorites          UserFavorite[]
+  behaviorEvents     UserBehaviorEvent[]
+  preferenceProfile  UserPreferenceProfile?
+  oAuthAccounts      UserOAuthAccount[]
 
   /// Отображаемое имя: после смены проходит предмодерацию; до `approved` скрыто во витрине (мастер).
   nameModerationStatus PublicationModerationStatus @default(approved)
   /// Ручная модерация контента (внутренний флаг; не путать с ролью в организации).
-  isContentModerator   Boolean                    @default(false)
+  isContentModerator   Boolean                     @default(false)
   /// Суперадмин: полный доступ к админ-панели; создаётся/обновляется из `ADMIN_MASTER_*` в `back/.env` при старте API.
-  platformRole         PlatformRole               @default(standard)
+  platformRole         PlatformRole                @default(standard)
 
   contentModerationCasesResolved ContentModerationCase[] @relation("ContentModerationResolvedBy")
 }
 
 /// Привязка внешнего аккаунта (Google) к `User`.
 model UserOAuthAccount {
-  id                  String         @id @default(uuid())
-  userId              String
-  user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider            OAuthProvider
+  id                String        @id @default(uuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          OAuthProvider
   /// `sub` в Google id_token.
-  providerAccountId  String
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
+  providerAccountId String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   @@unique([provider, providerAccountId])
   @@index([userId])
@@ -220,10 +232,10 @@ model UserFcmToken {
 /// Избранные салоны и мастера пользователя-клиента.
 model UserFavorite {
   userId     String
-  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   targetKind FavoriteTargetKind
   targetId   String
-  createdAt  DateTime            @default(now())
+  createdAt  DateTime           @default(now())
 
   @@id([userId, targetKind, targetId])
   @@index([userId])
@@ -231,9 +243,9 @@ model UserFavorite {
 
 /// События витрины для персонализации. `userId` null — гость; `sessionId` — анонимно, без PII.
 model UserBehaviorEvent {
-  id         String  @id @default(uuid())
+  id         String   @id @default(uuid())
   userId     String?
-  user       User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Браузерная сессия, если нет `userId` (или для корреляции).
   sessionId  String?
   /// Напр. search_view, specialist_view, organization_view, search_apply_filters.
@@ -241,7 +253,7 @@ model UserBehaviorEvent {
   entityType String?
   entityId   String?
   /// Slugs, id фильтра, majorSlug; без ввода пользователя (политика приватности).
-  metadata   Json    @default("{}")
+  metadata   Json     @default("{}")
   createdAt  DateTime @default(now())
 
   @@index([userId, createdAt])
@@ -273,8 +285,11 @@ model MajorServiceCategory {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  categories ServiceCategory[]
-  locales    MajorServiceCategoryLocale[]
+  categories              ServiceCategory[]
+  locales                 MajorServiceCategoryLocale[]
+  organizationsPrimary    Organization[]                        @relation("OrganizationPrimaryMajorCategory")
+  organizationsAdditional OrganizationAdditionalMajorCategory[]
+  bodyZones               BodyZone[]
 }
 
 /// Локализованное имя большой категории (en / vi / ru; позже de и др. — новые строки без смены схемы).
@@ -296,9 +311,9 @@ model MajorServiceCategoryLocale {
 
 /// Категория внутри большой (например «массаж стоп», «расслабляющий»): полное имя, короткое, slug.
 model ServiceCategory {
-  id                   String @id @default(uuid())
+  id                     String               @id @default(uuid())
   majorServiceCategoryId String
-  majorServiceCategory MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
+  majorServiceCategory   MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
 
   /// Канонические / fallback `name`, `shortName`, `description` (часто en).
   name        String
@@ -306,17 +321,18 @@ model ServiceCategory {
   slug        String
   /// Описание для SEO/карточек (опционально).
   description String?
-  sortOrder Int     @default(0)
-  isActive  Boolean @default(true)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  services Service[]
-  locales  ServiceCategoryLocale[]
+  services   Service[]
+  locales    ServiceCategoryLocale[]
+  comboItems ServiceComboItem[]
 
-  specialistTags    SpecialistServiceCategory[]
+  specialistTags   SpecialistServiceCategory[]
   organizationTags OrganizationServiceCategory[]
   revisionTags     OrganizationProfileRevisionServiceCategory[]
 
@@ -342,21 +358,55 @@ model ServiceCategoryLocale {
   @@index([locale])
 }
 
+/// Анатомическая зона для фильтрации/разметки услуг (MVP: вертикаль massage).
+model BodyZone {
+  id                     String               @id @default(uuid())
+  majorServiceCategoryId String
+  majorServiceCategory   MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
+  slug                   String
+  sortOrder              Int                  @default(0)
+  isActive               Boolean              @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  locales  BodyZoneLocale[]
+  services ServiceBodyZone[]
+
+  @@unique([majorServiceCategoryId, slug])
+  @@index([majorServiceCategoryId])
+}
+
+model BodyZoneLocale {
+  id         String   @id @default(uuid())
+  bodyZoneId String
+  bodyZone   BodyZone @relation(fields: [bodyZoneId], references: [id], onDelete: Cascade)
+  locale     String
+  name       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bodyZoneId, locale])
+  @@index([locale])
+}
+
 /// Физический адрес (геокод, витрина); ссылка с `Organization.addressId`.
 model Address {
-  id               String   @id @default(uuid())
+  id              String   @id @default(uuid())
   /// Строка адреса для отображения.
-  addressLine      String?
+  addressLine     String?
   /// Город / населённый пункт.
-  city             String?
-  latitude         Float?
-  longitude        Float?
+  city            String?
+  latitude        Float?
+  longitude       Float?
   /// Напр. `google_places` или `manual` при вводе без справочника.
-  sourceProvider   String?
+  sourceProvider  String?
   /// Внешний id места (place id) при `sourceProvider` из справочника.
   sourceReference String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   organizations Organization[]
 
@@ -377,7 +427,11 @@ model Organization {
 
   /// Адрес салона: отдельная сущность.
   addressId String?
-  address   Address?  @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+
+  /// Основная большая категория организации (MVP: massage).
+  primaryMajorServiceCategoryId String?
+  primaryMajorServiceCategory   MajorServiceCategory? @relation("OrganizationPrimaryMajorCategory", fields: [primaryMajorServiceCategoryId], references: [id], onDelete: SetNull)
 
   description     String?
   phone           String?
@@ -402,30 +456,45 @@ model Organization {
   deletedAt DateTime?
 
   /// Витрина салона: до AI/ручного одобрения не показывается в каталоге.
-  publicationModerationStatus PublicationModerationStatus @default(approved)
+  publicationModerationStatus PublicationModerationStatus  @default(approved)
   /// Снимок витринного профиля, уже опубликованный гостям; промодерированный черновик лежит в ревизиях со статусом pending/rejected.
-  publishedProfileRevisionId String? @unique
-  publishedProfileRevision   OrganizationProfileRevision? @relation("OrganizationPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
+  publishedProfileRevisionId  String?                      @unique
+  publishedProfileRevision    OrganizationProfileRevision? @relation("OrganizationPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
 
-  reviews              OrganizationReview[]
-  services             Service[]
-  bookings             Booking[]
-  specialistEmployments SpecialistOrganizationEmployment[]
+  reviews                    OrganizationReview[]
+  services                   Service[]
+  bookings                   Booking[]
+  specialistEmployments      SpecialistOrganizationEmployment[]
   /// Мастера, у которых эта организация выбрана как текущее место приёма.
-  specialistsActiveWorkplace Specialist[] @relation("SpecialistActiveOrganization")
-  locales               OrganizationLocale[]
-  serviceCategories     OrganizationServiceCategory[]
-  workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
-  profileRevisions OrganizationProfileRevision[] @relation("OrganizationProfileRevisions")
+  specialistsActiveWorkplace Specialist[]                          @relation("SpecialistActiveOrganization")
+  locales                    OrganizationLocale[]
+  serviceCategories          OrganizationServiceCategory[]
+  additionalMajorCategories  OrganizationAdditionalMajorCategory[]
+  workplaceJoinRequests      SpecialistWorkplaceJoinRequest[]
+  profileRevisions           OrganizationProfileRevision[]         @relation("OrganizationProfileRevisions")
 
   @@index([ownerUserId])
   @@index([addressId])
+  @@index([primaryMajorServiceCategoryId])
+}
+
+/// Дополнительные большие категории у организации (nail/hair и т.д. поверх primary).
+model OrganizationAdditionalMajorCategory {
+  organizationId         String
+  majorServiceCategoryId String
+  organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  majorServiceCategory   MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@id([organizationId, majorServiceCategoryId])
+  @@index([majorServiceCategoryId])
 }
 
 /// Черновик/история витринного профиля организации до promote в строку `Organization`
 /// (локали витрины + адрес и т.п. копируются из снимка ревизии на этапе промоута).
 model OrganizationProfileRevision {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
   organization   Organization @relation("OrganizationProfileRevisions", fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -435,11 +504,11 @@ model OrganizationProfileRevision {
   catalogLocale String
 
   /// Копия текстов ручного ввода (один язык, без таблицы `*RevisionLocale`).
-  name        String
-  description String?
-  phone       String?
-  email       String?
-  website     String?
+  name            String
+  description     String?
+  phone           String?
+  email           String?
+  website         String?
   yearsInBusiness Int?
 
   /// Снимок адреса на момент подачи (как после `resolveToCanonical`; промоут обновляет `Address` организации).
@@ -447,14 +516,14 @@ model OrganizationProfileRevision {
   city                   String?
   latitude               Float?
   longitude              Float?
-  addressSourceProvider   String?
-  addressSourceReference  String?
+  addressSourceProvider  String?
+  addressSourceReference String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  publishedOnOrganization Organization[] @relation("OrganizationPublishedRevision")
-  serviceCategories     OrganizationProfileRevisionServiceCategory[]
+  publishedOnOrganization Organization[]                               @relation("OrganizationPublishedRevision")
+  serviceCategories       OrganizationProfileRevisionServiceCategory[]
 
   @@index([organizationId])
   @@index([organizationId, status])
@@ -466,7 +535,7 @@ model OrganizationProfileRevisionServiceCategory {
   serviceCategoryId String
 
   revision        OrganizationProfileRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  serviceCategory ServiceCategory            @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
+  serviceCategory ServiceCategory             @relation(fields: [serviceCategoryId], references: [id], onDelete: Cascade)
 
   @@id([revisionId, serviceCategoryId])
   @@index([serviceCategoryId])
@@ -492,9 +561,9 @@ model Gallery {
 
 /// Элемент галереи; порядок отображения — `sortOrder` (меньше = раньше в слайдере / первая «обложка» для витрины организации).
 model GalleryItem {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   galleryId String
-  gallery   Gallery  @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+  gallery   Gallery @relation(fields: [galleryId], references: [id], onDelete: Cascade)
 
   url       String
   alt       String?
@@ -538,7 +607,7 @@ model OrganizationServiceCategory {
 
 /// Отзыв о организации.
 model OrganizationReview {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -549,9 +618,9 @@ model OrganizationReview {
   bookingId String?  @unique
   booking   Booking? @relation("OrganizationReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
 
-  rating Int
+  rating              Int
   /// Текст после одобрения; виден во витрине гостям.
-  publishedComment String? @db.Text
+  publishedComment    String? @db.Text
   /// Не опубликованный черновик (на проверке); сам автор может видеть в API отдельно.
   pendingCommentDraft String? @db.Text
 
@@ -568,9 +637,9 @@ model OrganizationReview {
 
 /// Черновик витринного профиля мастера (`listingName`, `bio`, фото); промоут копирует в строку `Specialist`.
 model SpecialistProfileRevision {
-  id           String                        @id @default(uuid())
+  id           String     @id @default(uuid())
   specialistId String
-  specialist   Specialist                    @relation("SpecialistProfileRevisions", fields: [specialistId], references: [id], onDelete: Cascade)
+  specialist   Specialist @relation("SpecialistProfileRevisions", fields: [specialistId], references: [id], onDelete: Cascade)
 
   status SpecialistProfileRevisionStatus @default(pending_review)
 
@@ -598,21 +667,22 @@ model Specialist {
   experienceYears Int?
 
   /// Имя мастера на витрине (каталог, карточка записи). Не путать с `User.name` (личный клиентский профиль).
-  listingName                   String?
-  ratingAverage Float @default(0)
-  reviewsCount  Int   @default(0)
+  listingName   String?
+  ratingAverage Float             @default(0)
+  reviewsCount  Int               @default(0)
   imageUrl      String?
   imageAlt      String?
+  gender        SpecialistGender?
 
   /// Уже промодерированный снимок витрины для гостей; черновик правок — в `SpecialistProfileRevision` до промоута.
-  publishedProfileRevisionId String? @unique
+  publishedProfileRevisionId String?                    @unique
   publishedProfileRevision   SpecialistProfileRevision? @relation("SpecialistPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
 
   /// Публикация полей профиля для каталога: одобрено / на модерации; legacy-заморозка в `catalogListed*` при миграции со старой модели.
   profilePublicationModerationStatus PublicationModerationStatus @default(approved)
-  catalogListedBio               String?
-  catalogListedListingName       String?
-  catalogListedImageUrl          String?
+  catalogListedBio                   String?
+  catalogListedListingName           String?
+  catalogListedImageUrl              String?
 
   /// Параметры, специфичные для вертикали «массаж» (сила нажима и т.д.); другие крупные категории — отдельные 1:1.
   massageProfile SpecialistMassageProfile?
@@ -636,12 +706,12 @@ model Specialist {
 
   profileRevisions SpecialistProfileRevision[] @relation("SpecialistProfileRevisions")
 
-  employments         SpecialistOrganizationEmployment[]
+  employments           SpecialistOrganizationEmployment[]
   workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
-  services            Service[]
-  bookings            Booking[]
-  reviews             SpecialistReview[]
-  serviceCategories   SpecialistServiceCategory[]
+  services              Service[]
+  bookings              Booking[]
+  reviews               SpecialistReview[]
+  serviceCategories     SpecialistServiceCategory[]
 
   @@index([activeOrganizationId])
 }
@@ -652,7 +722,7 @@ model SpecialistMassageProfile {
   specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
 
   /// Сила нажима (шкала 1–5); null — ещё не задано в онбординге.
-  pressureLevel Int?
+  pressureLevel          Int?
   /// Подстраивать силу под пожелания клиента.
   pressureAdaptsToClient Boolean?
 
@@ -675,9 +745,9 @@ model SpecialistServiceCategory {
 
 /// Период работы специалиста в организации (история смены салонов).
 model SpecialistOrganizationEmployment {
-  id             String @id @default(uuid())
+  id             String       @id @default(uuid())
   specialistId   String
-  specialist     Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  specialist     Specialist   @relation(fields: [specialistId], references: [id], onDelete: Cascade)
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -686,7 +756,7 @@ model SpecialistOrganizationEmployment {
 
   startDate DateTime
   endDate   DateTime?
-  isActive  Boolean  @default(true)
+  isActive  Boolean   @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -699,7 +769,7 @@ model SpecialistOrganizationEmployment {
 
 /// Заявка специалиста на приём в организацию (без автоматического членства).
 model SpecialistWorkplaceJoinRequest {
-  id             String @id @default(uuid())
+  id             String                               @id @default(uuid())
   specialistId   String
   organizationId String
   status         SpecialistWorkplaceJoinRequestStatus @default(pending)
@@ -718,7 +788,7 @@ model SpecialistWorkplaceJoinRequest {
 
 /// Услуга в каталоге организации или личная услуга мастера (`organizationId` = null).
 model Service {
-  id             String @id @default(uuid())
+  id             String        @id @default(uuid())
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -726,13 +796,16 @@ model Service {
   category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
   specialistId String?
-  specialist   Specialist? @relation(fields: [specialistId], references: [id], onDelete: SetNull)
+  specialist   Specialist?        @relation(fields: [specialistId], references: [id], onDelete: SetNull)
+  bodyZones    ServiceBodyZone[]
+  comboItems   ServiceComboItem[] @relation("ServiceComboItems")
 
   /// Стабильный ключ в пределах организации / личного каталога; отображаемое имя — у `ServiceCategory`.
   slug        String
   description String?
-  sortOrder   Int     @default(0)
-  isActive    Boolean @default(true)
+  kind        ServiceKind @default(standard)
+  sortOrder   Int         @default(0)
+  isActive    Boolean     @default(true)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -746,6 +819,32 @@ model Service {
   @@index([specialistId, slug])
   @@index([categoryId])
   @@index([specialistId])
+}
+
+model ServiceBodyZone {
+  serviceId  String
+  bodyZoneId String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  bodyZone   BodyZone @relation(fields: [bodyZoneId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([serviceId, bodyZoneId])
+  @@index([bodyZoneId])
+}
+
+/// Состав combo-услуги: набор подкатегорий (MVP бронируется как единая услуга).
+model ServiceComboItem {
+  comboServiceId        String
+  itemServiceCategoryId String
+  sortOrder             Int             @default(0)
+  comboService          Service         @relation("ServiceComboItems", fields: [comboServiceId], references: [id], onDelete: Cascade)
+  itemServiceCategory   ServiceCategory @relation(fields: [itemServiceCategoryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@id([comboServiceId, itemServiceCategoryId])
+  @@index([itemServiceCategoryId])
 }
 
 /// Варианты длительности и цены для услуги.
@@ -778,8 +877,8 @@ model SpecialistReview {
   bookingId String?  @unique
   booking   Booking? @relation("SpecialistReviewBooking", fields: [bookingId], references: [id], onDelete: SetNull)
 
-  rating Int
-  publishedComment String? @db.Text
+  rating              Int
+  publishedComment    String? @db.Text
   pendingCommentDraft String? @db.Text
 
   publicationModerationStatus PublicationModerationStatus @default(approved)
@@ -796,11 +895,11 @@ model SpecialistReview {
 /// Привязка: одна строка ↔ одна модерируемая сущность (`kind` + `subjectId`), без отдельного столбца на каждый тип.
 /// При жёстком удалении сущности из приложения удаляйте кейсы здесь же (до переноса раньше срабатывал ON DELETE FK).
 model ContentModerationCase {
-  id     String                       @id @default(uuid())
-  kind   ContentModerationCaseKind
+  id        String                      @id @default(uuid())
+  kind      ContentModerationCaseKind
   /// Id модерируемой сущности (смысл задаётся `kind`, см. enum).
   subjectId String
-  status ContentModerationCaseStatus @default(open)
+  status    ContentModerationCaseStatus @default(open)
 
   aiSummary String? @db.Text
 
@@ -836,9 +935,9 @@ model Booking {
 
   /// Локализованный `shortName` подкатегории на момент записи.
   categoryShortNameSnapshot String?
-  durationMinutes     Int
-  priceAmountSnapshot Int?
-  currencySnapshot    String? @default("VND")
+  durationMinutes           Int
+  priceAmountSnapshot       Int?
+  currencySnapshot          String? @default("VND")
 
   startsAt DateTime
   endsAt   DateTime
@@ -849,7 +948,7 @@ model Booking {
   pendingExpiresAt DateTime?
 
   /// Причина отмены/истечения: код (например `pending_confirmation_timeout`) или канонический английский авто-текст.
-  cancelReason String?
+  cancelReason        String?
   /// Дополнительный комментарий при отмене (например пояснение от мастера); системные отмены часто без текста.
   cancellationComment String?
 
@@ -861,8 +960,8 @@ model Booking {
   deletedAt DateTime?
 
   statusHistory      BookingStatusHistory[]
-  organizationReview OrganizationReview? @relation("OrganizationReviewBooking")
-  specialistReview   SpecialistReview?   @relation("SpecialistReviewBooking")
+  organizationReview OrganizationReview?    @relation("OrganizationReviewBooking")
+  specialistReview   SpecialistReview?      @relation("SpecialistReviewBooking")
 
   @@index([clientUserId])
   @@index([specialistId])
@@ -893,7 +992,7 @@ model BookingStatusHistory {
 
 /// Рекламное объявление / баннер по слоту показа (`placement`), с мультиязычными текстами.
 model Advertisement {
-  id        String @id @default(uuid())
+  id        String          @id @default(uuid())
   /// Слот: `home_promo`, `search_banner`, … — выборка по query `placement`.
   placement String
   ownerKind AdvertOwnerKind @default(internal)
@@ -926,8 +1025,8 @@ model AdvertisementLocale {
   advertisementId String
   advertisement   Advertisement @relation(fields: [advertisementId], references: [id], onDelete: Cascade)
 
-  locale String
-  title  String
+  locale   String
+  title    String
   subtitle String
   ctaLabel String
 
