@@ -12,8 +12,8 @@ export type SpecialistOccupiedSlotKeysEntryDto = {
 export type OrganizationListItemDto = {
   id: string;
   slug: string;
-  primaryMajorCategorySlug: string | null;
-  additionalMajorCategorySlugs: string[];
+  /** Сферы деятельности (slug больших категорий), порядок — sortOrder каталога. */
+  majorCategorySlugs: string[];
   name: string;
   description: string | null;
   city: string | null;

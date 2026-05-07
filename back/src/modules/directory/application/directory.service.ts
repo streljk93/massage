@@ -12,6 +12,7 @@ import {
   type OrganizationListRow,
   type SpecialistListRow,
 } from '../infrastructure/directory.repository';
+import { mergeOrganizationMajorIdsAndSlugsFromDb } from '../../organizations/lib/merge-organization-major-categories';
 import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
 import { listingCardPreviewWindowMs } from '../../../common/availability/listing-slot-policy';
 import {
@@ -35,6 +36,7 @@ import {
 } from '../../../common/pagination/review-list-cursor-codec';
 import type { ApiLocale } from '../../../common/i18n';
 import {
+  pickLocalizedMajorName,
   pickLocalizedOrganizationListItem,
   resolveLocalizedString,
   pickLocalizedServiceCategoryFields,
@@ -184,11 +186,12 @@ function mapServiceRowsToBookable(
     const comboShortNames =
       svc.kind === 'combo'
         ? (svc.comboItems ?? [])
-            .map((item) =>
-              pickLocalizedServiceCategoryFields(
-                item.itemServiceCategory as CategoryLocaleShape,
-                locale,
-              ).shortName,
+            .map(
+              (item) =>
+                pickLocalizedServiceCategoryFields(
+                  item.itemServiceCategory as CategoryLocaleShape,
+                  locale,
+                ).shortName,
             )
             .map((s) => s.trim())
             .filter((s) => s.length > 0)
@@ -197,14 +200,44 @@ function mapServiceRowsToBookable(
       .map((s) => s.trim())
       .filter((s, idx, arr) => s.length > 0 && arr.indexOf(s) === idx)
       .join(' + ');
+    const major = svc.category?.majorServiceCategory;
+    const majorSlug = major?.slug?.trim() ?? '';
+    const majorName =
+      major != null
+        ? pickLocalizedMajorName(
+            major as Parameters<typeof pickLocalizedMajorName>[0],
+            locale,
+          ).trim()
+        : '';
     out.push({
       id: svc.id,
       categoryShortName,
+      majorSlug,
+      majorName: majorName || majorSlug || categoryShortName,
+      majorSortOrder: major?.sortOrder ?? 0,
       durationMinutes: vndOpts.map((p) => p.durationMinutes),
       priceVndByDuration: vndOpts.map((p) => p.priceAmount),
     });
   }
   return out;
+}
+
+/**
+ * При привязке к салону витринные подкатегории мастера = SSC ∩ OSC с покрытием (как у карточки организации).
+ * Без привязки — все сохранённые теги SSC.
+ */
+function specialistStorefrontFilteredServiceCategories(
+  s: SpecialistListRow,
+  storefrontCategoryIdsByOrg?: Map<string, Set<string>>,
+): SpecialistListRow['serviceCategories'] {
+  const orgId = s.activeOrganizationId;
+  if (orgId == null || storefrontCategoryIdsByOrg == null) {
+    return s.serviceCategories;
+  }
+  const visible = storefrontCategoryIdsByOrg.get(orgId) ?? new Set<string>();
+  return s.serviceCategories.filter((link) =>
+    visible.has(link.serviceCategoryId),
+  );
 }
 
 /** Только `Service` с `specialistId` = этот мастер (см. `Specialist.services`). */
@@ -222,6 +255,7 @@ function mapSpecialistRowToListItem(
   occupiedKeys: Set<string>,
   doneClientsCount: number,
   opts?: { listedNameMode: 'public_catalog' | 'raw_account' },
+  storefrontCategoryIdsByOrg?: Map<string, Set<string>>,
 ): SpecialistListItemDto {
   const slotGroups = buildListingSlotGroupsFromOccupiedKeys(occupiedKeys, now);
 
@@ -232,8 +266,12 @@ function mapSpecialistRowToListItem(
   const latitude = addr?.latitude ?? null;
   const longitude = addr?.longitude ?? null;
 
+  const vitrineSvcCategories = specialistStorefrontFilteredServiceCategories(
+    s,
+    storefrontCategoryIdsByOrg,
+  );
   const categoriesLine = joinLocalizedCategoryShortNames(
-    s.serviceCategories,
+    vitrineSvcCategories,
     locale,
   );
   const metaLine =
@@ -275,7 +313,7 @@ function mapSpecialistRowToListItem(
     gender: s.gender ?? null,
     metaLine,
     servicesLine,
-    categories: mapDirectoryCategoryTags(s.serviceCategories, locale),
+    categories: mapDirectoryCategoryTags(vitrineSvcCategories, locale),
     slotGroups,
     bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
     autoConfirmBookings: s.autoConfirmBookings,
@@ -329,10 +367,7 @@ function mapOrganizationRowToListItem(
   return {
     id: localized.id,
     slug: o.slug,
-    primaryMajorCategorySlug: o.primaryMajorServiceCategory?.slug ?? null,
-    additionalMajorCategorySlugs: o.additionalMajorCategories.map(
-      (row) => row.majorServiceCategory.slug,
-    ),
+    majorCategorySlugs: mergeOrganizationMajorIdsAndSlugsFromDb(o).slugs,
     name: localized.name,
     description: localized.description,
     city: localized.city,
@@ -643,6 +678,19 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
         slice.map((s) => s.id),
       );
+    const storefrontOrgIds = [
+      ...new Set(
+        slice
+          .map((s) => s.activeOrganizationId)
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+      ),
+    ];
+    const storefrontCategoryIdsByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+        storefrontOrgIds,
+      );
     return {
       specialists: slice.map((s) =>
         mapSpecialistRowToListItem(
@@ -651,6 +699,8 @@ export class DirectoryService {
           now,
           occupiedBySpecialist.get(s.id) ?? new Set(),
           doneClientsBySpec.get(s.id) ?? 0,
+          undefined,
+          storefrontCategoryIdsByOrg,
         ),
       ),
       cursorPage: { nextCursor, hasMore },
@@ -806,6 +856,13 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds([
         id,
       ]);
+    const orgIdRow = row.activeOrganizationId;
+    const storefrontCategoryIdsByOrg =
+      typeof orgIdRow === 'string' && orgIdRow.length > 0
+        ? await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+            [orgIdRow],
+          )
+        : new Map<string, Set<string>>();
     const isOwner = viewerUserId != null && row.userId === viewerUserId;
     const dto = mapSpecialistRowToListItem(
       row,
@@ -816,6 +873,7 @@ export class DirectoryService {
       {
         listedNameMode: isOwner ? 'raw_account' : 'public_catalog',
       },
+      storefrontCategoryIdsByOrg,
     );
 
     const pendingWorkplace =
@@ -1014,6 +1072,19 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
         ids,
       );
+    const storefrontOrgIds = [
+      ...new Set(
+        rows
+          .map((r) => r.activeOrganizationId)
+          .filter(
+            (oid): oid is string => typeof oid === 'string' && oid.length > 0,
+          ),
+      ),
+    ];
+    const storefrontCategoryIdsByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+        storefrontOrgIds,
+      );
     const out: SpecialistListItemDto[] = [];
     for (const id of ids) {
       const s = byId.get(id);
@@ -1030,6 +1101,8 @@ export class DirectoryService {
           now,
           occupiedBySpecialist.get(id) ?? new Set(),
           doneBySpec.get(id) ?? 0,
+          undefined,
+          storefrontCategoryIdsByOrg,
         ),
       );
     }
@@ -1047,7 +1120,9 @@ export class DirectoryService {
     // Для UX фильтров показываем полный справочник активных категорий текущей вертикали,
     // даже если по части категорий пока нет карточек в выдаче.
     const rows =
-      await this.directoryRepository.findServiceCategoriesByMajorSlug('massage');
+      await this.directoryRepository.findServiceCategoriesByMajorSlug(
+        'massage',
+      );
     const tags: DirectoryCategoryTagDto[] = rows
       .map((cat) => {
         const t = pickLocalizedServiceCategoryFields(cat, locale);
@@ -1062,12 +1137,7 @@ export class DirectoryService {
     const bodyZones: DirectoryBodyZoneTagDto[] = bodyZoneRows
       .map((z) => ({
         slug: z.slug,
-        name: resolveLocalizedString(
-          locale,
-          z.locales,
-          (l) => l.name,
-          z.slug,
-        ),
+        name: resolveLocalizedString(locale, z.locales, (l) => l.name, z.slug),
       }))
       .sort((a, b) =>
         a.name.localeCompare(b.name, locale, { sensitivity: 'base' }),

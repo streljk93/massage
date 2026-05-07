@@ -1,9 +1,10 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect -- превью фото и сброс по initialSyncKey / дефолт категории */
+/* eslint-disable react-hooks/set-state-in-effect -- превью фото и сброс по initialSyncKey */
 
 import { MapPin } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Client } from "@/shared/api/generated/sdk/client";
 import type { OrganizationsCabinetPostCreateOrganizationData } from "@/shared/api/generated/sdk/types.gen";
 import type { AppLocale } from "@/app/i18n/routing";
@@ -14,6 +15,7 @@ import {
   Input,
   ORG_SALON_GALLERY_MAX_FILES,
 } from "@/shared/ui";
+import { catalogGetMajorCategories } from "@/shared/api";
 import { cn, previewSrcForPersistedGalleryUrl, randomUuid } from "@/shared/lib";
 import { AddressMapPickerDialog } from "@/widgets/address-map-picker";
 import { OrgContactFields } from "./org-contact-fields";
@@ -21,7 +23,6 @@ import { validateOrgContactForSubmit } from "../lib/organization-contact-form";
 
 export type OrganizationSalonCabinetSubmitBody =
   OrganizationsCabinetPostCreateOrganizationData["body"] & {
-    additionalMajorCategorySlugs?: string[];
     confirmDisableServiceIds?: string[];
   };
 
@@ -44,8 +45,7 @@ export type OrganizationSalonCabinetFormInitialValues = {
   email: string;
   website: string;
   years: string;
-  categoryIds: string[];
-  additionalMajorCategorySlugs?: string[];
+  majorCategorySlugs: string[];
   gallery: Array<{ url: string; alt?: string | null }>;
 };
 
@@ -102,9 +102,8 @@ export type OrganizationSalonCabinetFormProps = {
   t: (key: string, values?: Record<string, string | number | Date>) => string;
   client: Client;
   locale: AppLocale;
-  categories: Array<{ id: string; label: string }>;
-  additionalMajorOptions?: Array<{ slug: string; label: string }>;
-  categoriesLoading: boolean;
+  /** Access token для react-query ключей каталога (как у client). */
+  catalogQueryAccessToken: string;
   /** Ключ для полного сброса состояния: `"create"` или id организации */
   initialSyncKey: string;
   initialValues?: OrganizationSalonCabinetFormInitialValues | null;
@@ -123,15 +122,15 @@ export type OrganizationSalonCabinetFormProps = {
   sectionHint?: string;
   footerActions?: React.ReactNode;
   className?: string;
+  /** Не показывать выбор больших категорий (уже задан снаружи, например в онбординге мастера). */
+  hideMajorCategoryPicker?: boolean;
 };
 
 export function OrganizationSalonCabinetForm({
   t,
   client,
   locale,
-  categories,
-  additionalMajorOptions,
-  categoriesLoading,
+  catalogQueryAccessToken,
   initialSyncKey,
   initialValues,
   formError,
@@ -146,6 +145,7 @@ export function OrganizationSalonCabinetForm({
   sectionHint,
   footerActions,
   className,
+  hideMajorCategoryPicker = false,
 }: OrganizationSalonCabinetFormProps) {
   const [name, setName] = useState("");
   const [addrQ, setAddrQ] = useState("");
@@ -159,15 +159,27 @@ export function OrganizationSalonCabinetForm({
   const [website, setWebsite] = useState("");
   const [description, setDescription] = useState("");
   const [years, setYears] = useState("");
-  const [categoryIds, setCategoryIds] = useState<Set<string>>(new Set());
-  const [additionalMajorSlugs, setAdditionalMajorSlugs] = useState<Set<string>>(
-    new Set(),
-  );
+  const [majorCategorySlugs, setMajorCategorySlugs] = useState<Set<string>>(new Set());
   const [galleryRows, setGalleryRows] = useState<GalleryRow[]>([]);
   const galleryRowsRef = useRef<GalleryRow[]>([]);
   useEffect(() => {
     galleryRowsRef.current = galleryRows;
   }, [galleryRows]);
+
+  const majorsQuery = useQuery({
+    queryKey: ["organizationCabinetMajorCategories", locale, catalogQueryAccessToken] as const,
+    enabled: catalogQueryAccessToken.length > 0 && !hideMajorCategoryPicker,
+    queryFn: async () => {
+      const { data, error } = await catalogGetMajorCategories({
+        client,
+        query: { locale },
+      });
+      if (error || !data?.majorCategories) {
+        throw new Error("major-categories");
+      }
+      return [...data.majorCategories].sort((a, b) => a.sortOrder - b.sortOrder || a.slug.localeCompare(b.slug));
+    },
+  });
 
   const applySync = useCallback(() => {
     galleryRowsRef.current.forEach((row) => {
@@ -186,8 +198,7 @@ export function OrganizationSalonCabinetForm({
       setDescription("");
       setYears("");
       setGalleryRows([]);
-      setCategoryIds(new Set());
-      setAdditionalMajorSlugs(new Set());
+      setMajorCategorySlugs(new Set());
       return;
     }
     setName(initialValues.name);
@@ -199,9 +210,7 @@ export function OrganizationSalonCabinetForm({
     setWebsite(initialValues.website);
     setDescription(initialValues.description);
     setYears(initialValues.years);
-    const nextCats = new Set(initialValues.categoryIds);
-    setCategoryIds(nextCats.size > 0 ? nextCats : new Set());
-    setAdditionalMajorSlugs(new Set(initialValues.additionalMajorCategorySlugs ?? []));
+    setMajorCategorySlugs(new Set(initialValues.majorCategorySlugs ?? []));
     setGalleryRows(
       initialValues.gallery.map((g, idx) =>
         galleryRowFromRemote(g.url, g.alt ?? null, idx),
@@ -212,18 +221,6 @@ export function OrganizationSalonCabinetForm({
   useEffect(() => {
     applySync();
   }, [initialSyncKey, applySync]);
-
-  useEffect(() => {
-    if (categoriesLoading || categories.length < 1 || initialValues != null) {
-      return;
-    }
-    setCategoryIds((prev) => {
-      if (prev.size > 0) {
-        return prev;
-      }
-      return new Set([categories[0]!.id]);
-    });
-  }, [categories, categoriesLoading, initialValues]);
 
   useEffect(() => {
     return () => {
@@ -336,11 +333,6 @@ export function OrganizationSalonCabinetForm({
       lngLegacy = leg.longitude;
     }
 
-    if (categoryIds.size < 1) {
-      reportError(t("vErrCreateOrgCategories"));
-      return;
-    }
-
     const contact = validateOrgContactForSubmit({
       phoneLocalDigits: phoneLocal,
       email,
@@ -354,6 +346,11 @@ export function OrganizationSalonCabinetForm({
     const yearsRaw = years.trim();
     const yearsParsed =
       yearsRaw === "" ? null : Math.min(80, Math.max(0, parseInt(yearsRaw, 10) || 0));
+
+    if (hideMajorCategoryPicker && majorCategorySlugs.size < 1) {
+      reportError(t("vErrCreateOrgCategories"));
+      return;
+    }
 
     const galleryUrls: string[] = [];
     try {
@@ -397,10 +394,10 @@ export function OrganizationSalonCabinetForm({
       ...(galleryImageUrls != null && galleryImageUrls.length > 0 ?
         { galleryImageUrls }
       : {}),
-      serviceCategoryIds: Array.from(categoryIds),
-      ...(additionalMajorSlugs.size > 0 ?
-        { additionalMajorCategorySlugs: Array.from(additionalMajorSlugs).sort() }
-      : {}),
+      serviceCategoryIds: [],
+      majorCategorySlugs: Array.from(majorCategorySlugs).sort((a, b) =>
+        a.localeCompare(b, undefined, { sensitivity: "base" }),
+      ),
       ...(placeReference != null ?
         mapPinCoords != null ?
           {
@@ -421,6 +418,11 @@ export function OrganizationSalonCabinetForm({
 
     await onSubmit(body);
   };
+
+  const majorsBlocked =
+    hideMajorCategoryPicker ?
+      majorCategorySlugs.size < 1
+    : majorsQuery.isLoading || majorsQuery.isError || majorsQuery.data == null;
 
   const inner = (
     <>
@@ -524,76 +526,51 @@ export function OrganizationSalonCabinetForm({
           onChange={(e) => setDescription(e.target.value)}
         />
       </div>
-      <div className="space-y-2">
-        <span className="text-sm font-medium">{t("orgFormCategories")}</span>
-        {categoriesLoading ?
-          <div className="h-24 animate-pulse rounded-xl bg-muted/40" aria-busy />
-        : <div className="flex flex-col gap-2">
-            {categories.map((c) => {
-              const checked = categoryIds.has(c.id);
-              return (
-                <label
-                  key={c.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
-                >
-                  <Checkbox
-                    checked={checked}
-                    disabled={submitting}
-                    onCheckedChange={() => {
-                      setCategoryIds((prev) => {
-                        const n = new Set(prev);
-                        if (n.has(c.id)) {
-                          n.delete(c.id);
-                        } else {
-                          n.add(c.id);
-                        }
-                        return n;
-                      });
-                    }}
-                  />
-                  <span className="text-sm">{c.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        }
-      </div>
-      {additionalMajorOptions != null && additionalMajorOptions.length > 0 ? (
+
+      {hideMajorCategoryPicker ? null : (
         <div className="space-y-2">
-          <span className="text-sm font-medium">{t("orgFormAdditionalMajorCategories")}</span>
-          <p className="text-pretty text-xs text-muted-foreground">
-            {t("orgFormAdditionalMajorCategoriesHint")}
-          </p>
-          <div className="flex flex-col gap-2">
-            {additionalMajorOptions.map((m) => {
-              const checked = additionalMajorSlugs.has(m.slug);
-              return (
-                <label
-                  key={m.slug}
-                  className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
-                >
-                  <Checkbox
-                    checked={checked}
-                    disabled={submitting}
-                    onCheckedChange={() => {
-                      setAdditionalMajorSlugs((prev) => {
-                        const n = new Set(prev);
-                        if (n.has(m.slug)) {
-                          n.delete(m.slug);
-                        } else {
-                          n.add(m.slug);
-                        }
-                        return n;
-                      });
-                    }}
-                  />
-                  <span className="text-sm">{m.label}</span>
-                </label>
-              );
-            })}
-          </div>
+          <span className="text-sm font-medium">{t("orgFormActivityAreas")}</span>
+          <p className="text-pretty text-xs text-muted-foreground">{t("orgFormActivityAreasHint")}</p>
+          {majorsQuery.isLoading ?
+            <div className="h-24 animate-pulse rounded-xl bg-muted/40" aria-busy />
+          : majorsQuery.isError ?
+            <p className="text-pretty text-sm text-destructive" role="alert">
+              {t("vErrCatalogCategories")}
+            </p>
+          : (majorsQuery.data?.length ?? 0) === 0 ?
+            <p className="text-pretty text-sm text-muted-foreground">{t("orgFormActivityAreasEmptyCatalog")}</p>
+          : <div className="flex flex-col gap-2">
+              {majorsQuery.data!.map((m) => {
+                const checked = majorCategorySlugs.has(m.slug);
+                return (
+                  <label
+                    key={m.id}
+                    className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={submitting}
+                      onCheckedChange={() => {
+                        setMajorCategorySlugs((prev) => {
+                          const n = new Set(prev);
+                          if (n.has(m.slug)) {
+                            n.delete(m.slug);
+                          } else {
+                            n.add(m.slug);
+                          }
+                          return n;
+                        });
+                      }}
+                    />
+                    <span className="text-sm">{m.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          }
         </div>
-      ) : null}
+      )}
+
       <div
         className={cn(
           "flex gap-2 pt-1",
@@ -607,7 +584,7 @@ export function OrganizationSalonCabinetForm({
           type="button"
           variant="primary"
           className="h-12 w-full rounded-full sm:min-w-40"
-          disabled={submitting || categoriesLoading || categories.length < 1}
+          disabled={submitting || majorsBlocked}
           onClick={() => void runSubmit()}
         >
           {submitting ? t("saving") : submitLabel}

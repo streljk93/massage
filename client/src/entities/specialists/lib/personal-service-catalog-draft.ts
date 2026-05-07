@@ -1,3 +1,7 @@
+import {
+  NAIL_MAJOR_CATEGORY_SLUG,
+} from "@/shared/config/catalog-major-category";
+
 /** Рубрика каталога для онбординга / формы салона / личных услуг. */
 export type Cat = {
   id: string;
@@ -30,16 +34,30 @@ export function digitsFromVndPriceInput(raw: string): string {
   return raw.replace(/\D/g, "");
 }
 
-export function defaultSvc(catId: string): SvcForm {
+/** Стартовые варианты длительности/цены: для nail один слот; для массажа и прочих — два. */
+export function defaultDurationPricesForMajorSlug(
+  majorSlug: string | null | undefined,
+): DurPrice[] {
+  const s = majorSlug?.trim().toLowerCase() ?? "";
+  if (s === NAIL_MAJOR_CATEGORY_SLUG) {
+    return [{ minutes: 60, priceVnd: "" }];
+  }
+  return [
+    { minutes: 60, priceVnd: "" },
+    { minutes: 90, priceVnd: "" },
+  ];
+}
+
+export function defaultSvc(
+  catId: string,
+  options?: { majorSlug?: string | null },
+): SvcForm {
   return {
     categoryId: catId,
     kind: "standard",
     comboCategoryIds: [],
     bodyZoneSlugs: [],
-    durationPrices: [
-      { minutes: 60, priceVnd: "" },
-      { minutes: 90, priceVnd: "" },
-    ],
+    durationPrices: defaultDurationPricesForMajorSlug(options?.majorSlug),
   };
 }
 

@@ -13,6 +13,7 @@ import {
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
 import { ImageNsfwModerationService } from './image-nsfw-moderation.service';
 import { ModerationOllamaService } from './moderation-ollama.service';
 import { hydrateContentModerationCaseRows } from './hydrate-content-moderation-cases';
@@ -963,17 +964,10 @@ export class ContentModerationService {
       }
     }
 
-    await tx.organizationServiceCategory.deleteMany({
-      where: { organizationId },
-    });
-    for (const row of rev.serviceCategories) {
-      await tx.organizationServiceCategory.create({
-        data: {
-          organizationId,
-          serviceCategoryId: row.serviceCategoryId,
-        },
-      });
-    }
+    await syncOrganizationServiceCategoriesFromSpecialistServices(
+      tx,
+      organizationId,
+    );
 
     const head = await tx.organization.findFirst({
       where: { id: organizationId, deletedAt: null },

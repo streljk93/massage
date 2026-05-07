@@ -52,6 +52,16 @@ export function createBrowserSdkClient(
     }
 
     const status = response?.status;
+    /** Ожидаемый конфликт при снятии сфер: экран показывает свой диалог без глобального тоста. */
+    if (
+      status === 409 &&
+      typeof error === "object" &&
+      error !== null &&
+      (error as Record<string, unknown>).code ===
+        "MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED"
+    ) {
+      return error as unknown as string;
+    }
     if (status === 401) {
       const now = Date.now();
       if (now - lastUnauthorizedToastAt < UNAUTHORIZED_TOAST_COOLDOWN_MS) {

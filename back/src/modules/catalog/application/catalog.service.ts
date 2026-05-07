@@ -5,7 +5,10 @@ import {
   pickLocalizedServiceCategoryFields,
   type CategoryLocaleShape,
 } from '../../../common/i18n';
-import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
+import type {
+  CatalogBulkCategoriesResponseDto,
+  CatalogCategoriesResponseDto,
+} from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
 import type { CatalogMajorCategoriesListResponseDto } from '../dto/catalog-major-categories-list-response.dto';
 import { CatalogRepository } from '../infrastructure/catalog.repository';
@@ -66,6 +69,20 @@ export class CatalogService {
         ),
       ),
     };
+  }
+
+  async getServiceCategoriesByMajorSlugsBulk(
+    majorSlugs: string[],
+    locale: ApiLocale,
+    options?: { listedInDirectory?: boolean },
+  ): Promise<CatalogBulkCategoriesResponseDto> {
+    const sections: CatalogCategoriesResponseDto[] = [];
+    for (const slug of majorSlugs) {
+      sections.push(
+        await this.getServiceCategoriesByMajorSlug(slug, locale, options),
+      );
+    }
+    return { sections };
   }
 
   async getServiceCategoryByMajorAndSlug(

@@ -10,7 +10,7 @@ import {
   businessActiveOrganizationContextCardI18n,
   organizationCardI18n,
 } from "@/entities/organizations";
-import { categoryCardI18n } from "@/entities/services";
+import { categoryCardI18n, profileServiceSphereChipsI18n } from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { comingSoonI18n } from "@/features/coming-soon";
 import { fcmInAppI18n } from "@/features/push-notifications";
@@ -92,6 +92,7 @@ const bundles: ColocatedI18nBundle[] = [
   authLoginPageI18n,
   authRegisterPageI18n,
   categoryCardI18n,
+  profileServiceSphereChipsI18n,
   bookingCardI18n,
   bookingListCardI18n,
   bookingHistoryCardI18n,

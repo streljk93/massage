@@ -21,6 +21,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui";
+import { cn } from "@/shared/lib";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
@@ -39,7 +40,6 @@ function formatLinePrice(
 function PersonalServiceCabinetCard({
   svc,
   format,
-  t,
   tOnb,
   deletingId,
   deletePending,
@@ -47,24 +47,53 @@ function PersonalServiceCabinetCard({
 }: {
   svc: SpecialistCabinetPersonalServiceRow;
   format: ReturnType<typeof useFormatter>;
-  t: (key: string) => string;
   tOnb: (key: string) => string;
   deletingId: string | null;
   deletePending: boolean;
   onDelete: (id: string) => void;
 }) {
+  const t = useTranslations("businessServicesPage");
+  const inactive = !svc.isActive;
   return (
     <li className="relative w-full min-w-0 max-w-full">
-      <article className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-border/60 bg-card p-3 pr-20 text-card-foreground">
+      <article
+        className={cn(
+          "w-full min-w-0 max-w-full overflow-hidden rounded-2xl border bg-card p-3 pr-20 text-card-foreground",
+          inactive ?
+            "border-dashed border-muted-foreground/40 bg-muted/20"
+          : "border-border/60",
+        )}
+        {...(inactive ?
+          { "aria-label": t("serviceInactiveCardAria", { name: svc.categoryName }) }
+        : {})}
+      >
         <div className="min-w-0">
-          <h3 className="font-heading text-sm font-semibold leading-snug text-foreground">
+          <h3
+            className={cn(
+              "font-heading text-sm font-semibold leading-snug",
+              inactive ? "text-muted-foreground" : "text-foreground",
+            )}
+          >
             {svc.categoryName}
           </h3>
+          {inactive ?
+            <span className="mt-1 inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {t("serviceInactiveBadge")}
+            </span>
+          : null}
+          {inactive ?
+            <p className="mt-1.5 text-pretty text-xs leading-snug text-muted-foreground">
+              {t("serviceInactiveHint")}
+            </p>
+          : null}
           <ul className="mt-2 space-y-1">
             {svc.priceOptions.map((o, idx) => (
               <li
                 key={`${svc.id}-${o.durationMinutes}-${idx}`}
-                className="text-sm tabular-nums text-foreground"
+                className={cn(
+                  "text-sm tabular-nums",
+                  inactive ? "text-muted-foreground" : "text-foreground",
+                )}
               >
                 {o.durationMinutes}
                 {"\u00a0"}
@@ -284,7 +313,6 @@ export function BusinessServicesPage() {
                   key={svc.id}
                   svc={svc}
                   format={format}
-                  t={t}
                   tOnb={tOnb}
                   deletingId={deletingId}
                   deletePending={deleteMutation.isPending}

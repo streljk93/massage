@@ -2666,12 +2666,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -2734,12 +2738,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -2761,7 +2769,119 @@
             "access-token": []
           }
         ],
-        "summary": "Состояние онбординга мастера (карта шагов 1, 3, 4, 5, 6 для первого входа).",
+        "summary": "Состояние онбординга мастера (шаги 1→13, терминально 6).",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/onboarding/preferences": {
+      "patch": {
+        "operationId": "SpecialistsCabinet_patchSpecialistOnboardingPreferences",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "workPattern": {
+                    "type": "string",
+                    "enum": [
+                      "solo",
+                      "business",
+                      "employed_salon"
+                    ],
+                    "description": "solo — на себя; business — свой салон; employed_salon — заявка в существующий салон без создания своей организации."
+                  },
+                  "majorCategorySlugs": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "description": "Слаги больших категорий каталога; после привязки к организации список не меняется через эту ручку."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "onboardingStep",
+                    "specialist"
+                  ],
+                  "properties": {
+                    "onboardingStep": {
+                      "type": "integer",
+                      "enum": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        11,
+                        12,
+                        13
+                      ],
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
+                    },
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Профиль специалиста; null если ещё не создан.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидные slug больших категорий"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Профиля специалиста нет"
+          },
+          "409": {
+            "description": "Онбординг завершён, или нельзя менять режим/сферы после привязки к организации"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Онбординг: сохранить режим работы (solo / business / employed_salon) и/или большие категории до привязки к салону.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2783,6 +2903,14 @@
                     "minLength": 1,
                     "maxLength": 120,
                     "description": "Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`."
+                  },
+                  "gender": {
+                    "type": "string",
+                    "enum": [
+                      "male",
+                      "female"
+                    ],
+                    "description": "Пол специалиста для клиентского фильтра в поиске."
                   },
                   "phone": {
                     "oneOf": [
@@ -2863,12 +2991,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -2919,12 +3051,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -2952,7 +3088,7 @@
             "access-token": []
           }
         ],
-        "summary": "Завершить онбординг (после шага 5). Витрина с адресом салона — когда место работы подтверждено или создан свой салон.",
+        "summary": "Завершить онбординг после шага 13 (до этого должны быть место работы и личные услуги).",
         "tags": [
           "cabinet-specialists"
         ]
@@ -2991,6 +3127,30 @@
                   "categoryId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "standard",
+                      "combo"
+                    ]
+                  },
+                  "comboCategoryIds": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Состав combo-услуги: набор категорий, которые специалист включает в пакет."
+                  },
+                  "bodyZoneSlugs": {
+                    "type": "array",
+                    "maxItems": 24,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Зоны анатомии по slug (только для категорий в major massage)."
                   },
                   "description": {
                     "type": "string",
@@ -3112,6 +3272,30 @@
                   "categoryId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "standard",
+                      "combo"
+                    ]
+                  },
+                  "comboCategoryIds": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Состав combo-услуги: набор категорий, которые специалист включает в пакет."
+                  },
+                  "bodyZoneSlugs": {
+                    "type": "array",
+                    "maxItems": 24,
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Зоны анатомии по slug (только для категорий в major massage)."
                   },
                   "description": {
                     "type": "string",
@@ -4215,8 +4399,7 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "name",
-                  "serviceCategoryIds"
+                  "name"
                 ],
                 "properties": {
                   "name": {
@@ -4319,12 +4502,40 @@
                   },
                   "serviceCategoryIds": {
                     "type": "array",
-                    "minItems": 1,
+                    "minItems": 0,
                     "maxItems": 40,
                     "items": {
                       "type": "string",
                       "format": "uuid"
-                    }
+                    },
+                    "description": "Подкатегории в черновике ревизии (модерация). В форме кабинета не редактируются; обычно пустой массив."
+                  },
+                  "majorCategorySlugs": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "description": "Сферы деятельности организации (все выбранные большие категории). Пустой список — вертикали в кабинете не выбраны."
+                  },
+                  "organizationType": {
+                    "type": "string",
+                    "enum": [
+                      "solo",
+                      "business"
+                    ],
+                    "default": "business",
+                    "description": "solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге."
+                  },
+                  "confirmDisableServiceIds": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий)."
                   }
                 },
                 "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
@@ -4348,12 +4559,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -4413,6 +4628,15 @@
               "type": "integer",
               "minimum": 50,
               "maximum": 500000
+            }
+          },
+          {
+            "name": "bodyZones",
+            "required": false,
+            "in": "query",
+            "description": "Slug зон анатомии через запятую (для majorSlug=massage; салон матчится по услугам мастеров).",
+            "schema": {
+              "example": "neck,back-upper"
             }
           },
           {
@@ -4509,6 +4733,7 @@
                         "required": [
                           "id",
                           "slug",
+                          "majorCategorySlugs",
                           "name",
                           "ratingAverage",
                           "rating",
@@ -4532,6 +4757,13 @@
                           "slug": {
                             "type": "string",
                             "example": "demo-salon-seed"
+                          },
+                          "majorCategorySlugs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Сферы деятельности организации (большие категории каталога)."
                           },
                           "name": {
                             "type": "string"
@@ -4769,7 +5001,7 @@
                     "latitude",
                     "longitude",
                     "placeReference",
-                    "serviceCategoryIds",
+                    "majorCategorySlugs",
                     "galleryItems"
                   ],
                   "properties": {
@@ -4836,12 +5068,12 @@
                         }
                       }
                     },
-                    "serviceCategoryIds": {
+                    "majorCategorySlugs": {
                       "type": "array",
                       "items": {
-                        "type": "string",
-                        "format": "uuid"
-                      }
+                        "type": "string"
+                      },
+                      "description": "Выбранные сферы деятельности (большие категории каталога), без отдельного «основного» мажора."
                     },
                     "galleryItems": {
                       "type": "array",
@@ -5080,7 +5312,7 @@
         ]
       },
       "patch": {
-        "description": "Тело как у `POST /organizations`. Slug салона не меняется.",
+        "description": "Тело как у `POST /organizations`. Slug салона не меняется. Перед сохранением при смене сфер деятельности клиент может вызвать `POST /organizations/{id}/activity-majors-change-preview` для списка услуг, которые потребуют согласования. Без нужных `confirmDisableServiceIds` при конфликте — `409 MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED`.",
         "operationId": "OrganizationsCabinet_patchOrganization",
         "parameters": [
           {
@@ -5113,8 +5345,7 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "name",
-                  "serviceCategoryIds"
+                  "name"
                 ],
                 "properties": {
                   "name": {
@@ -5217,12 +5448,40 @@
                   },
                   "serviceCategoryIds": {
                     "type": "array",
-                    "minItems": 1,
+                    "minItems": 0,
                     "maxItems": 40,
                     "items": {
                       "type": "string",
                       "format": "uuid"
-                    }
+                    },
+                    "description": "Подкатегории в черновике ревизии (модерация). В форме кабинета не редактируются; обычно пустой массив."
+                  },
+                  "majorCategorySlugs": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "description": "Сферы деятельности организации (все выбранные большие категории). Пустой список — вертикали в кабинете не выбраны."
+                  },
+                  "organizationType": {
+                    "type": "string",
+                    "enum": [
+                      "solo",
+                      "business"
+                    ],
+                    "default": "business",
+                    "description": "solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге."
+                  },
+                  "confirmDisableServiceIds": {
+                    "type": "array",
+                    "maxItems": 200,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "description": "Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий)."
                   }
                 },
                 "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
@@ -5246,12 +5505,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -5288,6 +5551,127 @@
         ]
       }
     },
+    "/organizations/{organizationId}/activity-majors-change-preview": {
+      "post": {
+        "description": "Только расчёт, без сохранения. Текущее состояние сфер в БД сравнивается с переданным `majorCategorySlugs`; для мастеров с `activeOrganizationId` этого салона — те же активные услуги, что витринируются через каталог салона. `locale` задаёт локализацию `categoryName` в ответе (как для PATCH организации).",
+        "operationId": "OrganizationsCabinet_postActivityMajorsChangePreview",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "majorCategorySlugs"
+                ],
+                "properties": {
+                  "majorCategorySlugs": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                    },
+                    "description": "Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД)."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "affectedServices"
+                  ],
+                  "properties": {
+                    "affectedServices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "categoryId",
+                          "categorySlug",
+                          "categoryName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "categoryId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "categorySlug": {
+                            "type": "string"
+                          },
+                          "categoryName": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "description": "Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER) или организация не найдена"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Превью услуг, которые надо будет отключить при смене больших категорий (сфер деятельности).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
     "/organizations/{organizationId}/workplace-requests": {
       "post": {
         "operationId": "OrganizationsCabinet_postRequestWorkplaceJoin",
@@ -5317,12 +5701,16 @@
                       "type": "integer",
                       "enum": [
                         1,
+                        2,
                         3,
                         4,
                         5,
-                        6
+                        6,
+                        11,
+                        12,
+                        13
                       ],
-                      "description": "1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово."
+                      "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён."
                     },
                     "specialist": {
                       "type": "object",
@@ -5947,6 +6335,173 @@
         ]
       }
     },
+    "/catalog/major-categories/bulk/categories": {
+      "get": {
+        "description": "Параметр `majorSlugs` — список slug через запятую (например `massage,nail`). Порядок в ответе совпадает с порядком в запросе.",
+        "operationId": "catalogGetBulkCategoriesByMajorSlugs",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "listedInDirectory",
+            "required": false,
+            "in": "query",
+            "description": "Если true — только подкатегории витрины (как у одиночного маршрута по major).",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "majorSlugs",
+            "required": true,
+            "in": "query",
+            "description": "Slug больших категорий через запятую, без пробелов или с обрезкой пробелов.",
+            "schema": {
+              "example": "massage,nail"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sections"
+                  ],
+                  "properties": {
+                    "sections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "majorCategory",
+                          "categories"
+                        ],
+                        "properties": {
+                          "majorCategory": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "name",
+                              "slug"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "name": {
+                                "type": "string",
+                                "example": "Массаж"
+                              },
+                              "slug": {
+                                "type": "string",
+                                "example": "massage"
+                              }
+                            }
+                          },
+                          "categories": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "name",
+                                "shortName",
+                                "slug",
+                                "description",
+                                "sortOrder"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "example": "Массаж шеи и зоны декольте"
+                                },
+                                "shortName": {
+                                  "type": "string",
+                                  "example": "шея"
+                                },
+                                "slug": {
+                                  "type": "string",
+                                  "example": "neck"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "sortOrder": {
+                                  "type": "integer",
+                                  "example": 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат majorSlugs или locale"
+          },
+          "404": {
+            "description": "Один из major slug не найден",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "message"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "number",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "MAJOR_CATEGORY_NOT_FOUND"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Подкатегории по нескольким большим категориям (bulk)",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/catalog/major-categories/{majorSlug}/categories/{categorySlug}": {
       "get": {
         "description": "Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.",
@@ -6307,6 +6862,28 @@
             }
           },
           {
+            "name": "gender",
+            "required": false,
+            "in": "query",
+            "description": "Фильтр пола специалиста: male или female. Без параметра — все.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "male",
+                "female"
+              ]
+            }
+          },
+          {
+            "name": "bodyZones",
+            "required": false,
+            "in": "query",
+            "description": "Slug зон анатомии через запятую (для majorSlug=massage).",
+            "schema": {
+              "example": "neck,back-upper"
+            }
+          },
+          {
             "name": "categories",
             "required": false,
             "in": "query",
@@ -6412,6 +6989,7 @@
                           "categories",
                           "slotGroups",
                           "bookableServices",
+                          "gender",
                           "autoConfirmBookings",
                           "listingWorkdayStartMinute",
                           "listingWorkdayEndMinute"
@@ -6490,6 +7068,21 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "gender": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "male",
+                                  "female"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Пол специалиста для фильтра каталога."
+                          },
                           "metaLine": {
                             "type": "string",
                             "example": "~ 1 km | ул. Нгуен Тхай Хок"
@@ -6552,6 +7145,9 @@
                               "required": [
                                 "id",
                                 "categoryShortName",
+                                "majorSlug",
+                                "majorName",
+                                "majorSortOrder",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -6564,6 +7160,21 @@
                                   "type": "string",
                                   "example": "Body massage",
                                   "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "majorSlug": {
+                                  "type": "string",
+                                  "example": "massage",
+                                  "description": "Slug большой категории (`MajorServiceCategory.slug`)."
+                                },
+                                "majorName": {
+                                  "type": "string",
+                                  "example": "Massage",
+                                  "description": "Локализованное название большой категории (для переключателя сфер в UI карточки)."
+                                },
+                                "majorSortOrder": {
+                                  "type": "integer",
+                                  "example": 0,
+                                  "description": "Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI."
                                 },
                                 "durationMinutes": {
                                   "type": "array",
@@ -6867,6 +7478,7 @@
                     "categories",
                     "slotGroups",
                     "bookableServices",
+                    "gender",
                     "autoConfirmBookings",
                     "listingWorkdayStartMinute",
                     "listingWorkdayEndMinute"
@@ -6945,6 +7557,21 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "gender": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "male",
+                            "female"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Пол специалиста для фильтра каталога."
+                    },
                     "metaLine": {
                       "type": "string",
                       "example": "~ 1 km | ул. Нгуен Тхай Хок"
@@ -7007,6 +7634,9 @@
                         "required": [
                           "id",
                           "categoryShortName",
+                          "majorSlug",
+                          "majorName",
+                          "majorSortOrder",
                           "durationMinutes",
                           "priceVndByDuration"
                         ],
@@ -7019,6 +7649,21 @@
                             "type": "string",
                             "example": "Body massage",
                             "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                          },
+                          "majorSlug": {
+                            "type": "string",
+                            "example": "massage",
+                            "description": "Slug большой категории (`MajorServiceCategory.slug`)."
+                          },
+                          "majorName": {
+                            "type": "string",
+                            "example": "Massage",
+                            "description": "Локализованное название большой категории (для переключателя сфер в UI карточки)."
+                          },
+                          "majorSortOrder": {
+                            "type": "integer",
+                            "example": 0,
+                            "description": "Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI."
                           },
                           "durationMinutes": {
                             "type": "array",
@@ -7292,6 +7937,7 @@
                   "required": [
                     "id",
                     "slug",
+                    "majorCategorySlugs",
                     "name",
                     "ratingAverage",
                     "rating",
@@ -7318,6 +7964,13 @@
                     "slug": {
                       "type": "string",
                       "example": "demo-salon-seed"
+                    },
+                    "majorCategorySlugs": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Сферы деятельности организации (большие категории каталога)."
                     },
                     "name": {
                       "type": "string"
@@ -7510,6 +8163,9 @@
                               "required": [
                                 "id",
                                 "categoryShortName",
+                                "majorSlug",
+                                "majorName",
+                                "majorSortOrder",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -7522,6 +8178,21 @@
                                   "type": "string",
                                   "example": "Body massage",
                                   "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "majorSlug": {
+                                  "type": "string",
+                                  "example": "massage",
+                                  "description": "Slug большой категории (`MajorServiceCategory.slug`)."
+                                },
+                                "majorName": {
+                                  "type": "string",
+                                  "example": "Massage",
+                                  "description": "Локализованное название большой категории (для переключателя сфер в UI карточки)."
+                                },
+                                "majorSortOrder": {
+                                  "type": "integer",
+                                  "example": 0,
+                                  "description": "Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI."
                                 },
                                 "durationMinutes": {
                                   "type": "array",
@@ -7651,6 +8322,8 @@
                   "type": "object",
                   "required": [
                     "categories",
+                    "bodyZones",
+                    "genders",
                     "priceRangeVnd"
                   ],
                   "properties": {
@@ -7672,6 +8345,36 @@
                             "example": "Neck"
                           }
                         }
+                      }
+                    },
+                    "bodyZones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "slug",
+                          "name"
+                        ],
+                        "properties": {
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Neck"
+                          }
+                        }
+                      }
+                    },
+                    "genders": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "male",
+                          "female"
+                        ]
                       }
                     },
                     "priceRangeVnd": {
@@ -7930,6 +8633,7 @@
                           "categories",
                           "slotGroups",
                           "bookableServices",
+                          "gender",
                           "autoConfirmBookings",
                           "listingWorkdayStartMinute",
                           "listingWorkdayEndMinute"
@@ -8008,6 +8712,21 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "gender": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "male",
+                                  "female"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Пол специалиста для фильтра каталога."
+                          },
                           "metaLine": {
                             "type": "string",
                             "example": "~ 1 km | ул. Нгуен Тхай Хок"
@@ -8070,6 +8789,9 @@
                               "required": [
                                 "id",
                                 "categoryShortName",
+                                "majorSlug",
+                                "majorName",
+                                "majorSortOrder",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -8082,6 +8804,21 @@
                                   "type": "string",
                                   "example": "Body massage",
                                   "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "majorSlug": {
+                                  "type": "string",
+                                  "example": "massage",
+                                  "description": "Slug большой категории (`MajorServiceCategory.slug`)."
+                                },
+                                "majorName": {
+                                  "type": "string",
+                                  "example": "Massage",
+                                  "description": "Локализованное название большой категории (для переключателя сфер в UI карточки)."
+                                },
+                                "majorSortOrder": {
+                                  "type": "integer",
+                                  "example": 0,
+                                  "description": "Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI."
                                 },
                                 "durationMinutes": {
                                   "type": "array",
@@ -8154,6 +8891,7 @@
                         "required": [
                           "id",
                           "slug",
+                          "majorCategorySlugs",
                           "name",
                           "ratingAverage",
                           "rating",
@@ -8177,6 +8915,13 @@
                           "slug": {
                             "type": "string",
                             "example": "demo-salon-seed"
+                          },
+                          "majorCategorySlugs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Сферы деятельности организации (большие категории каталога)."
                           },
                           "name": {
                             "type": "string"
@@ -9215,6 +9960,7 @@
                         "required": [
                           "id",
                           "slug",
+                          "majorCategorySlugs",
                           "name",
                           "ratingAverage",
                           "rating",
@@ -9238,6 +9984,13 @@
                           "slug": {
                             "type": "string",
                             "example": "demo-salon-seed"
+                          },
+                          "majorCategorySlugs": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Сферы деятельности организации (большие категории каталога)."
                           },
                           "name": {
                             "type": "string"
@@ -9459,6 +10212,7 @@
                           "categories",
                           "slotGroups",
                           "bookableServices",
+                          "gender",
                           "autoConfirmBookings",
                           "listingWorkdayStartMinute",
                           "listingWorkdayEndMinute"
@@ -9537,6 +10291,21 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "gender": {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "male",
+                                  "female"
+                                ]
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Пол специалиста для фильтра каталога."
+                          },
                           "metaLine": {
                             "type": "string",
                             "example": "~ 1 km | ул. Нгуен Тхай Хок"
@@ -9599,6 +10368,9 @@
                               "required": [
                                 "id",
                                 "categoryShortName",
+                                "majorSlug",
+                                "majorName",
+                                "majorSortOrder",
                                 "durationMinutes",
                                 "priceVndByDuration"
                               ],
@@ -9611,6 +10383,21 @@
                                   "type": "string",
                                   "example": "Body massage",
                                   "description": "Локализованный shortName подкатегории каталога (`Service.category`)."
+                                },
+                                "majorSlug": {
+                                  "type": "string",
+                                  "example": "massage",
+                                  "description": "Slug большой категории (`MajorServiceCategory.slug`)."
+                                },
+                                "majorName": {
+                                  "type": "string",
+                                  "example": "Massage",
+                                  "description": "Локализованное название большой категории (для переключателя сфер в UI карточки)."
+                                },
+                                "majorSortOrder": {
+                                  "type": "integer",
+                                  "example": 0,
+                                  "description": "Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI."
                                 },
                                 "durationMinutes": {
                                   "type": "array",

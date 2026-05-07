@@ -36,7 +36,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       <QueryClientProvider client={queryClient}>
         <ThemePreferenceProvider>
         <FavoritesSyncOnAuth />
-        <SyncUserLocaleWithApp />
+        {/* <SyncUserLocaleWithApp /> */}
         {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
         <NotificationToaster />
         <ConfirmActionHost />

@@ -64,6 +64,9 @@ const specialistBookableServiceSchema = {
   required: [
     'id',
     'categoryShortName',
+    'majorSlug',
+    'majorName',
+    'majorSortOrder',
     'durationMinutes',
     'priceVndByDuration',
   ],
@@ -74,6 +77,22 @@ const specialistBookableServiceSchema = {
       example: 'Body massage',
       description:
         'Локализованный shortName подкатегории каталога (`Service.category`).',
+    },
+    majorSlug: {
+      type: 'string',
+      example: 'massage',
+      description: 'Slug большой категории (`MajorServiceCategory.slug`).',
+    },
+    majorName: {
+      type: 'string',
+      example: 'Massage',
+      description:
+        'Локализованное название большой категории (для переключателя сфер в UI карточки).',
+    },
+    majorSortOrder: {
+      type: 'integer',
+      example: 0,
+      description: 'Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.',
     },
     durationMinutes: {
       type: 'array',
@@ -233,8 +252,7 @@ export const organizationListItemSchema = {
   required: [
     'id',
     'slug',
-    'primaryMajorCategorySlug',
-    'additionalMajorCategorySlugs',
+    'majorCategorySlugs',
     'name',
     'ratingAverage',
     'rating',
@@ -253,10 +271,10 @@ export const organizationListItemSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     slug: { type: 'string', example: 'demo-salon-seed' },
-    primaryMajorCategorySlug: { type: 'string', nullable: true },
-    additionalMajorCategorySlugs: {
+    majorCategorySlugs: {
       type: 'array',
       items: { type: 'string' },
+      description: 'Сферы деятельности организации (большие категории каталога).',
     },
     name: { type: 'string' },
     description: { type: 'string', nullable: true },

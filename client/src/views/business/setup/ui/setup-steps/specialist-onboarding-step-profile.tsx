@@ -28,6 +28,7 @@ export default function SpecialistOnboardingStepProfile() {
   return (
     <SpecialistProfileEditForm
       showOnboardingIntro
+      showMassageFields={false}
       profileSaving={profileSaving}
       photoPreviewUrl={photoPreviewUrl}
       photoFileLabel={photoFileLabel}

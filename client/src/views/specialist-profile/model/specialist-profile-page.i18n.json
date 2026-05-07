@@ -23,6 +23,7 @@
         "noSlotsForDuration": "No times left for this duration on this day. Try another day or service length.",
         "selectService": "Select service",
         "noServices": "No services listed yet",
+        "noServicesInSphere": "No services in this area yet",
         "weekdays": {
           "sun": "Sun",
           "mon": "Mon",
@@ -63,6 +64,7 @@
         "noSlotsForDuration": "Không còn giờ phù hợp với thời lượng này trong ngày. Thử ngày khác hoặc thời lượng khác.",
         "selectService": "Chọn dịch vụ",
         "noServices": "Chưa có dịch vụ",
+        "noServicesInSphere": "Không có dịch vụ trong lĩnh vực này",
         "weekdays": {
           "sun": "CN",
           "mon": "T2",
@@ -103,6 +105,7 @@
         "noSlotsForDuration": "На этот день не осталось окон под выбранную длительность. Выберите другой день или длительность.",
         "selectService": "Выберите услугу",
         "noServices": "Услуги пока не добавлены",
+        "noServicesInSphere": "В этой сфере пока нет услуг",
         "weekdays": {
           "sun": "Вс",
           "mon": "Пн",

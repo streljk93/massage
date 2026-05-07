@@ -40,7 +40,7 @@ export function useBusinessSalonCatalogCategories(enabled: boolean) {
       const { data, error } = await catalogGetCategoriesByMajorSlug({
         client: sdk,
         path: { majorSlug: CATALOG_MAJOR_CATEGORY_SLUG },
-        query: { locale, listedInDirectory: true },
+        query: { locale },
       });
       if (error || !data?.categories?.length) {
         throw new Error("business salon catalog");

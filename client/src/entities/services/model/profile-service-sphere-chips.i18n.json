@@ -1,0 +1,19 @@
+{
+  "messages": {
+    "en": {
+      "profileServiceSphere": {
+        "ariaGroup": "Service area filter"
+      }
+    },
+    "vi": {
+      "profileServiceSphere": {
+        "ariaGroup": "Lọc theo lĩnh vực dịch vụ"
+      }
+    },
+    "ru": {
+      "profileServiceSphere": {
+        "ariaGroup": "Фильтр по сфере услуг"
+      }
+    }
+  }
+}

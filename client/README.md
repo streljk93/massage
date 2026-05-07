@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-Fonts: [Manrope](https://fonts.google.com/specimen/Manrope) (headings) and [Open Sans](https://fonts.google.com/specimen/Open+Sans) (body) via [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts). Tokens live in `src/app/styles/design-tokens.css`; base `h1`–`h6` styles in `globals.css`.
+Fonts: [Manrope](https://fonts.google.com/specimen/Manrope) (headings) and [Inter](https://fonts.google.com/specimen/Inter) (body) via [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts). Tokens live in `src/app/styles/design-tokens.css`; base `h1`–`h6` styles in `globals.css`.
 
 ## Learn More
 

@@ -19,6 +19,7 @@ import {
 import {
   organizationNonCategoryTextSearchWhere,
   specialistListFiltersWhere,
+  specialistNonCategoryTextSearchWhere,
   type OrganizationListApiFilters,
   type SpecialistListApiFilters,
 } from './directory-list-query-filters';
@@ -28,6 +29,8 @@ import {
   queryOrganizationIdsMatchingStorefrontCategoryTextSearch,
   queryOrganizationIdsMatchingVitrineCategoryConstraints,
   queryOrganizationStorefrontCategoryPairs,
+  querySpecialistIdsMatchingStorefrontCategoryConstraints,
+  querySpecialistIdsMatchingStorefrontCategoryTextSearch,
   vitrineCategoryCoverageExists,
 } from './organization-vitrine-category-coverage';
 import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
@@ -127,7 +130,12 @@ const directoryServiceInclude = {
   orderBy: { sortOrder: 'asc' as const },
   include: {
     priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
-    category: { include: { locales: true } },
+    category: {
+      include: {
+        locales: true,
+        majorServiceCategory: { include: { locales: true } },
+      },
+    },
     comboItems: {
       orderBy: { sortOrder: 'asc' as const },
       include: {
@@ -188,9 +196,12 @@ function specialistListInclude() {
 
 function organizationListInclude() {
   return {
-    primaryMajorServiceCategory: { select: { slug: true } },
-    additionalMajorCategories: {
-      include: { majorServiceCategory: { select: { slug: true } } },
+    majorServiceCategories: {
+      include: {
+        majorServiceCategory: {
+          select: { id: true, slug: true, sortOrder: true },
+        },
+      },
     },
     locales: true,
     serviceCategories: serviceCategoryWithLocales,
@@ -428,6 +439,8 @@ export class DirectoryRepository {
         ],
       },
     ];
+    /** Сужение id: радиус → пересечение с витринным SSC∩OSC для фильтра категорий. */
+    let mergedRestrictIds: string[] | null = null;
     if (radius != null) {
       const inRadius = await findSpecialistIdsWithinRadiusMeters(
         this.prisma,
@@ -438,10 +451,73 @@ export class DirectoryRepository {
       if (inRadius.length === 0) {
         return null;
       }
-      andParts.push({ id: { in: inRadius } });
+      mergedRestrictIds = inRadius;
     }
+
+    let filtersForFw: SpecialistListApiFilters | null = filters;
+
     if (filters != null) {
-      const fw = specialistListFiltersWhere(filters);
+      const hasCat =
+        (filters.majorCategorySlug != null &&
+          filters.majorCategorySlug.trim() !== '') ||
+        filters.categorySlugs.length > 0;
+      const qTrim = filters.q?.trim() ?? '';
+
+      if (hasCat) {
+        const catIds =
+          await querySpecialistIdsMatchingStorefrontCategoryConstraints(
+            this.prisma,
+            {
+              majorCategorySlug: filters.majorCategorySlug,
+              categorySlugs: filters.categorySlugs,
+              restrictToSpecialistIds: mergedRestrictIds,
+            },
+          );
+        if (catIds.length === 0) {
+          return null;
+        }
+        mergedRestrictIds = catIds;
+      }
+
+      if (qTrim.length > 0) {
+        const catTextHits =
+          await querySpecialistIdsMatchingStorefrontCategoryTextSearch(
+            this.prisma,
+            qTrim,
+            filters.locale,
+            mergedRestrictIds,
+          );
+        andParts.push({
+          OR: [
+            specialistNonCategoryTextSearchWhere(qTrim),
+            { id: { in: catTextHits } },
+          ],
+        });
+        filtersForFw = {
+          ...filters,
+          q: null,
+          ...(hasCat
+            ? {
+                majorCategorySlug: null,
+                categorySlugs: [] as string[],
+              }
+            : {}),
+        };
+      } else if (hasCat) {
+        filtersForFw = {
+          ...filters,
+          majorCategorySlug: null,
+          categorySlugs: [] as string[],
+        };
+      }
+    }
+
+    if (mergedRestrictIds != null) {
+      andParts.push({ id: { in: mergedRestrictIds } });
+    }
+
+    if (filtersForFw != null) {
+      const fw = specialistListFiltersWhere(filtersForFw);
       if (Object.keys(fw).length > 0) {
         andParts.push(fw);
       }
@@ -532,7 +608,8 @@ export class DirectoryRepository {
               activeOrganizationId: { not: null },
               activeOrganization: {
                 deletedAt: null,
-                publicationModerationStatus: PublicationModerationStatus.approved,
+                publicationModerationStatus:
+                  PublicationModerationStatus.approved,
               },
               services: {
                 some: {
@@ -617,8 +694,15 @@ export class DirectoryRepository {
             SELECT ssc."specialistId"::text AS "specialistId", COUNT(*)::int AS cnt
             FROM "SpecialistServiceCategory" ssc
             INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
+            INNER JOIN "Specialist" sp ON sp.id = ssc."specialistId"
+            INNER JOIN "OrganizationServiceCategory" osc
+              ON osc."organizationId" = sp."activeOrganizationId"
+              AND osc."serviceCategoryId" = sc.id
             WHERE ssc."specialistId"::text IN (${Prisma.join(ids)})
               AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
+              AND sp."deletedAt" IS NULL
+              AND sp."activeOrganizationId" IS NOT NULL
+              AND ${vitrineCategoryCoverageExists()}
             GROUP BY ssc."specialistId"
           `,
         );

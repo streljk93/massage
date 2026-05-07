@@ -11,10 +11,9 @@ import {
 } from "@/shared/api";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
 import type { Cat } from "@/entities/specialists";
-import { specialistOnboardingCatalogQueryKey } from "@/views/business/setup/lib/use-specialist-onboarding-catalog-categories";
 
 /**
- * Категории услуг для ЛК мастера вне визарда онбординга (тот же ключ кэша, что у шага «Услуги»).
+ * Категории услуг для ЛК мастера вне визарда онбординга.
  */
 export function useBusinessCabinetCatalogCategories(enabled: boolean) {
   const locale = useLocale() as AppLocale;
@@ -25,15 +24,17 @@ export function useBusinessCabinetCatalogCategories(enabled: boolean) {
     [accessToken, locale],
   );
 
+  const defaultKey = `single:${CATALOG_MAJOR_CATEGORY_SLUG}`;
+
   return useQuery({
-    queryKey: specialistOnboardingCatalogQueryKey(locale),
+    queryKey: ["businessCabinetCatalogCategories", locale, defaultKey] as const,
     enabled:
       enabled && status === "authenticated" && accessToken.length > 0,
     queryFn: async (): Promise<Cat[]> => {
       const { data, error } = await catalogGetCategoriesByMajorSlug({
         client: sdk,
         path: { majorSlug: CATALOG_MAJOR_CATEGORY_SLUG },
-        query: { locale, listedInDirectory: true },
+        query: { locale },
       });
       if (error || !data?.categories?.length) {
         throw new Error("business cabinet catalog");

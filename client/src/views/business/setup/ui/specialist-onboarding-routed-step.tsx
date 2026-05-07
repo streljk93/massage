@@ -7,16 +7,28 @@ const StepIntro = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-intro"),
   { ssr: false },
 );
+const StepWorkPattern = dynamic(
+  () => import("./setup-steps/specialist-onboarding-step-work-pattern"),
+  { ssr: false },
+);
+const StepMajors = dynamic(
+  () => import("./setup-steps/specialist-onboarding-step-majors"),
+  { ssr: false },
+);
 const StepProfile = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-profile"),
   { ssr: false },
 );
-const StepServices = dynamic(
-  () => import("./setup-steps/specialist-onboarding-step-services"),
+const StepMassage = dynamic(
+  () => import("./setup-steps/specialist-onboarding-step-massage"),
   { ssr: false },
 );
 const StepWorkplace = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-workplace"),
+  { ssr: false },
+);
+const StepServices = dynamic(
+  () => import("./setup-steps/specialist-onboarding-step-services"),
   { ssr: false },
 );
 const StepDone = dynamic(
@@ -26,10 +38,13 @@ const StepDone = dynamic(
 
 const byUi = {
   1: StepIntro,
-  2: StepProfile,
-  3: StepWorkplace,
-  4: StepServices,
-  5: StepDone,
+  2: StepWorkPattern,
+  3: StepMajors,
+  4: StepProfile,
+  5: StepMassage,
+  6: StepWorkplace,
+  7: StepServices,
+  8: StepDone,
 } as const;
 
 export function SpecialistOnboardingRoutedStep() {

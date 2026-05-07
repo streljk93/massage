@@ -8,6 +8,12 @@ export type SpecialistBookableServiceDto = {
   id: string;
   /** Подкатегория каталога (локализованный `shortName` для `?locale=`). */
   categoryShortName: string;
+  /** Большая категория (`Service.category.majorServiceCategory`). */
+  majorSlug: string;
+  /** Локализованное имя вертикали для UI (переключатель сфер на карточке). */
+  majorName: string;
+  /** Сортировка вертикалей на клиенте (как `MajorServiceCategory.sortOrder`). */
+  majorSortOrder: number;
   durationMinutes: number[];
   /** Суммы в VND, по индексу совпадают с `durationMinutes`. */
   priceVndByDuration: number[];

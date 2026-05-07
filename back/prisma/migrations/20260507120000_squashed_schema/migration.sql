@@ -1,3 +1,5 @@
+-- Единая начальная миграция: полная схема по `schema.prisma` (squash исторических миграций).
+
 -- CreateSchema
 CREATE SCHEMA IF NOT EXISTS "public";
 
@@ -9,6 +11,15 @@ CREATE TYPE "AdvertOwnerKind" AS ENUM ('internal', 'external');
 
 -- CreateEnum
 CREATE TYPE "OrganizationMembershipRole" AS ENUM ('owner', 'admin', 'specialist');
+
+-- CreateEnum
+CREATE TYPE "PlatformRole" AS ENUM ('standard', 'master');
+
+-- CreateEnum
+CREATE TYPE "SpecialistGender" AS ENUM ('male', 'female');
+
+-- CreateEnum
+CREATE TYPE "ServiceKind" AS ENUM ('standard', 'combo');
 
 -- CreateEnum
 CREATE TYPE "SpecialistWorkplaceJoinRequestStatus" AS ENUM ('pending', 'withdrawn', 'accepted', 'rejected', 'blocked');
@@ -23,13 +34,19 @@ CREATE TYPE "OAuthProvider" AS ENUM ('google');
 CREATE TYPE "PublicationModerationStatus" AS ENUM ('approved', 'pending_review', 'rejected');
 
 -- CreateEnum
-CREATE TYPE "ContentModerationCaseKind" AS ENUM ('organization_profile', 'organization_review', 'specialist_review', 'user_display_name');
+CREATE TYPE "OrganizationProfileRevisionStatus" AS ENUM ('pending_review', 'published', 'rejected', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "SpecialistProfileRevisionStatus" AS ENUM ('pending_review', 'published', 'rejected', 'superseded');
+
+-- CreateEnum
+CREATE TYPE "GalleryOwnerKind" AS ENUM ('organization', 'organization_profile_revision');
+
+-- CreateEnum
+CREATE TYPE "ContentModerationCaseKind" AS ENUM ('organization_profile', 'organization_review', 'specialist_review', 'specialist_profile', 'user_display_name');
 
 -- CreateEnum
 CREATE TYPE "ContentModerationCaseStatus" AS ENUM ('open', 'resolved_approved', 'resolved_rejected');
-
--- CreateEnum
-CREATE TYPE "GalleryOwnerKind" AS ENUM ('organization');
 
 -- CreateEnum
 CREATE TYPE "GalleryMediaKind" AS ENUM ('image', 'video');
@@ -48,6 +65,7 @@ CREATE TABLE "User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "catalogListedName" TEXT,
     "passwordHash" TEXT,
     "phone" TEXT,
     "avatarUrl" TEXT,
@@ -60,6 +78,7 @@ CREATE TABLE "User" (
     "deletedAt" TIMESTAMP(3),
     "nameModerationStatus" "PublicationModerationStatus" NOT NULL DEFAULT 'approved',
     "isContentModerator" BOOLEAN NOT NULL DEFAULT false,
+    "platformRole" "PlatformRole" NOT NULL DEFAULT 'standard',
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
@@ -195,6 +214,32 @@ CREATE TABLE "ServiceCategoryLocale" (
 );
 
 -- CreateTable
+CREATE TABLE "BodyZone" (
+    "id" TEXT NOT NULL,
+    "majorServiceCategoryId" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "BodyZone_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "BodyZoneLocale" (
+    "id" TEXT NOT NULL,
+    "bodyZoneId" TEXT NOT NULL,
+    "locale" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "BodyZoneLocale_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Address" (
     "id" TEXT NOT NULL,
     "addressLine" TEXT,
@@ -230,8 +275,50 @@ CREATE TABLE "Organization" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
     "publicationModerationStatus" "PublicationModerationStatus" NOT NULL DEFAULT 'approved',
+    "publishedProfileRevisionId" TEXT,
 
     CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OrganizationMajorServiceCategory" (
+    "organizationId" TEXT NOT NULL,
+    "majorServiceCategoryId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "OrganizationMajorServiceCategory_pkey" PRIMARY KEY ("organizationId","majorServiceCategoryId")
+);
+
+-- CreateTable
+CREATE TABLE "OrganizationProfileRevision" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "status" "OrganizationProfileRevisionStatus" NOT NULL DEFAULT 'pending_review',
+    "catalogLocale" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "phone" TEXT,
+    "email" TEXT,
+    "website" TEXT,
+    "yearsInBusiness" INTEGER,
+    "addressLine" TEXT,
+    "city" TEXT,
+    "latitude" DOUBLE PRECISION,
+    "longitude" DOUBLE PRECISION,
+    "addressSourceProvider" TEXT,
+    "addressSourceReference" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "OrganizationProfileRevision_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "OrganizationProfileRevisionServiceCategory" (
+    "revisionId" TEXT NOT NULL,
+    "serviceCategoryId" TEXT NOT NULL,
+
+    CONSTRAINT "OrganizationProfileRevisionServiceCategory_pkey" PRIMARY KEY ("revisionId","serviceCategoryId")
 );
 
 -- CreateTable
@@ -286,7 +373,8 @@ CREATE TABLE "OrganizationReview" (
     "authorUserId" TEXT NOT NULL,
     "bookingId" TEXT,
     "rating" INTEGER NOT NULL,
-    "comment" TEXT,
+    "publishedComment" TEXT,
+    "pendingCommentDraft" TEXT,
     "publicationModerationStatus" "PublicationModerationStatus" NOT NULL DEFAULT 'approved',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -296,15 +384,37 @@ CREATE TABLE "OrganizationReview" (
 );
 
 -- CreateTable
+CREATE TABLE "SpecialistProfileRevision" (
+    "id" TEXT NOT NULL,
+    "specialistId" TEXT NOT NULL,
+    "status" "SpecialistProfileRevisionStatus" NOT NULL DEFAULT 'pending_review',
+    "listingName" TEXT,
+    "bio" TEXT,
+    "imageUrl" TEXT,
+    "imageAlt" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SpecialistProfileRevision_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Specialist" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "bio" TEXT,
     "experienceYears" INTEGER,
+    "listingName" TEXT,
     "ratingAverage" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "reviewsCount" INTEGER NOT NULL DEFAULT 0,
     "imageUrl" TEXT,
     "imageAlt" TEXT,
+    "gender" "SpecialistGender",
+    "publishedProfileRevisionId" TEXT,
+    "profilePublicationModerationStatus" "PublicationModerationStatus" NOT NULL DEFAULT 'approved',
+    "catalogListedBio" TEXT,
+    "catalogListedListingName" TEXT,
+    "catalogListedImageUrl" TEXT,
     "activeOrganizationId" TEXT,
     "listedInDirectory" BOOLEAN NOT NULL DEFAULT false,
     "onboardingCompletedAt" TIMESTAMP(3),
@@ -372,6 +482,7 @@ CREATE TABLE "Service" (
     "specialistId" TEXT,
     "slug" TEXT NOT NULL,
     "description" TEXT,
+    "kind" "ServiceKind" NOT NULL DEFAULT 'standard',
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -379,6 +490,25 @@ CREATE TABLE "Service" (
     "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "Service_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ServiceBodyZone" (
+    "serviceId" TEXT NOT NULL,
+    "bodyZoneId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ServiceBodyZone_pkey" PRIMARY KEY ("serviceId","bodyZoneId")
+);
+
+-- CreateTable
+CREATE TABLE "ServiceComboItem" (
+    "comboServiceId" TEXT NOT NULL,
+    "itemServiceCategoryId" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ServiceComboItem_pkey" PRIMARY KEY ("comboServiceId","itemServiceCategoryId")
 );
 
 -- CreateTable
@@ -401,7 +531,8 @@ CREATE TABLE "SpecialistReview" (
     "authorUserId" TEXT NOT NULL,
     "bookingId" TEXT,
     "rating" INTEGER NOT NULL,
-    "comment" TEXT,
+    "publishedComment" TEXT,
+    "pendingCommentDraft" TEXT,
     "publicationModerationStatus" "PublicationModerationStatus" NOT NULL DEFAULT 'approved',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -414,11 +545,8 @@ CREATE TABLE "SpecialistReview" (
 CREATE TABLE "ContentModerationCase" (
     "id" TEXT NOT NULL,
     "kind" "ContentModerationCaseKind" NOT NULL,
+    "subjectId" TEXT NOT NULL,
     "status" "ContentModerationCaseStatus" NOT NULL DEFAULT 'open',
-    "organizationId" TEXT,
-    "organizationReviewId" TEXT,
-    "specialistReviewId" TEXT,
-    "targetUserId" TEXT,
     "aiSummary" TEXT,
     "moderatorUserId" TEXT,
     "moderatorReason" TEXT,
@@ -559,6 +687,18 @@ CREATE INDEX "ServiceCategoryLocale_locale_idx" ON "ServiceCategoryLocale"("loca
 CREATE UNIQUE INDEX "ServiceCategoryLocale_serviceCategoryId_locale_key" ON "ServiceCategoryLocale"("serviceCategoryId", "locale");
 
 -- CreateIndex
+CREATE INDEX "BodyZone_majorServiceCategoryId_idx" ON "BodyZone"("majorServiceCategoryId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BodyZone_majorServiceCategoryId_slug_key" ON "BodyZone"("majorServiceCategoryId", "slug");
+
+-- CreateIndex
+CREATE INDEX "BodyZoneLocale_locale_idx" ON "BodyZoneLocale"("locale");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "BodyZoneLocale_bodyZoneId_locale_key" ON "BodyZoneLocale"("bodyZoneId", "locale");
+
+-- CreateIndex
 CREATE INDEX "Address_city_idx" ON "Address"("city");
 
 -- CreateIndex
@@ -568,10 +708,25 @@ CREATE INDEX "Address_latitude_longitude_idx" ON "Address"("latitude", "longitud
 CREATE UNIQUE INDEX "Organization_slug_key" ON "Organization"("slug");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Organization_publishedProfileRevisionId_key" ON "Organization"("publishedProfileRevisionId");
+
+-- CreateIndex
 CREATE INDEX "Organization_ownerUserId_idx" ON "Organization"("ownerUserId");
 
 -- CreateIndex
 CREATE INDEX "Organization_addressId_idx" ON "Organization"("addressId");
+
+-- CreateIndex
+CREATE INDEX "OrganizationMajorServiceCategory_majorServiceCategoryId_idx" ON "OrganizationMajorServiceCategory"("majorServiceCategoryId");
+
+-- CreateIndex
+CREATE INDEX "OrganizationProfileRevision_organizationId_idx" ON "OrganizationProfileRevision"("organizationId");
+
+-- CreateIndex
+CREATE INDEX "OrganizationProfileRevision_organizationId_status_idx" ON "OrganizationProfileRevision"("organizationId", "status");
+
+-- CreateIndex
+CREATE INDEX "OrganizationProfileRevisionServiceCategory_serviceCategoryI_idx" ON "OrganizationProfileRevisionServiceCategory"("serviceCategoryId");
 
 -- CreateIndex
 CREATE INDEX "Gallery_ownerId_idx" ON "Gallery"("ownerId");
@@ -601,7 +756,16 @@ CREATE INDEX "OrganizationReview_organizationId_idx" ON "OrganizationReview"("or
 CREATE INDEX "OrganizationReview_authorUserId_idx" ON "OrganizationReview"("authorUserId");
 
 -- CreateIndex
+CREATE INDEX "SpecialistProfileRevision_specialistId_idx" ON "SpecialistProfileRevision"("specialistId");
+
+-- CreateIndex
+CREATE INDEX "SpecialistProfileRevision_specialistId_status_idx" ON "SpecialistProfileRevision"("specialistId", "status");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Specialist_userId_key" ON "Specialist"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Specialist_publishedProfileRevisionId_key" ON "Specialist"("publishedProfileRevisionId");
 
 -- CreateIndex
 CREATE INDEX "Specialist_activeOrganizationId_idx" ON "Specialist"("activeOrganizationId");
@@ -643,6 +807,12 @@ CREATE INDEX "Service_categoryId_idx" ON "Service"("categoryId");
 CREATE INDEX "Service_specialistId_idx" ON "Service"("specialistId");
 
 -- CreateIndex
+CREATE INDEX "ServiceBodyZone_bodyZoneId_idx" ON "ServiceBodyZone"("bodyZoneId");
+
+-- CreateIndex
+CREATE INDEX "ServiceComboItem_itemServiceCategoryId_idx" ON "ServiceComboItem"("itemServiceCategoryId");
+
+-- CreateIndex
 CREATE INDEX "ServicePriceOption_serviceId_idx" ON "ServicePriceOption"("serviceId");
 
 -- CreateIndex
@@ -658,19 +828,10 @@ CREATE INDEX "SpecialistReview_specialistId_idx" ON "SpecialistReview"("speciali
 CREATE INDEX "SpecialistReview_authorUserId_idx" ON "SpecialistReview"("authorUserId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ContentModerationCase_organizationReviewId_key" ON "ContentModerationCase"("organizationReviewId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ContentModerationCase_specialistReviewId_key" ON "ContentModerationCase"("specialistReviewId");
-
--- CreateIndex
 CREATE INDEX "ContentModerationCase_status_createdAt_idx" ON "ContentModerationCase"("status", "createdAt");
 
 -- CreateIndex
-CREATE INDEX "ContentModerationCase_organizationId_idx" ON "ContentModerationCase"("organizationId");
-
--- CreateIndex
-CREATE INDEX "ContentModerationCase_targetUserId_idx" ON "ContentModerationCase"("targetUserId");
+CREATE UNIQUE INDEX "ContentModerationCase_kind_subjectId_key" ON "ContentModerationCase"("kind", "subjectId");
 
 -- CreateIndex
 CREATE INDEX "Booking_clientUserId_idx" ON "Booking"("clientUserId");
@@ -730,10 +891,34 @@ ALTER TABLE "ServiceCategory" ADD CONSTRAINT "ServiceCategory_majorServiceCatego
 ALTER TABLE "ServiceCategoryLocale" ADD CONSTRAINT "ServiceCategoryLocale_serviceCategoryId_fkey" FOREIGN KEY ("serviceCategoryId") REFERENCES "ServiceCategory"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "BodyZone" ADD CONSTRAINT "BodyZone_majorServiceCategoryId_fkey" FOREIGN KEY ("majorServiceCategoryId") REFERENCES "MajorServiceCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BodyZoneLocale" ADD CONSTRAINT "BodyZoneLocale_bodyZoneId_fkey" FOREIGN KEY ("bodyZoneId") REFERENCES "BodyZone"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Organization" ADD CONSTRAINT "Organization_ownerUserId_fkey" FOREIGN KEY ("ownerUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Organization" ADD CONSTRAINT "Organization_addressId_fkey" FOREIGN KEY ("addressId") REFERENCES "Address"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Organization" ADD CONSTRAINT "Organization_publishedProfileRevisionId_fkey" FOREIGN KEY ("publishedProfileRevisionId") REFERENCES "OrganizationProfileRevision"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrganizationMajorServiceCategory" ADD CONSTRAINT "OrganizationMajorServiceCategory_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrganizationMajorServiceCategory" ADD CONSTRAINT "OrganizationMajorServiceCategory_majorServiceCategoryId_fkey" FOREIGN KEY ("majorServiceCategoryId") REFERENCES "MajorServiceCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrganizationProfileRevision" ADD CONSTRAINT "OrganizationProfileRevision_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrganizationProfileRevisionServiceCategory" ADD CONSTRAINT "OrganizationProfileRevisionServiceCategory_revisionId_fkey" FOREIGN KEY ("revisionId") REFERENCES "OrganizationProfileRevision"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "OrganizationProfileRevisionServiceCategory" ADD CONSTRAINT "OrganizationProfileRevisionServiceCategory_serviceCategory_fkey" FOREIGN KEY ("serviceCategoryId") REFERENCES "ServiceCategory"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "GalleryItem" ADD CONSTRAINT "GalleryItem_galleryId_fkey" FOREIGN KEY ("galleryId") REFERENCES "Gallery"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -757,7 +942,13 @@ ALTER TABLE "OrganizationReview" ADD CONSTRAINT "OrganizationReview_authorUserId
 ALTER TABLE "OrganizationReview" ADD CONSTRAINT "OrganizationReview_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "SpecialistProfileRevision" ADD CONSTRAINT "SpecialistProfileRevision_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_publishedProfileRevisionId_fkey" FOREIGN KEY ("publishedProfileRevisionId") REFERENCES "SpecialistProfileRevision"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Specialist" ADD CONSTRAINT "Specialist_activeOrganizationId_fkey" FOREIGN KEY ("activeOrganizationId") REFERENCES "Organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -793,6 +984,18 @@ ALTER TABLE "Service" ADD CONSTRAINT "Service_categoryId_fkey" FOREIGN KEY ("cat
 ALTER TABLE "Service" ADD CONSTRAINT "Service_specialistId_fkey" FOREIGN KEY ("specialistId") REFERENCES "Specialist"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "ServiceBodyZone" ADD CONSTRAINT "ServiceBodyZone_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceBodyZone" ADD CONSTRAINT "ServiceBodyZone_bodyZoneId_fkey" FOREIGN KEY ("bodyZoneId") REFERENCES "BodyZone"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceComboItem" ADD CONSTRAINT "ServiceComboItem_comboServiceId_fkey" FOREIGN KEY ("comboServiceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceComboItem" ADD CONSTRAINT "ServiceComboItem_itemServiceCategoryId_fkey" FOREIGN KEY ("itemServiceCategoryId") REFERENCES "ServiceCategory"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "ServicePriceOption" ADD CONSTRAINT "ServicePriceOption_serviceId_fkey" FOREIGN KEY ("serviceId") REFERENCES "Service"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -803,18 +1006,6 @@ ALTER TABLE "SpecialistReview" ADD CONSTRAINT "SpecialistReview_authorUserId_fke
 
 -- AddForeignKey
 ALTER TABLE "SpecialistReview" ADD CONSTRAINT "SpecialistReview_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContentModerationCase" ADD CONSTRAINT "ContentModerationCase_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContentModerationCase" ADD CONSTRAINT "ContentModerationCase_organizationReviewId_fkey" FOREIGN KEY ("organizationReviewId") REFERENCES "OrganizationReview"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContentModerationCase" ADD CONSTRAINT "ContentModerationCase_specialistReviewId_fkey" FOREIGN KEY ("specialistReviewId") REFERENCES "SpecialistReview"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ContentModerationCase" ADD CONSTRAINT "ContentModerationCase_targetUserId_fkey" FOREIGN KEY ("targetUserId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ContentModerationCase" ADD CONSTRAINT "ContentModerationCase_moderatorUserId_fkey" FOREIGN KEY ("moderatorUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -839,4 +1030,3 @@ ALTER TABLE "BookingStatusHistory" ADD CONSTRAINT "BookingStatusHistory_actorUse
 
 -- AddForeignKey
 ALTER TABLE "AdvertisementLocale" ADD CONSTRAINT "AdvertisementLocale_advertisementId_fkey" FOREIGN KEY ("advertisementId") REFERENCES "Advertisement"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-

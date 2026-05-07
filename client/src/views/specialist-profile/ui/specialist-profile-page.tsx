@@ -22,7 +22,12 @@ import { goBackOrFallback } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
 import { useClientFavorite } from "@/entities/favorites";
 import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
-import { priceForDuration, ProfileServicePickCard } from "@/entities/services";
+import {
+  majorSphereTabsFromBookableRows,
+  priceForDuration,
+  ProfileServicePickCard,
+  ProfileServiceSphereChips,
+} from "@/entities/services";
 import { Button } from "@/shared/ui/button";
 import { Rating } from "@/shared/ui/rating";
 import {
@@ -171,6 +176,46 @@ export function SpecialistProfilePage({
     }
     return init;
   });
+
+  const serviceSphereTabs = useMemo(
+    () => majorSphereTabsFromBookableRows(profile.services),
+    [profile.services],
+  );
+  const [sphereFilterSlug, setSphereFilterSlug] = useState("");
+  useEffect(() => {
+    if (serviceSphereTabs.length <= 1) {
+      return;
+    }
+    setSphereFilterSlug((prev) =>
+      prev && serviceSphereTabs.some((x) => x.slug === prev) ?
+        prev
+      : serviceSphereTabs[0]!.slug,
+    );
+  }, [serviceSphereTabs]);
+
+  const visibleBookingServices = useMemo(() => {
+    if (serviceSphereTabs.length <= 1) {
+      return profile.services;
+    }
+    const slug =
+      sphereFilterSlug && serviceSphereTabs.some((x) => x.slug === sphereFilterSlug) ?
+        sphereFilterSlug
+      : serviceSphereTabs[0]!.slug;
+    return profile.services.filter((s) => s.majorSlug === slug);
+  }, [profile.services, sphereFilterSlug, serviceSphereTabs]);
+
+  const sphereChipValue =
+    sphereFilterSlug && serviceSphereTabs.some((x) => x.slug === sphereFilterSlug) ?
+      sphereFilterSlug
+    : (serviceSphereTabs[0]?.slug ?? "");
+
+  useEffect(() => {
+    setServiceId((cur) =>
+      visibleBookingServices.some((s) => s.id === cur) ?
+        cur
+      : (visibleBookingServices[0]?.id ?? ""),
+    );
+  }, [visibleBookingServices]);
 
   const nameParts = useMemo(
     () => profile.name.trim().split(/\s+/).filter(Boolean),
@@ -350,7 +395,7 @@ export function SpecialistProfilePage({
 
   const bookingDisabled =
     bookingPending ||
-    profile.services.length === 0 ||
+    visibleBookingServices.length === 0 ||
     selectedBookingMinutes === undefined ||
     filteredDaySlots.length === 0 ||
     !effectiveSlot.trim();
@@ -622,8 +667,14 @@ export function SpecialistProfilePage({
                 <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                   {t("selectService")}
                 </h2>
+                <ProfileServiceSphereChips
+                  items={serviceSphereTabs}
+                  valueSlug={sphereChipValue}
+                  onChange={setSphereFilterSlug}
+                  disabled={bookingPending}
+                />
                 <div className="space-y-2.5">
-                  {profile.services.length === 0 ? (
+                  {profile.services.length === 0 ?
                     <Empty className="items-stretch py-4">
                       <EmptyHeader className="max-w-none">
                         <EmptyMedia variant="icon">
@@ -634,8 +685,19 @@ export function SpecialistProfilePage({
                         </EmptyTitle>
                       </EmptyHeader>
                     </Empty>
-                  ) : null}
-                  {profile.services.map((svc) => {
+                  : visibleBookingServices.length === 0 ?
+                    <Empty className="items-stretch py-4">
+                      <EmptyHeader className="max-w-none">
+                        <EmptyMedia variant="icon">
+                          <PackageOpen aria-hidden />
+                        </EmptyMedia>
+                        <EmptyTitle className="text-muted-foreground">
+                          {t("noServicesInSphere")}
+                        </EmptyTitle>
+                      </EmptyHeader>
+                    </Empty>
+                  : null}
+                  {visibleBookingServices.map((svc) => {
                     const selected = svc.id === serviceId;
                     const dur =
                       durationByService[svc.id] ?? svc.durationMinutes[0];
@@ -729,9 +791,9 @@ export function SpecialistProfilePage({
                 <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
                   {t("selectSlot")}
                 </h2>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
                   {daySlots.length === 0 ? (
-                    <Empty className="items-stretch py-3">
+                    <Empty className="col-span-full items-stretch py-3">
                       <EmptyHeader className="max-w-none">
                         <EmptyMedia variant="icon">
                           <CalendarOff aria-hidden />
@@ -742,7 +804,7 @@ export function SpecialistProfilePage({
                       </EmptyHeader>
                     </Empty>
                   ) : filteredDaySlots.length === 0 ? (
-                    <Empty className="items-stretch py-3">
+                    <Empty className="col-span-full items-stretch py-3">
                       <EmptyHeader className="max-w-none">
                         <EmptyMedia variant="icon">
                           <Clock aria-hidden />
@@ -762,7 +824,7 @@ export function SpecialistProfilePage({
                           onClick={() => setSlot(time)}
                           className={cn(
                             motion.interactivePressStrong,
-                            "h-10 min-w-[4.25rem] rounded-full border px-4 text-sm font-semibold transition-colors",
+                            "flex h-10 w-full min-w-0 touch-target items-center justify-center rounded-full border px-2 text-center text-sm font-semibold tabular-nums tracking-tight transition-colors",
                             selected
                               ? "border-primary/45 bg-primary/12 text-primary"
                               : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",

@@ -2,6 +2,9 @@
 export type StaffBookableServiceRow = {
   id: string;
   categoryShortName: string;
+  majorSlug: string;
+  majorName: string;
+  majorSortOrder: number;
   durationMinutes: readonly number[];
   priceVndByDuration: readonly number[];
 };

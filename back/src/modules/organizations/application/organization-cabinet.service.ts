@@ -13,17 +13,20 @@ import {
   GalleryOwnerKind,
   OrganizationMembershipRole,
   OrganizationProfileRevisionStatus,
+  OrganizationType,
   PublicationModerationStatus,
+  SpecialistWorkPattern,
   SpecialistWorkplaceJoinRequestStatus,
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import type { ApiLocale } from '../../../common/i18n';
+import type { ApiLocale, CategoryLocaleShape } from '../../../common/i18n';
 import {
   buildBookingStatusLabelMap,
   parseApiLocale,
   pickBookingStatusLabel,
   pickLocalizedOrganizationListItem,
+  pickLocalizedServiceCategoryFields,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN } from '../../bookings/domain/booking-cancel-reason';
@@ -38,6 +41,12 @@ import { PushNotificationsService } from '../../notifications/application/push-n
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
+import { mergeOrganizationMajorIdsAndSlugsFromDb } from '../lib/merge-organization-major-categories';
+import {
+  findActiveSalonScopedServicesAffectedByRemovingMajorCategories,
+  reactivateSalonScopedServicesForAddedMajorCategories,
+  syncOrganizationServiceCategoriesFromSpecialistServices,
+} from '../infrastructure/organization-service-category-sync';
 import type { WorkplaceOrganizationSearchResponseDto } from '../dto/workplace-organization-search.dto';
 import type {
   WorkplaceJoinRequestListQuery,
@@ -49,8 +58,8 @@ const CABINET_ALLOWED_PLACE_PROVIDERS = new Set<
 >(['locationiq', 'geoapify', 'opencage', 'nominatim']);
 
 export type OrganizationCabinetEditProfileDto = {
-  primaryMajorCategorySlug: string;
-  additionalMajorCategorySlugs: string[];
+  /** Все выбранные «сферы деятельности» (большие категории), по slug. */
+  majorCategorySlugs: string[];
   name: string;
   description: string | null;
   phone: string | null;
@@ -65,12 +74,51 @@ export type OrganizationCabinetEditProfileDto = {
     provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
     placeId: string;
   } | null;
-  serviceCategoryIds: string[];
   galleryItems: Array<{ url: string; alt: string | null }>;
 };
 
 @Injectable()
 export class OrganizationCabinetService {
+  private async assertServiceCategoriesBelongToOrganizationMajors(
+    serviceCategoryIds: string[],
+    organizationMajorCategoryIds: string[],
+  ): Promise<void> {
+    if (serviceCategoryIds.length === 0) {
+      return;
+    }
+    if (organizationMajorCategoryIds.length === 0) {
+      throw new BadRequestException({
+        code: 'SERVICE_CATEGORIES_REQUIRE_ORGANIZATION_MAJORS',
+        message:
+          'Cannot attach service categories while the organization has no activity majors selected',
+      });
+    }
+    const allowed = new Set<string>(organizationMajorCategoryIds);
+    const rows = await this.prisma.serviceCategory.findMany({
+      where: {
+        id: { in: serviceCategoryIds },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: { id: true, majorServiceCategoryId: true },
+    });
+    if (rows.length !== serviceCategoryIds.length) {
+      throw new BadRequestException({
+        code: 'INVALID_SERVICE_CATEGORIES',
+        message: 'One or more service categories are invalid or inactive',
+      });
+    }
+    for (const row of rows) {
+      if (!allowed.has(row.majorServiceCategoryId)) {
+        throw new BadRequestException({
+          code: 'SERVICE_CATEGORY_MAJOR_NOT_ALLOWED_FOR_ORGANIZATION',
+          message:
+            'One or more service categories belong to a major not enabled for this organization',
+        });
+      }
+    }
+  }
+
   private readonly logger = new Logger(OrganizationCabinetService.name);
 
   constructor(
@@ -566,20 +614,18 @@ export class OrganizationCabinetService {
       managerUserId,
       organizationId,
     );
-    const pending =
-      await this.prisma.specialistWorkplaceJoinRequest.findFirst({
-        where: {
-          organizationId,
-          specialistId: applicantSpecialistId,
-          status: SpecialistWorkplaceJoinRequestStatus.pending,
-        },
-        select: { id: true },
-      });
+    const pending = await this.prisma.specialistWorkplaceJoinRequest.findFirst({
+      where: {
+        organizationId,
+        specialistId: applicantSpecialistId,
+        status: SpecialistWorkplaceJoinRequestStatus.pending,
+      },
+      select: { id: true },
+    });
     if (!pending) {
       throw new NotFoundException({
         code: 'WORKPLACE_JOIN_REQUEST_NOT_FOUND',
-        message:
-          'Pending workplace join request not found for this specialist',
+        message: 'Pending workplace join request not found for this specialist',
       });
     }
     const specialist =
@@ -727,50 +773,44 @@ export class OrganizationCabinetService {
     return base.length > 0 ? base : 'salon';
   }
 
-  private async resolveMajorCategoriesForOrganization(
+  /**
+   * Slug'и больших категорий из тела запроса → упорядоченные id для БД.
+   * Пустой список допустим: у организации нет выбранных сфер деятельности.
+   */
+  private async resolveMajorCategoriesFromBodySlugs(
     slugs: string[] | undefined,
-  ): Promise<{
-    primaryMajorCategoryId: string;
-    additionalMajorCategoryIds: string[];
-    additionalMajorCategorySlugs: string[];
-  }> {
-    const primary = await this.prisma.majorServiceCategory.findFirst({
-      where: { slug: 'massage', deletedAt: null, isActive: true },
-      select: { id: true, slug: true },
-    });
-    if (!primary) {
-      throw new BadRequestException({
-        code: 'PRIMARY_MAJOR_CATEGORY_NOT_FOUND',
-        message: 'Primary major category massage is not configured',
-      });
-    }
-    const uniqSlugs = [...new Set((slugs ?? []).map((s) => s.trim().toLowerCase()))]
-      .filter((s) => s.length > 0 && s !== primary.slug);
-    if (uniqSlugs.length === 0) {
-      return {
-        primaryMajorCategoryId: primary.id,
-        additionalMajorCategoryIds: [],
-        additionalMajorCategorySlugs: [],
-      };
+  ): Promise<{ majorCategoryIds: string[]; majorCategorySlugs: string[] }> {
+    const uniqInput = [
+      ...new Set((slugs ?? []).map((s) => s.trim().toLowerCase())),
+    ].filter((s) => s.length > 0);
+    if (uniqInput.length === 0) {
+      return { majorCategoryIds: [], majorCategorySlugs: [] };
     }
     const rows = await this.prisma.majorServiceCategory.findMany({
       where: {
-        slug: { in: uniqSlugs },
+        slug: { in: uniqInput },
         deletedAt: null,
         isActive: true,
       },
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, sortOrder: true },
     });
-    if (rows.length !== uniqSlugs.length) {
+    if (rows.length !== uniqInput.length) {
       throw new BadRequestException({
-        code: 'INVALID_ADDITIONAL_MAJOR_CATEGORIES',
-        message: 'One or more additional major category slugs are invalid',
+        code: 'INVALID_MAJOR_CATEGORY_SLUGS',
+        message: 'One or more major category slugs are invalid or inactive',
       });
     }
+    const bySlug = new Map(rows.map((r) => [r.slug, r] as const));
+    const ordered = uniqInput
+      .map((slug) => bySlug.get(slug)!)
+      .sort(
+        (a, b) =>
+          a.sortOrder - b.sortOrder ||
+          a.slug.localeCompare(b.slug, undefined, { sensitivity: 'base' }),
+      );
     return {
-      primaryMajorCategoryId: primary.id,
-      additionalMajorCategoryIds: rows.map((r) => r.id),
-      additionalMajorCategorySlugs: rows.map((r) => r.slug),
+      majorCategoryIds: ordered.map((r) => r.id),
+      majorCategorySlugs: ordered.map((r) => r.slug),
     };
   }
 
@@ -793,24 +833,44 @@ export class OrganizationCabinetService {
         message: 'Specialist profile not found for this user',
       });
     }
-    const hadActiveWorkplace = specialist.activeOrganizationId != null;
-    const majors = await this.resolveMajorCategoriesForOrganization(
-      body.additionalMajorCategorySlugs,
-    );
-    const categories = await this.prisma.serviceCategory.findMany({
-      where: {
-        id: { in: body.serviceCategoryIds },
-        deletedAt: null,
-        isActive: true,
-      },
-      select: { id: true },
-    });
-    if (categories.length !== body.serviceCategoryIds.length) {
-      throw new BadRequestException({
-        code: 'INVALID_SERVICE_CATEGORIES',
-        message: 'One or more service categories are invalid or inactive',
+    if (
+      specialist.onboardingWorkPattern === SpecialistWorkPattern.employed_salon
+    ) {
+      throw new ConflictException({
+        code: 'ORGANIZATION_CREATE_FORBIDDEN_EMPLOYED_SALON_PATTERN',
+        message:
+          'Создание своей организации недоступно при выборе «работаю в салоне».',
       });
     }
+    const organizationType = body.organizationType;
+    if (
+      specialist.onboardingWorkPattern === SpecialistWorkPattern.solo &&
+      organizationType !== OrganizationType.solo
+    ) {
+      throw new ConflictException({
+        code: 'ORGANIZATION_TYPE_MISMATCH_WORK_PATTERN',
+        message:
+          'Для режима «на себя» тип организации в запросе должен быть solo.',
+      });
+    }
+    if (
+      specialist.onboardingWorkPattern === SpecialistWorkPattern.business &&
+      organizationType !== OrganizationType.business
+    ) {
+      throw new ConflictException({
+        code: 'ORGANIZATION_TYPE_MISMATCH_WORK_PATTERN',
+        message:
+          'Для режима «свой салон» тип организации в запросе должен быть business.',
+      });
+    }
+    const hadActiveWorkplace = specialist.activeOrganizationId != null;
+    const majors = await this.resolveMajorCategoriesFromBodySlugs(
+      body.majorCategorySlugs,
+    );
+    await this.assertServiceCategoriesBelongToOrganizationMajors(
+      body.serviceCategoryIds,
+      majors.majorCategoryIds,
+    );
 
     const orgId = randomUUID();
     const slug = `${this.slugifyOrganizationName(body.name)}-${orgId.slice(0, 8)}`;
@@ -920,12 +980,12 @@ export class OrganizationCabinetService {
           name: body.name.trim(),
           slug,
           ownerUserId: userId,
+          organizationType,
           description: norm(body.description),
           phone: norm(body.phone),
           email: norm(body.email),
           website: norm(body.website),
           addressId: addr.id,
-          primaryMajorServiceCategoryId: majors.primaryMajorCategoryId,
           yearsInBusiness: body.yearsInBusiness ?? null,
           publicationModerationStatus:
             PublicationModerationStatus.pending_review,
@@ -970,11 +1030,15 @@ export class OrganizationCabinetService {
           longitude,
           addressSourceProvider: sourceProvider,
           addressSourceReference: sourceReference,
-          serviceCategories: {
-            create: body.serviceCategoryIds.map((serviceCategoryId) => ({
-              serviceCategoryId,
-            })),
-          },
+          ...(body.serviceCategoryIds.length > 0
+            ? {
+                serviceCategories: {
+                  create: body.serviceCategoryIds.map((serviceCategoryId) => ({
+                    serviceCategoryId,
+                  })),
+                },
+              }
+            : {}),
         },
       });
       profileRevisionId = revision.id;
@@ -993,17 +1057,9 @@ export class OrganizationCabinetService {
         );
       }
 
-      for (const catId of body.serviceCategoryIds) {
-        await tx.organizationServiceCategory.create({
-          data: {
-            organizationId: orgId,
-            serviceCategoryId: catId,
-          },
-        });
-      }
-      if (majors.additionalMajorCategoryIds.length > 0) {
-        await tx.organizationAdditionalMajorCategory.createMany({
-          data: majors.additionalMajorCategoryIds.map((majorServiceCategoryId) => ({
+      if (majors.majorCategoryIds.length > 0) {
+        await tx.organizationMajorServiceCategory.createMany({
+          data: majors.majorCategoryIds.map((majorServiceCategoryId) => ({
             organizationId: orgId,
             majorServiceCategoryId,
           })),
@@ -1043,6 +1099,10 @@ export class OrganizationCabinetService {
           },
         });
       }
+
+      await syncOrganizationServiceCategoriesFromSpecialistServices(tx, orgId);
+
+      /** Снимок онбординговых сфер удаляем в SpecialistOnboardingService.complete — до finish клиент может объединить их с сферами организации для каталога услуг. */
     });
 
     await this.moderationEnqueue.enqueueOrganizationProfileModeration(
@@ -1067,9 +1127,12 @@ export class OrganizationCabinetService {
     const org = await this.prisma.organization.findFirst({
       where: { id: organizationId, deletedAt: null },
       select: {
-        primaryMajorServiceCategory: { select: { slug: true } },
-        additionalMajorCategories: {
-          include: { majorServiceCategory: { select: { slug: true } } },
+        majorServiceCategories: {
+          include: {
+            majorServiceCategory: {
+              select: { id: true, slug: true, sortOrder: true },
+            },
+          },
         },
         name: true,
         description: true,
@@ -1092,7 +1155,6 @@ export class OrganizationCabinetService {
           take: 1,
           select: { name: true, description: true },
         },
-        serviceCategories: { select: { serviceCategoryId: true } },
       },
     });
     if (!org) {
@@ -1123,7 +1185,6 @@ export class OrganizationCabinetService {
           longitude: true,
           addressSourceProvider: true,
           addressSourceReference: true,
-          serviceCategories: { select: { serviceCategoryId: true } },
         },
       });
 
@@ -1191,12 +1252,11 @@ export class OrganizationCabinetService {
         alt: it.alt,
       })) ?? [];
 
+    const { slugs: majorCategorySlugs } =
+      mergeOrganizationMajorIdsAndSlugsFromDb(org);
+
     return {
-      primaryMajorCategorySlug:
-        org.primaryMajorServiceCategory?.slug ?? 'massage',
-      additionalMajorCategorySlugs: org.additionalMajorCategories.map(
-        (row) => row.majorServiceCategory.slug,
-      ),
+      majorCategorySlugs,
       name,
       description,
       phone: useDraft ? pendingRevision.phone : org.phone,
@@ -1216,10 +1276,80 @@ export class OrganizationCabinetService {
         ? pendingRevision.longitude
         : (org.address?.longitude ?? null),
       placeReference,
-      serviceCategoryIds: useDraft
-        ? pendingRevision.serviceCategories.map((r) => r.serviceCategoryId)
-        : org.serviceCategories.map((r) => r.serviceCategoryId),
       galleryItems,
+    };
+  }
+
+  private localizedServiceCategoryLabel(
+    category: CategoryLocaleShape,
+    locale: ApiLocale,
+  ): string {
+    const L = pickLocalizedServiceCategoryFields(category, locale);
+    const short = L.shortName.trim();
+    return short.length > 0 ? short : L.name.trim();
+  }
+
+  /**
+   * Превью: какие активные услуги «у стойки» потребуют отключения, если сохранить переданный
+   * набор больших категорий (сравнение с **текущими** связями орг-сфера в БД).
+   */
+  async previewActivityMajorsChange(
+    userId: string,
+    organizationId: string,
+    majorCategorySlugs: readonly string[],
+    locale: ApiLocale,
+  ): Promise<{
+    affectedServices: Array<{
+      id: string;
+      categoryId: string;
+      categorySlug: string;
+      categoryName: string;
+    }>;
+  }> {
+    await this.assertUserCanManageOrgWorkplaceJoinRequests(
+      userId,
+      organizationId,
+    );
+    const majors = await this.resolveMajorCategoriesFromBodySlugs([
+      ...majorCategorySlugs,
+    ]);
+    const head = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: {
+        id: true,
+        majorServiceCategories: {
+          include: {
+            majorServiceCategory: {
+              select: { id: true, slug: true, sortOrder: true },
+            },
+          },
+        },
+      },
+    });
+    if (!head) {
+      throw new NotFoundException({
+        code: 'ORGANIZATION_NOT_FOUND',
+        message: 'Organization not found',
+      });
+    }
+    const { ids: prevMajorIds } = mergeOrganizationMajorIdsAndSlugsFromDb(head);
+    const nextMajorIdSet = new Set(majors.majorCategoryIds);
+    const removedMajorIds = prevMajorIds.filter(
+      (id) => !nextMajorIdSet.has(id),
+    );
+    const affected =
+      await findActiveSalonScopedServicesAffectedByRemovingMajorCategories(
+        this.prisma,
+        organizationId,
+        removedMajorIds,
+      );
+    return {
+      affectedServices: affected.map((row) => ({
+        id: row.id,
+        categoryId: row.category.id,
+        categorySlug: row.category.slug,
+        categoryName: this.localizedServiceCategoryLabel(row.category, locale),
+      })),
     };
   }
 
@@ -1238,23 +1368,13 @@ export class OrganizationCabinetService {
       userId,
       organizationId,
     );
-    const majors = await this.resolveMajorCategoriesForOrganization(
-      body.additionalMajorCategorySlugs,
+    const majors = await this.resolveMajorCategoriesFromBodySlugs(
+      body.majorCategorySlugs,
     );
-    const categories = await this.prisma.serviceCategory.findMany({
-      where: {
-        id: { in: body.serviceCategoryIds },
-        deletedAt: null,
-        isActive: true,
-      },
-      select: { id: true },
-    });
-    if (categories.length !== body.serviceCategoryIds.length) {
-      throw new BadRequestException({
-        code: 'INVALID_SERVICE_CATEGORIES',
-        message: 'One or more service categories are invalid or inactive',
-      });
-    }
+    await this.assertServiceCategoriesBelongToOrganizationMajors(
+      body.serviceCategoryIds,
+      majors.majorCategoryIds,
+    );
 
     const norm = (s: string | null | undefined): string | null => {
       if (s == null) {
@@ -1312,9 +1432,12 @@ export class OrganizationCabinetService {
         where: { id: organizationId, deletedAt: null },
         select: {
           id: true,
-          primaryMajorServiceCategoryId: true,
-          additionalMajorCategories: {
-            select: { majorServiceCategoryId: true },
+          majorServiceCategories: {
+            include: {
+              majorServiceCategory: {
+                select: { id: true, slug: true, sortOrder: true },
+              },
+            },
           },
         },
       });
@@ -1324,49 +1447,35 @@ export class OrganizationCabinetService {
           message: 'Organization not found',
         });
       }
-      const prevAdditionalIds = new Set(
-        head.additionalMajorCategories.map((row) => row.majorServiceCategoryId),
+      const { ids: prevMajorIds } =
+        mergeOrganizationMajorIdsAndSlugsFromDb(head);
+      const nextMajorIdSet = new Set(majors.majorCategoryIds);
+      const removedMajorIds = prevMajorIds.filter(
+        (id) => !nextMajorIdSet.has(id),
       );
-      const nextAdditionalIds = new Set(majors.additionalMajorCategoryIds);
-      const removedAdditionalIds = [...prevAdditionalIds].filter(
-        (id) => !nextAdditionalIds.has(id),
-      );
-      if (removedAdditionalIds.length > 0) {
-        const affected = await tx.service.findMany({
-          where: {
+      if (removedMajorIds.length > 0) {
+        const affected =
+          await findActiveSalonScopedServicesAffectedByRemovingMajorCategories(
+            tx,
             organizationId,
-            deletedAt: null,
-            isActive: true,
-            category: {
-              deletedAt: null,
-              majorServiceCategoryId: { in: removedAdditionalIds },
-            },
-          },
-          select: {
-            id: true,
-            category: {
-              select: {
-                id: true,
-                name: true,
-                shortName: true,
-                slug: true,
-              },
-            },
-          },
-        });
+            removedMajorIds,
+          );
         if (affected.length > 0) {
           const provided = new Set(body.confirmDisableServiceIds ?? []);
           const allConfirmed = affected.every((row) => provided.has(row.id));
           if (!allConfirmed) {
             throw new ConflictException({
-              code: 'ADDITIONAL_MAJOR_DISABLE_CONFIRM_REQUIRED',
+              code: 'MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED',
               message:
-                'Removing additional major categories requires confirmation for affected active services',
+                'Removing activity majors requires confirmation for affected active services',
               affectedServices: affected.map((row) => ({
                 id: row.id,
                 categoryId: row.category.id,
                 categorySlug: row.category.slug,
-                categoryName: row.category.shortName ?? row.category.name,
+                categoryName: this.localizedServiceCategoryLabel(
+                  row.category,
+                  locale,
+                ),
               })),
             });
           }
@@ -1379,26 +1488,40 @@ export class OrganizationCabinetService {
             data: { isActive: false },
           });
           this.logger.warn(
-            `additional major categories removed at organization ${organizationId}; deactivated services: ${affected
+            `major categories removed at organization ${organizationId}; deactivated services: ${affected
               .map((row) => row.id)
               .join(', ')}`,
           );
         }
       }
-      await tx.organization.update({
-        where: { id: organizationId },
-        data: { primaryMajorServiceCategoryId: majors.primaryMajorCategoryId },
-      });
-      await tx.organizationAdditionalMajorCategory.deleteMany({
+      await tx.organizationMajorServiceCategory.deleteMany({
         where: { organizationId },
       });
-      if (majors.additionalMajorCategoryIds.length > 0) {
-        await tx.organizationAdditionalMajorCategory.createMany({
-          data: majors.additionalMajorCategoryIds.map((majorServiceCategoryId) => ({
+      if (majors.majorCategoryIds.length > 0) {
+        await tx.organizationMajorServiceCategory.createMany({
+          data: majors.majorCategoryIds.map((majorServiceCategoryId) => ({
             organizationId,
             majorServiceCategoryId,
           })),
         });
+      }
+
+      const prevMajorIdSet = new Set(prevMajorIds);
+      const addedMajorIds = majors.majorCategoryIds.filter(
+        (id) => !prevMajorIdSet.has(id),
+      );
+      if (addedMajorIds.length > 0) {
+        const reactivated =
+          await reactivateSalonScopedServicesForAddedMajorCategories(
+            tx,
+            organizationId,
+            addedMajorIds,
+          );
+        if (reactivated > 0) {
+          this.logger.log(
+            `major categories added at organization ${organizationId}; reactivated services: ${reactivated}`,
+          );
+        }
       }
 
       const gallerySeed: Array<{
@@ -1477,11 +1600,15 @@ export class OrganizationCabinetService {
           longitude,
           addressSourceProvider: sourceProvider,
           addressSourceReference: sourceReference,
-          serviceCategories: {
-            create: body.serviceCategoryIds.map((serviceCategoryId) => ({
-              serviceCategoryId,
-            })),
-          },
+          ...(body.serviceCategoryIds.length > 0
+            ? {
+                serviceCategories: {
+                  create: body.serviceCategoryIds.map((serviceCategoryId) => ({
+                    serviceCategoryId,
+                  })),
+                },
+              }
+            : {}),
         },
       });
       profileRevisionId = revision.id;
@@ -1499,6 +1626,11 @@ export class OrganizationCabinetService {
           gallerySeed,
         );
       }
+
+      await syncOrganizationServiceCategoriesFromSpecialistServices(
+        tx,
+        organizationId,
+      );
     });
 
     await this.moderationEnqueue.enqueueOrganizationProfileModeration(

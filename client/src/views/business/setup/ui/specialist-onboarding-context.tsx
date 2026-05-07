@@ -31,6 +31,7 @@ import {
   organizationsCabinetPostCreateOrganization,
   organizationsCabinetPostRequestWorkplaceJoin,
   specialistsCabinetGetSpecialistOnboarding,
+  specialistsCabinetPatchSpecialistOnboardingPreferences,
   specialistsCabinetPatchSpecialistProfile,
   specialistsCabinetPostEnsureSpecialist,
   specialistsCabinetPostSpecialistOnboardingComplete,
@@ -54,6 +55,8 @@ import {
 
 export const ONB_QK = ["specialistOnboarding"] as const;
 
+export type SpecialistWorkPatternUi = "solo" | "business" | "employed_salon";
+
 export type SpecialistOnboardingSpec = {
   bio?: string | null;
   experienceYears?: number | null;
@@ -69,6 +72,12 @@ export type SpecialistOnboardingSpec = {
     pressureAdaptsToClient?: boolean | null;
   } | null;
   activeOrganizationId?: string | null;
+  /** Режим работы (онбординг). */
+  onboardingWorkPattern?: SpecialistWorkPatternUi | null;
+  /** Сферы онбординга до привязки к организации. */
+  onboardingMajorCategorySlugs?: string[];
+  /** При выбранном месте приёма — slug'и больших категорий организации; отсутствует, если место приёма не выбрано. */
+  activeWorkplaceMajorCategorySlugs?: string[];
   pendingWorkplaceJoinRequest?: {
     id: string;
     organizationId: string;
@@ -134,6 +143,16 @@ export type SpecialistOnboardingContextValue = {
   introSubmitting: boolean;
   servicesSubmitting: boolean;
   doneSubmitting: boolean;
+  workPatternSubmitting: boolean;
+  majorsSubmitting: boolean;
+  massageSaving: boolean;
+
+  draftWorkPattern: SpecialistWorkPatternUi | null;
+  setDraftWorkPattern: Dispatch<
+    SetStateAction<SpecialistWorkPatternUi | null>
+  >;
+  draftMajorSlugs: string[];
+  setDraftMajorSlugs: Dispatch<SetStateAction<string[]>>;
 
   photoPreviewUrl: string | null;
   photoFileLabel: string | null;
@@ -143,7 +162,10 @@ export type SpecialistOnboardingContextValue = {
 
   setStep: (n: number, serverOnboardingStep?: number) => void;
   onIntroContinue: () => Promise<void>;
+  onWorkPatternContinue: () => Promise<void>;
+  onMajorsContinue: () => Promise<void>;
   onProfileContinue: () => Promise<void>;
+  onMassageContinue: () => Promise<void>;
   onServicesContinue: () => Promise<void>;
   onOrgContinue: () => Promise<void>;
   submitCreateOrganizationFromOnboarding: (
@@ -226,6 +248,13 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [introSubmitting, setIntroSubmitting] = useState(false);
   const [servicesSubmitting, setServicesSubmitting] = useState(false);
   const [doneSubmitting, setDoneSubmitting] = useState(false);
+  const [workPatternSubmitting, setWorkPatternSubmitting] = useState(false);
+  const [majorsSubmitting, setMajorsSubmitting] = useState(false);
+  const [massageSaving, setMassageSaving] = useState(false);
+  const [draftWorkPattern, setDraftWorkPattern] = useState<
+    SpecialistWorkPatternUi | null
+  >(null);
+  const [draftMajorSlugs, setDraftMajorSlugs] = useState<string[]>([]);
 
   useEffect(() => {
     if (!spec) {
@@ -248,6 +277,14 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   }, [spec]);
 
   useEffect(() => {
+    if (!spec) {
+      return;
+    }
+    setDraftWorkPattern(spec.onboardingWorkPattern ?? null);
+    setDraftMajorSlugs([...(spec.onboardingMajorCategorySlugs ?? [])]);
+  }, [spec]);
+
+  useEffect(() => {
     if (!pendingPhotoFile) {
       setPendingPhotoObjectUrl(null);
       return;
@@ -259,7 +296,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     };
   }, [pendingPhotoFile]);
 
-  const maxUi = maxUiStepAllowed((apiStep as 1 | 3 | 4 | 5 | 6) ?? 1);
+  const maxUi = maxUiStepAllowed(apiStep);
 
   const activeUi = useMemo(() => {
     const parsed = parseInt(String(routeStepRaw ?? ""), 10);
@@ -288,9 +325,9 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const setStep = useCallback(
     (n: number, serverOnboardingStep?: number) => {
       const cap =
-        serverOnboardingStep != null
-          ? maxUiStepAllowed((serverOnboardingStep as 1 | 3 | 4 | 5 | 6) ?? 1)
-          : maxUi;
+        serverOnboardingStep != null ?
+          maxUiStepAllowed(serverOnboardingStep as number)
+        : maxUi;
       const s = Math.min(clampUi(n), cap);
       router.replace(`/business/setup/${s}`, { scroll: false });
       setFormError(null);
@@ -311,22 +348,136 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         return;
       }
       const { data: fresh } = await refetch();
-      const stepAfter = (fresh?.onboardingStep ?? 1) as number;
-      if (stepAfter === 1) {
-        setStep(2, stepAfter);
-      } else if (stepAfter === 4) {
-        setStep(3, stepAfter);
-      } else if (stepAfter === 3) {
-        setStep(4, stepAfter);
-      } else if (stepAfter === 5) {
-        setStep(5, stepAfter);
-      } else {
-        setStep(2, stepAfter);
-      }
+      const stepAfter = fresh?.onboardingStep ?? 1;
+      setStep(defaultWizardStepForApiStep(Number(stepAfter)), Number(stepAfter));
     } finally {
       setIntroSubmitting(false);
     }
   };
+
+  const onWorkPatternContinue = useCallback(async () => {
+    if (draftWorkPattern == null) {
+      setFormError(t("vErrWorkPattern"));
+      return;
+    }
+    setFormError(null);
+    setWorkPatternSubmitting(true);
+    try {
+      const { error } =
+        await specialistsCabinetPatchSpecialistOnboardingPreferences({
+          client: sdk,
+          query: { locale },
+          body: { workPattern: draftWorkPattern },
+        });
+      if (error) {
+        setFormError(t("vErrName"));
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: [...ONB_QK, accessToken, locale],
+      });
+      const { data: o2 } = await refetch();
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
+    } finally {
+      setWorkPatternSubmitting(false);
+    }
+  }, [
+    draftWorkPattern,
+    sdk,
+    locale,
+    queryClient,
+    accessToken,
+    refetch,
+    setStep,
+    t,
+  ]);
+
+  const onMajorsContinue = useCallback(async () => {
+    if (draftMajorSlugs.length < 1) {
+      setFormError(t("vErrMajorsPickOne"));
+      return;
+    }
+    setFormError(null);
+    setMajorsSubmitting(true);
+    try {
+      const { error } =
+        await specialistsCabinetPatchSpecialistOnboardingPreferences({
+          client: sdk,
+          query: { locale },
+          body: { majorCategorySlugs: draftMajorSlugs },
+        });
+      if (error) {
+        setFormError(t("vErrName"));
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: [...ONB_QK, accessToken, locale],
+      });
+      const { data: o2 } = await refetch();
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
+    } finally {
+      setMajorsSubmitting(false);
+    }
+  }, [
+    draftMajorSlugs,
+    sdk,
+    locale,
+    queryClient,
+    accessToken,
+    refetch,
+    setStep,
+    t,
+  ]);
+
+  const onMassageContinue = useCallback(async () => {
+    const touchOk =
+      adapt === true ||
+      (Number.isFinite(strength) && strength >= 1 && strength <= 5);
+    if (!touchOk) {
+      setFormError(t("vErrMassageTouch"));
+      return;
+    }
+    setFormError(null);
+    setMassageSaving(true);
+    try {
+      const { error } = await specialistsCabinetPatchSpecialistProfile({
+        client: sdk,
+        body: {
+          massage: {
+            pressureLevel: strength,
+            pressureAdaptsToClient: adapt,
+          },
+        },
+      });
+      if (error) {
+        setFormError(t("vErrName"));
+        return;
+      }
+      await queryClient.invalidateQueries({
+        queryKey: [...ONB_QK, accessToken, locale],
+      });
+      const { data: o2 } = await refetch();
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      if (stepAfter === 5) {
+        setFormError(t("vErrMassageTouch"));
+        return;
+      }
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
+    } finally {
+      setMassageSaving(false);
+    }
+  }, [
+    adapt,
+    strength,
+    sdk,
+    queryClient,
+    accessToken,
+    refetch,
+    setStep,
+    t,
+  ]);
 
   const onProfileContinue = async () => {
     if (!pName.trim() || !pBio.trim() || pExp == null || pGender == null) {
@@ -362,10 +513,6 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
           bio: pBio.trim(),
           experienceYears: keyToYears(pExp),
           ...(imageUrl != null ? { imageUrl } : {}),
-          massage: {
-            pressureLevel: strength,
-            pressureAdaptsToClient: adapt,
-          },
         } as Record<string, unknown>,
       });
       if (error) {
@@ -373,13 +520,16 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         return;
       }
       setPendingPhotoFile(null);
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+      await queryClient.invalidateQueries({
+        queryKey: [...ONB_QK, accessToken, locale],
+      });
       const { data: o2 } = await refetch();
-      if (o2 && (o2.onboardingStep as number) < 4) {
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      if (stepAfter === 4) {
         setFormError(t("vErrName"));
         return;
       }
-      setStep(3, o2?.onboardingStep);
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
     } finally {
       setProfileSaving(false);
     }
@@ -454,20 +604,24 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
-      setStep(5, o2?.onboardingStep);
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
     } finally {
       setServicesSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    if (activeUi === 3) {
-      setOrgSuggestOpen(true);
-    }
-  }, [activeUi]);
+  const employedWorkplaceUi =
+    spec?.onboardingWorkPattern === "employed_salon";
 
   useEffect(() => {
-    if (activeUi !== 3) {
+    if (activeUi === 6 && employedWorkplaceUi) {
+      setOrgSuggestOpen(true);
+    }
+  }, [activeUi, employedWorkplaceUi]);
+
+  useEffect(() => {
+    if (activeUi !== 6 || !employedWorkplaceUi) {
       return;
     }
     const q = orgQ.trim();
@@ -500,7 +654,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     return () => {
       clearTimeout(tmr);
     };
-  }, [activeUi, orgQ, locale, sdk]);
+  }, [activeUi, employedWorkplaceUi, orgQ, locale, sdk]);
 
   const onOrgContinue = async () => {
     if (!orgPicked) {
@@ -521,7 +675,8 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
-      setStep(4, o2?.onboardingStep);
+      const stepAfter = Number(o2?.onboardingStep ?? 1);
+      setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
     } finally {
       setWorkplaceSubmitting(false);
     }
@@ -529,13 +684,18 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
 
   const submitCreateOrganizationFromOnboarding = useCallback(
     async (body: OrganizationSalonCabinetSubmitBody) => {
+      const pattern = spec?.onboardingWorkPattern;
+      if (pattern !== "solo" && pattern !== "business") {
+        setFormError(t("vErrWorkplaceCreateForbidden"));
+        return;
+      }
       setFormError(null);
       setCreateOrgSubmitting(true);
       try {
         const { error } = await organizationsCabinetPostCreateOrganization({
           client: sdk,
           query: { locale },
-          body,
+          body: { ...body, organizationType: pattern },
         });
         if (error) {
           setFormError(t("vErrCreateOrg"));
@@ -544,12 +704,13 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setCreateSalonOpen(false);
         await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
         const { data: o2 } = await refetch();
-        setStep(4, o2?.onboardingStep);
+        const stepAfter = Number(o2?.onboardingStep ?? 1);
+        setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
       } finally {
         setCreateOrgSubmitting(false);
       }
     },
-    [accessToken, locale, queryClient, refetch, sdk, setStep, t],
+    [accessToken, locale, queryClient, refetch, sdk, setStep, spec?.onboardingWorkPattern, t],
   );
 
   const onWorkplaceSkip = () => {
@@ -665,13 +826,23 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     introSubmitting,
     servicesSubmitting,
     doneSubmitting,
+    workPatternSubmitting,
+    majorsSubmitting,
+    massageSaving,
+    draftWorkPattern,
+    setDraftWorkPattern,
+    draftMajorSlugs,
+    setDraftMajorSlugs,
     photoPreviewUrl,
     photoFileLabel,
     queryClient,
     refetch: refetch as SpecialistOnboardingContextValue["refetch"],
     setStep,
     onIntroContinue,
+    onWorkPatternContinue,
+    onMajorsContinue,
     onProfileContinue,
+    onMassageContinue,
     onServicesContinue,
     onOrgContinue,
     submitCreateOrganizationFromOnboarding,

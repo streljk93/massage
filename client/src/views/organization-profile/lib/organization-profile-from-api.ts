@@ -29,6 +29,9 @@ export function organizationProfileFromApiDetail(
     bookableServices: (s.bookableServices ?? []).map((b) => ({
       id: b.id,
       categoryShortName: b.categoryShortName,
+      majorSlug: b.majorSlug,
+      majorName: b.majorName,
+      majorSortOrder: b.majorSortOrder,
       durationMinutes: b.durationMinutes as readonly number[],
       priceVndByDuration: b.priceVndByDuration as readonly number[],
     })),

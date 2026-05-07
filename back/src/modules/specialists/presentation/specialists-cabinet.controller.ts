@@ -42,6 +42,8 @@ import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-special
 import { patchSpecialistActiveOrganizationBodySchema } from '../dto/patch-specialist-active-organization-body.schema';
 import type { SalonCabinetBookingsListQuery } from '../dto/salon-cabinet-bookings-list-query.schema';
 import { salonCabinetBookingsListQuerySchema } from '../dto/salon-cabinet-bookings-list-query.schema';
+import type { PatchSpecialistOnboardingPreferencesBody } from '../dto/patch-specialist-onboarding-preferences.schema';
+import { patchSpecialistOnboardingPreferencesBodySchema } from '../dto/patch-specialist-onboarding-preferences.schema';
 import {
   createSpecialistPersonalServiceBodySchema,
   patchSpecialistProfileBodySchema,
@@ -55,6 +57,7 @@ import {
   patchSpecialistPersonalServiceRequestSchema,
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
+  patchSpecialistOnboardingPreferencesRequestSchema,
   patchSpecialistProfileRequestSchema,
   specialistActiveOrganizationBookingsPreviewResponseSchema,
   specialistMyOrganizationsResponseSchema,
@@ -232,7 +235,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Состояние онбординга мастера (карта шагов 1, 3, 4, 5, 6 для первого входа).',
+      'Состояние онбординга мастера (шаги 1→13, терминально 6).',
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
@@ -242,6 +245,40 @@ export class SpecialistsCabinetController {
     @RequestLocale() locale: ApiLocale,
   ) {
     return this.specialistOnboardingService.getOnboarding(req.user.id, locale);
+  }
+
+  @Patch('me/onboarding/preferences')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Онбординг: сохранить режим работы (solo / business / employed_salon) и/или большие категории до привязки к салону.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiBody({
+    schema: patchSpecialistOnboardingPreferencesRequestSchema,
+  })
+  @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
+  @ApiConflictResponse({
+    description:
+      'Онбординг завершён, или нельзя менять режим/сферы после привязки к организации',
+  })
+  @ApiBadRequestResponse({ description: 'Невалидные slug больших категорий' })
+  @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async patchSpecialistOnboardingPreferences(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Body(
+      new ZodValidationPipe(patchSpecialistOnboardingPreferencesBodySchema),
+    )
+    body: PatchSpecialistOnboardingPreferencesBody,
+  ) {
+    return this.specialistOnboardingService.patchOnboardingPreferences(
+      req.user.id,
+      body,
+      locale,
+    );
   }
 
   @Patch('me/profile')
@@ -256,10 +293,15 @@ export class SpecialistsCabinetController {
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async patchSpecialistProfile(
     @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
     @Body(new ZodValidationPipe(patchSpecialistProfileBodySchema))
     body: PatchSpecialistProfileBody,
   ) {
-    return this.specialistOnboardingService.patchProfile(req.user.id, body);
+    return this.specialistOnboardingService.patchProfile(
+      req.user.id,
+      body,
+      locale,
+    );
   }
 
   @Post('me/onboarding/complete')
@@ -267,7 +309,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Завершить онбординг (после шага 5). Витрина с адресом салона — когда место работы подтверждено или создан свой салон.',
+      'Завершить онбординг после шага 13 (до этого должны быть место работы и личные услуги).',
   })
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiConflictResponse({
@@ -275,8 +317,14 @@ export class SpecialistsCabinetController {
   })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async postSpecialistOnboardingComplete(@Req() req: AuthedRequest) {
-    return this.specialistOnboardingService.completeOnboarding(req.user.id);
+  async postSpecialistOnboardingComplete(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+  ) {
+    return this.specialistOnboardingService.completeOnboarding(
+      req.user.id,
+      locale,
+    );
   }
 
   @Post('me/services')

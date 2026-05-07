@@ -12,9 +12,7 @@ export const organizationCabinetEditProfileResponseSchema = {
     'latitude',
     'longitude',
     'placeReference',
-    'primaryMajorCategorySlug',
-    'additionalMajorCategorySlugs',
-    'serviceCategoryIds',
+    'majorCategorySlugs',
     'galleryItems',
   ],
   properties: {
@@ -45,18 +43,11 @@ export const organizationCabinetEditProfileResponseSchema = {
         placeId: { type: 'string' },
       },
     },
-    primaryMajorCategorySlug: {
-      type: 'string',
-      description: 'Основная большая категория организации (MVP: massage).',
-    },
-    additionalMajorCategorySlugs: {
+    majorCategorySlugs: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Дополнительные большие категории организации.',
-    },
-    serviceCategoryIds: {
-      type: 'array',
-      items: { type: 'string', format: 'uuid' },
+      description:
+        'Выбранные сферы деятельности (большие категории каталога), без отдельного «основного» мажора.',
     },
     galleryItems: {
       type: 'array',
@@ -74,7 +65,7 @@ export const organizationCabinetEditProfileResponseSchema = {
 
 export const createOrganizationRequestSchema = {
   type: 'object',
-  required: ['name', 'serviceCategoryIds'],
+  required: ['name'],
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 200 },
     placeReference: {
@@ -131,26 +122,74 @@ export const createOrganizationRequestSchema = {
     },
     serviceCategoryIds: {
       type: 'array',
-      minItems: 1,
+      minItems: 0,
       maxItems: 40,
       items: { type: 'string', format: 'uuid' },
+      description:
+        'Подкатегории в черновике ревизии (модерация). В форме кабинета не редактируются; обычно пустой массив.',
     },
-    additionalMajorCategorySlugs: {
+    majorCategorySlugs: {
       type: 'array',
-      maxItems: 10,
+      maxItems: 20,
       items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
-      description: 'Дополнительные большие категории по slug.',
+      description:
+        'Сферы деятельности организации (все выбранные большие категории). Пустой список — вертикали в кабинете не выбраны.',
+    },
+    organizationType: {
+      type: 'string',
+      enum: ['solo', 'business'],
+      default: 'business',
+      description:
+        'solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.',
     },
     confirmDisableServiceIds: {
       type: 'array',
       maxItems: 200,
       items: { type: 'string', format: 'uuid' },
       description:
-        'Подтверждение деактивации услуг при снятии additional major categories.',
+        'Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).',
     },
   },
   description:
     'Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`.',
+};
+
+export const organizationActivityMajorsChangePreviewRequestSchema = {
+  type: 'object',
+  required: ['majorCategorySlugs'],
+  properties: {
+    majorCategorySlugs: {
+      type: 'array',
+      maxItems: 20,
+      items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
+      description:
+        'Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД).',
+    },
+  },
+};
+
+const organizationActivityMajorsAffectedServiceItemSchema = {
+  type: 'object',
+  required: ['id', 'categoryId', 'categorySlug', 'categoryName'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    categoryId: { type: 'string', format: 'uuid' },
+    categorySlug: { type: 'string' },
+    categoryName: { type: 'string' },
+  },
+};
+
+export const organizationActivityMajorsChangePreviewResponseSchema = {
+  type: 'object',
+  required: ['affectedServices'],
+  properties: {
+    affectedServices: {
+      type: 'array',
+      items: organizationActivityMajorsAffectedServiceItemSchema,
+      description:
+        'Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами.',
+    },
+  },
 };
 
 export const workplaceJoinRequestReviewRequestSchema = {
@@ -309,8 +348,7 @@ export const organizationCabinetDeleteBookingsPreviewResponseSchema = {
           },
           specialistDisplayName: {
             type: 'string',
-            description:
-              'Имя/витринное имя мастера, принимающего по записи.',
+            description: 'Имя/витринное имя мастера, принимающего по записи.',
           },
         },
       },

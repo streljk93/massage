@@ -1202,9 +1202,9 @@ export type SpecialistsCabinetPostEnsureSpecialistErrors = {
 export type SpecialistsCabinetPostEnsureSpecialistResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -1238,9 +1238,9 @@ export type SpecialistsCabinetGetSpecialistOnboardingErrors = {
 export type SpecialistsCabinetGetSpecialistOnboardingResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -1252,12 +1252,73 @@ export type SpecialistsCabinetGetSpecialistOnboardingResponses = {
 
 export type SpecialistsCabinetGetSpecialistOnboardingResponse = SpecialistsCabinetGetSpecialistOnboardingResponses[keyof SpecialistsCabinetGetSpecialistOnboardingResponses];
 
+export type SpecialistsCabinetPatchSpecialistOnboardingPreferencesData = {
+    body: {
+        /**
+         * solo — на себя; business — свой салон; employed_salon — заявка в существующий салон без создания своей организации.
+         */
+        workPattern?: 'solo' | 'business' | 'employed_salon';
+        /**
+         * Слаги больших категорий каталога; после привязки к организации список не меняется через эту ручку.
+         */
+        majorCategorySlugs?: Array<string>;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/onboarding/preferences';
+};
+
+export type SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors = {
+    /**
+     * Невалидные slug больших категорий
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Профиля специалиста нет
+     */
+    404: unknown;
+    /**
+     * Онбординг завершён, или нельзя менять режим/сферы после привязки к организации
+     */
+    409: unknown;
+};
+
+export type SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses = {
+    200: {
+        /**
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
+         */
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
+        /**
+         * Профиль специалиста; null если ещё не создан.
+         */
+        specialist: {
+            [key: string]: unknown;
+        } | null;
+    };
+};
+
+export type SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponse = SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses[keyof SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses];
+
 export type SpecialistsCabinetPatchSpecialistProfileData = {
     body: {
         /**
          * Имя мастера на витрине (каталог, клиентские экраны). Не обновляет `User.name`.
          */
         name?: string;
+        /**
+         * Пол специалиста для клиентского фильтра в поиске.
+         */
+        gender?: 'male' | 'female';
         phone?: string | unknown;
         bio?: string;
         experienceYears?: number;
@@ -1290,9 +1351,9 @@ export type SpecialistsCabinetPatchSpecialistProfileErrors = {
 export type SpecialistsCabinetPatchSpecialistProfileResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -1329,9 +1390,9 @@ export type SpecialistsCabinetPostSpecialistOnboardingCompleteErrors = {
 export type SpecialistsCabinetPostSpecialistOnboardingCompleteResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -1346,6 +1407,15 @@ export type SpecialistsCabinetPostSpecialistOnboardingCompleteResponse = Special
 export type SpecialistsCabinetPostSpecialistPersonalServiceData = {
     body: {
         categoryId: string;
+        kind?: 'standard' | 'combo';
+        /**
+         * Состав combo-услуги: набор категорий, которые специалист включает в пакет.
+         */
+        comboCategoryIds?: Array<string>;
+        /**
+         * Зоны анатомии по slug (только для категорий в major massage).
+         */
+        bodyZoneSlugs?: Array<string>;
         description?: string;
         priceOptions: Array<{
             durationMinutes: number;
@@ -1420,6 +1490,15 @@ export type SpecialistsCabinetDeleteSpecialistPersonalServiceResponse = Speciali
 export type SpecialistsCabinetPatchSpecialistPersonalServiceData = {
     body: {
         categoryId: string;
+        kind?: 'standard' | 'combo';
+        /**
+         * Состав combo-услуги: набор категорий, которые специалист включает в пакет.
+         */
+        comboCategoryIds?: Array<string>;
+        /**
+         * Зоны анатомии по slug (только для категорий в major massage).
+         */
+        bodyZoneSlugs?: Array<string>;
         description?: string;
         priceOptions: Array<{
             durationMinutes: number;
@@ -1942,6 +2021,10 @@ export type OrganizationsListData = {
          */
         radiusM?: number;
         /**
+         * Slug зон анатомии через запятую (для majorSlug=massage; салон матчится по услугам мастеров).
+         */
+        bodyZones?: unknown;
+        /**
          * Slug подкатегорий через запятую (салон должен отмечен хотя бы одну).
          */
         categories?: unknown;
@@ -1985,6 +2068,10 @@ export type OrganizationsListResponses = {
         organizations: Array<{
             id: string;
             slug: string;
+            /**
+             * Сферы деятельности организации (большие категории каталога).
+             */
+            majorCategorySlugs: Array<string>;
             name: string;
             description?: string | null;
             city?: string | null;
@@ -2084,7 +2171,22 @@ export type OrganizationsCabinetPostCreateOrganizationData = {
          * URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются.
          */
         galleryImageUrls?: Array<string>;
-        serviceCategoryIds: Array<string>;
+        /**
+         * Подкатегории в черновике ревизии (модерация). В форме кабинета не редактируются; обычно пустой массив.
+         */
+        serviceCategoryIds?: Array<string>;
+        /**
+         * Сферы деятельности организации (все выбранные большие категории). Пустой список — вертикали в кабинете не выбраны.
+         */
+        majorCategorySlugs?: Array<string>;
+        /**
+         * solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.
+         */
+        organizationType?: 'solo' | 'business';
+        /**
+         * Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).
+         */
+        confirmDisableServiceIds?: Array<string>;
     };
     path?: never;
     query?: {
@@ -2114,9 +2216,9 @@ export type OrganizationsCabinetPostCreateOrganizationErrors = {
 export type OrganizationsCabinetPostCreateOrganizationResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -2173,7 +2275,10 @@ export type OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses = 
             provider: 'locationiq' | 'geoapify' | 'opencage' | 'nominatim';
             placeId: string;
         } | null;
-        serviceCategoryIds: Array<string>;
+        /**
+         * Выбранные сферы деятельности (большие категории каталога), без отдельного «основного» мажора.
+         */
+        majorCategorySlugs: Array<string>;
         galleryItems: Array<{
             url: string;
             alt: string | null;
@@ -2310,7 +2415,22 @@ export type OrganizationsCabinetPatchOrganizationData = {
          * URL изображений витрины в порядке показа. Удобно передать обложку через `imageUrl` (станет первым элементом галереи), остальное — в этом массиве; либо только этот массив. Дубликаты URL отбрасываются.
          */
         galleryImageUrls?: Array<string>;
-        serviceCategoryIds: Array<string>;
+        /**
+         * Подкатегории в черновике ревизии (модерация). В форме кабинета не редактируются; обычно пустой массив.
+         */
+        serviceCategoryIds?: Array<string>;
+        /**
+         * Сферы деятельности организации (все выбранные большие категории). Пустой список — вертикали в кабинете не выбраны.
+         */
+        majorCategorySlugs?: Array<string>;
+        /**
+         * solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.
+         */
+        organizationType?: 'solo' | 'business';
+        /**
+         * Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).
+         */
+        confirmDisableServiceIds?: Array<string>;
     };
     path: {
         organizationId: unknown;
@@ -2346,9 +2466,9 @@ export type OrganizationsCabinetPatchOrganizationErrors = {
 export type OrganizationsCabinetPatchOrganizationResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -2359,6 +2479,60 @@ export type OrganizationsCabinetPatchOrganizationResponses = {
 };
 
 export type OrganizationsCabinetPatchOrganizationResponse = OrganizationsCabinetPatchOrganizationResponses[keyof OrganizationsCabinetPatchOrganizationResponses];
+
+export type OrganizationsCabinetPostActivityMajorsChangePreviewData = {
+    body: {
+        /**
+         * Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД).
+         */
+        majorCategorySlugs: Array<string>;
+    };
+    path: {
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}/activity-majors-change-preview';
+};
+
+export type OrganizationsCabinetPostActivityMajorsChangePreviewErrors = {
+    /**
+     * Невалидное тело
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER) или организация не найдена
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetPostActivityMajorsChangePreviewResponses = {
+    200: {
+        /**
+         * Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами.
+         */
+        affectedServices: Array<{
+            id: string;
+            categoryId: string;
+            categorySlug: string;
+            categoryName: string;
+        }>;
+    };
+};
+
+export type OrganizationsCabinetPostActivityMajorsChangePreviewResponse = OrganizationsCabinetPostActivityMajorsChangePreviewResponses[keyof OrganizationsCabinetPostActivityMajorsChangePreviewResponses];
 
 export type OrganizationsCabinetPostRequestWorkplaceJoinData = {
     body?: never;
@@ -2391,9 +2565,9 @@ export type OrganizationsCabinetPostRequestWorkplaceJoinErrors = {
 export type OrganizationsCabinetPostRequestWorkplaceJoinResponses = {
     200: {
         /**
-         * 1 — профиль; 3 — услуги; 4 — организация; 5 — финальный экран; 6 — готово.
+         * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
-        onboardingStep: 1 | 3 | 4 | 5 | 6;
+        onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
         /**
          * Профиль специалиста; null если ещё не создан.
          */
@@ -2658,6 +2832,65 @@ export type CatalogGetMajorCategoriesResponses = {
 
 export type CatalogGetMajorCategoriesResponse = CatalogGetMajorCategoriesResponses[keyof CatalogGetMajorCategoriesResponses];
 
+export type CatalogGetBulkCategoriesByMajorSlugsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+        /**
+         * Если true — только подкатегории витрины (как у одиночного маршрута по major).
+         */
+        listedInDirectory?: boolean;
+        /**
+         * Slug больших категорий через запятую, без пробелов или с обрезкой пробелов.
+         */
+        majorSlugs: unknown;
+    };
+    url: '/catalog/major-categories/bulk/categories';
+};
+
+export type CatalogGetBulkCategoriesByMajorSlugsErrors = {
+    /**
+     * Неверный формат majorSlugs или locale
+     */
+    400: unknown;
+    /**
+     * Один из major slug не найден
+     */
+    404: {
+        statusCode: number;
+        message: string;
+        code?: 'MAJOR_CATEGORY_NOT_FOUND';
+    };
+};
+
+export type CatalogGetBulkCategoriesByMajorSlugsError = CatalogGetBulkCategoriesByMajorSlugsErrors[keyof CatalogGetBulkCategoriesByMajorSlugsErrors];
+
+export type CatalogGetBulkCategoriesByMajorSlugsResponses = {
+    200: {
+        sections: Array<{
+            majorCategory: {
+                id: string;
+                name: string;
+                slug: string;
+            };
+            categories: Array<{
+                id: string;
+                name: string;
+                shortName: string;
+                slug: string;
+                description: string | null;
+                sortOrder: number;
+            }>;
+        }>;
+    };
+};
+
+export type CatalogGetBulkCategoriesByMajorSlugsResponse = CatalogGetBulkCategoriesByMajorSlugsResponses[keyof CatalogGetBulkCategoriesByMajorSlugsResponses];
+
 export type CatalogGetCategoryByMajorAndSlugData = {
     body?: never;
     path: {
@@ -2793,6 +3026,14 @@ export type SpecialistsListData = {
          */
         priceMinVnd?: number;
         /**
+         * Фильтр пола специалиста: male или female. Без параметра — все.
+         */
+        gender?: 'male' | 'female';
+        /**
+         * Slug зон анатомии через запятую (для majorSlug=massage).
+         */
+        bodyZones?: unknown;
+        /**
          * Slug подкатегорий каталога через запятую (мастер должен отмечен хотя бы одну).
          */
         categories?: unknown;
@@ -2862,6 +3103,10 @@ export type SpecialistsListResponses = {
             phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
+            /**
+             * Пол специалиста для фильтра каталога.
+             */
+            gender: 'male' | 'female' | unknown;
             metaLine: string;
             servicesLine: string;
             categories: Array<{
@@ -2887,6 +3132,18 @@ export type SpecialistsListResponses = {
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
                 categoryShortName: string;
+                /**
+                 * Slug большой категории (`MajorServiceCategory.slug`).
+                 */
+                majorSlug: string;
+                /**
+                 * Локализованное название большой категории (для переключателя сфер в UI карточки).
+                 */
+                majorName: string;
+                /**
+                 * Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.
+                 */
+                majorSortOrder: number;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
@@ -3054,6 +3311,10 @@ export type SpecialistsGetByIdResponses = {
         phone?: string | null;
         imageUrl?: string | null;
         imageAlt?: string | null;
+        /**
+         * Пол специалиста для фильтра каталога.
+         */
+        gender: 'male' | 'female' | unknown;
         metaLine: string;
         servicesLine: string;
         categories: Array<{
@@ -3079,6 +3340,18 @@ export type SpecialistsGetByIdResponses = {
              * Локализованный shortName подкатегории каталога (`Service.category`).
              */
             categoryShortName: string;
+            /**
+             * Slug большой категории (`MajorServiceCategory.slug`).
+             */
+            majorSlug: string;
+            /**
+             * Локализованное название большой категории (для переключателя сфер в UI карточки).
+             */
+            majorName: string;
+            /**
+             * Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.
+             */
+            majorSortOrder: number;
             durationMinutes: Array<number>;
             priceVndByDuration: Array<number>;
         }>;
@@ -3209,6 +3482,10 @@ export type OrganizationsGetByIdResponses = {
     200: {
         id: string;
         slug: string;
+        /**
+         * Сферы деятельности организации (большие категории каталога).
+         */
+        majorCategorySlugs: Array<string>;
         name: string;
         description?: string | null;
         city?: string | null;
@@ -3271,6 +3548,18 @@ export type OrganizationsGetByIdResponses = {
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
                 categoryShortName: string;
+                /**
+                 * Slug большой категории (`MajorServiceCategory.slug`).
+                 */
+                majorSlug: string;
+                /**
+                 * Локализованное название большой категории (для переключателя сфер в UI карточки).
+                 */
+                majorName: string;
+                /**
+                 * Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.
+                 */
+                majorSortOrder: number;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
@@ -3334,6 +3623,11 @@ export type DirectoryGetCatalogFilterOptionsResponses = {
             slug: string;
             shortName: string;
         }>;
+        bodyZones: Array<{
+            slug: string;
+            name: string;
+        }>;
+        genders: Array<'male' | 'female'>;
         priceRangeVnd: {
             min: number;
             max: number;
@@ -3451,6 +3745,10 @@ export type PersonalizationGetRecommendationsResponses = {
             phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
+            /**
+             * Пол специалиста для фильтра каталога.
+             */
+            gender: 'male' | 'female' | unknown;
             metaLine: string;
             servicesLine: string;
             categories: Array<{
@@ -3476,6 +3774,18 @@ export type PersonalizationGetRecommendationsResponses = {
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
                 categoryShortName: string;
+                /**
+                 * Slug большой категории (`MajorServiceCategory.slug`).
+                 */
+                majorSlug: string;
+                /**
+                 * Локализованное название большой категории (для переключателя сфер в UI карточки).
+                 */
+                majorName: string;
+                /**
+                 * Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.
+                 */
+                majorSortOrder: number;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;
@@ -3506,6 +3816,10 @@ export type PersonalizationGetRecommendationsResponses = {
         organizations: Array<{
             id: string;
             slug: string;
+            /**
+             * Сферы деятельности организации (большие категории каталога).
+             */
+            majorCategorySlugs: Array<string>;
             name: string;
             description?: string | null;
             city?: string | null;
@@ -3949,6 +4263,10 @@ export type FavoritesListOrganizationsListingResponses = {
         organizations: Array<{
             id: string;
             slug: string;
+            /**
+             * Сферы деятельности организации (большие категории каталога).
+             */
+            majorCategorySlugs: Array<string>;
             name: string;
             description?: string | null;
             city?: string | null;
@@ -4054,6 +4372,10 @@ export type FavoritesListSpecialistsListingResponses = {
             phone?: string | null;
             imageUrl?: string | null;
             imageAlt?: string | null;
+            /**
+             * Пол специалиста для фильтра каталога.
+             */
+            gender: 'male' | 'female' | unknown;
             metaLine: string;
             servicesLine: string;
             categories: Array<{
@@ -4079,6 +4401,18 @@ export type FavoritesListSpecialistsListingResponses = {
                  * Локализованный shortName подкатегории каталога (`Service.category`).
                  */
                 categoryShortName: string;
+                /**
+                 * Slug большой категории (`MajorServiceCategory.slug`).
+                 */
+                majorSlug: string;
+                /**
+                 * Локализованное название большой категории (для переключателя сфер в UI карточки).
+                 */
+                majorName: string;
+                /**
+                 * Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.
+                 */
+                majorSortOrder: number;
                 durationMinutes: Array<number>;
                 priceVndByDuration: Array<number>;
             }>;

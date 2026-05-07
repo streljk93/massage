@@ -37,3 +37,8 @@ export {
   type OrgContactValidated,
   type OrgContactValidationErrorKey,
 } from "./lib/organization-contact-form";
+export {
+  organizationCabinetMergedCatalogQueryKey,
+  useOrganizationCabinetMergedCatalogCategories,
+  type OrganizationCabinetCatalogSection,
+} from "./lib/use-organization-cabinet-merged-catalog-categories";

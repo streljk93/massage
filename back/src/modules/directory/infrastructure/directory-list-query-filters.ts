@@ -21,9 +21,9 @@ export type OrganizationListApiFilters = {
   locale: ApiLocale;
 };
 
-function specialistTextSearchWhere(
+/** Текстовый поиск мастера без ветки подкатегорий SSC (её закрываем отдельно по витринной OSC). */
+export function specialistNonCategoryTextSearchWhere(
   q: string,
-  locale: ApiLocale,
 ): Prisma.SpecialistWhereInput {
   return {
     OR: [
@@ -48,6 +48,19 @@ function specialistTextSearchWhere(
           },
         },
       },
+    ],
+  };
+}
+
+function specialistTextSearchWhere(
+  q: string,
+  locale: ApiLocale,
+): Prisma.SpecialistWhereInput {
+  const base = specialistNonCategoryTextSearchWhere(q);
+  const baseOr = Array.isArray(base.OR) ? base.OR : [];
+  return {
+    OR: [
+      ...baseOr,
       {
         serviceCategories: {
           some: {

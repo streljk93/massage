@@ -3,13 +3,13 @@
  * Лежат в слое App рядом с globals.css — точка входа глобальных стилей.
  * Тема: data-theme="light" | "dark" на <html>
  *
- * Семейства: --font-manrope и --font-open-sans выставляет next/font на <html>.
+ * Семейства: --font-manrope и --font-inter выставляет next/font на <html>.
  */
 
 /* Шкала заголовков и body — не зависит от светлой/тёмной темы */
 :root {
   --ds-font-heading: var(--font-manrope);
-  --ds-font-body: var(--font-open-sans);
+  --ds-font-body: var(--font-inter);
 
   --ds-type-h1-size: 2.25rem;
   --ds-type-h1-leading: 2.5rem;

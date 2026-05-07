@@ -4,6 +4,8 @@ export type SpecialistCabinetPersonalServiceRow = {
   id: string;
   categoryId: string;
   categoryName: string;
+  /** false — снята с витрины (например после смены сфер в организации). */
+  isActive: boolean;
   kind: "standard" | "combo";
   comboCategoryIds: string[];
   bodyZoneSlugs: string[];
@@ -41,6 +43,7 @@ export function specialistPersonalServicesFromCabinetBlob(
     const bodyZoneSlugs = Array.isArray(r.bodyZoneSlugs)
       ? r.bodyZoneSlugs.filter((v): v is string => typeof v === "string")
       : [];
+    const isActive = r.isActive === false ? false : true;
     const poRaw = r.priceOptions;
     if (!id || !categoryId || !categoryName || !Array.isArray(poRaw)) {
       continue;
@@ -71,6 +74,7 @@ export function specialistPersonalServicesFromCabinetBlob(
       id,
       categoryId,
       categoryName,
+      isActive,
       kind,
       comboCategoryIds,
       bodyZoneSlugs,

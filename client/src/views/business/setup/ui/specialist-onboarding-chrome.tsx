@@ -24,24 +24,34 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     activeUi,
     formError,
     createSalonOpen,
+    draftWorkPattern,
+    draftMajorSlugs,
     introSubmitting,
     profileSaving,
     servicesSubmitting,
     workplaceSubmitting,
     createOrgSubmitting,
     doneSubmitting,
+    workPatternSubmitting,
+    majorsSubmitting,
+    massageSaving,
+    spec,
     onIntroContinue,
+    onWorkPatternContinue,
+    onMajorsContinue,
     onProfileContinue,
+    onMassageContinue,
     onServicesContinue,
     onOrgContinue,
     onWorkplaceSkip,
     onDone,
   } = useSpecialistOnboarding();
 
-  const serviceStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 3);
+  const serviceStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 7);
   const servicesContinueBlocked =
-    activeUi === 3 &&
-    (serviceStepCatalog.isLoading || !serviceStepCatalog.data?.length);
+    activeUi === 7 &&
+    (serviceStepCatalog.isLoading ||
+      !(serviceStepCatalog.data?.categories?.length ?? 0));
 
   const topChromeRef = useRef<HTMLDivElement | null>(null);
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
@@ -119,7 +129,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
           />
           <SpecialistOnboardingStepper
             current={activeUi}
-            total={5}
+            total={8}
             aria={t("stepperAria")}
           />
           {formError ? (
@@ -156,7 +166,31 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               {introSubmitting ? t("saving") : t("continue")}
             </Button>
           ) : null}
-          {activeUi === 2 ? (
+          {activeUi === 2 ?
+            <Button
+              type="button"
+              className="h-12 w-full rounded-full"
+              onClick={() => {
+                void onWorkPatternContinue();
+              }}
+              disabled={workPatternSubmitting || draftWorkPattern == null}
+            >
+              {workPatternSubmitting ? t("saving") : t("continue")}
+            </Button>
+          : null}
+          {activeUi === 3 ?
+            <Button
+              type="button"
+              className="h-12 w-full rounded-full"
+              onClick={() => {
+                void onMajorsContinue();
+              }}
+              disabled={majorsSubmitting || draftMajorSlugs.length < 1}
+            >
+              {majorsSubmitting ? t("saving") : t("continue")}
+            </Button>
+          : null}
+          {activeUi === 4 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
@@ -167,20 +201,20 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
             >
               {profileSaving ? t("saving") : t("continue")}
             </Button>
-          ) : null}
-          {activeUi === 3 ? (
+          : null}
+          {activeUi === 5 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
               onClick={() => {
-                void onServicesContinue();
+                void onMassageContinue();
               }}
-              disabled={servicesSubmitting || servicesContinueBlocked}
+              disabled={massageSaving}
             >
-              {servicesSubmitting ? t("saving") : t("continue")}
+              {massageSaving ? t("saving") : t("continue")}
             </Button>
-          ) : null}
-          {activeUi === 4 ? (
+          : null}
+          {activeUi === 6 && spec?.onboardingWorkPattern === "employed_salon" ?
             <>
               <Button
                 type="button"
@@ -188,9 +222,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
                 onClick={() => {
                   void onOrgContinue();
                 }}
-                disabled={
-                  workplaceSubmitting || createOrgSubmitting || createSalonOpen
-                }
+                disabled={workplaceSubmitting || createOrgSubmitting || createSalonOpen}
               >
                 {workplaceSubmitting ? t("saving") : t("workplaceRequestSubmit")}
               </Button>
@@ -204,8 +236,20 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
                 {t("skip")}
               </Button>
             </>
-          ) : null}
-          {activeUi === 5 ? (
+          : null}
+          {activeUi === 7 ?
+            <Button
+              type="button"
+              className="h-12 w-full rounded-full"
+              onClick={() => {
+                void onServicesContinue();
+              }}
+              disabled={servicesSubmitting || servicesContinueBlocked}
+            >
+              {servicesSubmitting ? t("saving") : t("continue")}
+            </Button>
+          : null}
+          {activeUi === 8 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
@@ -216,7 +260,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
             >
               {doneSubmitting ? t("saving") : t("goDashboard")}
             </Button>
-          ) : null}
+          : null}
         </div>
       </div>
     </div>

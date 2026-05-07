@@ -22,7 +22,10 @@ import {
 } from '../../../common/i18n';
 import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CatalogService } from '../application/catalog.service';
-import type { CatalogCategoriesResponseDto } from '../dto/catalog-categories-response.dto';
+import type {
+  CatalogBulkCategoriesResponseDto,
+  CatalogCategoriesResponseDto,
+} from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
 import type { CatalogMajorCategoriesListResponseDto } from '../dto/catalog-major-categories-list-response.dto';
 import {
@@ -32,12 +35,17 @@ import {
   type MajorSlugParam,
 } from '../dto/major-slug-param.schema';
 import {
+  catalogBulkCategoriesResponseSchema,
   catalogCategoriesResponseSchema,
   catalogCategoryDetailResponseSchema,
   catalogMajorCategoriesListResponseSchema,
   catalogMajorCategoryNotFoundSchema,
   catalogServiceCategoryNotFoundSchema,
 } from './catalog.openapi-schemas';
+import {
+  catalogBulkCategoriesQuerySchema,
+  type CatalogBulkCategoriesQuery,
+} from '../dto/catalog-bulk-categories-query.schema';
 
 @ApiTags('catalog')
 @Controller('catalog')
@@ -59,6 +67,47 @@ export class CatalogController {
     @RequestLocale() locale: ApiLocale,
   ): Promise<CatalogMajorCategoriesListResponseDto> {
     return this.catalogService.getAllMajorServiceCategories(locale);
+  }
+
+  @Get('major-categories/bulk/categories')
+  @ApiOperation({
+    summary: 'Подкатегории по нескольким большим категориям (bulk)',
+    description:
+      'Параметр `majorSlugs` — список slug через запятую (например `massage,nail`). Порядок в ответе совпадает с порядком в запросе.',
+    operationId: 'catalogGetBulkCategoriesByMajorSlugs',
+  })
+  @ApiQuery({
+    name: 'majorSlugs',
+    required: true,
+    example: 'massage,nail',
+    description: 'Slug больших категорий через запятую, без пробелов или с обрезкой пробелов.',
+  })
+  @ApiQuery({
+    name: 'listedInDirectory',
+    required: false,
+    type: Boolean,
+    description:
+      'Если true — только подкатегории витрины (как у одиночного маршрута по major).',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiOkResponse({ schema: catalogBulkCategoriesResponseSchema })
+  @ApiBadRequestResponse({
+    description: 'Неверный формат majorSlugs или locale',
+  })
+  @ApiNotFoundResponse({
+    description: 'Один из major slug не найден',
+    schema: catalogMajorCategoryNotFoundSchema,
+  })
+  async getBulkCategoriesByMajorSlugs(
+    @Query(new ZodValidationPipe(catalogBulkCategoriesQuerySchema))
+    query: CatalogBulkCategoriesQuery,
+    @RequestLocale() locale: ApiLocale,
+  ): Promise<CatalogBulkCategoriesResponseDto> {
+    return this.catalogService.getServiceCategoriesByMajorSlugsBulk(
+      query.majorSlugs,
+      locale,
+      { listedInDirectory: query.listedInDirectory },
+    );
   }
 
   /** Более специфичный маршрут — объявляем до списка `.../categories`. */

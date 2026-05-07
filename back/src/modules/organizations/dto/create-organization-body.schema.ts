@@ -40,16 +40,21 @@ export const createOrganizationBodySchema = z
     imageAlt: z.string().max(500).optional().nullable(),
     /** Дополнительные фото витрины (первая «обложка» — `imageUrl`, если задан, иначе первый URL здесь). */
     galleryImageUrls: z.array(z.string().min(1).max(2048)).max(24).optional(),
-    /** Подкатегории витрины (каталог) — не меньше одной, все должны существовать и быть активны. */
-    serviceCategoryIds: z.array(z.string().uuid()).min(1).max(40),
     /**
-     * Дополнительные большие категории (кроме primary=massage на MVP).
-     * Храним slug для обратной совместимости API и удобства формы.
+     * Подкатегории в черновике ревизии профиля (модерация). Живая витрина OSC — от услуг мастеров (reconcile).
+     * При создании салона допускается пустой список.
      */
-    additionalMajorCategorySlugs: z
+    serviceCategoryIds: z.array(z.string().uuid()).max(40).default([]),
+    /**
+     * Сферы деятельности организации (все выбранные большие категории).
+     * Пустой список допустим — каталог услуг по вертикалям недоступен, пока не выбрано ни одной сферы.
+     */
+    majorCategorySlugs: z
       .array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
-      .max(10)
-      .optional(),
+      .max(20)
+      .default([]),
+    /** solo — точка одного мастера; business — салон с командой. По умолчанию business для обратной совместимости. */
+    organizationType: z.enum(['solo', 'business']).default('business'),
     confirmDisableServiceIds: z.array(z.string().uuid()).max(200).optional(),
   })
   .strict()

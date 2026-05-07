@@ -340,16 +340,46 @@ export function BusinessSpecialistCabinetProfile({
               {personalServices.map((svc) => (
                 <li
                   key={svc.id}
-                  className="rounded-xl border border-border/45 bg-white px-3 py-2.5 shadow-sm dark:bg-card dark:shadow-none"
+                  className={cn(
+                    "rounded-xl border px-3 py-2.5 shadow-sm dark:shadow-none",
+                    !svc.isActive
+                      ? "border-dashed border-muted-foreground/40 bg-muted/25 dark:bg-muted/15"
+                      : "border-border/45 bg-white dark:bg-card",
+                  )}
+                  {...(!svc.isActive ?
+                    {
+                      "aria-label": t("profilePersonalServiceInactiveAria", {
+                        name: svc.categoryName,
+                      }),
+                    }
+                  : {})}
                 >
-                  <p className="font-heading text-sm font-semibold leading-snug text-foreground">
+                  <p
+                    className={cn(
+                      "font-heading text-sm font-semibold leading-snug",
+                      !svc.isActive ? "text-muted-foreground" : "text-foreground",
+                    )}
+                  >
                     {svc.categoryName}
                   </p>
+                  {!svc.isActive ?
+                    <span className="mt-1 inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                      {t("profilePersonalServiceInactiveBadge")}
+                    </span>
+                  : null}
+                  {!svc.isActive ?
+                    <p className="mt-1.5 text-pretty text-xs leading-snug text-muted-foreground">
+                      {t("profilePersonalServiceInactiveHint")}
+                    </p>
+                  : null}
                   <ul className="mt-2 space-y-1">
                     {svc.priceOptions.map((o, idx) => (
                       <li
                         key={`${svc.id}-${o.durationMinutes}-${idx}`}
-                        className="text-sm tabular-nums text-foreground"
+                        className={cn(
+                          "text-sm tabular-nums",
+                          !svc.isActive ? "text-muted-foreground" : "text-foreground",
+                        )}
                       >
                         {o.durationMinutes}
                         {"\u00a0"}

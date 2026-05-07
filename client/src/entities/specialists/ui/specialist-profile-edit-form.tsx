@@ -33,6 +33,8 @@ export type SpecialistProfileEditFormProps = {
   onAdaptChange: (value: boolean) => void;
   /** Заголовок и подзаголовок шага 2 онбординга; на странице редактирования — выключить. */
   showOnboardingIntro?: boolean;
+  /** Поля массажа (сила / адаптация): на отдельном шаге онбординга — false. */
+  showMassageFields?: boolean;
 };
 
 export function SpecialistProfileEditForm({
@@ -55,6 +57,7 @@ export function SpecialistProfileEditForm({
   adapt,
   onAdaptChange,
   showOnboardingIntro = true,
+  showMassageFields = true,
 }: SpecialistProfileEditFormProps) {
   const t = useTranslations("specialistOnboarding");
 
@@ -191,7 +194,8 @@ export function SpecialistProfileEditForm({
         </div>
       </div>
 
-      <div className="space-y-3 rounded-2xl bg-muted/20 p-4 ring-1 ring-inset ring-border/40">
+      {showMassageFields ?
+        <div className="space-y-3 rounded-2xl bg-muted/20 p-4 ring-1 ring-inset ring-border/40">
         <span className="text-sm font-medium text-foreground">{t("strengthLabel")}</span>
         <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
           <span className="max-w-[40%] leading-snug">{t("strengthLeft")}</span>
@@ -239,6 +243,7 @@ export function SpecialistProfileEditForm({
           <span className="text-pretty text-sm leading-snug text-foreground">{t("adaptCheck")}</span>
         </label>
       </div>
+      : null}
     </section>
   );
 }

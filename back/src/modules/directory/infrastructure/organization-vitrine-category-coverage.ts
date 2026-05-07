@@ -297,6 +297,129 @@ export async function queryOrganizationIdsMatchingStorefrontCategoryTextSearch(
   return rows.map((r) => r.id);
 }
 
+export type SpecialistVitrineCategoryListFilter = {
+  majorCategorySlug: string | null;
+  categorySlugs: string[];
+  /** Уже ограниченные id мастера (например радиус). */
+  restrictToSpecialistIds: string[] | null;
+};
+
+/**
+ * Мастера с тегами SSC по подкатегории, где для **текущего** активного салона есть витринная OSC с покрытием.
+ * Без голого SSC «вне салона» — синхрон с карточкой организации по OSC.
+ */
+export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
+  prisma: { $queryRaw: <T>(query: Prisma.Sql) => Promise<T> },
+  f: SpecialistVitrineCategoryListFilter,
+): Promise<string[]> {
+  const major =
+    f.majorCategorySlug != null && f.majorCategorySlug.trim() !== ''
+      ? f.majorCategorySlug.trim().toLowerCase()
+      : null;
+  const slugs = f.categorySlugs
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => s.length > 0);
+  if (major == null && slugs.length === 0) {
+    return [];
+  }
+
+  const restrict =
+    f.restrictToSpecialistIds != null && f.restrictToSpecialistIds.length > 0
+      ? Prisma.sql`AND sp.id::text IN (${Prisma.join(f.restrictToSpecialistIds)})`
+      : Prisma.empty;
+
+  const majorClause =
+    major != null
+      ? Prisma.sql`AND LOWER(msc.slug) = ${major}
+        AND msc."deletedAt" IS NULL
+        AND msc."isActive" = true`
+      : Prisma.sql`AND msc."deletedAt" IS NULL
+        AND msc."isActive" = true`;
+
+  const slugClause =
+    slugs.length > 0
+      ? Prisma.sql`AND LOWER(sc.slug) IN (${Prisma.join(slugs)})`
+      : Prisma.empty;
+
+  const rows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`
+      SELECT DISTINCT sp.id::text AS id
+      FROM "Specialist" sp
+      INNER JOIN "SpecialistServiceCategory" ssc ON ssc."specialistId" = sp.id
+      INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
+      INNER JOIN "MajorServiceCategory" msc ON msc.id = sc."majorServiceCategoryId"
+      INNER JOIN "OrganizationServiceCategory" osc
+        ON osc."organizationId" = sp."activeOrganizationId"
+        AND osc."serviceCategoryId" = sc.id
+      WHERE sp."deletedAt" IS NULL
+        AND sp."listedInDirectory" = true
+        AND sp."activeOrganizationId" IS NOT NULL
+        AND sc."deletedAt" IS NULL
+        AND sc."isActive" = true
+        ${majorClause}
+        ${slugClause}
+        ${restrict}
+        AND ${vitrineCategoryCoverageExists()}
+    `,
+  );
+
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Текст по подкатегории — только SSC, закреплённые за витринной OSC активного салона мастера.
+ */
+export async function querySpecialistIdsMatchingStorefrontCategoryTextSearch(
+  prisma: { $queryRaw: <T>(query: Prisma.Sql) => Promise<T> },
+  q: string,
+  locale: ApiLocale,
+  restrictToSpecialistIds: string[] | null,
+): Promise<string[]> {
+  const term = `%${q}%`;
+  const locales = [...new Set([locale, ...ORG_TEXT_SEARCH_LOCALES])];
+
+  const restrict =
+    restrictToSpecialistIds != null && restrictToSpecialistIds.length > 0
+      ? Prisma.sql`AND sp.id::text IN (${Prisma.join(restrictToSpecialistIds)})`
+      : Prisma.empty;
+
+  const rows = await prisma.$queryRaw<{ id: string }[]>(
+    Prisma.sql`
+      SELECT DISTINCT sp.id::text AS id
+      FROM "Specialist" sp
+      INNER JOIN "SpecialistServiceCategory" ssc ON ssc."specialistId" = sp.id
+      INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
+      INNER JOIN "OrganizationServiceCategory" osc
+        ON osc."organizationId" = sp."activeOrganizationId"
+        AND osc."serviceCategoryId" = sc.id
+      WHERE sp."deletedAt" IS NULL
+        AND sp."listedInDirectory" = true
+        AND sp."activeOrganizationId" IS NOT NULL
+        AND sc."deletedAt" IS NULL
+        AND sc."isActive" = true
+        ${restrict}
+        AND (
+          sc.name ILIKE ${term}
+          OR sc."shortName" ILIKE ${term}
+          OR sc.slug ILIKE ${term}
+          OR EXISTS (
+            SELECT 1
+            FROM "ServiceCategoryLocale" scl
+            WHERE scl."serviceCategoryId" = sc.id
+              AND scl.locale::text IN (${Prisma.join(locales)})
+              AND (
+                scl.name ILIKE ${term}
+                OR scl."shortName" ILIKE ${term}
+              )
+          )
+        )
+        AND ${vitrineCategoryCoverageExists()}
+    `,
+  );
+
+  return rows.map((r) => r.id);
+}
+
 /** DISTINCT serviceCategoryId для фильтров каталога салонов — только с витринным покрытием. */
 export async function queryDistinctStorefrontOrganizationServiceCategoryIds(prisma: {
   $queryRaw: <T>(query: Prisma.Sql) => Promise<T>;

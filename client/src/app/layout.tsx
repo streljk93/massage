@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Manrope, Open_Sans } from "next/font/google";
+import { Inter, Manrope } from "next/font/google";
 import { headers } from "next/headers";
 import { routing, type AppLocale } from "@/app/i18n/routing";
 import { themePreferenceInlineScript } from "@/shared/lib/theme-preference";
@@ -11,8 +11,8 @@ const manrope = Manrope({
   display: "swap",
 });
 
-const openSans = Open_Sans({
-  variable: "--font-open-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin", "cyrillic", "vietnamese"],
   display: "swap",
   style: ["normal", "italic"],
@@ -37,7 +37,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang={htmlLang}
-      className={`${manrope.variable} ${openSans.variable} h-full font-sans antialiased`}
+      className={`${manrope.variable} ${inter.variable} h-full font-sans antialiased`}
       suppressHydrationWarning
     >
       <head>

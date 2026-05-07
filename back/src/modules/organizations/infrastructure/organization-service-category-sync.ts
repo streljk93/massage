@@ -1,18 +1,115 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import type { CategoryLocaleShape } from '../../../common/i18n';
 
 /**
- * Дополняет `OrganizationServiceCategory`: любая подкатегория из **активных** услуг мастеров,
- * у которых `activeOrganizationId` = этот салон (личный каталог `organizationId` null или услуги салона),
- * считается объявленной организацией — без ручного совпадения с формой при создании салона.
+ * Услуги, которые должны считаться «в салоне» при снятии больших категорий:
+ * активные строки каталога мастера с текущим `activeOrganizationId` = салон и
+ * услуги в скоупе этого салона (`organizationId` null — личный каталог у стойки или id салона).
+ * Должен совпадать по смыслу с отбором в `syncOrganizationServiceCategoriesFromSpecialistServices`.
+ */
+export async function findActiveSalonScopedServicesAffectedByRemovingMajorCategories(
+  db: PrismaService | Prisma.TransactionClient,
+  organizationId: string,
+  removedMajorCategoryIds: string[],
+): Promise<
+  Array<{
+    id: string;
+    category: CategoryLocaleShape;
+  }>
+> {
+  if (removedMajorCategoryIds.length === 0) {
+    return [];
+  }
+  return db.service.findMany({
+    where: {
+      deletedAt: null,
+      isActive: true,
+      specialistId: { not: null },
+      specialist: {
+        deletedAt: null,
+        activeOrganizationId: organizationId,
+      },
+      AND: [
+        {
+          OR: [{ organizationId: null }, { organizationId }],
+        },
+      ],
+      category: {
+        deletedAt: null,
+        majorServiceCategoryId: { in: removedMajorCategoryIds },
+      },
+    },
+    select: {
+      id: true,
+      category: {
+        select: {
+          id: true,
+          name: true,
+          shortName: true,
+          slug: true,
+          description: true,
+          sortOrder: true,
+          locales: {
+            select: {
+              locale: true,
+              name: true,
+              shortName: true,
+              description: true,
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * При **добавлении** больших категорий к салону: снова включить (`isActive: true`) услуги того же скоупа,
+ * что при снятии мажоров (`findActiveSalonScopedServicesAffectedByRemovingMajorCategories`), если
+ * подкатегория относится к одному из новых мажоров и строка сейчас неактивна.
+ */
+export async function reactivateSalonScopedServicesForAddedMajorCategories(
+  db: PrismaService | Prisma.TransactionClient,
+  organizationId: string,
+  addedMajorCategoryIds: string[],
+): Promise<number> {
+  if (addedMajorCategoryIds.length === 0) {
+    return 0;
+  }
+  const result = await db.service.updateMany({
+    where: {
+      deletedAt: null,
+      isActive: false,
+      specialistId: { not: null },
+      specialist: {
+        deletedAt: null,
+        activeOrganizationId: organizationId,
+      },
+      AND: [
+        {
+          OR: [{ organizationId: null }, { organizationId }],
+        },
+      ],
+      category: {
+        deletedAt: null,
+        majorServiceCategoryId: { in: addedMajorCategoryIds },
+      },
+    },
+    data: { isActive: true },
+  });
+  return result.count;
+}
+
+/**
+ * Полная пересборка `OrganizationServiceCategory`: множество OSC для салона = уникальные `Service.categoryId`,
+ * где услуга активна, мастер с `activeOrganizationId` = этот салон, а услуга в скоупе салона
+ * (`organizationId` null — личный каталог — или совпадает с салоном).
  *
- * Пересчитывает по **всем** таким мастерам и только **добавляет** строки OSC (`skipDuplicates`).
- * Удаление «лишних» OSC из БД не делает.
+ * В одной логике: удалить все OSC по организации и вставить актуальный набор (идемпотентно).
+ * Пустой набор желаемых категорий → удалить все OSC.
  *
- * Уже вызывается: создание личной услуги, удаление личной услуги, смена активного салона мастера.
- * **При появлении PATCH услуги** (смена `categoryId`, `isActive`, `organizationId`, soft-delete и т.д.) —
- * после успешной записи в той же транзакции вызывать с `activeOrganizationId` затронутого мастера
- * (и при смене салона — для старого и нового id, если нужно).
+ * Вызывать при CRUD/деактивации услуг, смене активного салона (старом и новом id) и т.д.
  */
 export async function syncOrganizationServiceCategoriesFromSpecialistServices(
   db: PrismaService | Prisma.TransactionClient,
@@ -33,6 +130,9 @@ export async function syncOrganizationServiceCategoriesFromSpecialistServices(
         )
     `,
   );
+  await db.organizationServiceCategory.deleteMany({
+    where: { organizationId },
+  });
   if (rows.length === 0) {
     return;
   }
@@ -41,6 +141,5 @@ export async function syncOrganizationServiceCategoriesFromSpecialistServices(
       organizationId,
       serviceCategoryId: r.categoryId,
     })),
-    skipDuplicates: true,
   });
 }

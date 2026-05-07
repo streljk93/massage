@@ -3,6 +3,11 @@ export type BookableServiceOption = {
   id: string;
   /** Подкатегория каталога — единственная подпись на карточках (локаль из API). */
   categoryShortName: string;
+  /** Вертикаль (`MajorServiceCategory.slug`). */
+  majorSlug: string;
+  /** Локализованное имя вертикали (переключатель сфер). */
+  majorName: string;
+  majorSortOrder: number;
   durationMinutes: readonly number[];
   /** Длина совпадает с `durationMinutes`: цена в VND за сессию. */
   priceVndByDuration: readonly number[];

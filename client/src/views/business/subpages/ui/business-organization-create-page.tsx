@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
-import { BusinessEmptyState, useBusinessSalonCatalogCategories } from "@/entities/business";
+import { BusinessEmptyState } from "@/entities/business";
 import {
   OrganizationSalonCabinetForm,
   specialistMyOrganizationsQueryKey,
@@ -36,19 +36,8 @@ export function BusinessOrganizationCreatePage() {
     [accessToken, locale],
   );
 
-  const { data: categories = [], isLoading: categoriesLoading } =
-    useBusinessSalonCatalogCategories(sessionStatus === "authenticated" && accessToken.length > 0);
-
   const [formError, setFormError] = useState<string | null>(null);
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
-  const additionalMajorOptions = useMemo(
-    () => [
-      { slug: "nail", label: t("majorCategoryNail") },
-      { slug: "hair", label: t("majorCategoryHair") },
-      { slug: "spa", label: t("majorCategorySpa") },
-    ],
-    [t],
-  );
 
   const backToOrgs = {
     href: "/business/organizations",
@@ -131,9 +120,7 @@ export function BusinessOrganizationCreatePage() {
         t={t}
         client={sdk}
         locale={locale}
-        categories={categories}
-        additionalMajorOptions={additionalMajorOptions}
-        categoriesLoading={categoriesLoading}
+        catalogQueryAccessToken={accessToken}
         initialSyncKey="create"
         initialValues={null}
         formError={formError}

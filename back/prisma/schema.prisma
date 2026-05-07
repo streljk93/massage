@@ -78,6 +78,18 @@ enum SpecialistWorkplaceJoinRequestStatus {
   blocked
 }
 
+/// Тип организации: личная точка приёма или коммерческий салон / команда.
+enum OrganizationType {
+  solo
+  business
+}
+/// Выбор режима работы при онбординге (до привязки к месту или параллельно черновику).
+enum SpecialistWorkPattern {
+  solo
+  business
+  employed_salon
+}
+
 /// Цель избранного клиента: салон или мастер (витрина).
 enum FavoriteTargetKind {
   organization
@@ -285,11 +297,12 @@ model MajorServiceCategory {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  categories              ServiceCategory[]
-  locales                 MajorServiceCategoryLocale[]
-  organizationsPrimary    Organization[]                        @relation("OrganizationPrimaryMajorCategory")
-  organizationsAdditional OrganizationAdditionalMajorCategory[]
-  bodyZones               BodyZone[]
+  categories                         ServiceCategory[]
+  locales                            MajorServiceCategoryLocale[]
+  /// Салоны, у которых эта большая категория выбрана как сфера деятельности (N:M).
+  organizationMajorServiceCategories OrganizationMajorServiceCategory[]
+  bodyZones                          BodyZone[]
+  specialistOnboardingSelections      SpecialistOnboardingMajorServiceCategory[]
 }
 
 /// Локализованное имя большой категории (en / vi / ru; позже de и др. — новые строки без смены схемы).
@@ -429,10 +442,6 @@ model Organization {
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
 
-  /// Основная большая категория организации (MVP: massage).
-  primaryMajorServiceCategoryId String?
-  primaryMajorServiceCategory   MajorServiceCategory? @relation("OrganizationPrimaryMajorCategory", fields: [primaryMajorServiceCategoryId], references: [id], onDelete: SetNull)
-
   description     String?
   phone           String?
   email           String?
@@ -447,6 +456,9 @@ model Organization {
   /// Денормализованные агрегаты (обновляются при отзывах / фоново).
   ratingAverage Float @default(0)
   reviewsCount  Int   @default(0)
+
+  /// solo — мастер на себя; business — салон с командой и т.д.
+  organizationType OrganizationType @default(business)
 
   /// Сколько минут ждать подтверждения записи мастером/салоном (pending → иначе авто-expired). По умолчанию 15.
   bookingConfirmationGraceMinutes Int @default(15)
@@ -469,17 +481,17 @@ model Organization {
   specialistsActiveWorkplace Specialist[]                          @relation("SpecialistActiveOrganization")
   locales                    OrganizationLocale[]
   serviceCategories          OrganizationServiceCategory[]
-  additionalMajorCategories  OrganizationAdditionalMajorCategory[]
+  /// Сферы деятельности: большие категории каталога, доступные для организации (выбор владельца).
+  majorServiceCategories     OrganizationMajorServiceCategory[]
   workplaceJoinRequests      SpecialistWorkplaceJoinRequest[]
   profileRevisions           OrganizationProfileRevision[]         @relation("OrganizationProfileRevisions")
 
   @@index([ownerUserId])
   @@index([addressId])
-  @@index([primaryMajorServiceCategoryId])
 }
 
-/// Дополнительные большие категории у организации (nail/hair и т.д. поверх primary).
-model OrganizationAdditionalMajorCategory {
+/// Связь организации с большими категориями каталога (сферы деятельности), без «основной» категории — только N:M.
+model OrganizationMajorServiceCategory {
   organizationId         String
   majorServiceCategoryId String
   organization           Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -687,6 +699,9 @@ model Specialist {
   /// Параметры, специфичные для вертикали «массаж» (сила нажима и т.д.); другие крупные категории — отдельные 1:1.
   massageProfile SpecialistMassageProfile?
 
+  /// Режим работы из онбординга; null пока пользователь не выбрал («как работаете»).
+  onboardingWorkPattern SpecialistWorkPattern?
+
   /// Текущее место приёма (адрес и гео для витрины берутся от этой организации).
   activeOrganizationId String?
   activeOrganization   Organization? @relation("SpecialistActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
@@ -712,8 +727,22 @@ model Specialist {
   bookings              Booking[]
   reviews               SpecialistReview[]
   serviceCategories     SpecialistServiceCategory[]
+  onboardingMajorPicks SpecialistOnboardingMajorServiceCategory[]
 
   @@index([activeOrganizationId])
+}
+
+/// Большие категории (сферы), выбранные на шаге онбординга до создания организации / присоединения к салону.
+model SpecialistOnboardingMajorServiceCategory {
+  specialistId           String
+  majorServiceCategoryId String
+  specialist             Specialist           @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+  majorServiceCategory   MajorServiceCategory @relation(fields: [majorServiceCategoryId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@id([specialistId, majorServiceCategoryId])
+  @@index([majorServiceCategoryId])
 }
 
 /// Профиль мастера в вертикали «массаж» (онбординг / витрина), чтобы не тащить отраслевые поля в `Specialist`.

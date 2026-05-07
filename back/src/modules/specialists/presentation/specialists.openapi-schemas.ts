@@ -6,15 +6,39 @@ export const specialistOnboardingResponseSchema = {
   properties: {
     onboardingStep: {
       type: 'integer',
-      enum: [1, 3, 4, 5, 6],
+      enum: [1, 2, 3, 4, 5, 6, 11, 12, 13],
       description:
-        '1 — профиль; 4 — организация; 3 — услуги; 5 — финальный экран; 6 — готово.',
+        '1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.',
     },
     specialist: {
       type: 'object',
       nullable: true,
       description: 'Профиль специалиста; null если ещё не создан.',
       additionalProperties: true,
+    },
+  },
+};
+
+/** Черновик онбординга: режим работы и большие категории (до места работы с организацией). */
+export const patchSpecialistOnboardingPreferencesRequestSchema = {
+  type: 'object',
+  minProperties: 1,
+  properties: {
+    workPattern: {
+      type: 'string',
+      enum: ['solo', 'business', 'employed_salon'],
+      description:
+        'solo — на себя; business — свой салон; employed_salon — заявка в существующий салон без создания своей организации.',
+    },
+    majorCategorySlugs: {
+      type: 'array',
+      maxItems: 20,
+      items: {
+        type: 'string',
+        pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
+      },
+      description:
+        'Слаги больших категорий каталога; после привязки к организации список не меняется через эту ручку.',
     },
   },
 };

@@ -57,6 +57,17 @@ export const catalogCategoriesResponseSchema = {
   },
 };
 
+export const catalogBulkCategoriesResponseSchema = {
+  type: 'object',
+  required: ['sections'],
+  properties: {
+    sections: {
+      type: 'array',
+      items: catalogCategoriesResponseSchema,
+    },
+  },
+};
+
 export const catalogMajorCategoryNotFoundSchema = {
   type: 'object',
   required: ['statusCode', 'message'],

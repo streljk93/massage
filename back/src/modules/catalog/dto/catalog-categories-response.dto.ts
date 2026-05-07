@@ -13,3 +13,8 @@ export type CatalogCategoriesResponseDto = {
     sortOrder: number;
   }>;
 };
+
+/** Несколько секций «большая категория + подкатегории» за один запрос. */
+export type CatalogBulkCategoriesResponseDto = {
+  sections: CatalogCategoriesResponseDto[];
+};

@@ -30,7 +30,10 @@
         "loadErrorHint": "Check your connection and try again.",
         "retry": "Try again",
         "emptyProfileTitle": "Profile not filled in yet",
-        "emptyProfileHint": "Here you’ll add your team, organization, public listing, and the basics clients see in search. We’ll only show what you choose, when you’re ready to go live."
+        "emptyProfileHint": "Here you’ll add your team, organization, public listing, and the basics clients see in search. We’ll only show what you choose, when you’re ready to go live.",
+        "serviceInactiveBadge": "Inactive",
+        "serviceInactiveHint": "Your organization has not selected this activity sphere in the salon settings.",
+        "serviceInactiveCardAria": "{name} — inactive"
       }
     },
     "vi": {
@@ -63,7 +66,10 @@
         "loadErrorHint": "Kiểm tra kết nối và thử lại.",
         "retry": "Thử lại",
         "emptyProfileTitle": "Hồ sơ chưa hoàn tất",
-        "emptyProfileHint": "Tại đây bạn thêm nhóm, tổ chức, hồ sơ công khai và thông tin khách thấy trên tìm kiếm. Chỉ hiển thị phần bạn chọn khi sẵn sàng."
+        "emptyProfileHint": "Tại đây bạn thêm nhóm, tổ chức, hồ sơ công khai và thông tin khách thấy trên tìm kiếm. Chỉ hiển thị phần bạn chọn khi sẵn sàng.",
+        "serviceInactiveBadge": "Ngừng hoạt động",
+        "serviceInactiveHint": "Salon chưa chọn lĩnh vực hoạt động này trong cài đặt tổ chức.",
+        "serviceInactiveCardAria": "{name} — ngừng hoạt động"
       }
     },
     "ru": {
@@ -96,7 +102,10 @@
         "loadErrorHint": "Проверьте соединение и попробуйте снова.",
         "retry": "Повторить",
         "emptyProfileTitle": "Профиль ещё пуст",
-        "emptyProfileHint": "Здесь будут команда, организация, витрина и то, что видят клиенты в поиске. Публикуем только с вашего согласия."
+        "emptyProfileHint": "Здесь будут команда, организация, витрина и то, что видят клиенты в поиске. Публикуем только с вашего согласия.",
+        "serviceInactiveBadge": "Неактивна",
+        "serviceInactiveHint": "У организации не выбрана эта сфера деятельности в настройках салона.",
+        "serviceInactiveCardAria": "{name} — неактивна"
       }
     }
   }

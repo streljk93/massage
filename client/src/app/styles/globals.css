@@ -19,7 +19,7 @@
   --color-action-on-primary: var(--ds-action-on-primary);
   --color-action-on-secondary: var(--ds-action-on-secondary);
   --color-ring: var(--ds-ring);
-  --font-sans: var(--font-open-sans);
+  --font-sans: var(--font-inter);
   --font-heading: var(--font-manrope);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;

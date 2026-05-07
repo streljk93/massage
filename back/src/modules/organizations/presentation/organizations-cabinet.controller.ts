@@ -41,6 +41,10 @@ import {
   type CreateOrganizationBody,
 } from '../dto/create-organization-body.schema';
 import {
+  organizationActivityMajorsChangePreviewBodySchema,
+  type OrganizationActivityMajorsChangePreviewBody,
+} from '../dto/organization-activity-majors-change-preview-body.schema';
+import {
   workplaceJoinRequestListQuerySchema,
   workplaceJoinRequestReviewBodySchema,
   type WorkplaceJoinRequestListQuery,
@@ -48,6 +52,8 @@ import {
 } from '../dto/workplace-join-request.schema';
 import {
   createOrganizationRequestSchema,
+  organizationActivityMajorsChangePreviewRequestSchema,
+  organizationActivityMajorsChangePreviewResponseSchema,
   organizationCabinetDeleteBookingsPreviewResponseSchema,
   organizationCabinetDeleteOrganizationResponseSchema,
   organizationCabinetEditProfileResponseSchema,
@@ -216,7 +222,9 @@ export class OrganizationsCabinetController {
     description:
       'Активные записи отменяются, услуги салона архивируются, членства и заявки в штат закрываются.',
   })
-  @ApiOkResponse({ schema: organizationCabinetDeleteOrganizationResponseSchema })
+  @ApiOkResponse({
+    schema: organizationCabinetDeleteOrganizationResponseSchema,
+  })
   @ApiForbiddenResponse({
     description: 'Только владелец организации (NOT_ORGANIZATION_OWNER)',
   })
@@ -233,6 +241,48 @@ export class OrganizationsCabinetController {
     );
   }
 
+  @Post(':organizationId/activity-majors-change-preview')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Превью услуг, которые надо будет отключить при смене больших категорий (сфер деятельности).',
+    description:
+      'Только расчёт, без сохранения. Текущее состояние сфер в БД сравнивается с переданным `majorCategorySlugs`; для мастеров с `activeOrganizationId` этого салона — те же активные услуги, что витринируются через каталог салона. `locale` задаёт локализацию `categoryName` в ответе (как для PATCH организации).',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiBody({
+    schema: organizationActivityMajorsChangePreviewRequestSchema,
+  })
+  @ApiOkResponse({
+    schema: organizationActivityMajorsChangePreviewResponseSchema,
+  })
+  @ApiBadRequestResponse({ description: 'Невалидное тело' })
+  @ApiForbiddenResponse({
+    description:
+      'Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER) или организация не найдена',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async postActivityMajorsChangePreview(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Body(
+      new ZodValidationPipe(organizationActivityMajorsChangePreviewBodySchema),
+    )
+    body: OrganizationActivityMajorsChangePreviewBody,
+  ) {
+    return this.organizationCabinet.previewActivityMajorsChange(
+      req.user.id,
+      organizationId,
+      body.majorCategorySlugs,
+      locale,
+    );
+  }
+
   @Patch(':organizationId')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
@@ -240,7 +290,7 @@ export class OrganizationsCabinetController {
     summary:
       'Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.',
     description:
-      'Тело как у `POST /organizations`. Slug салона не меняется.',
+      'Тело как у `POST /organizations`. Slug салона не меняется. Перед сохранением при смене сфер деятельности клиент может вызвать `POST /organizations/{id}/activity-majors-change-preview` для списка услуг, которые потребуют согласования. Без нужных `confirmDisableServiceIds` при конфликте — `409 MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED`.',
   })
   @ApiLocaleQueryDocs()
   @ApiParam({ name: 'organizationId', format: 'uuid' })
@@ -336,7 +386,9 @@ export class OrganizationsCabinetController {
     );
   }
 
-  @Get(':organizationId/workplace-join-applicants/:specialistId/cabinet-profile')
+  @Get(
+    ':organizationId/workplace-join-applicants/:specialistId/cabinet-profile',
+  )
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({

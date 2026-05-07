@@ -34,27 +34,35 @@ async function main() {
     throw new Error("Major category 'massage' not found");
   }
 
-  const orgsPatched = await prisma.organization.updateMany({
+  const orgsWithoutMajors = await prisma.organization.findMany({
     where: {
       deletedAt: null,
-      primaryMajorServiceCategoryId: null,
+      majorServiceCategories: { none: {} },
     },
-    data: {
-      primaryMajorServiceCategoryId: massage.id,
-    },
+    select: { id: true },
   });
 
-  const staleAdditional = await prisma.organizationAdditionalMajorCategory.findMany({
+  if (orgsWithoutMajors.length > 0) {
+    await prisma.organizationMajorServiceCategory.createMany({
+      data: orgsWithoutMajors.map((o) => ({
+        organizationId: o.id,
+        majorServiceCategoryId: massage.id,
+      })),
+      skipDuplicates: true,
+    });
+  }
+
+  const staleLinks = await prisma.organizationMajorServiceCategory.findMany({
     where: {
       organization: { deletedAt: null },
       majorServiceCategory: { deletedAt: null, isActive: false },
     },
     select: { organizationId: true, majorServiceCategoryId: true },
   });
-  if (staleAdditional.length > 0) {
-    await prisma.organizationAdditionalMajorCategory.deleteMany({
+  if (staleLinks.length > 0) {
+    await prisma.organizationMajorServiceCategory.deleteMany({
       where: {
-        OR: staleAdditional.map((row) => ({
+        OR: staleLinks.map((row) => ({
           organizationId: row.organizationId,
           majorServiceCategoryId: row.majorServiceCategoryId,
         })),
@@ -63,7 +71,7 @@ async function main() {
   }
 
   console.log(
-    `[backfill-major-categories] primary patched: ${orgsPatched.count}, stale additional removed: ${staleAdditional.length}`,
+    `[backfill-major-categories] massage link added for orgs without majors: ${orgsWithoutMajors.length}, stale links removed: ${staleLinks.length}`,
   );
 }
 
