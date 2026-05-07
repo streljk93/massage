@@ -227,14 +227,27 @@ export class ContentModerationService {
       return;
     }
 
-    /** Первая подача и правки после publish — как у профиля мастера: строка организации в pending_review, пока кейс открыт. */
-    await this.prisma.organization.update({
-      where: { id: organizationId },
-      data: {
-        publicationModerationStatus:
-          PublicationModerationStatus.pending_review,
-      },
+    /**
+     * Для первой подачи (нет опубликованного снапшота) скрываем до ручного/AI approve.
+     * Для правки поверх уже опубликованной витрины НЕ трогаем live-строку:
+     * гости продолжают видеть опубликованный снимок до промоута ревизии.
+     */
+    const orgHead = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { publishedProfileRevisionId: true },
     });
+    const hasPublishedSnapshot =
+      orgHead?.publishedProfileRevisionId != null &&
+      orgHead.publishedProfileRevisionId !== revisionId;
+    if (!hasPublishedSnapshot) {
+      await this.prisma.organization.update({
+        where: { id: organizationId },
+        data: {
+          publicationModerationStatus:
+            PublicationModerationStatus.pending_review,
+        },
+      });
+    }
 
     const chunks: string[] = [];
     if (galleryProblems.length > 0) {
@@ -486,14 +499,26 @@ export class ContentModerationService {
       return;
     }
 
-    /** И первичная подача, и правки после publish — строка специалиста в состоянии «на модерации», пока кейс открыт. */
-    await this.prisma.specialist.update({
-      where: { id: specialistId },
-      data: {
-        profilePublicationModerationStatus:
-          PublicationModerationStatus.pending_review,
-      },
+    /**
+     * Аналогично организациям: если есть опубликованный профиль, продолжаем
+     * показывать live-версию до промоута ревизии.
+     */
+    const specialistHead = await this.prisma.specialist.findFirst({
+      where: { id: specialistId, deletedAt: null },
+      select: { publishedProfileRevisionId: true },
     });
+    const hasPublishedSnapshot =
+      specialistHead?.publishedProfileRevisionId != null &&
+      specialistHead.publishedProfileRevisionId !== revisionId;
+    if (!hasPublishedSnapshot) {
+      await this.prisma.specialist.update({
+        where: { id: specialistId },
+        data: {
+          profilePublicationModerationStatus:
+            PublicationModerationStatus.pending_review,
+        },
+      });
+    }
 
     const chunks: string[] = [];
     if (galleryProblems.length > 0) {

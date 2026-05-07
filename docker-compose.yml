@@ -148,6 +148,8 @@ services:
       start_period: 180s
     networks:
       - internal
+    ports:
+      - "8085:8085"
     cpus: 2.0
     mem_limit: 2g
 
