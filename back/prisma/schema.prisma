@@ -68,6 +68,12 @@ enum ServiceKind {
   combo
 }
 
+/// Скоуп строки каталога: `personal` — личная услуга мастера; `organization` — строка каталога конкретной организации (см. CHECK: согласование с `organizationId`).
+enum ServiceCatalogScope {
+  personal
+  organization
+}
+
 /// Заявка мастера на работу в существующем салоне (онбординг / смена места).
 enum SpecialistWorkplaceJoinRequestStatus {
   pending
@@ -815,11 +821,14 @@ model SpecialistWorkplaceJoinRequest {
   @@index([organizationId, status])
 }
 
-/// Услуга в каталоге организации или личная услуга мастера (`organizationId` = null).
+/// Строка каталога услуг: `scope` = organization (салонная) или personal (личная мастера без привязки к организации).
 model Service {
   id             String        @id @default(uuid())
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Явный скоуп совпадает с `organizationId`: personal ↔ null, organization ↔ не null (CHECK в миграции).
+  scope ServiceCatalogScope @default(organization)
 
   categoryId String
   category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -843,7 +852,7 @@ model Service {
   priceOptions ServicePriceOption[]
   bookings     Booking[]
 
-  /// Уникальность `(organizationId, slug)` и `(specialistId, slug)` при `organizationId IS NULL` задаётся частичными индексами в SQL-миграции.
+  /// Уникальность slug по скоупам (организация / личный каталог мастера) задаётся частичными индексами в SQL-миграции; для personal в БД `organizationId IS NULL`.
   @@index([organizationId, slug])
   @@index([specialistId, slug])
   @@index([categoryId])

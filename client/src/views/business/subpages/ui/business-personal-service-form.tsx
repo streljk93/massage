@@ -13,7 +13,15 @@ import {
   specialistsCabinetPostSpecialistPersonalService,
 } from "@/shared/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Separator } from "@/shared/ui";
+import {
+  Button,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Separator,
+} from "@/shared/ui";
 import {
   SpecialistPersonalServiceFields,
   defaultSvc,
@@ -23,7 +31,8 @@ import {
   type SvcForm,
 } from "@/entities/specialists";
 import { defaultBodyZoneSlugsForCategorySlug } from "@/entities/body-zones";
-import { useBusinessCabinetCatalogCategories } from "../lib/use-business-catalog-categories";
+import type { CatalogCategoryWithMajor } from "@/views/business/setup/lib/personal-catalog-categories-core";
+import { useBusinessPersonalServiceCatalogCategories } from "../lib/use-business-personal-catalog-categories";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
@@ -72,8 +81,16 @@ function priceOptionsFromInitial(
   }));
 }
 
+function categoriesOfMajorSlug(
+  categories: CatalogCategoryWithMajor[],
+  slug: string,
+): CatalogCategoryWithMajor[] {
+  return categories.filter((c) => c.majorSlug === slug);
+}
+
 /**
  * Форма создания / редактирования личной услуги мастера (POST или PATCH).
+ * Выбор большой категории и фильтрация подкатегорий — как на шаге услуг онбординга.
  */
 export function BusinessPersonalServiceForm({
   mode,
@@ -93,11 +110,29 @@ export function BusinessPersonalServiceForm({
     [accessToken, locale],
   );
 
-  const catalogQuery = useBusinessCabinetCatalogCategories(
+  const catalogQuery = useBusinessPersonalServiceCatalogCategories(
     status === "authenticated" && accessToken.length > 0,
   );
 
-  const categories = catalogQuery.data ?? [];
+  const majors = useMemo(
+    () => catalogQuery.data?.majors ?? [],
+    [catalogQuery.data?.majors],
+  );
+  const categories = useMemo(
+    () => catalogQuery.data?.categories ?? [],
+    [catalogQuery.data?.categories],
+  );
+
+  const categoryMajorById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of categories) {
+      m.set(c.id, c.majorSlug);
+    }
+    return m;
+  }, [categories]);
+
+  const fallbackMajorSlug = majors[0]?.slug ?? "";
+
   const bodyZonesQuery = useQuery({
     queryKey: ["businessServiceBodyZones", locale, accessToken],
     enabled: status === "authenticated" && accessToken.length > 0,
@@ -109,7 +144,13 @@ export function BusinessPersonalServiceForm({
       if (error || !data) {
         throw new Error("body-zones");
       }
-      return (data as { bodyZones?: Array<{ slug: string; name: string }> }).bodyZones ?? [];
+      return (
+        (
+          data as {
+            bodyZones?: Array<{ slug: string; name: string }>;
+          }
+        ).bodyZones ?? []
+      );
     },
   });
   const bodyZoneOptions = bodyZonesQuery.data ?? [];
@@ -122,8 +163,15 @@ export function BusinessPersonalServiceForm({
     hydratedRef.current = false;
   }, [mode, serviceId, initial]);
 
+  /* Гидратация черновика после загрузки каталога (как onboarding `setServices`). */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useLayoutEffect(() => {
-    if (!categories.length || hydratedRef.current) {
+    if (
+      catalogQuery.workplaceMajorsEmpty ||
+      !majors.length ||
+      !categories.length ||
+      hydratedRef.current
+    ) {
       return;
     }
     if (mode === "edit" && initial != null) {
@@ -141,14 +189,25 @@ export function BusinessPersonalServiceForm({
       return;
     }
     if (mode === "create") {
-      const first = categories[0]!;
+      const firstMajorSlug = majors[0]!.slug;
+      const firstCat = categories.find((c) => c.majorSlug === firstMajorSlug);
+      if (!firstCat) {
+        return;
+      }
       setDraft({
-        ...defaultSvc(first.id),
-        bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlug(first.slug),
+        ...defaultSvc(firstCat.id, { majorSlug: firstMajorSlug }),
+        bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlug(firstCat.slug),
       });
       hydratedRef.current = true;
     }
-  }, [categories, mode, initial]);
+  }, [
+    catalogQuery.workplaceMajorsEmpty,
+    categories,
+    initial,
+    majors,
+    mode,
+  ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -162,8 +221,12 @@ export function BusinessPersonalServiceForm({
       const body = {
         categoryId: draft.categoryId,
         kind: draft.kind,
-        ...(draft.comboCategoryIds.length > 0 ? ({ comboCategoryIds: draft.comboCategoryIds } as Record<string, unknown>) : {}),
-        ...(draft.bodyZoneSlugs.length > 0 ? ({ bodyZoneSlugs: draft.bodyZoneSlugs } as Record<string, unknown>) : {}),
+        ...(draft.comboCategoryIds.length > 0 ?
+          ({ comboCategoryIds: draft.comboCategoryIds } as Record<string, unknown>)
+        : {}),
+        ...(draft.bodyZoneSlugs.length > 0 ?
+          ({ bodyZoneSlugs: draft.bodyZoneSlugs } as Record<string, unknown>)
+        : {}),
         priceOptions: priceOptions.map((o) => ({ ...o, currency: "VND" as const })),
       } as unknown as NonNullable<
         Parameters<typeof specialistsCabinetPostSpecialistPersonalService>[0]["body"]
@@ -172,12 +235,13 @@ export function BusinessPersonalServiceForm({
         if (serviceId == null || serviceId.length === 0) {
           throw new Error("validation");
         }
-        const { error } = await specialistsCabinetPatchSpecialistPersonalService({
-          client: sdk,
-          query: { locale },
-          path: { serviceId },
-          body,
-        });
+        const { error } =
+          await specialistsCabinetPatchSpecialistPersonalService({
+            client: sdk,
+            query: { locale },
+            path: { serviceId },
+            body,
+          });
         if (error) {
           throw new Error("api");
         }
@@ -206,6 +270,19 @@ export function BusinessPersonalServiceForm({
     },
   });
 
+  if (catalogQuery.workplaceMajorsEmpty) {
+    return (
+      <div className="space-y-3 rounded-xl border border-border/45 bg-muted/12 px-4 py-5 dark:bg-muted/18">
+        <h2 className="font-heading text-base font-semibold text-foreground">
+          {tOnb("stepServicesWorkplaceMajorsEmptyTitle")}
+        </h2>
+        <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+          {tOnb("stepServicesWorkplaceMajorsEmptyHint")}
+        </p>
+      </div>
+    );
+  }
+
   if (catalogQuery.isLoading || draft == null) {
     return (
       <div className="flex justify-center py-16 text-muted-foreground" aria-busy>
@@ -231,11 +308,68 @@ export function BusinessPersonalServiceForm({
     );
   }
 
+  if (!majors.length || !categories.length) {
+    return (
+      <div className="flex flex-col gap-3 rounded-xl border border-border/45 bg-muted/12 px-4 py-5 dark:bg-muted/18">
+        <p className="text-sm text-muted-foreground">{t("catalogError")}</p>
+        <Button
+          type="button"
+          variant="secondary"
+          tone="light"
+          className="h-11 rounded-xl border border-border"
+          onClick={() => void catalogQuery.refetch()}
+        >
+          {t("catalogRetry")}
+        </Button>
+      </div>
+    );
+  }
+
+  const catMajor = categoryMajorById.get(draft.categoryId);
+  const rowMajorResolved = catMajor ?? fallbackMajorSlug;
+  const categoriesForRow = categoriesOfMajorSlug(
+    categories,
+    rowMajorResolved,
+  );
+
   return (
     <div className="space-y-4">
       <div className="space-y-4 rounded-xl border border-border/45 bg-muted/12 px-3 py-4 dark:bg-muted/18">
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium text-foreground">
+            {tOnb("servicesMajorSphereLabel")}
+          </span>
+          <Select
+            value={rowMajorResolved}
+            disabled={submitMutation.isPending}
+            onValueChange={(nextSlug) => {
+              const firstCat = categories.find((c) => c.majorSlug === nextSlug);
+              if (!firstCat) {
+                return;
+              }
+              setDraft({
+                ...defaultSvc(firstCat.id, { majorSlug: nextSlug }),
+                bodyZoneSlugs: defaultBodyZoneSlugsForCategorySlug(
+                  firstCat.slug,
+                ),
+              });
+            }}
+          >
+            <SelectTrigger className="h-12 w-full min-w-0 rounded-2xl border-0 bg-muted/45">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-[min(70vh,28rem)]">
+              {majors.map((m) => (
+                <SelectItem key={m.slug} value={m.slug}>
+                  <span className="font-medium text-foreground">{m.name}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <SpecialistPersonalServiceFields
-          categories={categories}
+          categories={categoriesForRow}
           value={draft}
           disabled={submitMutation.isPending}
           categoryLabelVariant="compact"

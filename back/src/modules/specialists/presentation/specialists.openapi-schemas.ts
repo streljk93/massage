@@ -395,7 +395,13 @@ export const specialistSalonCabinetBookingItemSchema = {
       description: 'Мастер, принимающий по этой брони.',
     },
     specialistImageUrl: { type: 'string', nullable: true },
-    organizationId: { type: 'string', format: 'uuid', nullable: true },
+    organizationId: {
+      type: 'string',
+      format: 'uuid',
+      nullable: true,
+      description:
+        'Организация в контексте этой брони; может быть null, если запись без привязки к салону (не смешивать с `scope` строки услуги в каталоге).',
+    },
     organizationName: { type: 'string', nullable: true },
     clientDisplayName: {
       type: 'string',

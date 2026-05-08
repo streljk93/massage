@@ -2441,7 +2441,8 @@
                           "organizationId": {
                             "type": "string",
                             "format": "uuid",
-                            "nullable": true
+                            "nullable": true,
+                            "description": "Организация в контексте этой брони; может быть null, если запись без привязки к салону (не смешивать с `scope` строки услуги в каталоге)."
                           },
                           "organizationName": {
                             "type": "string",
@@ -2625,7 +2626,7 @@
             "access-token": []
           }
         ],
-        "summary": "Текущая организация мастера (адрес витрины и новые записи). При смене или снятии (`organizationId`: null) активные брони на прежнем месте приёма отменяются.",
+        "summary": "Текущая организация мастера (адрес витрины и новые записи). При переключении на другую организацию или снятии активного салона (в теле PATCH `organizationId`: uuid другой организации или null) активные брони на прежнем месте приёма отменяются.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -3224,7 +3225,7 @@
             "access-token": []
           }
         ],
-        "summary": "Личная услуга мастера без организации (organizationId = null, specialistId = текущий).",
+        "summary": "Создать личную услугу мастера (скоуп каталога `personal`; строка относится к текущему `specialistId`).",
         "tags": [
           "cabinet-specialists"
         ]
@@ -3361,7 +3362,7 @@
             "description": "Нет или невалидный access token"
           },
           "404": {
-            "description": "Профиля мастера нет или услуга не найдена / не личная"
+            "description": "Профиля мастера нет или услуга не найдена / не со скоупом personal"
           }
         },
         "security": [
@@ -3413,7 +3414,7 @@
             "description": "Нет или невалидный access token"
           },
           "404": {
-            "description": "Профиля мастера нет, услуга не найдена или не личная"
+            "description": "Профиля мастера нет, услуга не найдена или не со скоупом personal"
           }
         },
         "security": [
@@ -3421,7 +3422,7 @@
             "access-token": []
           }
         ],
-        "summary": "Удалить личную услугу мастера (soft delete). Услуга должна быть с organizationId = null.",
+        "summary": "Удалить личную услугу мастера (soft delete). Допускаются только строки каталога со скоупом personal.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -3763,7 +3764,7 @@
     },
     "/bookings/{id}/visit-reviews": {
       "post": {
-        "description": "Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. `organizationId` брони; если `null` — берётся `activeOrganizationId` мастера.",
+        "description": "Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. Контекст салона для отзыва берётся из `organizationId` брони; если оно отсутствует, может подставляться активная организация мастера.",
         "operationId": "Bookings_submitVisitReviews",
         "parameters": [
           {
@@ -4527,15 +4528,6 @@
                     ],
                     "default": "business",
                     "description": "solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге."
-                  },
-                  "confirmDisableServiceIds": {
-                    "type": "array",
-                    "maxItems": 200,
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "description": "Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий)."
                   }
                 },
                 "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
@@ -5312,7 +5304,7 @@
         ]
       },
       "patch": {
-        "description": "Тело как у `POST /organizations`. Slug салона не меняется. Перед сохранением при смене сфер деятельности клиент может вызвать `POST /organizations/{id}/activity-majors-change-preview` для списка услуг, которые потребуют согласования. Без нужных `confirmDisableServiceIds` при конфликте — `409 MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED`.",
+        "description": "Тело как у `POST /organizations`. Slug салона не меняется. При смене сфер деятельности каталог салона под категории витрины перестраивается по текущим сферам; строки услуг мастеров не включаются/выключаются автоматически.",
         "operationId": "OrganizationsCabinet_patchOrganization",
         "parameters": [
           {
@@ -5473,15 +5465,6 @@
                     ],
                     "default": "business",
                     "description": "solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге."
-                  },
-                  "confirmDisableServiceIds": {
-                    "type": "array",
-                    "maxItems": 200,
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "description": "Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий)."
                   }
                 },
                 "description": "Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`."
@@ -5546,127 +5529,6 @@
           }
         ],
         "summary": "Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.",
-        "tags": [
-          "cabinet-organizations"
-        ]
-      }
-    },
-    "/organizations/{organizationId}/activity-majors-change-preview": {
-      "post": {
-        "description": "Только расчёт, без сохранения. Текущее состояние сфер в БД сравнивается с переданным `majorCategorySlugs`; для мастеров с `activeOrganizationId` этого салона — те же активные услуги, что витринируются через каталог салона. `locale` задаёт локализацию `categoryName` в ответе (как для PATCH организации).",
-        "operationId": "OrganizationsCabinet_postActivityMajorsChangePreview",
-        "parameters": [
-          {
-            "name": "organizationId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "locale",
-            "required": false,
-            "in": "query",
-            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
-            "schema": {
-              "enum": [
-                "en",
-                "vi",
-                "ru"
-              ],
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "majorCategorySlugs"
-                ],
-                "properties": {
-                  "majorCategorySlugs": {
-                    "type": "array",
-                    "maxItems": 20,
-                    "items": {
-                      "type": "string",
-                      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
-                    },
-                    "description": "Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД)."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "affectedServices"
-                  ],
-                  "properties": {
-                    "affectedServices": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "categoryId",
-                          "categorySlug",
-                          "categoryName"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "categoryId": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "categorySlug": {
-                            "type": "string"
-                          },
-                          "categoryName": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      "description": "Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Невалидное тело"
-          },
-          "401": {
-            "description": "Нет или невалидный access token"
-          },
-          "403": {
-            "description": "Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER) или организация не найдена"
-          },
-          "404": {
-            "description": "Организация не найдена"
-          }
-        },
-        "security": [
-          {
-            "access-token": []
-          }
-        ],
-        "summary": "Превью услуг, которые надо будет отключить при смене больших категорий (сфер деятельности).",
         "tags": [
           "cabinet-organizations"
         ]

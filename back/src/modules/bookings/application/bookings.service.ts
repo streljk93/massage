@@ -39,6 +39,7 @@ import { PushNotificationsService } from '../../notifications/application/push-n
 import { BookingsRepository, type SalonCabinetBookingRow } from '../infrastructure/bookings.repository';
 import { isBookingSlotStartTimeReached } from '../domain/booking-in-progress-start-policy';
 import { isBookingStatusTransitionAllowed } from '../domain/booking-status-transitions';
+import { isServiceBookableMatchingDirectoryVitrineRules } from '../../services/domain/service-catalog-visibility';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
@@ -180,6 +181,7 @@ export class BookingsService {
         activeOrganizationId: true,
         userId: true,
         autoConfirmBookings: true,
+        listedInDirectory: true,
       },
     });
     if (!specialist) {
@@ -196,12 +198,95 @@ export class BookingsService {
         deletedAt: null,
         isActive: true,
       },
-      include: {
+      select: {
+        id: true,
+        organizationId: true,
+        deletedAt: true,
+        isActive: true,
+        scope: true,
         priceOptions: true,
-        category: { include: { locales: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            shortName: true,
+            slug: true,
+            description: true,
+            sortOrder: true,
+            majorServiceCategoryId: true,
+            locales: {
+              select: {
+                locale: true,
+                name: true,
+                shortName: true,
+                description: true,
+              },
+            },
+          },
+        },
       },
     });
     if (!service) {
+      throw new NotFoundException({
+        code: 'SERVICE_NOT_FOUND',
+        message: 'Service not found for this specialist',
+      });
+    }
+
+    let organizationId = specialist.activeOrganizationId;
+    if (!organizationId) {
+      const employment =
+        await this.prisma.specialistOrganizationEmployment.findFirst({
+          where: {
+            specialistId: body.specialistId,
+            isActive: true,
+          },
+          orderBy: { startDate: 'desc' },
+        });
+      organizationId = employment?.organizationId ?? null;
+    }
+
+    let listingOrg: {
+      listingWorkdayStartMinute: number | null;
+      listingWorkdayEndMinute: number | null;
+      bookingConfirmationGraceMinutes: number | null;
+    } | null = null;
+
+    let workplaceOrgMajorCategoryIds: string[] | null = null;
+
+    if (organizationId) {
+      const [org, majorRows] = await Promise.all([
+        this.prisma.organization.findFirst({
+          where: { id: organizationId, deletedAt: null },
+          select: {
+            listingWorkdayStartMinute: true,
+            listingWorkdayEndMinute: true,
+            bookingConfirmationGraceMinutes: true,
+          },
+        }),
+        this.prisma.organizationMajorServiceCategory.findMany({
+          where: { organizationId },
+          select: { majorServiceCategoryId: true },
+        }),
+      ]);
+      listingOrg = org;
+      workplaceOrgMajorCategoryIds = majorRows.map(
+        (m) => m.majorServiceCategoryId,
+      );
+    }
+
+    if (
+      !isServiceBookableMatchingDirectoryVitrineRules({
+        scope: service.scope,
+        serviceOrganizationId: service.organizationId,
+        categoryMajorServiceCategoryId: service.category.majorServiceCategoryId,
+        serviceIsActive: service.isActive,
+        serviceDeletedAt: service.deletedAt,
+        specialistListedInDirectory: specialist.listedInDirectory,
+        workplaceOrganizationId: organizationId,
+        workplaceOrganizationMajorCategoryIds: workplaceOrgMajorCategoryIds,
+      })
+    ) {
       throw new NotFoundException({
         code: 'SERVICE_NOT_FOUND',
         message: 'Service not found for this specialist',
@@ -219,44 +304,22 @@ export class BookingsService {
       });
     }
 
-    let organizationId = specialist.activeOrganizationId;
-    if (!organizationId) {
-      const employment =
-        await this.prisma.specialistOrganizationEmployment.findFirst({
-          where: {
-            specialistId: body.specialistId,
-            isActive: true,
-          },
-          orderBy: { startDate: 'desc' },
-        });
-      organizationId = employment?.organizationId ?? null;
-    }
-
     let graceMinutes = DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES;
     let listingWorkday = normalizeDirectoryListingWorkdayBounds(
       undefined,
       undefined,
     );
-    if (organizationId) {
-      const org = await this.prisma.organization.findFirst({
-        where: { id: organizationId, deletedAt: null },
-        select: {
-          listingWorkdayStartMinute: true,
-          listingWorkdayEndMinute: true,
-          bookingConfirmationGraceMinutes: true,
-        },
-      });
-      if (org) {
-        listingWorkday = normalizeDirectoryListingWorkdayBounds(
-          org.listingWorkdayStartMinute,
-          org.listingWorkdayEndMinute,
-        );
-        if (
-          Number.isFinite(org.bookingConfirmationGraceMinutes) &&
-          org.bookingConfirmationGraceMinutes > 0
-        ) {
-          graceMinutes = org.bookingConfirmationGraceMinutes;
-        }
+    if (listingOrg) {
+      listingWorkday = normalizeDirectoryListingWorkdayBounds(
+        listingOrg.listingWorkdayStartMinute,
+        listingOrg.listingWorkdayEndMinute,
+      );
+      if (
+        listingOrg.bookingConfirmationGraceMinutes != null &&
+        Number.isFinite(listingOrg.bookingConfirmationGraceMinutes) &&
+        listingOrg.bookingConfirmationGraceMinutes > 0
+      ) {
+        graceMinutes = listingOrg.bookingConfirmationGraceMinutes;
       }
     }
 

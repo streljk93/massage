@@ -1090,6 +1090,9 @@ export type SpecialistsCabinetGetSpecialistSalonBookingsResponses = {
              */
             specialistName: string;
             specialistImageUrl: string | null;
+            /**
+             * Организация в контексте этой брони; может быть null, если запись без привязки к салону (не смешивать с `scope` строки услуги в каталоге).
+             */
             organizationId: string | null;
             organizationName: string | null;
             /**
@@ -1474,7 +1477,7 @@ export type SpecialistsCabinetDeleteSpecialistPersonalServiceErrors = {
      */
     401: unknown;
     /**
-     * Профиля мастера нет, услуга не найдена или не личная
+     * Профиля мастера нет, услуга не найдена или не со скоупом personal
      */
     404: unknown;
 };
@@ -1531,7 +1534,7 @@ export type SpecialistsCabinetPatchSpecialistPersonalServiceErrors = {
      */
     401: unknown;
     /**
-     * Профиля мастера нет или услуга не найдена / не личная
+     * Профиля мастера нет или услуга не найдена / не со скоупом personal
      */
     404: unknown;
 };
@@ -2183,10 +2186,6 @@ export type OrganizationsCabinetPostCreateOrganizationData = {
          * solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.
          */
         organizationType?: 'solo' | 'business';
-        /**
-         * Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).
-         */
-        confirmDisableServiceIds?: Array<string>;
     };
     path?: never;
     query?: {
@@ -2427,10 +2426,6 @@ export type OrganizationsCabinetPatchOrganizationData = {
          * solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.
          */
         organizationType?: 'solo' | 'business';
-        /**
-         * Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).
-         */
-        confirmDisableServiceIds?: Array<string>;
     };
     path: {
         organizationId: unknown;
@@ -2479,60 +2474,6 @@ export type OrganizationsCabinetPatchOrganizationResponses = {
 };
 
 export type OrganizationsCabinetPatchOrganizationResponse = OrganizationsCabinetPatchOrganizationResponses[keyof OrganizationsCabinetPatchOrganizationResponses];
-
-export type OrganizationsCabinetPostActivityMajorsChangePreviewData = {
-    body: {
-        /**
-         * Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД).
-         */
-        majorCategorySlugs: Array<string>;
-    };
-    path: {
-        organizationId: unknown;
-    };
-    query?: {
-        /**
-         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
-         */
-        locale?: 'en' | 'vi' | 'ru';
-    };
-    url: '/organizations/{organizationId}/activity-majors-change-preview';
-};
-
-export type OrganizationsCabinetPostActivityMajorsChangePreviewErrors = {
-    /**
-     * Невалидное тело
-     */
-    400: unknown;
-    /**
-     * Нет или невалидный access token
-     */
-    401: unknown;
-    /**
-     * Нет прав управлять салоном (NOT_ORGANIZATION_MANAGER) или организация не найдена
-     */
-    403: unknown;
-    /**
-     * Организация не найдена
-     */
-    404: unknown;
-};
-
-export type OrganizationsCabinetPostActivityMajorsChangePreviewResponses = {
-    200: {
-        /**
-         * Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами.
-         */
-        affectedServices: Array<{
-            id: string;
-            categoryId: string;
-            categorySlug: string;
-            categoryName: string;
-        }>;
-    };
-};
-
-export type OrganizationsCabinetPostActivityMajorsChangePreviewResponse = OrganizationsCabinetPostActivityMajorsChangePreviewResponses[keyof OrganizationsCabinetPostActivityMajorsChangePreviewResponses];
 
 export type OrganizationsCabinetPostRequestWorkplaceJoinData = {
     body?: never;

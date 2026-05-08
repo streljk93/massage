@@ -142,54 +142,9 @@ export const createOrganizationRequestSchema = {
       description:
         'solo — личная точка приёма; business — коммерческий салон / команда. Должен согласовываться с выбором в онбординге.',
     },
-    confirmDisableServiceIds: {
-      type: 'array',
-      maxItems: 200,
-      items: { type: 'string', format: 'uuid' },
-      description:
-        'Подтверждение деактивации услуг при снятии сфер деятельности (больших категорий).',
-    },
   },
   description:
     'Адрес: `placeReference` + опционально `addressLine`/`latitude`/`longitude` с карты кабинета; или только `placeReference` (resolve на сервере); или без placeReference — `addressLine`+`latitude`+`longitude`.',
-};
-
-export const organizationActivityMajorsChangePreviewRequestSchema = {
-  type: 'object',
-  required: ['majorCategorySlugs'],
-  properties: {
-    majorCategorySlugs: {
-      type: 'array',
-      maxItems: 20,
-      items: { type: 'string', pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
-      description:
-        'Планируемый после сохранения набор больших категорий (сфер деятельности сравнивается с текущим в БД).',
-    },
-  },
-};
-
-const organizationActivityMajorsAffectedServiceItemSchema = {
-  type: 'object',
-  required: ['id', 'categoryId', 'categorySlug', 'categoryName'],
-  properties: {
-    id: { type: 'string', format: 'uuid' },
-    categoryId: { type: 'string', format: 'uuid' },
-    categorySlug: { type: 'string' },
-    categoryName: { type: 'string' },
-  },
-};
-
-export const organizationActivityMajorsChangePreviewResponseSchema = {
-  type: 'object',
-  required: ['affectedServices'],
-  properties: {
-    affectedServices: {
-      type: 'array',
-      items: organizationActivityMajorsAffectedServiceItemSchema,
-      description:
-        'Активные услуги мастеров с текущим местом приёма в этом салоне, которые конфликтуют со снимаемыми сферами.',
-    },
-  },
 };
 
 export const workplaceJoinRequestReviewRequestSchema = {

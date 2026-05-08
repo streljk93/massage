@@ -22,9 +22,7 @@ import { OrgContactFields } from "./org-contact-fields";
 import { validateOrgContactForSubmit } from "../lib/organization-contact-form";
 
 export type OrganizationSalonCabinetSubmitBody =
-  OrganizationsCabinetPostCreateOrganizationData["body"] & {
-    confirmDisableServiceIds?: string[];
-  };
+  OrganizationsCabinetPostCreateOrganizationData["body"];
 
 export type OrganizationSalonCabinetFormInitialValues = {
   name: string;

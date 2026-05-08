@@ -13,6 +13,7 @@ import {
   ContentModerationCaseKind,
   ContentModerationCaseStatus,
   PublicationModerationStatus,
+  ServiceCatalogScope,
   SpecialistProfileRevisionStatus,
   SpecialistWorkPattern,
   SpecialistWorkplaceJoinRequestStatus,
@@ -100,7 +101,7 @@ export class SpecialistOnboardingService {
     return this.prisma.service.count({
       where: {
         specialistId,
-        organizationId: null,
+        scope: ServiceCatalogScope.personal,
         deletedAt: null,
       },
     });
@@ -140,7 +141,9 @@ export class SpecialistOnboardingService {
   }
 
   /** Слаги больших категорий: сначала черновик онбординга, иначе сферы активной организации. */
-  private async sphereSlugsForOnboarding(specialistId: string): Promise<string[]> {
+  private async sphereSlugsForOnboarding(
+    specialistId: string,
+  ): Promise<string[]> {
     const row = await this.prisma.specialist.findFirst({
       where: { id: specialistId, deletedAt: null },
       select: {
@@ -187,8 +190,7 @@ export class SpecialistOnboardingService {
     return [...org.majorServiceCategories]
       .sort(
         (a, b) =>
-          a.majorServiceCategory.sortOrder -
-            b.majorServiceCategory.sortOrder ||
+          a.majorServiceCategory.sortOrder - b.majorServiceCategory.sortOrder ||
           a.majorServiceCategory.slug.localeCompare(
             b.majorServiceCategory.slug,
           ),
@@ -216,6 +218,10 @@ export class SpecialistOnboardingService {
     });
     if (!spec) {
       return { step: 1, specialistId: null };
+    }
+    /** Завершённый онбординг не откатываем при снятии места или очистке picks в БД. */
+    if (spec.onboardingCompletedAt != null) {
+      return { step: 6, specialistId: spec.id };
     }
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -261,17 +267,17 @@ export class SpecialistOnboardingService {
         orderBy: { updatedAt: 'desc' },
         select: { id: true },
       });
-    if (!spec.onboardingCompletedAt) {
-      if (!this.workplaceResolved(spec, pendingJoin)) {
-        return { step: 11, specialistId: spec.id };
-      }
-      const svcCount = await this.countPersonalServices(spec.id);
-      if (svcCount < 1) {
-        return { step: 12, specialistId: spec.id };
-      }
-      return { step: 13, specialistId: spec.id };
+    if (!this.workplaceResolved(spec, pendingJoin)) {
+      return { step: 11, specialistId: spec.id };
     }
-    return { step: 6, specialistId: spec.id };
+    const svcCount = await this.countPersonalServices(spec.id);
+    const personalCatalogSkippableForEmployedPath =
+      spec.onboardingWorkPattern === SpecialistWorkPattern.employed_salon &&
+      this.workplaceResolved(spec, pendingJoin);
+    if (svcCount < 1 && !personalCatalogSkippableForEmployedPath) {
+      return { step: 12, specialistId: spec.id };
+    }
+    return { step: 13, specialistId: spec.id };
   }
 
   /**
@@ -321,16 +327,38 @@ export class SpecialistOnboardingService {
         orderBy: { updatedAt: 'desc' },
       });
 
+    let activeWorkplaceMajorCategorySlugs: string[] = [];
+    if (spec.activeOrganizationId != null) {
+      const orgRowEarly = await this.prisma.organization.findFirst({
+        where: { id: spec.activeOrganizationId, deletedAt: null },
+        select: {
+          majorServiceCategories: {
+            include: {
+              majorServiceCategory: {
+                select: { id: true, slug: true, sortOrder: true },
+              },
+            },
+          },
+        },
+      });
+      if (orgRowEarly != null) {
+        activeWorkplaceMajorCategorySlugs =
+          mergeOrganizationMajorIdsAndSlugsFromDb(orgRowEarly).slugs;
+      }
+    }
+    const workplaceMajorSlugSet = new Set(activeWorkplaceMajorCategorySlugs);
+
     const personalServiceRows = await this.prisma.service.findMany({
       where: {
         specialistId: spec.id,
-        organizationId: null,
+        scope: ServiceCatalogScope.personal,
         deletedAt: null,
       },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
       include: {
         category: {
           include: {
+            majorServiceCategory: { select: { slug: true } },
             locales: {
               select: {
                 locale: true,
@@ -377,6 +405,26 @@ export class SpecialistOnboardingService {
       },
     });
 
+    const listedAtActiveWorkplaceForRow = (
+      row: (typeof personalServiceRows)[number],
+    ): boolean => {
+      if (!row.isActive) {
+        return false;
+      }
+      if (spec.activeOrganizationId == null) {
+        return true;
+      }
+      if (workplaceMajorSlugSet.size === 0) {
+        return false;
+      }
+      const slug = row.category.majorServiceCategory?.slug;
+      return (
+        typeof slug === 'string' &&
+        slug.length > 0 &&
+        workplaceMajorSlugSet.has(slug)
+      );
+    };
+
     const personalServices = personalServiceRows.map((row) => ({
       // В кабинете показываем читаемое имя combo как "Услуга + Услуга".
       ...(() => {
@@ -386,11 +434,12 @@ export class SpecialistOnboardingService {
         );
         const comboNames =
           row.kind === 'combo'
-            ? row.comboItems.map((item) =>
-                pickLocalizedServiceCategoryFields(
-                  item.itemServiceCategory as CategoryLocaleShape,
-                  locale,
-                ).name,
+            ? row.comboItems.map(
+                (item) =>
+                  pickLocalizedServiceCategoryFields(
+                    item.itemServiceCategory as CategoryLocaleShape,
+                    locale,
+                  ).name,
               )
             : [];
         return {
@@ -403,10 +452,12 @@ export class SpecialistOnboardingService {
       })(),
       id: row.id,
       categoryId: row.categoryId,
-      isActive: row.isActive,
+      listedAtActiveWorkplace: listedAtActiveWorkplaceForRow(row),
       description: row.description,
       kind: row.kind,
-      comboCategoryIds: row.comboItems.map((item) => item.itemServiceCategoryId),
+      comboCategoryIds: row.comboItems.map(
+        (item) => item.itemServiceCategoryId,
+      ),
       bodyZoneSlugs: row.bodyZones.map((item) => item.bodyZone.slug),
       priceOptions: row.priceOptions.map((o) => ({
         durationMinutes: o.durationMinutes,
@@ -416,43 +467,23 @@ export class SpecialistOnboardingService {
     }));
 
     /** Пока висит черновик ревизии — в кабинете показываем «на модерации», как у салона с pending revision. */
-    const pendingProfileRevision = await this.prisma.specialistProfileRevision.findFirst({
-      where: {
-        specialistId: spec.id,
-        status: SpecialistProfileRevisionStatus.pending_review,
-      },
-      select: { id: true },
-    });
+    const pendingProfileRevision =
+      await this.prisma.specialistProfileRevision.findFirst({
+        where: {
+          specialistId: spec.id,
+          status: SpecialistProfileRevisionStatus.pending_review,
+        },
+        select: { id: true },
+      });
     const profilePublicationModerationStatusForCabinet =
       pendingProfileRevision != null
         ? PublicationModerationStatus.pending_review
         : spec.profilePublicationModerationStatus;
 
-    let activeWorkplaceMajorCategorySlugs: string[] = [];
-    if (spec.activeOrganizationId != null) {
-      const orgRow = await this.prisma.organization.findFirst({
-        where: { id: spec.activeOrganizationId, deletedAt: null },
-        select: {
-          majorServiceCategories: {
-            include: {
-              majorServiceCategory: {
-                select: { id: true, slug: true, sortOrder: true },
-              },
-            },
-          },
-        },
-      });
-      if (orgRow != null) {
-        activeWorkplaceMajorCategorySlugs =
-          mergeOrganizationMajorIdsAndSlugsFromDb(orgRow).slugs;
-      }
-    }
-
     const onboardingMajorCategorySlugs = [...spec.onboardingMajorPicks]
       .sort(
         (a, b) =>
-          a.majorServiceCategory.sortOrder -
-            b.majorServiceCategory.sortOrder ||
+          a.majorServiceCategory.sortOrder - b.majorServiceCategory.sortOrder ||
           a.majorServiceCategory.slug.localeCompare(
             b.majorServiceCategory.slug,
           ),

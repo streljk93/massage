@@ -21,7 +21,6 @@ import {
   filesUploadPublic,
   organizationsCabinetGetCabinetOrganizationProfileForEdit,
   organizationsCabinetPatchOrganization,
-  organizationsCabinetPostActivityMajorsChangePreview,
   specialistsCabinetGetSpecialistMyOrganizations,
 } from "@/shared/api";
 import { cn, motion } from "@/shared/lib";
@@ -29,44 +28,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { parseVnLocalForInput } from "@/views/business/setup/lib/specialist-onboarding-utils";
 
-import { confirmAction } from "@/shared/lib/notifications";
-
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
-
-type AffectedSalonServiceRow = {
-  id: string;
-  categoryName?: string | null;
-};
-
-function OrganizationEditRemoveMajorsServicesConfirmBody({
-  rows,
-}: {
-  rows: AffectedSalonServiceRow[];
-}) {
-  const tPage = useTranslations("businessAppSubpages");
-  return (
-    <div className="min-w-0 w-full space-y-2 pt-1 text-foreground">
-      <p className="min-w-0 max-w-full text-pretty text-sm leading-snug text-muted-foreground">
-        {tPage("organizationEditDisableServicesConfirmLead")}
-      </p>
-      <ul
-        className="max-h-44 w-full min-w-0 max-w-full list-none divide-y divide-border overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-card p-0 shadow-sm overscroll-contain"
-        role="list"
-        aria-label={tPage("organizationEditDisableServicesListAria")}
-      >
-        {rows.map((s) => (
-          <li
-            key={s.id}
-            className="min-w-0 px-2 py-1.5 text-left text-[0.8125rem] leading-tight font-medium"
-          >
-            {s.categoryName ?? s.id}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function roleAllowsSalonCabinetEditing(role: string): boolean {
   return role === "owner" || role === "admin";
 }
@@ -212,111 +174,13 @@ export function BusinessOrganizationEditPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const previewPayload = {
-        client: sdk,
-        path: { organizationId },
-        query: { locale },
-        body: {
-          majorCategorySlugs: body.majorCategorySlugs ?? [],
-        },
-        suppressGlobalErrorToast: true,
-      };
-      const previewRes = (await organizationsCabinetPostActivityMajorsChangePreview(
-        previewPayload as Parameters<
-          typeof organizationsCabinetPostActivityMajorsChangePreview
-        >[0],
-      )) as {
-        error?: unknown;
-        data?: { affectedServices: AffectedSalonServiceRow[] };
-      };
-      if (previewRes.error || !previewRes.data) {
-        setFormError(tPage("orgSwitchWorkplacePreviewLoadError"));
-        return;
-      }
-
-      let bodyToSend: OrganizationSalonCabinetSubmitBody = body;
-
-      const affectedFromPreview = previewRes.data.affectedServices;
-      if (affectedFromPreview.length > 0) {
-        const confirmed = await confirmAction({
-          title: tPage("organizationEditDisableServicesConfirmTitle"),
-          body: (
-            <OrganizationEditRemoveMajorsServicesConfirmBody
-              rows={affectedFromPreview}
-            />
-          ),
-          confirmLabel: tPage("organizationEditDisableServicesConfirmAction"),
-          cancelLabel: tPage("organizationEditDisableServicesConfirmBack"),
-          destructive: true,
-        });
-        if (!confirmed) {
-          return;
-        }
-        bodyToSend = {
-          ...body,
-          confirmDisableServiceIds: affectedFromPreview.map((s) => s.id),
-        };
-      }
-
       const { error } = await organizationsCabinetPatchOrganization({
         client: sdk,
         path: { organizationId },
         query: { locale },
-        body: bodyToSend,
+        body,
       });
       if (error) {
-        const confirmPayload = error as {
-          code?: string;
-          affectedServices?: AffectedSalonServiceRow[];
-        };
-        if (
-          confirmPayload.code === "MAJOR_CATEGORY_DISABLE_CONFIRM_REQUIRED" &&
-          Array.isArray(confirmPayload.affectedServices) &&
-          confirmPayload.affectedServices.length > 0
-        ) {
-          const confirmed = await confirmAction({
-            title: tPage("organizationEditDisableServicesConfirmTitle"),
-            body: (
-              <OrganizationEditRemoveMajorsServicesConfirmBody
-                rows={confirmPayload.affectedServices}
-              />
-            ),
-            confirmLabel: tPage("organizationEditDisableServicesConfirmAction"),
-            cancelLabel: tPage("organizationEditDisableServicesConfirmBack"),
-            destructive: true,
-          });
-          if (confirmed) {
-            const retry = await organizationsCabinetPatchOrganization({
-              client: sdk,
-              path: { organizationId },
-              query: { locale },
-              body: {
-                ...body,
-                confirmDisableServiceIds: confirmPayload.affectedServices.map(
-                  (s) => s.id,
-                ),
-              } as OrganizationSalonCabinetSubmitBody,
-            });
-            if (!retry.error) {
-              await Promise.all([
-                queryClient.invalidateQueries({
-                  predicate: (q) =>
-                    Array.isArray(q.queryKey) &&
-                    q.queryKey[0] ===
-                      SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX[0],
-                }),
-                queryClient.invalidateQueries({
-                  predicate: (q) =>
-                    Array.isArray(q.queryKey) &&
-                    q.queryKey[0] === CABINET_EDIT_QK[0] &&
-                    q.queryKey[1] === organizationId,
-                }),
-              ]);
-              router.replace("/business/organizations");
-              return;
-            }
-          }
-        }
         setFormError(t("vErrCreateOrg"));
         return;
       }

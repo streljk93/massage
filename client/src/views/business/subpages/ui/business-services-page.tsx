@@ -53,7 +53,7 @@ function PersonalServiceCabinetCard({
   onDelete: (id: string) => void;
 }) {
   const t = useTranslations("businessServicesPage");
-  const inactive = !svc.isActive;
+  const inactive = !svc.listedAtActiveWorkplace;
   return (
     <li className="relative w-full min-w-0 max-w-full">
       <article

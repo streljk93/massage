@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ServiceCatalogScope } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
@@ -156,6 +157,7 @@ export class SpecialistPersonalCatalogService {
         data: {
           id,
           organizationId: null,
+          scope: ServiceCatalogScope.personal,
           specialistId: specialist.id,
           categoryId: body.categoryId,
           kind,
@@ -222,7 +224,7 @@ export class SpecialistPersonalCatalogService {
   }
 
   /**
-   * Мягкое удаление личной услуги (`organizationId` = null). Услуги каталога салона — не трогаем.
+   * Мягкое удаление строки личной услуги (`ServiceCatalogScope.personal`). Строки каталога организации не затрагиваются.
    */
   async deletePersonalService(
     userId: string,
@@ -244,7 +246,7 @@ export class SpecialistPersonalCatalogService {
         where: {
           id: serviceId,
           specialistId: specialist.id,
-          organizationId: null,
+          scope: ServiceCatalogScope.personal,
           deletedAt: null,
         },
         select: { id: true, categoryId: true },
@@ -265,7 +267,7 @@ export class SpecialistPersonalCatalogService {
         where: {
           specialistId: specialist.id,
           categoryId: svc.categoryId,
-          organizationId: null,
+          scope: ServiceCatalogScope.personal,
           deletedAt: null,
         },
       });
@@ -362,7 +364,7 @@ export class SpecialistPersonalCatalogService {
         where: {
           id: serviceId,
           specialistId: specialist.id,
-          organizationId: null,
+          scope: ServiceCatalogScope.personal,
           deletedAt: null,
         },
         select: { id: true, categoryId: true },
@@ -436,7 +438,7 @@ export class SpecialistPersonalCatalogService {
           where: {
             specialistId: specialist.id,
             categoryId: oldCategoryId,
-            organizationId: null,
+            scope: ServiceCatalogScope.personal,
             deletedAt: null,
           },
         });

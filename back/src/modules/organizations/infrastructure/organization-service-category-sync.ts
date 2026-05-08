@@ -1,115 +1,19 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../../infrastructure/prisma/prisma.service';
-import type { CategoryLocaleShape } from '../../../common/i18n';
 
 /**
- * Услуги, которые должны считаться «в салоне» при снятии больших категорий:
- * активные строки каталога мастера с текущим `activeOrganizationId` = салон и
- * услуги в скоупе этого салона (`organizationId` null — личный каталог у стойки или id салона).
- * Должен совпадать по смыслу с отбором в `syncOrganizationServiceCategoriesFromSpecialistServices`.
- */
-export async function findActiveSalonScopedServicesAffectedByRemovingMajorCategories(
-  db: PrismaService | Prisma.TransactionClient,
-  organizationId: string,
-  removedMajorCategoryIds: string[],
-): Promise<
-  Array<{
-    id: string;
-    category: CategoryLocaleShape;
-  }>
-> {
-  if (removedMajorCategoryIds.length === 0) {
-    return [];
-  }
-  return db.service.findMany({
-    where: {
-      deletedAt: null,
-      isActive: true,
-      specialistId: { not: null },
-      specialist: {
-        deletedAt: null,
-        activeOrganizationId: organizationId,
-      },
-      AND: [
-        {
-          OR: [{ organizationId: null }, { organizationId }],
-        },
-      ],
-      category: {
-        deletedAt: null,
-        majorServiceCategoryId: { in: removedMajorCategoryIds },
-      },
-    },
-    select: {
-      id: true,
-      category: {
-        select: {
-          id: true,
-          name: true,
-          shortName: true,
-          slug: true,
-          description: true,
-          sortOrder: true,
-          locales: {
-            select: {
-              locale: true,
-              name: true,
-              shortName: true,
-              description: true,
-            },
-          },
-        },
-      },
-    },
-  });
-}
-
-/**
- * При **добавлении** больших категорий к салону: снова включить (`isActive: true`) услуги того же скоупа,
- * что при снятии мажоров (`findActiveSalonScopedServicesAffectedByRemovingMajorCategories`), если
- * подкатегория относится к одному из новых мажоров и строка сейчас неактивна.
- */
-export async function reactivateSalonScopedServicesForAddedMajorCategories(
-  db: PrismaService | Prisma.TransactionClient,
-  organizationId: string,
-  addedMajorCategoryIds: string[],
-): Promise<number> {
-  if (addedMajorCategoryIds.length === 0) {
-    return 0;
-  }
-  const result = await db.service.updateMany({
-    where: {
-      deletedAt: null,
-      isActive: false,
-      specialistId: { not: null },
-      specialist: {
-        deletedAt: null,
-        activeOrganizationId: organizationId,
-      },
-      AND: [
-        {
-          OR: [{ organizationId: null }, { organizationId }],
-        },
-      ],
-      category: {
-        deletedAt: null,
-        majorServiceCategoryId: { in: addedMajorCategoryIds },
-      },
-    },
-    data: { isActive: true },
-  });
-  return result.count;
-}
-
-/**
- * Полная пересборка `OrganizationServiceCategory`: множество OSC для салона = уникальные `Service.categoryId`,
- * где услуга активна, мастер с `activeOrganizationId` = этот салон, а услуга в скоупе салона
- * (`organizationId` null — личный каталог — или совпадает с салоном).
+ * Полная пересборка `OrganizationServiceCategory`: подкатегории витрины салона = уникальные
+ * `Service.categoryId` по активным услугам мастеров с `activeOrganizationId` = этот салон,
+ * услуга в скоупе места приёма (`scope` = personal либо `organizationId` салона),
+ * **и** `majorServiceCategoryId` категории входит в выбранные сферы организации
+ * (`OrganizationMajorServiceCategory`).
  *
- * В одной логике: удалить все OSC по организации и вставить актуальный набор (идемпотентно).
- * Пустой набор желаемых категорий → удалить все OSC.
+ * Так мы не переводим сами строки услуг в `isActive: false`, когда салон снимает сферу:
+ * услуги остаются в каталоге мастера; для этой организации вертикаль просто не показывается.
  *
- * Вызывать при CRUD/деактивации услуг, смене активного салона (старом и новом id) и т.д.
+ * Пустой набор сфер у организации → OSC очищается (inner join на `OrganizationMajorServiceCategory`).
+ *
+ * Вызывать при CRUD/деактивации услуг, смене сфер/места приёма и т.д.
  */
 export async function syncOrganizationServiceCategoriesFromSpecialistServices(
   db: PrismaService | Prisma.TransactionClient,
@@ -120,12 +24,17 @@ export async function syncOrganizationServiceCategoriesFromSpecialistServices(
       SELECT DISTINCT s."categoryId"::text AS "categoryId"
       FROM "Service" s
       INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
+      INNER JOIN "ServiceCategory" sc ON sc.id = s."categoryId"
+      INNER JOIN "OrganizationMajorServiceCategory" omsc
+        ON omsc."organizationId"::text = ${organizationId}
+        AND omsc."majorServiceCategoryId" = sc."majorServiceCategoryId"
       WHERE sp."activeOrganizationId"::text = ${organizationId}
         AND sp."deletedAt" IS NULL
         AND s."deletedAt" IS NULL
+        AND sc."deletedAt" IS NULL
         AND s."isActive" = true
         AND (
-          s."organizationId" IS NULL
+          s."scope" = 'personal'::"ServiceCatalogScope"
           OR s."organizationId"::text = ${organizationId}
         )
     `,

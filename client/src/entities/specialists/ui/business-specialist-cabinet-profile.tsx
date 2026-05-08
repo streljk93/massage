@@ -342,11 +342,11 @@ export function BusinessSpecialistCabinetProfile({
                   key={svc.id}
                   className={cn(
                     "rounded-xl border px-3 py-2.5 shadow-sm dark:shadow-none",
-                    !svc.isActive
+                    !svc.listedAtActiveWorkplace
                       ? "border-dashed border-muted-foreground/40 bg-muted/25 dark:bg-muted/15"
                       : "border-border/45 bg-white dark:bg-card",
                   )}
-                  {...(!svc.isActive ?
+                  {...(!svc.listedAtActiveWorkplace ?
                     {
                       "aria-label": t("profilePersonalServiceInactiveAria", {
                         name: svc.categoryName,
@@ -357,17 +357,17 @@ export function BusinessSpecialistCabinetProfile({
                   <p
                     className={cn(
                       "font-heading text-sm font-semibold leading-snug",
-                      !svc.isActive ? "text-muted-foreground" : "text-foreground",
+                      !svc.listedAtActiveWorkplace ? "text-muted-foreground" : "text-foreground",
                     )}
                   >
                     {svc.categoryName}
                   </p>
-                  {!svc.isActive ?
+                  {!svc.listedAtActiveWorkplace ?
                     <span className="mt-1 inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {t("profilePersonalServiceInactiveBadge")}
                     </span>
                   : null}
-                  {!svc.isActive ?
+                  {!svc.listedAtActiveWorkplace ?
                     <p className="mt-1.5 text-pretty text-xs leading-snug text-muted-foreground">
                       {t("profilePersonalServiceInactiveHint")}
                     </p>
@@ -378,7 +378,7 @@ export function BusinessSpecialistCabinetProfile({
                         key={`${svc.id}-${o.durationMinutes}-${idx}`}
                         className={cn(
                           "text-sm tabular-nums",
-                          !svc.isActive ? "text-muted-foreground" : "text-foreground",
+                          !svc.listedAtActiveWorkplace ? "text-muted-foreground" : "text-foreground",
                         )}
                       >
                         {o.durationMinutes}

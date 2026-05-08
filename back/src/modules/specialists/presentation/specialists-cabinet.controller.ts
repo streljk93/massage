@@ -190,7 +190,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Текущая организация мастера (адрес витрины и новые записи). При смене или снятии (`organizationId`: null) активные брони на прежнем месте приёма отменяются.',
+      'Текущая организация мастера (адрес витрины и новые записи). При переключении на другую организацию или снятии активного салона (в теле PATCH `organizationId`: uuid другой организации или null) активные брони на прежнем месте приёма отменяются.',
   })
   @ApiBody({ schema: patchSpecialistActiveOrganizationRequestSchema })
   @ApiOkResponse({ schema: patchSpecialistActiveOrganizationResponseSchema })
@@ -234,8 +234,7 @@ export class SpecialistsCabinetController {
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary:
-      'Состояние онбординга мастера (шаги 1→13, терминально 6).',
+    summary: 'Состояние онбординга мастера (шаги 1→13, терминально 6).',
   })
   @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
@@ -269,9 +268,7 @@ export class SpecialistsCabinetController {
   async patchSpecialistOnboardingPreferences(
     @Req() req: AuthedRequest,
     @RequestLocale() locale: ApiLocale,
-    @Body(
-      new ZodValidationPipe(patchSpecialistOnboardingPreferencesBodySchema),
-    )
+    @Body(new ZodValidationPipe(patchSpecialistOnboardingPreferencesBodySchema))
     body: PatchSpecialistOnboardingPreferencesBody,
   ) {
     return this.specialistOnboardingService.patchOnboardingPreferences(
@@ -332,7 +329,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Личная услуга мастера без организации (organizationId = null, specialistId = текущий).',
+      'Создать личную услугу мастера (скоуп каталога `personal`; строка относится к текущему `specialistId`).',
   })
   @ApiLocaleQueryDocs()
   @ApiBody({ schema: createSpecialistPersonalServiceRequestSchema })
@@ -370,7 +367,8 @@ export class SpecialistsCabinetController {
   @ApiOkResponse({ schema: createSpecialistPersonalServiceResponseSchema })
   @ApiBadRequestResponse({ description: 'Категория или валюта' })
   @ApiNotFoundResponse({
-    description: 'Профиля мастера нет или услуга не найдена / не личная',
+    description:
+      'Профиля мастера нет или услуга не найдена / не со скоупом personal',
   })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async patchSpecialistPersonalService(
@@ -393,7 +391,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Удалить личную услугу мастера (soft delete). Услуга должна быть с organizationId = null.',
+      'Удалить личную услугу мастера (soft delete). Допускаются только строки каталога со скоупом personal.',
   })
   @ApiParam({
     name: 'serviceId',
@@ -402,7 +400,8 @@ export class SpecialistsCabinetController {
   })
   @ApiOkResponse({ schema: deleteSpecialistPersonalServiceResponseSchema })
   @ApiNotFoundResponse({
-    description: 'Профиля мастера нет, услуга не найдена или не личная',
+    description:
+      'Профиля мастера нет, услуга не найдена или не со скоупом personal',
   })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async deleteSpecialistPersonalService(

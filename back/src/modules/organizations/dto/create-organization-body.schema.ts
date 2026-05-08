@@ -55,7 +55,6 @@ export const createOrganizationBodySchema = z
       .default([]),
     /** solo — точка одного мастера; business — салон с командой. По умолчанию business для обратной совместимости. */
     organizationType: z.enum(['solo', 'business']).default('business'),
-    confirmDisableServiceIds: z.array(z.string().uuid()).max(200).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {

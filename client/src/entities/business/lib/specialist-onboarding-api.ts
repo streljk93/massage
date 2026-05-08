@@ -36,7 +36,13 @@ export function onboardingApiStepToUiStep(apiStep: number): number {
 export function isSpecialistOnboardingComplete(
   data: SpecialistsCabinetGetSpecialistOnboardingResponse | null | undefined,
 ): boolean {
-  return data?.onboardingStep === 6;
+  if (data?.onboardingStep === 6) {
+    return true;
+  }
+  const oc = (
+    data?.specialist as { onboardingCompletedAt?: string | null } | null | undefined
+  )?.onboardingCompletedAt;
+  return oc != null && oc !== "";
 }
 
 /** У пользователя уже создан профиль специалиста (`specialist !== null`). */

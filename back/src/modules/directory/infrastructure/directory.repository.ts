@@ -858,7 +858,7 @@ export class DirectoryRepository {
           INNER JOIN "Service" sv ON sv."specialistId" = e."specialistId"
             AND sv."deletedAt" IS NULL
             AND sv."isActive" = true
-            AND (sv."organizationId" IS NULL OR sv."organizationId" = e."organizationId")
+            AND (sv."scope" = 'personal'::"ServiceCatalogScope" OR sv."organizationId" = e."organizationId")
           INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id AND po."currency" = 'VND'
           WHERE e."isActive" = true
             AND e."organizationId"::text IN (${Prisma.join(ids)})
@@ -1378,7 +1378,7 @@ export class DirectoryRepository {
       INNER JOIN "SpecialistOrganizationEmployment" e
         ON e."specialistId" = s."specialistId"
         AND e."isActive" = true
-        AND (s."organizationId" IS NULL OR s."organizationId" = e."organizationId")
+        AND (s."scope" = 'personal'::"ServiceCatalogScope" OR s."organizationId" = e."organizationId")
       INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
       WHERE po."currency" = 'VND'
         AND s."deletedAt" IS NULL

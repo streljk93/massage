@@ -81,7 +81,9 @@ const specialistVitrineListingNameSqlSp0 = Prisma.sql`(
   )
 )`;
 
-/** Подкатегория объявлена у салона и закрыта активным мастером из каталога с забронируемой услугой (VND). */
+/** Подкатегория объявлена у салона и закрыта активным мастером из каталога с забронируемой услугой (VND).
+ * Скоуп услуги совпадает с {@link isSalonCounterServiceScope} в `services/domain/service-catalog-visibility.ts`.
+ */
 export function vitrineCategoryCoverageExists(): Prisma.Sql {
   return Prisma.sql`
     EXISTS (
@@ -94,7 +96,7 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
         AND s."categoryId" = osc."serviceCategoryId"
         AND s."deletedAt" IS NULL
         AND s."isActive" = true
-        AND (s."organizationId" IS NULL OR s."organizationId" = e."organizationId")
+        AND (s."scope" = 'personal'::"ServiceCatalogScope" OR s."organizationId" = e."organizationId")
       INNER JOIN "ServicePriceOption" po ON po."serviceId" = s.id AND po."currency" = 'VND'
       WHERE e."organizationId" = osc."organizationId"
         AND e."isActive" = true
