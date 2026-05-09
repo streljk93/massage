@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_SpecialistOrgOnboarding" targetNamespace="http://services-app.local/bpmn/specialist-organization-onboarding" exporter="Camunda Modeler" exporterVersion="5.31.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.5.0">
+  <bpmn:collaboration id="Collaboration_Onboarding">
+    <bpmn:participant id="Participant_Specialist" name="Специалист" processRef="Process_Specialist" />
+    <bpmn:participant id="Participant_Owner" name="Владелец / админ организации" processRef="Process_Owner" />
+    <bpmn:messageFlow id="MessageFlow_JoinSubmitted" name="Уведомление / появление pending заявки" sourceRef="Task_SubmitJoinRequest" targetRef="Task_OwnerSeesNewRequest" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Specialist" name="Онбординг специалиста и место приёма" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Specialist">
+      <bpmn:lane id="Lane_Specialist" name="Мастер">
+        <bpmn:flowNodeRef>Start_Specialist</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_EnsureSpecialist</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PrefsAndSteps</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_WorkPattern</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>SubProcess_CreateOrganization</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_SubmitJoinRequest</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_JoinPathMerge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CatalogOfferings</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_CompleteOnboarding</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Specialist</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Specialist" name="Старт онбординга">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_EnsureSpecialist" name="POST ensure-specialist&#10;(создать Specialist 1:1 User)">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_PrefsAndSteps" name="Шаги API: вертикали, витрина, массаж, patch profile&#10;(ревизия профиля → модерация)">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_WorkPattern" name="onboardingWorkPattern?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCreateOrg</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ToEmployed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:subProcess id="SubProcess_CreateOrganization" name="Свой салон: POST create organization">
+      <bpmn:startEvent id="SubStart_CreateOrg" name="Начало">
+        <bpmn:outgoing>SFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="SubTask_CreateOrgTx" name="Транзакция: Organization, Address, Locale,&#10;Gallery, Major categories, Service categories,&#10;Employment role=owner, activeOrganizationId*,&#10;отозвать прочие pending join">
+        <bpmn:incoming>SFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SFlow_2</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="SubTask_OrgRevisionModeration" name="OrganizationProfileRevision → очередь модерации&#10;(витрина гостя после approve)">
+        <bpmn:incoming>SFlow_2</bpmn:incoming>
+        <bpmn:outgoing>SFlow_3</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="SubTask_ReconcileOfferings" name="reconcileAssignmentsForSpecialist&#10;/ sync категорий">
+        <bpmn:incoming>SFlow_3</bpmn:incoming>
+        <bpmn:outgoing>SFlow_4</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="SubEnd_CreateOrg" name="Салон создан">
+        <bpmn:incoming>SFlow_4</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SFlow_1" sourceRef="SubStart_CreateOrg" targetRef="SubTask_CreateOrgTx" />
+      <bpmn:sequenceFlow id="SFlow_2" sourceRef="SubTask_CreateOrgTx" targetRef="SubTask_OrgRevisionModeration" />
+      <bpmn:sequenceFlow id="SFlow_3" sourceRef="SubTask_OrgRevisionModeration" targetRef="SubTask_ReconcileOfferings" />
+      <bpmn:sequenceFlow id="SFlow_4" sourceRef="SubTask_ReconcileOfferings" targetRef="SubEnd_CreateOrg" />
+    </bpmn:subProcess>
+    <bpmn:task id="Task_SubmitJoinRequest" name="POST request-workplace-join → pending&#10;(workplaceResolved=true уже здесь)">
+      <bpmn:incoming>Flow_ToEmployed</bpmn:incoming>
+      <bpmn:outgoing>Flow_FromEmployedToMerge</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_JoinPathMerge" name="После места приёма">
+      <bpmn:incoming>Flow_FromCreateOrg</bpmn:incoming>
+      <bpmn:incoming>Flow_FromEmployedToMerge</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToCatalog</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:textAnnotation id="Annotation_PendingEnough">
+      <bpmn:text>API: для employed_salon достаточно pending ИЛИ activeOrganizationId (workplaceResolved). Шаги 12–13 и POST complete не ждут accept владельца.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:textAnnotation id="Annotation_AcceptSideEffect">
+      <bpmn:text>Accept владельца — асинхронно к онбордингу: выставляет activeOrganizationId, employment; нужен для listedInDirectory и витрины, онбординг мог быть завершён раньше.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_AnnotPending" associationDirection="None" sourceRef="Task_SubmitJoinRequest" targetRef="Annotation_PendingEnough" />
+    <bpmn:association id="Association_AnnotAccept" associationDirection="None" sourceRef="Gateway_JoinPathMerge" targetRef="Annotation_AcceptSideEffect" />
+    <bpmn:task id="Task_CatalogOfferings" name="Личный каталог / offerings&#10;(для employed_salon шаг может быть пропущен в API)">
+      <bpmn:incoming>Flow_ToCatalog</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToComplete</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_CompleteOnboarding" name="POST onboarding/complete&#10;onboardingCompletedAt, listedInDirectory*,&#10;удалить onboarding major picks&#10;*listed=true только с activeOrganizationId">
+      <bpmn:incoming>Flow_ToComplete</bpmn:incoming>
+      <bpmn:outgoing>Flow_ToEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Specialist" name="Онбординг завершён">
+      <bpmn:incoming>Flow_ToEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Specialist" targetRef="Task_EnsureSpecialist" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_EnsureSpecialist" targetRef="Task_PrefsAndSteps" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_PrefsAndSteps" targetRef="Gateway_WorkPattern" />
+    <bpmn:sequenceFlow id="Flow_ToCreateOrg" name="solo / business" sourceRef="Gateway_WorkPattern" targetRef="SubProcess_CreateOrganization" />
+    <bpmn:sequenceFlow id="Flow_ToEmployed" name="employed_salon" sourceRef="Gateway_WorkPattern" targetRef="Task_SubmitJoinRequest" />
+    <bpmn:sequenceFlow id="Flow_FromCreateOrg" sourceRef="SubProcess_CreateOrganization" targetRef="Gateway_JoinPathMerge" />
+    <bpmn:sequenceFlow id="Flow_FromEmployedToMerge" name="сразу дальше (без ожидания accept)" sourceRef="Task_SubmitJoinRequest" targetRef="Gateway_JoinPathMerge" />
+    <bpmn:sequenceFlow id="Flow_ToCatalog" sourceRef="Gateway_JoinPathMerge" targetRef="Task_CatalogOfferings" />
+    <bpmn:sequenceFlow id="Flow_ToComplete" sourceRef="Task_CatalogOfferings" targetRef="Task_CompleteOnboarding" />
+    <bpmn:sequenceFlow id="Flow_ToEnd" sourceRef="Task_CompleteOnboarding" targetRef="End_Specialist" />
+  </bpmn:process>
+  <bpmn:process id="Process_Owner" name="Рассмотрение заявки в организацию" isExecutable="false">
+    <bpmn:startEvent id="Start_Owner" name="Владелец в кабинете салона">
+      <bpmn:outgoing>OFlow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_OwnerSeesNewRequest" name="GET workplace-join-requests&#10;(pending)">
+      <bpmn:incoming>OFlow_1</bpmn:incoming>
+      <bpmn:outgoing>OFlow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_ReviewApplicant" name="GET applicant cabinet-profile">
+      <bpmn:incoming>OFlow_2</bpmn:incoming>
+      <bpmn:outgoing>OFlow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_OwnerDecision" name="POST review decision">
+      <bpmn:incoming>OFlow_3</bpmn:incoming>
+      <bpmn:outgoing>OFlow_Accept</bpmn:outgoing>
+      <bpmn:outgoing>OFlow_Reject</bpmn:outgoing>
+      <bpmn:outgoing>OFlow_Block</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Accept" name="accept: Employment specialist,&#10;activeOrganizationId, withdraw др. pending,&#10;reconcileAssignments (не шлюз онбординга)">
+      <bpmn:incoming>OFlow_Accept</bpmn:incoming>
+      <bpmn:outgoing>OFlow_AcceptEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Reject" name="reject: статус rejected">
+      <bpmn:incoming>OFlow_Reject</bpmn:incoming>
+      <bpmn:outgoing>OFlow_RejectEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Block" name="block: дальнейшие заявки к салону запрещены">
+      <bpmn:incoming>OFlow_Block</bpmn:incoming>
+      <bpmn:outgoing>OFlow_BlockEnd</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Owner_Accept" name="Решение зафиксировано">
+      <bpmn:incoming>OFlow_AcceptEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="OFlow_1" sourceRef="Start_Owner" targetRef="Task_OwnerSeesNewRequest" />
+    <bpmn:sequenceFlow id="OFlow_2" sourceRef="Task_OwnerSeesNewRequest" targetRef="Task_ReviewApplicant" />
+    <bpmn:sequenceFlow id="OFlow_3" sourceRef="Task_ReviewApplicant" targetRef="Gateway_OwnerDecision" />
+    <bpmn:sequenceFlow id="OFlow_Accept" name="accept" sourceRef="Gateway_OwnerDecision" targetRef="Task_Accept" />
+    <bpmn:sequenceFlow id="OFlow_Reject" name="reject" sourceRef="Gateway_OwnerDecision" targetRef="Task_Reject" />
+    <bpmn:sequenceFlow id="OFlow_Block" name="block" sourceRef="Gateway_OwnerDecision" targetRef="Task_Block" />
+    <bpmn:sequenceFlow id="OFlow_AcceptEnd" sourceRef="Task_Accept" targetRef="End_Owner_Accept" />
+    <bpmn:sequenceFlow id="OFlow_RejectEnd" sourceRef="Task_Reject" targetRef="End_Owner_Reject" />
+    <bpmn:sequenceFlow id="OFlow_BlockEnd" sourceRef="Task_Block" targetRef="End_Owner_Block" />
+    <bpmn:endEvent id="End_Owner_Reject" name="Отклонено">
+      <bpmn:incoming>OFlow_RejectEnd</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Owner_Block" name="Заблокировано">
+      <bpmn:incoming>OFlow_BlockEnd</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_Onboarding">
+      <bpmndi:BPMNShape id="Participant_Specialist_di" bpmnElement="Participant_Specialist" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="1320" height="480" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Specialist_di" bpmnElement="Start_Specialist">
+        <dc:Bounds x="212" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EnsureSpecialist_di" bpmnElement="Task_EnsureSpecialist">
+        <dc:Bounds x="290" y="210" width="120" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PrefsAndSteps_di" bpmnElement="Task_PrefsAndSteps">
+        <dc:Bounds x="450" y="210" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_WorkPattern_di" bpmnElement="Gateway_WorkPattern" isMarkerVisible="true">
+        <dc:Bounds x="635" y="225" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubProcess_CreateOrganization_di" bpmnElement="SubProcess_CreateOrganization" isExpanded="false">
+        <dc:Bounds x="730" y="120" width="200" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SubmitJoinRequest_di" bpmnElement="Task_SubmitJoinRequest">
+        <dc:Bounds x="730" y="290" width="200" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_JoinPathMerge_di" bpmnElement="Gateway_JoinPathMerge" isMarkerVisible="true">
+        <dc:Bounds x="1000" y="225" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_PendingEnough_di" bpmnElement="Annotation_PendingEnough">
+        <dc:Bounds x="680" y="400" width="300" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Annotation_AcceptSideEffect_di" bpmnElement="Annotation_AcceptSideEffect">
+        <dc:Bounds x="1060" y="400" width="340" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CatalogOfferings_di" bpmnElement="Task_CatalogOfferings">
+        <dc:Bounds x="1120" y="210" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_CompleteOnboarding_di" bpmnElement="Task_CompleteOnboarding">
+        <dc:Bounds x="1300" y="200" width="150" height="100" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Specialist_di" bpmnElement="End_Specialist">
+        <dc:Bounds x="1482" y="232" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="248" y="250" />
+        <di:waypoint x="290" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+        <di:waypoint x="410" y="250" />
+        <di:waypoint x="450" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+        <di:waypoint x="590" y="250" />
+        <di:waypoint x="635" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToCreateOrg_di" bpmnElement="Flow_ToCreateOrg">
+        <di:waypoint x="660" y="225" />
+        <di:waypoint x="660" y="160" />
+        <di:waypoint x="730" y="160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEmployed_di" bpmnElement="Flow_ToEmployed">
+        <di:waypoint x="660" y="275" />
+        <di:waypoint x="660" y="335" />
+        <di:waypoint x="730" y="335" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FromCreateOrg_di" bpmnElement="Flow_FromCreateOrg">
+        <di:waypoint x="930" y="160" />
+        <di:waypoint x="1025" y="160" />
+        <di:waypoint x="1025" y="225" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_FromEmployedToMerge_di" bpmnElement="Flow_FromEmployedToMerge">
+        <di:waypoint x="930" y="335" />
+        <di:waypoint x="1025" y="335" />
+        <di:waypoint x="1025" y="275" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToCatalog_di" bpmnElement="Flow_ToCatalog">
+        <di:waypoint x="1050" y="250" />
+        <di:waypoint x="1120" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToComplete_di" bpmnElement="Flow_ToComplete">
+        <di:waypoint x="1260" y="250" />
+        <di:waypoint x="1300" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ToEnd_di" bpmnElement="Flow_ToEnd">
+        <di:waypoint x="1450" y="250" />
+        <di:waypoint x="1482" y="250" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_AnnotPending_di" bpmnElement="Association_AnnotPending">
+        <di:waypoint x="830" y="370" />
+        <di:waypoint x="830" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_AnnotAccept_di" bpmnElement="Association_AnnotAccept">
+        <di:waypoint x="1025" y="275" />
+        <di:waypoint x="1025" y="400" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_Owner_di" bpmnElement="Participant_Owner" isHorizontal="true">
+        <dc:Bounds x="160" y="600" width="1320" height="300" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Owner_di" bpmnElement="Start_Owner">
+        <dc:Bounds x="212" y="712" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_OwnerSeesNewRequest_di" bpmnElement="Task_OwnerSeesNewRequest">
+        <dc:Bounds x="300" y="690" width="150" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReviewApplicant_di" bpmnElement="Task_ReviewApplicant">
+        <dc:Bounds x="500" y="690" width="140" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_OwnerDecision_di" bpmnElement="Gateway_OwnerDecision" isMarkerVisible="true">
+        <dc:Bounds x="695" y="705" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Accept_di" bpmnElement="Task_Accept">
+        <dc:Bounds x="800" y="620" width="180" height="90" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Reject_di" bpmnElement="Task_Reject">
+        <dc:Bounds x="800" y="730" width="120" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Block_di" bpmnElement="Task_Block">
+        <dc:Bounds x="800" y="820" width="120" height="70" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Owner_Accept_di" bpmnElement="End_Owner_Accept">
+        <dc:Bounds x="1040" y="642" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Owner_Reject_di" bpmnElement="End_Owner_Reject">
+        <dc:Bounds x="1020" y="747" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Owner_Block_di" bpmnElement="End_Owner_Block">
+        <dc:Bounds x="1020" y="837" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="OFlow_1_di" bpmnElement="OFlow_1">
+        <di:waypoint x="248" y="730" />
+        <di:waypoint x="300" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_2_di" bpmnElement="OFlow_2">
+        <di:waypoint x="450" y="730" />
+        <di:waypoint x="500" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_3_di" bpmnElement="OFlow_3">
+        <di:waypoint x="640" y="730" />
+        <di:waypoint x="695" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_Accept_di" bpmnElement="OFlow_Accept">
+        <di:waypoint x="720" y="705" />
+        <di:waypoint x="720" y="665" />
+        <di:waypoint x="800" y="665" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_Reject_di" bpmnElement="OFlow_Reject">
+        <di:waypoint x="745" y="730" />
+        <di:waypoint x="800" y="730" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_Block_di" bpmnElement="OFlow_Block">
+        <di:waypoint x="720" y="755" />
+        <di:waypoint x="720" y="855" />
+        <di:waypoint x="800" y="855" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_AcceptEnd_di" bpmnElement="OFlow_AcceptEnd">
+        <di:waypoint x="980" y="665" />
+        <di:waypoint x="1040" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_RejectEnd_di" bpmnElement="OFlow_RejectEnd">
+        <di:waypoint x="920" y="765" />
+        <di:waypoint x="1020" y="765" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="OFlow_BlockEnd_di" bpmnElement="OFlow_BlockEnd">
+        <di:waypoint x="920" y="855" />
+        <di:waypoint x="1020" y="855" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_JoinSubmitted_di" bpmnElement="MessageFlow_JoinSubmitted">
+        <di:waypoint x="830" y="380" />
+        <di:waypoint x="830" y="500" />
+        <di:waypoint x="375" y="500" />
+        <di:waypoint x="375" y="690" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

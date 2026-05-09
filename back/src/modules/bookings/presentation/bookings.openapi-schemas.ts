@@ -8,12 +8,25 @@ const bookingStatusEnum = [...BOOKING_STATUS_ALL_ORDERED];
 
 export const createBookingRequestSchema = {
   type: 'object',
-  required: ['specialistId', 'serviceId', 'durationMinutes', 'startsAt'],
+  description:
+    'Запись по опубликованному офферу точки: `organizationOfferingId`, `offeringPriceOptionId`; длительность и цена берутся из опции, `durationMinutes` — опционально для сверки с опцией.',
+  required: [
+    'specialistId',
+    'startsAt',
+    'organizationOfferingId',
+    'offeringPriceOptionId',
+  ],
   properties: {
     specialistId: { type: 'string', format: 'uuid' },
-    serviceId: { type: 'string', format: 'uuid' },
-    durationMinutes: { type: 'integer', minimum: 1 },
     startsAt: { type: 'string', description: 'ISO 8601' },
+    durationMinutes: {
+      type: 'integer',
+      minimum: 1,
+      description:
+        'Опционально; если передано, должно совпадать с `OfferingPriceOption.durationMinutes`.',
+    },
+    organizationOfferingId: { type: 'string', format: 'uuid' },
+    offeringPriceOptionId: { type: 'string', format: 'uuid' },
   },
 };
 
@@ -279,6 +292,41 @@ export const specialistStartVisitResponseSchema = {
       type: 'string',
       enum: ['in_progress'],
       description: 'Приём отмечен как идущий.',
+    },
+    startsAt: { type: 'string', format: 'date-time' },
+    endsAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+/** Тело `POST /bookings/me/:id/reschedule` — новый начальный слот; длительность из брони. */
+export const specialistRescheduleConfirmedBookingRequestSchema = {
+  type: 'object',
+  required: ['startsAt'],
+  properties: {
+    startsAt: {
+      type: 'string',
+      format: 'date-time',
+      description: 'Новое начало визита (ISO 8601); конец считается по `Booking.durationMinutes`.',
+    },
+    reasonCode: {
+      type: 'string',
+      maxLength: 200,
+      description: 'Опционально — попадает в payload доменного события `rescheduled`.',
+    },
+  },
+};
+
+/** Ответ `POST /bookings/me/:id/reschedule`. */
+export const specialistRescheduleConfirmedBookingResponseSchema = {
+  type: 'object',
+  required: ['id', 'status', 'startsAt', 'endsAt'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    status: {
+      type: 'string',
+      enum: ['confirmed'],
+      description:
+        'Статус строки после проекции остаётся подтверждённым; меняются только времена слота.',
     },
     startsAt: { type: 'string', format: 'date-time' },
     endsAt: { type: 'string', format: 'date-time' },

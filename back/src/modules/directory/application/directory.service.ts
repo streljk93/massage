@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   forwardRef,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -20,9 +21,15 @@ import {
   decodeSpecialistListCursor,
   encodeOrganizationListCursor,
   encodeSpecialistListCursor,
+  type DecodedSpecialistListCursor,
 } from '../../../common/pagination/directory-list-cursor-codec';
+import {
+  decodeDirectoryIndexedSpecialistsCursor,
+  encodeDirectoryIndexedSpecialistsCursor,
+} from '../../../common/pagination/directory-indexed-specialists-cursor';
 import type { DirectoryListSort } from '../../../common/pagination/directory-list-sort';
 import { PersonalizationService } from '../../personalization/application/personalization.service';
+import { MarketplaceListingEdgesIndexService } from './marketplace-listing-edges-index.service';
 import {
   directorySpecialistListedBio,
   directorySpecialistListedExperienceYears,
@@ -153,6 +160,31 @@ function isVitrineStaffAtOrganization(
   );
 }
 
+/**
+ * Кого показывать в блоке «сотрудники» профиля организации.
+ * Гость — витрина (место приёма = салон и флаг записи в каталоге).
+ * Владелец БД — всё активное членство с **текущим местом приёма = этот салон**, даже если мастер
+ * сам не в каталоге (`listedInDirectory`); исключаем тех, кто только числится в employment, но снял workplace.
+ */
+function specialistEmploymentsForOrganizationStaffSection(
+  employments: OrganizationListRow['specialistEmployments'],
+  organizationId: string,
+  viewerOwnsOrganization: boolean,
+): OrganizationListRow['specialistEmployments'] {
+  return employments.filter((e) => {
+    if (!e.isActive) {
+      return false;
+    }
+    if (e.specialist.activeOrganizationId !== organizationId) {
+      return false;
+    }
+    if (viewerOwnsOrganization) {
+      return true;
+    }
+    return e.specialist.listedInDirectory;
+  });
+}
+
 function mapDirectoryCategoryTags(
   links: { serviceCategory: CategoryLocaleShape }[],
   locale: ApiLocale,
@@ -163,44 +195,42 @@ function mapDirectoryCategoryTags(
   });
 }
 
-type DirectoryServiceRow = SpecialistListRow['services'][number];
-
 function isVndPriceOption(p: { currency: string }): boolean {
   return (p.currency ?? 'VND').toUpperCase() === 'VND';
 }
 
-/** Услуги из `Service` + `ServicePriceOption` (только VND). */
-function mapServiceRowsToBookable(
-  services: DirectoryServiceRow[],
+function mapMarketplaceOfferingEdgesToBookable(
+  specialist: SpecialistBookableSource,
   locale: ApiLocale,
 ): SpecialistBookableServiceDto[] {
+  type Edge = NonNullable<SpecialistBookableSource['offeringsExecution']>[number];
+  const edges: Edge[] | undefined = specialist.offeringsExecution;
+  if (edges == null || edges.length === 0) {
+    return [];
+  }
+  const orgId =
+    specialist.activeOrganization?.id ?? specialist.activeOrganizationId ?? null;
+  if (orgId == null) {
+    return [];
+  }
+
   const out: SpecialistBookableServiceDto[] = [];
-  for (const svc of services) {
-    const vndOpts = (svc.priceOptions ?? []).filter(isVndPriceOption);
+  for (const edge of edges) {
+    const off = edge.organizationOffering;
+    if (off.organizationId !== orgId) {
+      continue;
+    }
+    const vndOpts = (off.priceOptions ?? []).filter(isVndPriceOption);
     if (vndOpts.length === 0) {
       continue;
     }
-    const baseShortName = svc.category
-      ? pickLocalizedServiceCategoryFields(svc.category, locale).shortName
-      : '';
-    const comboShortNames =
-      svc.kind === 'combo'
-        ? (svc.comboItems ?? [])
-            .map(
-              (item) =>
-                pickLocalizedServiceCategoryFields(
-                  item.itemServiceCategory as CategoryLocaleShape,
-                  locale,
-                ).shortName,
-            )
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0)
-        : [];
-    const categoryShortName = [baseShortName, ...comboShortNames]
-      .map((s) => s.trim())
-      .filter((s, idx, arr) => s.length > 0 && arr.indexOf(s) === idx)
-      .join(' + ');
-    const major = svc.category?.majorServiceCategory;
+    const priceByOption = new Map<string, number>();
+    for (const po of edge.priceOverrides) {
+      priceByOption.set(po.offeringPriceOptionId, po.customPrice);
+    }
+
+    const category = off.category;
+    const major = category?.majorServiceCategory;
     const majorSlug = major?.slug?.trim() ?? '';
     const majorName =
       major != null
@@ -209,14 +239,35 @@ function mapServiceRowsToBookable(
             locale,
           ).trim()
         : '';
+
+    let catShort = '';
+    if (category != null) {
+      catShort =
+        pickLocalizedServiceCategoryFields(
+          category as CategoryLocaleShape,
+          locale,
+        ).shortName.trim() ?? '';
+    }
+    const rawTitle = off.title.trim();
+    const slug = off.slug.trim();
+    const categoryShortName =
+      rawTitle.length > 0 ? rawTitle : catShort.length > 0 ? catShort : slug;
+
+    const durationMinutes = vndOpts.map((p) => p.durationMinutes);
+    const priceVndByDuration = vndOpts.map(
+      (p) => priceByOption.get(p.id) ?? p.priceAmount,
+    );
+
     out.push({
-      id: svc.id,
+      id: off.id,
       categoryShortName,
       majorSlug,
       majorName: majorName || majorSlug || categoryShortName,
       majorSortOrder: major?.sortOrder ?? 0,
-      durationMinutes: vndOpts.map((p) => p.durationMinutes),
-      priceVndByDuration: vndOpts.map((p) => p.priceAmount),
+      durationMinutes,
+      priceVndByDuration,
+      organizationOfferingId: off.id,
+      marketplaceOfferingPriceOptionIds: vndOpts.map((p) => p.id),
     });
   }
   return out;
@@ -229,23 +280,28 @@ function mapServiceRowsToBookable(
 function specialistStorefrontFilteredServiceCategories(
   s: SpecialistListRow,
   storefrontCategoryIdsByOrg?: Map<string, Set<string>>,
-): SpecialistListRow['serviceCategories'] {
+): SpecialistListRow['skills'] {
   const orgId = s.activeOrganizationId;
   if (orgId == null || storefrontCategoryIdsByOrg == null) {
-    return s.serviceCategories;
+    return s.skills;
   }
   const visible = storefrontCategoryIdsByOrg.get(orgId) ?? new Set<string>();
-  return s.serviceCategories.filter((link) =>
+  return s.skills.filter((link) =>
     visible.has(link.serviceCategoryId),
   );
 }
 
-/** Только `Service` с `specialistId` = этот мастер (см. `Specialist.services`). */
+type SpecialistBookableSource = Pick<
+  SpecialistListRow,
+  'activeOrganization' | 'activeOrganizationId' | 'offeringsExecution'
+>;
+
+/** Услуги для записи: опубликованные офферы активной точки + назначения `SpecialistOffering`. */
 function mapSpecialistOwnBookableServices(
-  services: SpecialistListRow['services'],
+  specialist: SpecialistBookableSource,
   locale: ApiLocale,
 ): SpecialistBookableServiceDto[] {
-  return mapServiceRowsToBookable(services, locale);
+  return mapMarketplaceOfferingEdgesToBookable(specialist, locale);
 }
 
 function mapSpecialistRowToListItem(
@@ -315,7 +371,7 @@ function mapSpecialistRowToListItem(
     servicesLine,
     categories: mapDirectoryCategoryTags(vitrineSvcCategories, locale),
     slotGroups,
-    bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
+    bookableServices: mapSpecialistOwnBookableServices(s, locale),
     autoConfirmBookings: s.autoConfirmBookings,
     listingWorkdayStartMinute: listingWd.startMinute,
     listingWorkdayEndMinute: listingWd.endMinute,
@@ -331,6 +387,10 @@ function mapOrganizationRowToListItem(
   storefront: { imageUrl: string | null; imageAlt: string | null },
   /** Подмножество OSC с покрытием мастером — только они на витрине. */
   storefrontCategoryIds: Set<string>,
+  opts?: {
+    /** Если задан — `specialistOccupiedSlotKeys` по этим id; иначе только витринные мастера. */
+    specialistIdsForOccupancyPreview?: string[];
+  },
 ): OrganizationListItemDto {
   const localized = pickLocalizedOrganizationListItem(
     {
@@ -340,16 +400,18 @@ function mapOrganizationRowToListItem(
     },
     locale,
   );
-  const specialistOccupiedSlotKeys: SpecialistOccupiedSlotKeysEntryDto[] =
+  const occupancySpecialistIds =
+    opts?.specialistIdsForOccupancyPreview ??
     o.specialistEmployments
       .filter((e) => isVitrineStaffAtOrganization(e, o.id))
-      .map((e) => e.specialist.id)
-      .map((specialistId) => ({
-        specialistId,
-        keys: [...(occupiedMap.get(specialistId) ?? new Set())].sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      }));
+      .map((e) => e.specialist.id);
+  const specialistOccupiedSlotKeys: SpecialistOccupiedSlotKeysEntryDto[] =
+    occupancySpecialistIds.map((specialistId) => ({
+      specialistId,
+      keys: [...(occupiedMap.get(specialistId) ?? new Set())].sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    }));
 
   const vitrineLinks = o.serviceCategories.filter((l) =>
     storefrontCategoryIds.has(l.serviceCategoryId),
@@ -415,13 +477,15 @@ function mapSpecialistToStaffMember(
     rating: s.ratingAverage,
     metaLine,
     imageUrl: staffImg,
-    bookableServices: mapSpecialistOwnBookableServices(s.services, locale),
+    bookableServices: mapSpecialistOwnBookableServices(s, locale),
     occupiedListingSlotKeys: [...occupiedKeys].sort(),
   };
 }
 
 @Injectable()
 export class DirectoryService {
+  private readonly logger = new Logger(DirectoryService.name);
+
   constructor(
     @Inject(forwardRef(() => DirectoryRepository))
     private readonly directoryRepository: DirectoryRepository,
@@ -429,7 +493,21 @@ export class DirectoryService {
     private readonly config: ConfigService,
     @Inject(forwardRef(() => PersonalizationService))
     private readonly personalizationService: PersonalizationService,
+    private readonly marketplaceListingEdgesIndex: MarketplaceListingEdgesIndexService,
   ) {}
+
+  private useIndexedSpecialistListing(): boolean {
+    const isIndexed =
+      this.config.get<string>('search.listingBackend', 'sql') === 'indexed';
+    const key = this.config.get<string>('search.typesense.apiKey', '').trim();
+    const ok = Boolean(key);
+    if (isIndexed && !ok) {
+      this.logger.warn(
+        'SEARCH_LISTING_BACKEND=indexed при пустом TYPESENSE_API_KEY — список мастеров остаётся на SQL',
+      );
+    }
+    return isIndexed && ok;
+  }
 
   /** Дни превью слотов на карточках списка / главной / поиска. */
   private getListingCardPreviewCalendarDays(): number {
@@ -462,6 +540,90 @@ export class DirectoryService {
       this.getListingCardPreviewCalendarDays(),
       this.getProfileSlotPreviewCalendarDays(),
     );
+  }
+
+  /** Список мастеров из Typesense: курсор — страница группированного поиска (v3, `kb: didx_edge`). */
+  private async listSpecialistsIndexed(
+    locale: ApiLocale,
+    options: {
+      limit: number;
+      sort: DirectoryListSort;
+      radius: DirectoryListRadiusFilter | null;
+    },
+    now: Date,
+    filters: SpecialistListApiFilters | null,
+    indexedPage: number,
+  ): Promise<SpecialistsListResponseDto> {
+    const limit = options.limit;
+    const fetch = limit + 1;
+    const { specialistIds: ids } =
+      await this.marketplaceListingEdgesIndex.searchSpecialistsGrouped({
+        sort: options.sort,
+        page: indexedPage,
+        perPageGroups: fetch,
+        locale,
+        filters,
+        radius: options.radius,
+      });
+    const hasMore = ids.length > limit;
+    const idPage = hasMore ? ids.slice(0, limit) : ids;
+    const rowMap = new Map<string, SpecialistListRow>();
+    await Promise.all(
+      idPage.map(async (id) => {
+        const row =
+          await this.directoryRepository.findSpecialistListRowById(id);
+        if (row != null) {
+          rowMap.set(id, row);
+        }
+      }),
+    );
+    const slice = idPage
+      .map((id) => rowMap.get(id))
+      .filter((r): r is SpecialistListRow => r != null);
+    const nextCursor =
+      hasMore ?
+        encodeDirectoryIndexedSpecialistsCursor(
+          options.sort,
+          indexedPage + 1,
+        )
+      : null;
+
+    const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
+      slice.map((s) => s.id),
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+    );
+    const doneClientsBySpec =
+      await this.directoryRepository.countDistinctDoneClientsBySpecialistIds(
+        slice.map((s) => s.id),
+      );
+    const storefrontOrgIds = [
+      ...new Set(
+        slice
+          .map((s) => s.activeOrganizationId)
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+      ),
+    ];
+    const storefrontCategoryIdsByOrg =
+      await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
+        storefrontOrgIds,
+      );
+    return {
+      specialists: slice.map((s) =>
+        mapSpecialistRowToListItem(
+          s,
+          locale,
+          now,
+          occupiedBySpecialist.get(s.id) ?? new Set(),
+          doneClientsBySpec.get(s.id) ?? 0,
+          undefined,
+          storefrontCategoryIdsByOrg,
+        ),
+      ),
+      cursorPage: { nextCursor, hasMore },
+    };
   }
 
   private encodeSpecialistListNextCursor(
@@ -583,21 +745,51 @@ export class DirectoryService {
     },
   ): Promise<SpecialistsListResponseDto> {
     const now = new Date();
+    const useIndexedListing =
+      this.useIndexedSpecialistListing() &&
+      options.sort !== 'recommended' &&
+      options.bodyZoneSlugs.length === 0;
+
     const rawCursor = options.cursor?.trim() || null;
-    const decoded =
-      rawCursor == null ? null : decodeSpecialistListCursor(rawCursor);
-    if (rawCursor != null && decoded == null) {
-      throw new BadRequestException({
-        code: 'INVALID_CURSOR',
-        message: 'Invalid cursor',
-      });
+
+    let decodedSql: DecodedSpecialistListCursor | null = null;
+    let indexedPage = 1;
+
+    if (useIndexedListing) {
+      if (rawCursor != null) {
+        const idx = decodeDirectoryIndexedSpecialistsCursor(rawCursor);
+        if (idx == null) {
+          throw new BadRequestException({
+            code: 'INVALID_CURSOR',
+            message:
+              'Invalid cursor (indexed listing expects listing-edge page cursors only)',
+          });
+        }
+        if (idx.sort !== options.sort) {
+          throw new BadRequestException({
+            code: 'INVALID_CURSOR',
+            message: 'Cursor does not match sort',
+          });
+        }
+        indexedPage = idx.page;
+      }
+    } else {
+      decodedSql =
+        rawCursor == null ? null : decodeSpecialistListCursor(rawCursor);
+      if (rawCursor != null && decodedSql == null) {
+        throw new BadRequestException({
+          code: 'INVALID_CURSOR',
+          message: 'Invalid cursor',
+        });
+      }
+      if (decodedSql != null && decodedSql.sort !== options.sort) {
+        throw new BadRequestException({
+          code: 'INVALID_CURSOR',
+          message: 'Cursor does not match sort',
+        });
+      }
     }
-    if (decoded != null && decoded.sort !== options.sort) {
-      throw new BadRequestException({
-        code: 'INVALID_CURSOR',
-        message: 'Cursor does not match sort',
-      });
-    }
+
     if (options.sort === 'recommended') {
       if (options.userId == null || options.userId.trim() === '') {
         throw new BadRequestException({
@@ -649,10 +841,21 @@ export class DirectoryService {
       listPriceMin,
       listPriceMax,
     );
+
+    if (useIndexedListing) {
+      return this.listSpecialistsIndexed(
+        locale,
+        options,
+        now,
+        filters,
+        indexedPage,
+      );
+    }
+
     const rows = await this.directoryRepository.findSpecialistsPage({
       take: limit + 1,
       sort: options.sort,
-      cursor: decoded,
+      cursor: decodedSql,
       filters,
       radius: options.radius,
       overlapCategorySlugs,
@@ -670,7 +873,7 @@ export class DirectoryService {
         ? this.encodeSpecialistListNextCursor(
             options.sort,
             limit,
-            decoded,
+            decodedSql,
             last,
           )
         : null;
@@ -913,9 +1116,12 @@ export class DirectoryService {
       row.ownerUserId != null &&
       row.ownerUserId === viewerUserId;
 
-    const specialistIds = row.specialistEmployments
-      .filter((e) => isVitrineStaffAtOrganization(e, row.id))
-      .map((e) => e.specialist.id);
+    const staffEmployments = specialistEmploymentsForOrganizationStaffSection(
+      row.specialistEmployments,
+      row.id,
+      isOwner,
+    );
+    const specialistIds = staffEmployments.map((e) => e.specialist.id);
     const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
       specialistIds,
       now,
@@ -940,20 +1146,20 @@ export class DirectoryService {
       occupiedBySpecialist,
       storefront,
       storefrontCategoriesByOrg.get(id) ?? new Set<string>(),
+      isOwner ?
+        { specialistIdsForOccupancyPreview: specialistIds }
+      : undefined,
     );
-    // Только мастера, доступные для записи (как в каталоге). Владелец «без приёма»
-    // (listedInDirectory: false) остаётся в employment, но не показывается в блоке сотрудников.
-    const staff: OrganizationStaffMemberDto[] = row.specialistEmployments
-      .filter((e) => isVitrineStaffAtOrganization(e, row.id))
-      .map((e) =>
-        mapSpecialistToStaffMember(
-          e.specialist,
-          locale,
-          base.metaLine,
-          occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
-          isOwner,
-        ),
-      );
+    // Гости: только витрина (запись через каталог). Владелец БД: весь активный персонал.
+    const staff: OrganizationStaffMemberDto[] = staffEmployments.map((e) =>
+      mapSpecialistToStaffMember(
+        e.specialist,
+        locale,
+        base.metaLine,
+        occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
+        isOwner,
+      ),
+    );
     const clientsCount =
       await this.directoryRepository.countDistinctDoneClientsForOrganization(
         id,

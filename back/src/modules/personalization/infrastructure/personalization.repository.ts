@@ -86,7 +86,7 @@ export class PersonalizationRepository {
       .map((f) => f.targetId);
     const [fromSpec, fromOrg, storefrontOrgCategories] = await Promise.all([
       specIds.length > 0
-        ? this.prisma.specialistServiceCategory.findMany({
+        ? this.prisma.specialistSkill.findMany({
             where: { specialistId: { in: specIds } },
             include: { serviceCategory: { select: { slug: true } } },
           })
@@ -115,7 +115,7 @@ export class PersonalizationRepository {
   }
 
   /**
-   * Брони с привязанной услугой: веса по статусу.
+   * Недавние брони: веса по slug подкатегории из якоря оффера (`OrganizationOffering` → category).
    */
   async getBookingCategorySlugWeights(
     userId: string,
@@ -125,11 +125,10 @@ export class PersonalizationRepository {
       where: {
         clientUserId: userId,
         deletedAt: null,
-        serviceId: { not: null },
         createdAt: { gte: since },
       },
       include: {
-        service: {
+        organizationOffering: {
           include: { category: { select: { slug: true } } },
         },
       },
@@ -138,10 +137,10 @@ export class PersonalizationRepository {
     });
     const map = new Map<string, number>();
     for (const b of bookings) {
-      if (b.service == null) {
+      if (b.organizationOffering == null) {
         continue;
       }
-      const slug = b.service.category.slug;
+      const slug = b.organizationOffering.category.slug;
       const w = b.status === 'done' ? 2 : 1;
       map.set(slug, (map.get(slug) ?? 0) + w);
     }

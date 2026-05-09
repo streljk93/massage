@@ -104,7 +104,7 @@ export class CatalogRepository {
     };
 
     const [fromSpecialists, fromOrgs] = await Promise.all([
-      this.prisma.specialistServiceCategory.findMany({
+      this.prisma.specialistSkill.findMany({
         where: {
           specialist: { deletedAt: null, listedInDirectory: true },
           serviceCategory: serviceCategoryUnderMajor,

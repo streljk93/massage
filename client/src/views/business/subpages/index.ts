@@ -1,13 +1,13 @@
 export { default as businessAppSubpagesI18n } from "./model/business-app-subpages.i18n.json";
-export { default as businessServicesPageI18n } from "./model/business-services-page.i18n.json";
+export { default as businessOrganizationOfferingsPageI18n } from "./model/business-organization-offerings-page.i18n.json";
+export { default as businessSkillsPageI18n } from "./model/business-skills-page.i18n.json";
 export { BusinessBookingsPage } from "./ui/business-bookings-page";
 export { BusinessOrganizationCreatePage } from "./ui/business-organization-create-page";
 export { BusinessOrganizationJoinPage } from "./ui/business-organization-join-page";
 export { BusinessOrganizationEditPage } from "./ui/business-organization-edit-page";
+export { BusinessOrganizationOfferingsPage } from "./ui/business-organization-offerings-page";
 export { BusinessOrganizationsPage } from "./ui/business-organizations-page";
 export { BusinessProfilePage } from "./ui/business-profile-page";
-export { BusinessServiceEditPage } from "./ui/business-service-edit-page";
-export { BusinessServiceNewPage } from "./ui/business-service-new-page";
-export { BusinessServicesPage } from "./ui/business-services-page";
+export { BusinessSkillsPage } from "./ui/business-skills-page";
 export { BusinessProfileEditPage } from "./ui/business-profile-edit-page";
 export { BusinessWorkplaceApplicantProfilePage } from "./ui/business-workplace-applicant-profile-page";

@@ -69,14 +69,21 @@ const specialistBookableServiceSchema = {
     'majorSortOrder',
     'durationMinutes',
     'priceVndByDuration',
+    'organizationOfferingId',
+    'marketplaceOfferingPriceOptionIds',
   ],
   properties: {
-    id: { type: 'string', format: 'uuid' },
+    id: {
+      type: 'string',
+      format: 'uuid',
+      description:
+        'Стабильный идентификатор строки для UI; совпадает с `OrganizationOffering.id` при построении витрины из marketplace.',
+    },
     categoryShortName: {
       type: 'string',
       example: 'Body massage',
       description:
-        'Локализованный shortName подкатегории каталога (`Service.category`).',
+        'Подпись услуги для UI: заголовок опубликованного оффера или локализованный shortName категории.',
     },
     majorSlug: {
       type: 'string',
@@ -101,6 +108,17 @@ const specialistBookableServiceSchema = {
     priceVndByDuration: {
       type: 'array',
       items: { type: 'integer', example: 450000 },
+    },
+    organizationOfferingId: {
+      type: 'string',
+      format: 'uuid',
+      description: 'Id `OrganizationOffering` активного салона.',
+    },
+    marketplaceOfferingPriceOptionIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+      description:
+        'Параллельно `durationMinutes`: id опций цены оффера (`OfferingPriceOption.id`); длины массивов совпадают.',
     },
   },
 };

@@ -1,0 +1,82 @@
+{
+  "messages": {
+    "en": {
+      "businessSkillsPage": {
+        "title": "Skills",
+        "subtitle": "Categories you can perform, without price. Prices for clients come from your organization’s offerings.",
+        "hint": "Toggle categories, then save. Assignments to organization offerings update automatically.",
+        "loadingAria": "Loading skills editor",
+        "catalogError": "Could not load categories",
+        "catalogRetry": "Try again",
+        "signInTitle": "Sign in to edit skills",
+        "signInHint": "Your skills list appears here after you sign in.",
+        "loadErrorTitle": "Could not load profile",
+        "loadErrorHint": "Check your connection and try again.",
+        "retry": "Try again",
+        "emptyProfileTitle": "Profile not ready",
+        "emptyProfileHint": "Complete onboarding first.",
+        "workplaceMajorsEmptyTitle": "Organization has no activity spheres",
+        "workplaceMajorsEmptyHint": "The salon owner must select service areas in organization settings before you can choose skills.",
+        "pickerGroupAria": "Skills in {name}",
+        "pickerOptionAria": "{name}",
+        "save": "Save skills",
+        "saving": "Saving…",
+        "saveError": "Could not save. Check categories and try again.",
+        "saved": "Skills updated",
+        "unchanged": "No changes to save"
+      }
+    },
+    "vi": {
+      "businessSkillsPage": {
+        "title": "Kỹ năng",
+        "subtitle": "Danh mục bạn thực hiện, không kèm giá. Giá cho khách đến từ gói dịch vụ của tổ chức.",
+        "hint": "Bật/tắt danh mục rồi lưu. Gán với gói tổ chức sẽ được cập nhật tự động.",
+        "loadingAria": "Đang tải trình chỉnh sửa kỹ năng",
+        "catalogError": "Không tải được danh mục",
+        "catalogRetry": "Thử lại",
+        "signInTitle": "Đăng nhập để chỉnh sửa kỹ năng",
+        "signInHint": "Danh sách kỹ năng hiện sau khi đăng nhập.",
+        "loadErrorTitle": "Không tải được hồ sơ",
+        "loadErrorHint": "Kiểm tra kết nối và thử lại.",
+        "retry": "Thử lại",
+        "emptyProfileTitle": "Hồ sơ chưa sẵn sàng",
+        "emptyProfileHint": "Hoàn tất thiết lập trước.",
+        "workplaceMajorsEmptyTitle": "Tổ chức chưa có lĩnh vực hoạt động",
+        "workplaceMajorsEmptyHint": "Chủ salon cần chọn lĩnh vực trong cài đặt tổ chức trước khi bạn chọn kỹ năng.",
+        "pickerGroupAria": "Kỹ năng trong {name}",
+        "pickerOptionAria": "{name}",
+        "save": "Lưu kỹ năng",
+        "saving": "Đang lưu…",
+        "saveError": "Không lưu được. Kiểm tra danh mục và thử lại.",
+        "saved": "Đã cập nhật kỹ năng",
+        "unchanged": "Không có thay đổi để lưu"
+      }
+    },
+    "ru": {
+      "businessSkillsPage": {
+        "title": "Навыки",
+        "subtitle": "Подкатегории, с которыми вы работаете, без цены. Цены для гостя задаются офферами организации.",
+        "hint": "Отметьте категории и сохраните. Назначения к офферам салона подтянутся автоматически.",
+        "loadingAria": "Загрузка редактора навыков",
+        "catalogError": "Не удалось загрузить категории",
+        "catalogRetry": "Повторить",
+        "signInTitle": "Войдите, чтобы редактировать навыки",
+        "signInHint": "Список навыков отображается после входа.",
+        "loadErrorTitle": "Не удалось загрузить профиль",
+        "loadErrorHint": "Проверьте соединение и попробуйте снова.",
+        "retry": "Повторить",
+        "emptyProfileTitle": "Профиль ещё не готов",
+        "emptyProfileHint": "Сначала завершите онбординг.",
+        "workplaceMajorsEmptyTitle": "У организации не выбраны сферы деятельности",
+        "workplaceMajorsEmptyHint": "Владелец салона должен указать направления в настройках организации, затем можно выбрать навыки.",
+        "pickerGroupAria": "Навыки: {name}",
+        "pickerOptionAria": "{name}",
+        "save": "Сохранить навыки",
+        "saving": "Сохранение…",
+        "saveError": "Не удалось сохранить. Проверьте категории и повторите.",
+        "saved": "Навыки обновлены",
+        "unchanged": "Нет изменений для сохранения"
+      }
+    }
+  }
+}

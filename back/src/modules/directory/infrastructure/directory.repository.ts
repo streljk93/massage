@@ -3,8 +3,11 @@ import {
   BookingStatus,
   GalleryMediaKind,
   GalleryOwnerKind,
+  OfferingPriceOptionStatus,
+  OfferingPublicationStatus,
   Prisma,
   PublicationModerationStatus,
+  SpecialistOfferingStatus,
 } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
@@ -120,32 +123,14 @@ function directoryReviewListedComment(args: {
 const serviceCategoryWithLocales = {
   include: {
     serviceCategory: {
-      include: { locales: true },
+      include: {
+        locales: true,
+        /** Для фильтров индексированного списка мастеров (major / витрина). */
+        majorServiceCategory: { select: { id: true, slug: true } },
+      },
     },
   },
 } as const;
-
-const directoryServiceInclude = {
-  where: { deletedAt: null, isActive: true },
-  orderBy: { sortOrder: 'asc' as const },
-  include: {
-    priceOptions: { orderBy: { durationMinutes: 'asc' as const } },
-    category: {
-      include: {
-        locales: true,
-        majorServiceCategory: { include: { locales: true } },
-      },
-    },
-    comboItems: {
-      orderBy: { sortOrder: 'asc' as const },
-      include: {
-        itemServiceCategory: {
-          include: { locales: true },
-        },
-      },
-    },
-  },
-} satisfies Prisma.ServiceFindManyArgs;
 
 const directoryAddressForListSelect = {
   addressLine: true,
@@ -166,6 +151,64 @@ const specialistActiveOrganizationInclude = {
   },
 } as const;
 
+const marketplaceSpecialistOfferingInclude = {
+  where: {
+    deletedAt: null,
+    status: SpecialistOfferingStatus.active,
+    organizationOffering: {
+      deletedAt: null,
+      publicationStatus: OfferingPublicationStatus.published,
+    },
+  },
+  select: {
+    id: true,
+    priceOverrides: {
+      select: {
+        offeringPriceOptionId: true,
+        customPrice: true,
+      },
+    },
+    organizationOffering: {
+      select: {
+        id: true,
+        organizationId: true,
+        title: true,
+        slug: true,
+        category: {
+          include: {
+            locales: true,
+            majorServiceCategory: { include: { locales: true } },
+          },
+        },
+        priceOptions: {
+          where: {
+            deletedAt: null,
+            status: OfferingPriceOptionStatus.active,
+            currency: 'VND',
+          },
+          orderBy: { durationMinutes: 'asc' as const },
+          select: {
+            id: true,
+            durationMinutes: true,
+            priceAmount: true,
+            currency: true,
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.SpecialistOfferingFindManyArgs;
+
+const publishedProfileRevisionVitrineSelect = {
+  select: {
+    listingName: true,
+    bio: true,
+    imageUrl: true,
+    imageAlt: true,
+    status: true,
+  },
+} as const;
+
 function specialistIncludeForOrgEmployment() {
   return {
     user: {
@@ -174,8 +217,9 @@ function specialistIncludeForOrgEmployment() {
         phone: true,
       },
     },
-    services: directoryServiceInclude,
     activeOrganization: specialistActiveOrganizationInclude,
+    offeringsExecution: marketplaceSpecialistOfferingInclude,
+    publishedProfileRevision: publishedProfileRevisionVitrineSelect,
   } satisfies Prisma.SpecialistInclude;
 }
 
@@ -187,10 +231,10 @@ function specialistListInclude() {
         phone: true,
       },
     },
-    serviceCategories: serviceCategoryWithLocales,
-    /** Услуги каталога с `specialistId` = этот мастер. */
-    services: directoryServiceInclude,
+    skills: serviceCategoryWithLocales,
     activeOrganization: specialistActiveOrganizationInclude,
+    offeringsExecution: marketplaceSpecialistOfferingInclude,
+    publishedProfileRevision: publishedProfileRevisionVitrineSelect,
   } satisfies Prisma.SpecialistInclude;
 }
 
@@ -418,6 +462,64 @@ const SPECIALIST_LIST_CAP = 8000;
 export class DirectoryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Одна строка списка мастера каталога (как для mapSpecialistRowToListItem).
+   */
+  async findSpecialistListRowById(id: string): Promise<SpecialistListRow | null> {
+    return this.prisma.specialist.findUnique({
+      where: { id, deletedAt: null },
+      include: specialistListInclude(),
+    });
+  }
+
+  /**
+   * Базовые правила включения строки каталога (без пользовательских фильтров категории/цен).
+   */
+  async specialistPassesDirectoryListingBase(specialistId: string): Promise<boolean> {
+    const parts = await this.specialistDirectoryAndParts(null, null);
+    if (parts == null) {
+      return false;
+    }
+    const cnt = await this.prisma.specialist.count({
+      where: { AND: [...parts, { id: specialistId }] },
+    });
+    return cnt > 0;
+  }
+
+  /**
+   * Индексируемое ребро оффера × мастер: мастер должен проходить базу каталога,
+   * а `activeOrganizationId` совпадать с организацией `OrganizationOffering`.
+   */
+  async specialistPassesDirectoryListingBaseEdge(
+    edgeId: string,
+  ): Promise<boolean> {
+    const edge = await this.prisma.specialistOffering.findFirst({
+      where: { id: edgeId, deletedAt: null },
+      select: {
+        specialistId: true,
+        organizationOffering: { select: { organizationId: true } },
+      },
+    });
+    if (edge == null) {
+      return false;
+    }
+    const passes = await this.specialistPassesDirectoryListingBase(
+      edge.specialistId,
+    );
+    if (!passes) {
+      return false;
+    }
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { id: edge.specialistId, deletedAt: null },
+      select: { activeOrganizationId: true },
+    });
+    const activeOrgId = specialist?.activeOrganizationId ?? null;
+    return (
+      activeOrgId != null &&
+      activeOrgId === edge.organizationOffering.organizationId
+    );
+  }
+
   private async specialistDirectoryAndParts(
     filters: SpecialistListApiFilters | null,
     radius: DirectoryListRadiusFilter | null,
@@ -563,7 +665,6 @@ export class DirectoryRepository {
     const hasCat =
       (filters.majorCategorySlug != null && filters.majorCategorySlug !== '') ||
       filters.categorySlugs.length > 0;
-    const hasBodyZones = filters.bodyZoneSlugs.length > 0;
     const q = filters.q?.trim() ?? '';
 
     if (hasCat) {
@@ -595,41 +696,6 @@ export class DirectoryRepository {
         { id: { in: catHitIds } },
       ];
       andParts.push({ OR: branches });
-    }
-
-    if (hasBodyZones) {
-      andParts.push({
-        specialistEmployments: {
-          some: {
-            isActive: true,
-            specialist: {
-              deletedAt: null,
-              listedInDirectory: true,
-              activeOrganizationId: { not: null },
-              activeOrganization: {
-                deletedAt: null,
-                publicationModerationStatus:
-                  PublicationModerationStatus.approved,
-              },
-              services: {
-                some: {
-                  deletedAt: null,
-                  isActive: true,
-                  bodyZones: {
-                    some: {
-                      bodyZone: {
-                        deletedAt: null,
-                        isActive: true,
-                        slug: { in: [...filters.bodyZoneSlugs, 'full-body'] },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
     }
 
     return andParts;
@@ -692,7 +758,7 @@ export class DirectoryRepository {
         >(
           Prisma.sql`
             SELECT ssc."specialistId"::text AS "specialistId", COUNT(*)::int AS cnt
-            FROM "SpecialistServiceCategory" ssc
+            FROM "SpecialistSkill" ssc
             INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
             INNER JOIN "Specialist" sp ON sp.id = ssc."specialistId"
             INNER JOIN "OrganizationServiceCategory" osc
@@ -727,16 +793,24 @@ export class DirectoryRepository {
       const rows = await this.prisma.$queryRaw<
         { specId: string; mp: number | null }[]
       >(
-        Prisma.sql`
-          SELECT sv."specialistId"::text AS "specId", MIN(po."priceAmount")::int AS mp
-          FROM "Service" sv
-          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id
-          WHERE sv."specialistId"::text IN (${Prisma.join(ids)})
-            AND sv."deletedAt" IS NULL
-            AND sv."isActive" = true
-            AND po."currency" = 'VND'
-          GROUP BY sv."specialistId"
-        `,
+          Prisma.sql`
+            SELECT so."specialistId"::text AS "specId",
+              MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS mp
+            FROM "SpecialistOffering" so
+            INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+              AND oo."deletedAt" IS NULL
+              AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+            INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+              AND po."deletedAt" IS NULL
+              AND po."status" = 'active'::"OfferingPriceOptionStatus"
+              AND po."currency" = 'VND'
+            LEFT JOIN "SpecialistOfferingPriceOverride" sovo ON sovo."specialistOfferingId" = so.id
+              AND sovo."offeringPriceOptionId" = po.id
+            WHERE so."specialistId"::text IN (${Prisma.join(ids)})
+              AND so."deletedAt" IS NULL
+              AND so."status" = 'active'::"SpecialistOfferingStatus"
+            GROUP BY so."specialistId"
+          `,
       );
       const minPrice = new Map<string, number | null>();
       for (const id of ids) {
@@ -851,23 +925,32 @@ export class DirectoryRepository {
       const rows = await this.prisma.$queryRaw<
         { orgId: string; mp: number | null }[]
       >(
-        Prisma.sql`
-          SELECT e."organizationId"::text AS "orgId", MIN(po."priceAmount")::int AS mp
-          FROM "SpecialistOrganizationEmployment" e
-          INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
-          INNER JOIN "Service" sv ON sv."specialistId" = e."specialistId"
-            AND sv."deletedAt" IS NULL
-            AND sv."isActive" = true
-            AND (sv."scope" = 'personal'::"ServiceCatalogScope" OR sv."organizationId" = e."organizationId")
-          INNER JOIN "ServicePriceOption" po ON po."serviceId" = sv.id AND po."currency" = 'VND'
-          WHERE e."isActive" = true
-            AND e."organizationId"::text IN (${Prisma.join(ids)})
-            AND sp."listedInDirectory" = true
-            AND sp."deletedAt" IS NULL
-            AND sp."activeOrganizationId" IS NOT NULL
-            AND sp."activeOrganizationId" = e."organizationId"
-          GROUP BY e."organizationId"
-        `,
+          Prisma.sql`
+            SELECT e."organizationId"::text AS "orgId",
+              MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS mp
+            FROM "SpecialistOrganizationEmployment" e
+            INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
+            INNER JOIN "SpecialistOffering" so ON so."specialistId" = e."specialistId"
+              AND so."deletedAt" IS NULL
+              AND so."status" = 'active'::"SpecialistOfferingStatus"
+            INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+              AND oo."organizationId" = e."organizationId"
+              AND oo."deletedAt" IS NULL
+              AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+            INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+              AND po."deletedAt" IS NULL
+              AND po."status" = 'active'::"OfferingPriceOptionStatus"
+              AND po."currency" = 'VND'
+            LEFT JOIN "SpecialistOfferingPriceOverride" sovo ON sovo."specialistOfferingId" = so.id
+              AND sovo."offeringPriceOptionId" = po.id
+            WHERE e."isActive" = true
+              AND e."organizationId"::text IN (${Prisma.join(ids)})
+              AND sp."listedInDirectory" = true
+              AND sp."deletedAt" IS NULL
+              AND sp."activeOrganizationId" IS NOT NULL
+              AND sp."activeOrganizationId" = e."organizationId"
+            GROUP BY e."organizationId"
+          `,
       );
       const minPrice = new Map<string, number | null>();
       for (const id of ids) {
@@ -1212,7 +1295,7 @@ export class DirectoryRepository {
           ],
         },
         select: {
-          serviceCategories: {
+          skills: {
             select: { serviceCategoryId: true },
           },
         },
@@ -1220,7 +1303,7 @@ export class DirectoryRepository {
       .then((rows) => {
         const ids = new Set<string>();
         for (const row of rows) {
-          for (const c of row.serviceCategories) {
+          for (const c of row.skills) {
             ids.add(c.serviceCategoryId);
           }
         }
@@ -1233,53 +1316,6 @@ export class DirectoryRepository {
    */
   findDistinctServiceCategoryIdsForListingOrganizations(): Promise<string[]> {
     return queryDistinctStorefrontOrganizationServiceCategoryIds(this.prisma);
-  }
-
-  async findDistinctBodyZoneIdsForListingSpecialists(): Promise<string[]> {
-    const rows = await this.prisma.serviceBodyZone.findMany({
-      where: {
-        service: {
-          deletedAt: null,
-          isActive: true,
-          specialistId: { not: null },
-          specialist: {
-            deletedAt: null,
-            listedInDirectory: true,
-          },
-        },
-        bodyZone: {
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-      select: { bodyZoneId: true },
-      distinct: ['bodyZoneId'],
-    });
-    return rows.map((r) => r.bodyZoneId);
-  }
-
-  async findDistinctBodyZoneIdsForListingOrganizations(): Promise<string[]> {
-    const rows = await this.prisma.serviceBodyZone.findMany({
-      where: {
-        service: {
-          deletedAt: null,
-          isActive: true,
-          specialistId: { not: null },
-          specialist: {
-            deletedAt: null,
-            listedInDirectory: true,
-            activeOrganizationId: { not: null },
-          },
-        },
-        bodyZone: {
-          deletedAt: null,
-          isActive: true,
-        },
-      },
-      select: { bodyZoneId: true },
-      distinct: ['bodyZoneId'],
-    });
-    return rows.map((r) => r.bodyZoneId);
   }
 
   findServiceCategoriesByIds(ids: string[]) {
@@ -1335,33 +1371,40 @@ export class DirectoryRepository {
   }
 
   /**
-   * Min/max VND по личным услугам мастеров (Service.specialistId), показываемым в каталоге.
+   * Min/max VND по опубликованным офферам и активным назначениям (`SpecialistOffering`) у мастеров в каталоге.
    */
   async aggregateVndPriceBoundsForListingSpecialists(): Promise<{
     min: number | null;
     max: number | null;
   }> {
-    const a = await this.prisma.servicePriceOption.aggregate({
-      where: {
-        currency: 'VND',
-        service: {
-          deletedAt: null,
-          isActive: true,
-          specialistId: { not: null },
-          specialist: {
-            deletedAt: null,
-            listedInDirectory: true,
-          },
-        },
-      },
-      _min: { priceAmount: true },
-      _max: { priceAmount: true },
-    });
-    return { min: a._min.priceAmount, max: a._max.priceAmount };
+    const rows = await this.prisma.$queryRaw<
+      { min: number | null; max: number | null }[]
+    >(Prisma.sql`
+      SELECT
+        MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS min,
+        MAX(COALESCE(sovo."customPrice", po."priceAmount"))::int AS max
+      FROM "SpecialistOffering" so
+      INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+        AND oo."deletedAt" IS NULL
+        AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+      INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+        AND po."deletedAt" IS NULL
+        AND po."status" = 'active'::"OfferingPriceOptionStatus"
+        AND po."currency" = 'VND'
+      LEFT JOIN "SpecialistOfferingPriceOverride" sovo ON sovo."specialistOfferingId" = so.id
+        AND sovo."offeringPriceOptionId" = po.id
+      INNER JOIN "Specialist" sp ON sp.id = so."specialistId"
+      WHERE so."deletedAt" IS NULL
+        AND so."status" = 'active'::"SpecialistOfferingStatus"
+        AND sp."deletedAt" IS NULL
+        AND sp."listedInDirectory" = true
+    `);
+    const r = rows[0];
+    return { min: r?.min ?? null, max: r?.max ?? null };
   }
 
   /**
-   * Min/max VND: услуги в салоне, оказываемые мастером с активной привязкой к этому салону.
+   * Min/max VND: активные офферы точки забронировать через мастеров каталога с текущей привязкой к салону.
    */
   async aggregateVndPriceBoundsForOrgListingServices(): Promise<{
     min: number | null;
@@ -1369,26 +1412,31 @@ export class DirectoryRepository {
   }> {
     const rows = await this.prisma.$queryRaw<
       { min: number | null; max: number | null }[]
-    >`
+    >(Prisma.sql`
       SELECT
-        (MIN(po."priceAmount"))::int AS "min",
-        (MAX(po."priceAmount"))::int AS "max"
-      FROM "ServicePriceOption" po
-      INNER JOIN "Service" s ON s.id = po."serviceId"
-      INNER JOIN "SpecialistOrganizationEmployment" e
-        ON e."specialistId" = s."specialistId"
-        AND e."isActive" = true
-        AND (s."scope" = 'personal'::"ServiceCatalogScope" OR s."organizationId" = e."organizationId")
-      INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
-      WHERE po."currency" = 'VND'
-        AND s."deletedAt" IS NULL
-        AND s."isActive" = true
-        AND s."specialistId" IS NOT NULL
+        MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS min,
+        MAX(COALESCE(sovo."customPrice", po."priceAmount"))::int AS max
+      FROM "SpecialistOrganizationEmployment" e
+      INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
+      INNER JOIN "SpecialistOffering" so ON so."specialistId" = e."specialistId"
+        AND so."deletedAt" IS NULL
+        AND so."status" = 'active'::"SpecialistOfferingStatus"
+      INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+        AND oo."organizationId" = e."organizationId"
+        AND oo."deletedAt" IS NULL
+        AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+      INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+        AND po."deletedAt" IS NULL
+        AND po."status" = 'active'::"OfferingPriceOptionStatus"
+        AND po."currency" = 'VND'
+      LEFT JOIN "SpecialistOfferingPriceOverride" sovo ON sovo."specialistOfferingId" = so.id
+        AND sovo."offeringPriceOptionId" = po.id
+      WHERE e."isActive" = true
         AND sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
         AND sp."activeOrganizationId" IS NOT NULL
         AND sp."activeOrganizationId" = e."organizationId"
-    `;
+    `);
     const r = rows[0];
     return { min: r?.min ?? null, max: r?.max ?? null };
   }

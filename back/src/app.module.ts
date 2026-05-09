@@ -7,6 +7,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { SearchInfrastructureModule } from './infrastructure/search/search-infrastructure.module';
+import { TransactionalOutboxModule } from './infrastructure/transactional-outbox/transactional-outbox.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AdvertisingModule } from './modules/advertising/advertising.module';
@@ -67,6 +69,8 @@ const bullRootImports = isModerationContentQueueEnabled()
     ...bullRootImports,
     ScheduleModule.forRoot(),
     PrismaModule,
+    SearchInfrastructureModule,
+    TransactionalOutboxModule,
     AddressModule,
     StorageModule,
     HealthModule,

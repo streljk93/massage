@@ -1,10 +1,7 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  Param,
-  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -19,7 +16,6 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
-  ApiParam,
   ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -34,7 +30,6 @@ import {
 } from '../../../common/i18n';
 import { BookingsService } from '../../bookings/application/bookings.service';
 import { SpecialistOnboardingService } from '../application/specialist-onboarding.service';
-import { SpecialistPersonalCatalogService } from '../application/specialist-personal-catalog.service';
 import { SpecialistWorkplaceService } from '../application/specialist-workplace.service';
 import type { SpecialistActiveOrganizationBookingsPreviewQuery } from '../dto/specialist-active-organization-bookings-preview-query.schema';
 import { specialistActiveOrganizationBookingsPreviewQuerySchema } from '../dto/specialist-active-organization-bookings-preview-query.schema';
@@ -44,21 +39,15 @@ import type { SalonCabinetBookingsListQuery } from '../dto/salon-cabinet-booking
 import { salonCabinetBookingsListQuerySchema } from '../dto/salon-cabinet-bookings-list-query.schema';
 import type { PatchSpecialistOnboardingPreferencesBody } from '../dto/patch-specialist-onboarding-preferences.schema';
 import { patchSpecialistOnboardingPreferencesBodySchema } from '../dto/patch-specialist-onboarding-preferences.schema';
+import type { PatchSpecialistSkillsBody } from '../dto/patch-specialist-skills-body.schema';
+import { patchSpecialistSkillsBodySchema } from '../dto/patch-specialist-skills-body.schema';
+import { patchSpecialistProfileBodySchema, type PatchSpecialistProfileBody } from '../dto/specialist-body.schema';
 import {
-  createSpecialistPersonalServiceBodySchema,
-  patchSpecialistProfileBodySchema,
-  type CreateSpecialistPersonalServiceBody,
-  type PatchSpecialistProfileBody,
-} from '../dto/specialist-body.schema';
-import {
-  createSpecialistPersonalServiceRequestSchema,
-  createSpecialistPersonalServiceResponseSchema,
-  deleteSpecialistPersonalServiceResponseSchema,
-  patchSpecialistPersonalServiceRequestSchema,
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
   patchSpecialistOnboardingPreferencesRequestSchema,
   patchSpecialistProfileRequestSchema,
+  patchSpecialistSkillsRequestSchema,
   specialistActiveOrganizationBookingsPreviewResponseSchema,
   specialistMyOrganizationsResponseSchema,
   specialistMyWorkplaceJoinRequestsResponseSchema,
@@ -79,7 +68,6 @@ export class SpecialistsCabinetController {
   constructor(
     private readonly specialistWorkplaceService: SpecialistWorkplaceService,
     private readonly specialistOnboardingService: SpecialistOnboardingService,
-    private readonly specialistPersonalCatalogService: SpecialistPersonalCatalogService,
     private readonly bookingsService: BookingsService,
   ) {}
 
@@ -251,7 +239,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Онбординг: сохранить режим работы (solo / business / employed_salon) и/или большие категории до привязки к салону.',
+      'Онбординг: режим работы, большие категории и/или навыки (подкатегории без цены).',
   })
   @ApiLocaleQueryDocs()
   @ApiBody({
@@ -262,7 +250,10 @@ export class SpecialistsCabinetController {
     description:
       'Онбординг завершён, или нельзя менять режим/сферы после привязки к организации',
   })
-  @ApiBadRequestResponse({ description: 'Невалидные slug больших категорий' })
+  @ApiBadRequestResponse({
+    description:
+      'Невалидные slug больших категорий, подкатегории навыков или несовпадение с доступными сферами',
+  })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
   async patchSpecialistOnboardingPreferences(
@@ -306,11 +297,12 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Завершить онбординг после шага 13 (до этого должны быть место работы и личные услуги).',
+      'Завершить онбординг после шага 13 (место работы и хотя бы один навык — подкатегория).',
   })
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiConflictResponse({
-    description: 'Профиль, услуги или организация не готовы',
+    description:
+      'Профиль, навыки или организация не готовы',
   })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
@@ -324,93 +316,29 @@ export class SpecialistsCabinetController {
     );
   }
 
-  @Post('me/services')
+  @Patch('me/skills')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Создать личную услугу мастера (скоуп каталога `personal`; строка относится к текущему `specialistId`).',
+      'Кабинет: полная замена навыков мастера (подкатегории каталога без цены).',
   })
   @ApiLocaleQueryDocs()
-  @ApiBody({ schema: createSpecialistPersonalServiceRequestSchema })
-  @ApiOkResponse({ schema: createSpecialistPersonalServiceResponseSchema })
-  @ApiBadRequestResponse({ description: 'Категория или валюта' })
+  @ApiBody({ schema: patchSpecialistSkillsRequestSchema })
+  @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
+  @ApiBadRequestResponse({ description: 'Недопустимые категории или сферы' })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async postSpecialistPersonalService(
+  async patchSpecialistCabinetSkills(
     @Req() req: AuthedRequest,
     @RequestLocale() locale: ApiLocale,
-    @Body(new ZodValidationPipe(createSpecialistPersonalServiceBodySchema))
-    body: CreateSpecialistPersonalServiceBody,
+    @Body(new ZodValidationPipe(patchSpecialistSkillsBodySchema))
+    body: PatchSpecialistSkillsBody,
   ) {
-    return this.specialistPersonalCatalogService.createPersonalService(
+    return this.specialistOnboardingService.patchCabinetSkills(
       req.user.id,
       body,
       locale,
-    );
-  }
-
-  @Patch('me/services/:serviceId')
-  @UseGuards(JwtAccessGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    summary:
-      'Обновить личную услугу мастера (категория, описание, варианты цены). Идентификатор услуги сохраняется.',
-  })
-  @ApiLocaleQueryDocs()
-  @ApiParam({
-    name: 'serviceId',
-    format: 'uuid',
-    description: 'Идентификатор услуги',
-  })
-  @ApiBody({ schema: patchSpecialistPersonalServiceRequestSchema })
-  @ApiOkResponse({ schema: createSpecialistPersonalServiceResponseSchema })
-  @ApiBadRequestResponse({ description: 'Категория или валюта' })
-  @ApiNotFoundResponse({
-    description:
-      'Профиля мастера нет или услуга не найдена / не со скоупом personal',
-  })
-  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async patchSpecialistPersonalService(
-    @Req() req: AuthedRequest,
-    @Param('serviceId', ParseUUIDPipe) serviceId: string,
-    @RequestLocale() locale: ApiLocale,
-    @Body(new ZodValidationPipe(createSpecialistPersonalServiceBodySchema))
-    body: CreateSpecialistPersonalServiceBody,
-  ) {
-    return this.specialistPersonalCatalogService.updatePersonalService(
-      req.user.id,
-      serviceId,
-      body,
-      locale,
-    );
-  }
-
-  @Delete('me/services/:serviceId')
-  @UseGuards(JwtAccessGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    summary:
-      'Удалить личную услугу мастера (soft delete). Допускаются только строки каталога со скоупом personal.',
-  })
-  @ApiParam({
-    name: 'serviceId',
-    format: 'uuid',
-    description: 'Идентификатор услуги из POST /specialists/me/services',
-  })
-  @ApiOkResponse({ schema: deleteSpecialistPersonalServiceResponseSchema })
-  @ApiNotFoundResponse({
-    description:
-      'Профиля мастера нет, услуга не найдена или не со скоупом personal',
-  })
-  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async deleteSpecialistPersonalService(
-    @Req() req: AuthedRequest,
-    @Param('serviceId', ParseUUIDPipe) serviceId: string,
-  ) {
-    return this.specialistPersonalCatalogService.deletePersonalService(
-      req.user.id,
-      serviceId,
     );
   }
 }

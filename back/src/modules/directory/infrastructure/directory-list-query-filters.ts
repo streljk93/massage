@@ -1,4 +1,9 @@
 import type { Prisma } from '@prisma/client';
+import {
+  OfferingPriceOptionStatus,
+  OfferingPublicationStatus,
+  SpecialistOfferingStatus,
+} from '@prisma/client';
 import type { ApiLocale } from '../../../common/i18n';
 
 export type SpecialistListApiFilters = {
@@ -21,7 +26,7 @@ export type OrganizationListApiFilters = {
   locale: ApiLocale;
 };
 
-/** Текстовый поиск мастера без ветки подкатегорий SSC (её закрываем отдельно по витринной OSC). */
+/** Текстовый поиск мастера без ветки подкатегорий навыков (её закрываем отдельно по витринной OSC). */
 export function specialistNonCategoryTextSearchWhere(
   q: string,
 ): Prisma.SpecialistWhereInput {
@@ -62,7 +67,7 @@ function specialistTextSearchWhere(
     OR: [
       ...baseOr,
       {
-        serviceCategories: {
+        skills: {
           some: {
             serviceCategory: {
               OR: [
@@ -97,7 +102,7 @@ export function specialistListFiltersWhere(
 
   if (f.majorCategorySlug) {
     and.push({
-      serviceCategories: {
+      skills: {
         some: {
           serviceCategory: {
             deletedAt: null,
@@ -115,7 +120,7 @@ export function specialistListFiltersWhere(
 
   if (f.categorySlugs.length > 0) {
     and.push({
-      serviceCategories: {
+      skills: {
         some: {
           serviceCategory: {
             slug: { in: f.categorySlugs },
@@ -127,25 +132,7 @@ export function specialistListFiltersWhere(
     });
   }
 
-  if (f.bodyZoneSlugs.length > 0) {
-    and.push({
-      services: {
-        some: {
-          deletedAt: null,
-          isActive: true,
-          bodyZones: {
-            some: {
-              bodyZone: {
-                deletedAt: null,
-                isActive: true,
-                slug: { in: [...f.bodyZoneSlugs, 'full-body'] },
-              },
-            },
-          },
-        },
-      },
-    });
-  }
+  // bodyZoneSlugs: ранее через личный Service; после cutover не сужает выборку.
 
   if (f.gender != null) {
     and.push({
@@ -162,15 +149,20 @@ export function specialistListFiltersWhere(
       priceAmount.lte = f.priceMaxVnd;
     }
     and.push({
-      services: {
+      offeringsExecution: {
         some: {
           deletedAt: null,
-          isActive: true,
-          specialistId: { not: null },
-          priceOptions: {
-            some: {
-              currency: 'VND',
-              priceAmount,
+          status: SpecialistOfferingStatus.active,
+          organizationOffering: {
+            deletedAt: null,
+            publicationStatus: OfferingPublicationStatus.published,
+            priceOptions: {
+              some: {
+                deletedAt: null,
+                status: OfferingPriceOptionStatus.active,
+                currency: 'VND',
+                priceAmount,
+              },
             },
           },
         },

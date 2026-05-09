@@ -13,21 +13,26 @@ import {
   ContentModerationCaseKind,
   ContentModerationCaseStatus,
   PublicationModerationStatus,
-  ServiceCatalogScope,
   SpecialistProfileRevisionStatus,
   SpecialistWorkPattern,
   SpecialistWorkplaceJoinRequestStatus,
 } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { mergeOrganizationMajorIdsAndSlugsFromDb } from '../../organizations/lib/merge-organization-major-categories';
+import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { ModerationEnqueueService } from '../../moderation/application/moderation-enqueue.service';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 import type { PatchSpecialistOnboardingPreferencesBody } from '../dto/patch-specialist-onboarding-preferences.schema';
+import type { PatchSpecialistSkillsBody } from '../dto/patch-specialist-skills-body.schema';
 import type { PatchSpecialistProfileBody } from '../dto/specialist-body.schema';
 
 const MASSAGE_MAJOR_SLUG = 'massage';
 
-/** Шаги первичного онбординга (`6` — кабинет разблокирован). */
+/**
+ * Шаги первичного онбординга (`6` — кабинет разблокирован).
+ * Смысловой порядок сценариев (major → skills → workplace → offerings) — см. `domain/specialist-onboarding-step-order.ts`.
+ */
 type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 11 | 12 | 13 | 6;
 
 type CabinetVitrine = {
@@ -37,21 +42,12 @@ type CabinetVitrine = {
   imageAlt: string | null;
 };
 
-function joinComboServiceDisplayName(args: {
-  baseName: string;
-  comboNames: string[];
-}): string {
-  return [args.baseName, ...args.comboNames]
-    .map((s) => s.trim())
-    .filter((s, idx, arr) => s.length > 0 && arr.indexOf(s) === idx)
-    .join(' + ');
-}
-
 @Injectable()
 export class SpecialistOnboardingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly moderationEnqueue: ModerationEnqueueService,
+    private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
   ) {}
 
   /** Черновик на модерации имеет приоритет над опубликованными колонками `Specialist` в кабинете. */
@@ -97,14 +93,76 @@ export class SpecialistOnboardingService {
     return true;
   }
 
-  private async countPersonalServices(specialistId: string): Promise<number> {
-    return this.prisma.service.count({
-      where: {
-        specialistId,
-        scope: ServiceCatalogScope.personal,
-        deletedAt: null,
-      },
+  private async countSkillServiceCategories(specialistId: string): Promise<number> {
+    return this.prisma.specialistSkill.count({
+      where: { specialistId },
     });
+  }
+
+  /** Полная замена `SpecialistSkill` с проверкой majors (организация + остаток онбординга до complete). */
+  private async replaceSpecialistSkillsTx(
+    tx: Prisma.TransactionClient,
+    specialist: { id: string; activeOrganizationId: string | null },
+    serviceCategoryIds: readonly string[],
+  ): Promise<void> {
+    const allowedMajorIds = new Set<string>();
+    if (specialist.activeOrganizationId) {
+      const orgM = await tx.organizationMajorServiceCategory.findMany({
+        where: { organizationId: specialist.activeOrganizationId },
+        select: { majorServiceCategoryId: true },
+      });
+      for (const r of orgM) {
+        allowedMajorIds.add(r.majorServiceCategoryId);
+      }
+    }
+    const onbM = await tx.specialistOnboardingMajorServiceCategory.findMany({
+      where: { specialistId: specialist.id },
+      select: { majorServiceCategoryId: true },
+    });
+    for (const r of onbM) {
+      allowedMajorIds.add(r.majorServiceCategoryId);
+    }
+    if (allowedMajorIds.size === 0) {
+      throw new BadRequestException({
+        code: 'SKILL_MAJORS_UNAVAILABLE',
+        message:
+          'Нет доступных сфер для навыков: выберите большие категории (шаг 3) или организацию с направлениями.',
+      });
+    }
+    const uniqIds = [...new Set(serviceCategoryIds)];
+    const categories = await tx.serviceCategory.findMany({
+      where: {
+        id: { in: uniqIds },
+        deletedAt: null,
+        isActive: true,
+      },
+      select: { id: true, majorServiceCategoryId: true },
+    });
+    if (categories.length !== uniqIds.length) {
+      throw new BadRequestException({
+        code: 'INVALID_SERVICE_CATEGORY_ID',
+        message: 'Одна или несколько подкатегорий недоступны',
+      });
+    }
+    for (const c of categories) {
+      if (!allowedMajorIds.has(c.majorServiceCategoryId)) {
+        throw new BadRequestException({
+          code: 'SERVICE_CATEGORY_MAJOR_MISMATCH',
+          message: 'Подкатегория не относится к доступным для профиля сферам',
+        });
+      }
+    }
+    await tx.specialistSkill.deleteMany({
+      where: { specialistId: specialist.id },
+    });
+    if (uniqIds.length > 0) {
+      await tx.specialistSkill.createMany({
+        data: uniqIds.map((serviceCategoryId) => ({
+          specialistId: specialist.id,
+          serviceCategoryId,
+        })),
+      });
+    }
   }
 
   private isMassageVerticalComplete(
@@ -270,11 +328,8 @@ export class SpecialistOnboardingService {
     if (!this.workplaceResolved(spec, pendingJoin)) {
       return { step: 11, specialistId: spec.id };
     }
-    const svcCount = await this.countPersonalServices(spec.id);
-    const personalCatalogSkippableForEmployedPath =
-      spec.onboardingWorkPattern === SpecialistWorkPattern.employed_salon &&
-      this.workplaceResolved(spec, pendingJoin);
-    if (svcCount < 1 && !personalCatalogSkippableForEmployedPath) {
+    const skillCount = await this.countSkillServiceCategories(spec.id);
+    if (skillCount < 1) {
       return { step: 12, specialistId: spec.id };
     }
     return { step: 13, specialistId: spec.id };
@@ -302,6 +357,44 @@ export class SpecialistOnboardingService {
     if (!spec) {
       return null;
     }
+
+    const skillCategoryRows = await this.prisma.specialistSkill.findMany({
+        where: { specialistId: spec.id },
+        include: {
+          serviceCategory: {
+            include: {
+              majorServiceCategory: {
+                select: { slug: true, sortOrder: true },
+              },
+              locales: {
+                select: {
+                  locale: true,
+                  name: true,
+                  shortName: true,
+                  description: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    const skillCategoriesSorted = [...skillCategoryRows].sort((a, b) => {
+      const ao = a.serviceCategory.majorServiceCategory.sortOrder;
+      const bo = b.serviceCategory.majorServiceCategory.sortOrder;
+      if (ao !== bo) {
+        return ao - bo;
+      }
+      const an = pickLocalizedServiceCategoryFields(
+        a.serviceCategory as CategoryLocaleShape,
+        locale,
+      ).name;
+      const bn = pickLocalizedServiceCategoryFields(
+        b.serviceCategory as CategoryLocaleShape,
+        locale,
+      ).name;
+      return an.localeCompare(bn, undefined, { sensitivity: 'base' });
+    });
+
     const userRow = await this.prisma.user.findFirst({
       where: { id: spec.userId, deletedAt: null },
       select: { name: true, phone: true, email: true, avatarUrl: true },
@@ -346,125 +439,6 @@ export class SpecialistOnboardingService {
           mergeOrganizationMajorIdsAndSlugsFromDb(orgRowEarly).slugs;
       }
     }
-    const workplaceMajorSlugSet = new Set(activeWorkplaceMajorCategorySlugs);
-
-    const personalServiceRows = await this.prisma.service.findMany({
-      where: {
-        specialistId: spec.id,
-        scope: ServiceCatalogScope.personal,
-        deletedAt: null,
-      },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      include: {
-        category: {
-          include: {
-            majorServiceCategory: { select: { slug: true } },
-            locales: {
-              select: {
-                locale: true,
-                name: true,
-                shortName: true,
-                description: true,
-              },
-            },
-          },
-        },
-        priceOptions: {
-          orderBy: { durationMinutes: 'asc' },
-          select: {
-            durationMinutes: true,
-            priceAmount: true,
-            currency: true,
-          },
-        },
-        comboItems: {
-          orderBy: { sortOrder: 'asc' },
-          select: {
-            itemServiceCategoryId: true,
-            itemServiceCategory: {
-              include: {
-                locales: {
-                  select: {
-                    locale: true,
-                    name: true,
-                    shortName: true,
-                    description: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        bodyZones: {
-          select: {
-            bodyZone: {
-              select: { slug: true },
-            },
-          },
-        },
-      },
-    });
-
-    const listedAtActiveWorkplaceForRow = (
-      row: (typeof personalServiceRows)[number],
-    ): boolean => {
-      if (!row.isActive) {
-        return false;
-      }
-      if (spec.activeOrganizationId == null) {
-        return true;
-      }
-      if (workplaceMajorSlugSet.size === 0) {
-        return false;
-      }
-      const slug = row.category.majorServiceCategory?.slug;
-      return (
-        typeof slug === 'string' &&
-        slug.length > 0 &&
-        workplaceMajorSlugSet.has(slug)
-      );
-    };
-
-    const personalServices = personalServiceRows.map((row) => ({
-      // В кабинете показываем читаемое имя combo как "Услуга + Услуга".
-      ...(() => {
-        const base = pickLocalizedServiceCategoryFields(
-          row.category as CategoryLocaleShape,
-          locale,
-        );
-        const comboNames =
-          row.kind === 'combo'
-            ? row.comboItems.map(
-                (item) =>
-                  pickLocalizedServiceCategoryFields(
-                    item.itemServiceCategory as CategoryLocaleShape,
-                    locale,
-                  ).name,
-              )
-            : [];
-        return {
-          categoryName: joinComboServiceDisplayName({
-            baseName: base.name,
-            comboNames,
-          }),
-          comboCategoryNames: comboNames,
-        };
-      })(),
-      id: row.id,
-      categoryId: row.categoryId,
-      listedAtActiveWorkplace: listedAtActiveWorkplaceForRow(row),
-      description: row.description,
-      kind: row.kind,
-      comboCategoryIds: row.comboItems.map(
-        (item) => item.itemServiceCategoryId,
-      ),
-      bodyZoneSlugs: row.bodyZones.map((item) => item.bodyZone.slug),
-      priceOptions: row.priceOptions.map((o) => ({
-        durationMinutes: o.durationMinutes,
-        priceAmount: o.priceAmount,
-        currency: o.currency,
-      })),
-    }));
 
     /** Пока висит черновик ревизии — в кабинете показываем «на модерации», как у салона с pending revision. */
     const pendingProfileRevision =
@@ -522,7 +496,16 @@ export class SpecialistOnboardingService {
             organizationName: pendingJoin.organization.name,
           }
         : null,
-      personalServices,
+      skillServiceCategoryIds: skillCategoriesSorted.map(
+        (r) => r.serviceCategoryId,
+      ),
+      skillCategories: skillCategoriesSorted.map((r) => ({
+        categoryId: r.serviceCategoryId,
+        name: pickLocalizedServiceCategoryFields(
+          r.serviceCategory as CategoryLocaleShape,
+          locale,
+        ).name,
+      })),
     };
 
     if (spec.activeOrganizationId == null) {
@@ -668,8 +651,46 @@ export class SpecialistOnboardingService {
           });
         }
       }
+
+      if (body.serviceCategoryIds !== undefined) {
+        await this.replaceSpecialistSkillsTx(
+          tx,
+          specialist,
+          body.serviceCategoryIds,
+        );
+      }
     });
 
+    if (body.serviceCategoryIds !== undefined) {
+      await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+        specialist.id,
+      );
+    }
+
+    return this.mapOnboarding(userId, locale);
+  }
+
+  /** Кабинет после онбординга: полная замена навыков (`SpecialistSkill`). */
+  async patchCabinetSkills(
+    userId: string,
+    body: PatchSpecialistSkillsBody,
+    locale: ApiLocale = 'en',
+  ) {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.replaceSpecialistSkillsTx(tx, specialist, body.serviceCategoryIds);
+    });
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialist.id,
+    );
     return this.mapOnboarding(userId, locale);
   }
 
@@ -880,6 +901,9 @@ export class SpecialistOnboardingService {
         },
       });
     });
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      spec.id,
+    );
     return this.mapOnboarding(userId, locale);
   }
 }

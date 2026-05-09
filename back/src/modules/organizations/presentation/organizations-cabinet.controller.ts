@@ -34,7 +34,6 @@ import {
   RequestLocale,
   type ApiLocale,
 } from '../../../common/i18n';
-import { parseListSearchQ } from '../../../common/pagination/directory-list-search-query.parse';
 import { OrganizationCabinetService } from '../application/organization-cabinet.service';
 import {
   createOrganizationBodySchema,
@@ -55,7 +54,6 @@ import {
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
   workplaceJoinRequestReviewResponseSchema,
-  workplaceOrganizationSearchResponseSchema,
 } from './organizations-cabinet.openapi-schemas';
 import { specialistOnboardingResponseSchema } from '../../specialists/presentation/specialists.openapi-schemas';
 
@@ -68,53 +66,10 @@ export class OrganizationsCabinetController {
     private readonly organizationCabinet: OrganizationCabinetService,
   ) {}
 
-  @Get('workplace-search')
-  @UseGuards(JwtAccessGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({
-    summary:
-      'Поиск салона для заявки на место работы (без фильтров публичной витрины по мастерам).',
-    description:
-      'Только салоны с **одобренной** публикацией (`approved` после модерации). Пустой `q` — первые `limit` по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).',
-  })
-  @ApiLocaleQueryDocs()
-  @ApiQuery({
-    name: 'q',
-    required: false,
-    description: 'Строка поиска (до 200 символов).',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: '1–50, по умолчанию 30.',
-    schema: { type: 'integer', minimum: 1, maximum: 50 },
-  })
-  @ApiOkResponse({ schema: workplaceOrganizationSearchResponseSchema })
-  @ApiBadRequestResponse({ description: 'Неверный limit' })
-  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
-  async getWorkplaceOrganizationSearch(
-    @RequestLocale() locale: ApiLocale,
-    @Query('q') qRaw?: string,
-    @Query('limit') limitRaw?: string,
-  ) {
-    let limit = 30;
-    if (limitRaw !== undefined && limitRaw !== '') {
-      const n = Number.parseInt(limitRaw, 10);
-      if (!Number.isFinite(n) || n < 1 || n > 50) {
-        throw new BadRequestException({
-          code: 'INVALID_LIMIT',
-          message: 'limit must be an integer from 1 to 50',
-        });
-      }
-      limit = n;
-    }
-    const q = parseListSearchQ(qRaw);
-    return this.organizationCabinet.searchOrganizationsForWorkplaceJoin(
-      locale,
-      q,
-      limit,
-    );
-  }
+  /**
+   * Реализация: {@link OrganizationsController.getWorkplaceOrganizationSearch} (тот же URI), —
+   * см. комментарий там: статический путь должен объявляться **до** `:id` на префиксе `organizations`.
+   */
 
   @Post()
   @UseGuards(JwtAccessGuard)

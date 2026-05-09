@@ -8,6 +8,12 @@ function positiveInt(raw: string | undefined, fallback: number): number {
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : fallback;
 }
 
+/** Целое >= 0; для необязательных политик (`0` = выключено). */
+function nonNegativeInt(raw: string | undefined, fallback: number): number {
+  const v = Number(raw);
+  return Number.isFinite(v) && v >= 0 ? Math.floor(v) : fallback;
+}
+
 /** Включение вызовов Ollama (`ENABLE_OLLAMA`); пустое значение → fallback. */
 function envBool(raw: string | undefined, fallback: boolean): boolean {
   if (raw === undefined || raw.trim() === '') {
@@ -89,6 +95,17 @@ export default () => ({
     maxCreatesPerDay: positiveInt(
       process.env.BOOKING_CLIENT_MAX_CREATES_PER_DAY,
       30,
+    ),
+  },
+  /**
+   * Перенос подтверждённой записи мастером/салоном (`BookingEventType.rescheduled`).
+   * Если > 0: запрет, если до **текущего** начала слота осталось меньше этого числа минут.
+   */
+  bookingReschedulePolicy: {
+    forbidWithinMinutesBeforeOriginalStart: nonNegativeInt(
+      process.env
+        .BOOKING_RESCHEDULE_FORBID_WITHIN_MINUTES_BEFORE_ORIGINAL_START,
+      0,
     ),
   },
   /**
@@ -282,5 +299,31 @@ export default () => ({
     email: process.env.ADMIN_MASTER_EMAIL?.trim() ?? '',
     password: process.env.ADMIN_MASTER_PASSWORD ?? '',
     name: process.env.ADMIN_MASTER_NAME?.trim() || 'Platform Admin',
+  },
+  /**
+   * Маркетплейс: retrieval (Typesense) vs SQL listing; versioning документа — см. ADR marketplace.
+   * `SEARCH_LISTING_BACKEND=indexed` + Typesense — `GET /v1/specialists` по индексу рёбер
+   * `SpecialistOffering` (`TYPESENSE_LISTING_EDGES_COLLECTION`, см. marketplace ADR §3).
+   */
+  search: {
+    listingBackend:
+      process.env.SEARCH_LISTING_BACKEND?.trim() === 'indexed'
+        ? 'indexed'
+        : 'sql',
+    typesense: {
+      host: process.env.TYPESENSE_HOST?.trim() || '127.0.0.1',
+      port: positiveInt(process.env.TYPESENSE_PORT, 8108),
+      protocol:
+        process.env.TYPESENSE_PROTOCOL?.trim().toLowerCase() === 'https'
+          ? ('https' as const)
+          : ('http' as const),
+      apiKey: process.env.TYPESENSE_API_KEY?.trim() ?? '',
+      marketplaceCollection:
+        process.env.TYPESENSE_MARKETPLACE_COLLECTION?.trim() ||
+        'marketplace_offerings_v1',
+      listingEdgesCollection:
+        process.env.TYPESENSE_LISTING_EDGES_COLLECTION?.trim() ||
+        'marketplace_listing_edges_v1',
+    },
   },
 });

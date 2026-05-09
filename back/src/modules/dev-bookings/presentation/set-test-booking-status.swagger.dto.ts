@@ -23,7 +23,8 @@ export class SetTestBookingStatusSwaggerDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Текст в `BookingStatusHistory.reason`',
+    description:
+      'Свободный текст — попадает в payload доменных событий бронирования (`BookingEvent`).',
     example: 'dev: проверка UI',
   })
   reason?: string;

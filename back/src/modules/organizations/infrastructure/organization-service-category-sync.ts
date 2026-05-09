@@ -2,41 +2,26 @@ import { Prisma } from '@prisma/client';
 import type { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 
 /**
- * Полная пересборка `OrganizationServiceCategory`: подкатегории витрины салона = уникальные
- * `Service.categoryId` по активным услугам мастеров с `activeOrganizationId` = этот салон,
- * услуга в скоупе места приёма (`scope` = personal либо `organizationId` салона),
- * **и** `majorServiceCategoryId` категории входит в выбранные сферы организации
- * (`OrganizationMajorServiceCategory`).
- *
- * Так мы не переводим сами строки услуг в `isActive: false`, когда салон снимает сферу:
- * услуги остаются в каталоге мастера; для этой организации вертикаль просто не показывается.
- *
- * Пустой набор сфер у организации → OSC очищается (inner join на `OrganizationMajorServiceCategory`).
- *
- * Вызывать при CRUD/деактивации услуг, смене сфер/места приёма и т.д.
+ * Полная пересборка `OrganizationServiceCategory` из **опубликованных** офферов точки,
+ * чьи подкатегории входят в выбранные сферы (`OrganizationMajorServiceCategory`).
+ * Личный каталог мастера (`Service`) на витрину салона не влияет.
  */
-export async function syncOrganizationServiceCategoriesFromSpecialistServices(
+export async function syncOrganizationServiceCategoriesFromPublishedOfferings(
   db: PrismaService | Prisma.TransactionClient,
   organizationId: string,
 ): Promise<void> {
   const rows = await db.$queryRaw<{ categoryId: string }[]>(
     Prisma.sql`
-      SELECT DISTINCT s."categoryId"::text AS "categoryId"
-      FROM "Service" s
-      INNER JOIN "Specialist" sp ON sp.id = s."specialistId"
-      INNER JOIN "ServiceCategory" sc ON sc.id = s."categoryId"
+      SELECT DISTINCT o."categoryId"::text AS "categoryId"
+      FROM "OrganizationOffering" o
+      INNER JOIN "ServiceCategory" sc ON sc.id = o."categoryId"
       INNER JOIN "OrganizationMajorServiceCategory" omsc
-        ON omsc."organizationId"::text = ${organizationId}
+        ON omsc."organizationId" = o."organizationId"
         AND omsc."majorServiceCategoryId" = sc."majorServiceCategoryId"
-      WHERE sp."activeOrganizationId"::text = ${organizationId}
-        AND sp."deletedAt" IS NULL
-        AND s."deletedAt" IS NULL
+      WHERE o."organizationId"::text = ${organizationId}
+        AND o."deletedAt" IS NULL
+        AND o."publicationStatus" = 'published'::"OfferingPublicationStatus"
         AND sc."deletedAt" IS NULL
-        AND s."isActive" = true
-        AND (
-          s."scope" = 'personal'::"ServiceCatalogScope"
-          OR s."organizationId"::text = ${organizationId}
-        )
     `,
   );
   await db.organizationServiceCategory.deleteMany({

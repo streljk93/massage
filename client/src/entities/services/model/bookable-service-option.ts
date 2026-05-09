@@ -11,6 +11,10 @@ export type BookableServiceOption = {
   durationMinutes: readonly number[];
   /** Длина совпадает с `durationMinutes`: цена в VND за сессию. */
   priceVndByDuration: readonly number[];
+  /** Id опубликованного оффера активного салона (`OrganizationOffering.id`; совпадает с `id` строки при marketplace-витрине). */
+  organizationOfferingId: string;
+  /** Id ценовых опций по индексу длительности (`OfferingPriceOption.id`). */
+  marketplaceOfferingPriceOptionIds: readonly string[];
 };
 
 /** Текущая цена услуги для выбранной длительности (минут). */

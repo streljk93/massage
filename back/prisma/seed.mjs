@@ -114,17 +114,8 @@ async function seedMajorWithCategories(db, args) {
     await db.organizationServiceCategory.deleteMany({
       where: { serviceCategoryId: { in: deprecatedCategoryIds } },
     });
-    await db.specialistServiceCategory.deleteMany({
+    await db.specialistSkill.deleteMany({
       where: { serviceCategoryId: { in: deprecatedCategoryIds } },
-    });
-    await db.service.updateMany({
-      where: {
-        categoryId: { in: deprecatedCategoryIds },
-        deletedAt: null,
-      },
-      data: {
-        isActive: false,
-      },
     });
   }
 

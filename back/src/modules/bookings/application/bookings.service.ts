@@ -10,8 +10,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { addMinutes, parseISO, subHours } from 'date-fns';
 import {
+  OfferingPriceOptionStatus,
+  OfferingPublicationStatus,
   OrganizationMembershipRole,
   PublicationModerationStatus,
+  SpecialistOfferingStatus,
+  BookingEventType,
   type BookingStatus,
   type Prisma,
 } from '@prisma/client';
@@ -29,24 +33,31 @@ import {
   type CategoryLocaleShape,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { TransactionalOutboxService } from '../../../infrastructure/transactional-outbox/transactional-outbox.service';
+import {
+  BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT,
+  BOOKING_COMPLETED_EVENT_REASON_CODE_AUTO_DONE_AT_SLOT_END,
+} from '../domain/booking-cancel-reason';
+import { buildBookingSnapshotCreateData } from '../domain/booking-snapshot.builder';
+import { BookingAppendService } from './booking-append.service';
 import { ContentModerationService } from '../../moderation/application/content-moderation.service';
 import type { CancelBookingBody } from '../dto/cancel-booking-body.schema';
 import type { SpecialistCancelConfirmedBookingBody } from '../dto/specialist-cancel-confirmed-booking-body.schema';
+import type { SpecialistRescheduleConfirmedBookingBody } from '../dto/specialist-reschedule-confirmed-booking-body.schema';
 import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import type { SubmitBookingVisitReviewsBody } from '../dto/submit-booking-visit-reviews-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { BookingsRepository, type SalonCabinetBookingRow } from '../infrastructure/bookings.repository';
 import { isBookingSlotStartTimeReached } from '../domain/booking-in-progress-start-policy';
-import { isBookingStatusTransitionAllowed } from '../domain/booking-status-transitions';
-import { isServiceBookableMatchingDirectoryVitrineRules } from '../../services/domain/service-catalog-visibility';
+import { isOrganizationOfferingBookableMatchingDirectoryVitrineRules } from '../../services/domain/service-catalog-visibility';
+import {
+  OfferingPricingResolver,
+  isOfferingPricingResolverError,
+} from '../domain/offering-pricing-resolver.service';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
-
-function isVndCurrency(currency: string | null | undefined): boolean {
-  return (currency ?? 'VND').toUpperCase() === 'VND';
-}
 
 /** Автор в списке бронирований видит черновик отзыва пока он на модерации; опубликованный текст — иначе. */
 function bookingReviewMergedExcerpt(
@@ -80,6 +91,9 @@ export class BookingsService {
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
     private readonly contentModeration: ContentModerationService,
+    private readonly outbox: TransactionalOutboxService,
+    private readonly offeringPricingResolver: OfferingPricingResolver,
+    private readonly bookingAppend: BookingAppendService,
   ) {}
 
   private async resolveBookingsListLocale(
@@ -174,12 +188,29 @@ export class BookingsService {
       });
     }
 
+    return this.createBookingViaOrganizationOffering(
+      clientUserId,
+      body,
+      locale,
+    );
+  }
+
+  /**
+   * Создание брони якорем OrganizationOffering + OfferingPriceOption через SpecialistOffering.
+   */
+  private async createBookingViaOrganizationOffering(
+    clientUserId: string,
+    body: CreateBookingBody,
+    locale: ApiLocale,
+  ) {
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: body.specialistId, deletedAt: null },
       select: {
         id: true,
         activeOrganizationId: true,
         userId: true,
+        listingName: true,
+        user: { select: { name: true } },
         autoConfirmBookings: true,
         listedInDirectory: true,
       },
@@ -191,56 +222,11 @@ export class BookingsService {
       });
     }
 
-    const service = await this.prisma.service.findFirst({
-      where: {
-        id: body.serviceId,
-        specialistId: body.specialistId,
-        deletedAt: null,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        organizationId: true,
-        deletedAt: true,
-        isActive: true,
-        scope: true,
-        priceOptions: true,
-        category: {
-          select: {
-            id: true,
-            name: true,
-            shortName: true,
-            slug: true,
-            description: true,
-            sortOrder: true,
-            majorServiceCategoryId: true,
-            locales: {
-              select: {
-                locale: true,
-                name: true,
-                shortName: true,
-                description: true,
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!service) {
-      throw new NotFoundException({
-        code: 'SERVICE_NOT_FOUND',
-        message: 'Service not found for this specialist',
-      });
-    }
-
     let organizationId = specialist.activeOrganizationId;
     if (!organizationId) {
       const employment =
         await this.prisma.specialistOrganizationEmployment.findFirst({
-          where: {
-            specialistId: body.specialistId,
-            isActive: true,
-          },
+          where: { specialistId: body.specialistId, isActive: true },
           orderBy: { startDate: 'desc' },
         });
       organizationId = employment?.organizationId ?? null;
@@ -252,6 +238,9 @@ export class BookingsService {
       bookingConfirmationGraceMinutes: number | null;
     } | null = null;
 
+    let organizationNameForSnapshot: string | null = null;
+    let addressLineForSnapshot: string | null = null;
+    let cityForSnapshot: string | null = null;
     let workplaceOrgMajorCategoryIds: string[] | null = null;
 
     if (organizationId) {
@@ -262,6 +251,8 @@ export class BookingsService {
             listingWorkdayStartMinute: true,
             listingWorkdayEndMinute: true,
             bookingConfirmationGraceMinutes: true,
+            name: true,
+            address: { select: { addressLine: true, city: true } },
           },
         }),
         this.prisma.organizationMajorServiceCategory.findMany({
@@ -270,38 +261,152 @@ export class BookingsService {
         }),
       ]);
       listingOrg = org;
+      if (org != null) {
+        organizationNameForSnapshot = org.name;
+        addressLineForSnapshot = org.address?.addressLine ?? null;
+        cityForSnapshot = org.address?.city ?? null;
+      }
       workplaceOrgMajorCategoryIds = majorRows.map(
         (m) => m.majorServiceCategoryId,
       );
     }
 
+    const orgOfferingId = body.organizationOfferingId!;
+    const optId = body.offeringPriceOptionId!;
+
+    const startsAt = parseISO(body.startsAt);
+
+    const assignment = await this.prisma.specialistOffering.findFirst({
+      where: {
+        specialistId: body.specialistId,
+        organizationOfferingId: orgOfferingId,
+        deletedAt: null,
+        status: SpecialistOfferingStatus.active,
+      },
+      include: {
+        organizationOffering: {
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                shortName: true,
+                slug: true,
+                description: true,
+                sortOrder: true,
+                majorServiceCategoryId: true,
+                locales: {
+                  select: {
+                    locale: true,
+                    name: true,
+                    shortName: true,
+                    description: true,
+                  },
+                },
+              },
+            },
+            organization: {
+              select: {
+                id: true,
+                deletedAt: true,
+              },
+            },
+          },
+        },
+        priceOverrides: {
+          where: { offeringPriceOptionId: optId },
+          select: { offeringPriceOptionId: true, customPrice: true },
+        },
+      },
+    });
+
+    const off = assignment?.organizationOffering;
     if (
-      !isServiceBookableMatchingDirectoryVitrineRules({
-        scope: service.scope,
-        serviceOrganizationId: service.organizationId,
-        categoryMajorServiceCategoryId: service.category.majorServiceCategoryId,
-        serviceIsActive: service.isActive,
-        serviceDeletedAt: service.deletedAt,
+      assignment == null ||
+      off == null ||
+      off.deletedAt != null ||
+      off.publicationStatus !== OfferingPublicationStatus.published ||
+      off.organization == null
+    ) {
+      throw new NotFoundException({
+        code: 'BOOKING_OFFERING_NOT_FOUND',
+        message: 'Offering is not available for booking with this specialist',
+      });
+    }
+
+    if (
+      off.organizationId !== organizationId ||
+      off.organization.deletedAt != null
+    ) {
+      throw new NotFoundException({
+        code: 'BOOKING_OFFERING_NOT_FOUND',
+        message: 'Offering is not available for booking with this specialist',
+      });
+    }
+
+    if (
+      !isOrganizationOfferingBookableMatchingDirectoryVitrineRules({
+        offeringOrganizationId: off.organizationId,
+        categoryMajorServiceCategoryId:
+          off.category.majorServiceCategoryId,
         specialistListedInDirectory: specialist.listedInDirectory,
         workplaceOrganizationId: organizationId,
         workplaceOrganizationMajorCategoryIds: workplaceOrgMajorCategoryIds,
       })
     ) {
       throw new NotFoundException({
-        code: 'SERVICE_NOT_FOUND',
-        message: 'Service not found for this specialist',
+        code: 'BOOKING_OFFERING_NOT_FOUND',
+        message: 'Offering is not available for booking with this specialist',
       });
     }
 
-    const priceOpt = service.priceOptions.find(
-      (p) =>
-        p.durationMinutes === body.durationMinutes && isVndCurrency(p.currency),
-    );
+    const priceOpt = await this.prisma.offeringPriceOption.findFirst({
+      where: {
+        id: optId,
+        organizationOfferingId: orgOfferingId,
+        deletedAt: null,
+        status: OfferingPriceOptionStatus.active,
+      },
+    });
     if (!priceOpt) {
-      throw new BadRequestException({
-        code: 'INVALID_DURATION_OR_PRICE',
-        message: 'No VND price option for this duration',
+      throw new NotFoundException({
+        code: 'BOOKING_PRICE_OPTION_NOT_FOUND',
+        message: 'Price option not available for this offering',
       });
+    }
+
+    if (
+      body.durationMinutes != null &&
+      body.durationMinutes !== priceOpt.durationMinutes
+    ) {
+      throw new BadRequestException({
+        code: 'BOOKING_DURATION_MISMATCH',
+        message: 'durationMinutes does not match the selected price option',
+      });
+    }
+
+    const overrideRow = assignment.priceOverrides[0];
+    let resolved: {
+      priceAmount: number;
+      currency: string;
+      durationMinutes: number;
+    };
+    try {
+      resolved = this.offeringPricingResolver.resolve({
+        priceOption: priceOpt,
+        override:
+          overrideRow != null ?
+            { customPrice: overrideRow.customPrice }
+          : null,
+      });
+    } catch (e: unknown) {
+      if (isOfferingPricingResolverError(e)) {
+        throw new BadRequestException({
+          code: e.code,
+          message: e.message,
+        });
+      }
+      throw e;
     }
 
     let graceMinutes = DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES;
@@ -323,8 +428,7 @@ export class BookingsService {
       }
     }
 
-    const endsAt = addMinutes(startsAt, body.durationMinutes);
-
+    const endsAt = addMinutes(startsAt, resolved.durationMinutes);
     const bookability = checkListingBookability(
       startsAt,
       endsAt,
@@ -344,6 +448,7 @@ export class BookingsService {
       body.specialistId,
       startsAt,
       endsAt,
+      null,
     );
     if (overlap) {
       throw new BadRequestException({
@@ -352,11 +457,15 @@ export class BookingsService {
       });
     }
 
-    const categoryShortNameSnapshot = pickLocalizedServiceCategoryFields(
-      service.category as CategoryLocaleShape,
+    const categoryPresentation = pickLocalizedServiceCategoryFields(
+      off.category as CategoryLocaleShape,
       locale,
-    ).shortName;
+    );
+    const categoryShortNameSnapshot = categoryPresentation.shortName;
+    const titleSnapshot =
+      off.title.trim().length > 0 ? off.title.trim() : categoryPresentation.name;
 
+    const now = Date.now();
     const shouldAutoConfirm = specialist.autoConfirmBookings;
     const pendingExpiresAt = shouldAutoConfirm
       ? null
@@ -368,44 +477,63 @@ export class BookingsService {
           clientUserId,
           specialistId: body.specialistId,
           organizationId,
-          serviceId: service.id,
+          organizationOfferingId: orgOfferingId,
+          offeringPriceOptionId: optId,
           categoryShortNameSnapshot,
-          durationMinutes: body.durationMinutes,
-          priceAmountSnapshot: priceOpt.priceAmount,
-          currencySnapshot: priceOpt.currency ?? 'VND',
+          durationMinutes: resolved.durationMinutes,
+          priceAmountSnapshot: resolved.priceAmount,
+          currencySnapshot: resolved.currency ?? 'VND',
           startsAt,
           endsAt,
-          status: shouldAutoConfirm ? 'confirmed' : 'pending',
-          pendingExpiresAt,
+          pendingExpiresAt: null,
         },
       });
-      await tx.bookingStatusHistory.create({
-        data: {
+      await tx.bookingSnapshot.create({
+        data: buildBookingSnapshotCreateData({
           bookingId: b.id,
-          fromStatus: null,
-          toStatus: 'pending',
-          actorUserId: clientUserId,
+          organizationOfferingId: orgOfferingId,
+          offeringPriceOptionId: optId,
+          organizationOfferingTitleSnapshot: titleSnapshot,
+          organizationNameSnapshot: organizationNameForSnapshot,
+          specialistDisplayNameSnapshot:
+            specialist.listingName?.trim() ??
+            specialist.user.name?.trim() ??
+            null,
+          durationMinutesSnapshot: resolved.durationMinutes,
+          priceAmountSnapshot: resolved.priceAmount,
+          currencySnapshot: resolved.currency ?? 'VND',
+          addressLineSnapshot: addressLineForSnapshot,
+          citySnapshot: cityForSnapshot,
+        }),
+      });
+      await this.outbox.enqueueBookingCreated(tx, b.id);
+      await this.bookingAppend.appendBookingEvent(tx, {
+        bookingId: b.id,
+        type: BookingEventType.created,
+        actorUserId: clientUserId,
+        payload: {
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+          ...(pendingExpiresAt == null ?
+            { pendingExpiresAt: null }
+          : { pendingExpiresAt: pendingExpiresAt.toISOString() }),
         },
       });
       if (shouldAutoConfirm) {
-        await tx.bookingStatusHistory.create({
-          data: {
-            bookingId: b.id,
-            fromStatus: 'pending',
-            toStatus: 'confirmed',
-            /** Автоподтверждение по настройке мастера. */
-            actorUserId: specialist.userId,
-          },
+        await this.bookingAppend.appendBookingEvent(tx, {
+          bookingId: b.id,
+          type: BookingEventType.confirmed,
+          actorUserId: specialist.userId,
+          payload: {},
         });
       }
-      return b;
+      const fresh = await tx.booking.findFirstOrThrow({
+        where: { id: b.id },
+      });
+      return fresh;
     });
 
     void this.pushNotifications.notifySpecialistNewBooking(booking.id);
-    /**
-     * Уведомление о новой брони — только мастеру. Клиент получает пуш/письмо при смене статуса и т.д.
-     * При автоподтверждении отдельный FCM «подтверждение» не шлём — см. {@link PushNotificationsService.notifyClientBookingStatusChange}.
-     */
 
     return {
       id: booking.id,
@@ -639,7 +767,22 @@ export class BookingsService {
     count: number;
     bookingIds: string[];
   }> {
-    return this.bookingsRepository.expirePendingPastDeadline(new Date());
+    const now = new Date();
+    const ids =
+      await this.bookingsRepository.findBookingIdsPendingExpiredDeadline(now);
+    const bookingIds: string[] = [];
+    for (const id of ids) {
+      await this.bookingAppend.appendBookingEventNewTx({
+        bookingId: id,
+        type: BookingEventType.expired,
+        actorUserId: null,
+        payload: {
+          reasonCode: BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT,
+        },
+      });
+      bookingIds.push(id);
+    }
+    return { count: bookingIds.length, bookingIds };
   }
 
   /** Вызывается cron: `in_progress` с истёкшим `endsAt` → `done`. */
@@ -647,7 +790,23 @@ export class BookingsService {
     count: number;
     bookingIds: string[];
   }> {
-    return this.bookingsRepository.completeInProgressPastEndsAt(new Date());
+    const now = new Date();
+    const ids =
+      await this.bookingsRepository.findBookingIdsInProgressPastSlotEnd(now);
+    const bookingIds: string[] = [];
+    for (const id of ids) {
+      await this.bookingAppend.appendBookingEventNewTx({
+        bookingId: id,
+        type: BookingEventType.completed,
+        actorUserId: null,
+        payload: {
+          reasonCode: BOOKING_COMPLETED_EVENT_REASON_CODE_AUTO_DONE_AT_SLOT_END,
+          reasonText: BOOKING_COMPLETED_EVENT_REASON_CODE_AUTO_DONE_AT_SLOT_END,
+        },
+      });
+      bookingIds.push(id);
+    }
+    return { count: bookingIds.length, bookingIds };
   }
 
   /**
@@ -700,6 +859,29 @@ export class BookingsService {
     }
   }
 
+  /** Границы витринного рабочего дня точки для проверки слота (как при создании брони). */
+  private async resolveListingWorkdayForBookingOrganization(
+    organizationId: string | null,
+  ) {
+    if (organizationId == null) {
+      return normalizeDirectoryListingWorkdayBounds(undefined, undefined);
+    }
+    const org = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: {
+        listingWorkdayStartMinute: true,
+        listingWorkdayEndMinute: true,
+      },
+    });
+    if (org == null) {
+      return normalizeDirectoryListingWorkdayBounds(undefined, undefined);
+    }
+    return normalizeDirectoryListingWorkdayBounds(
+      org.listingWorkdayStartMinute,
+      org.listingWorkdayEndMinute,
+    );
+  }
+
   /**
    * Ручное подтверждение: `pending` → `confirmed` + FCM клиенту.
    */
@@ -715,6 +897,14 @@ export class BookingsService {
   }> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
+      select: {
+        clientUserId: true,
+        specialistId: true,
+        organizationId: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+      },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -726,29 +916,16 @@ export class BookingsService {
       specialistId: booking.specialistId,
       organizationId: booking.organizationId,
     });
-    if (!isBookingStatusTransitionAllowed(booking.status, 'confirmed')) {
-      throw new BadRequestException({
-        code: 'BOOKING_NOT_PENDING',
-        message: 'Only a pending booking can be confirmed by the specialist',
-      });
-    }
 
     const fromStatus = booking.status;
     const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: 'confirmed', pendingExpiresAt: null },
+      await this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.confirmed,
+        actorUserId: specialistUserId,
+        payload: {},
       });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          fromStatus,
-          toStatus: 'confirmed',
-          actorUserId: specialistUserId,
-          reason: null,
-        },
-      });
-      return row;
+      return tx.booking.findFirstOrThrow({ where: { id: bookingId } });
     });
 
     void this.pushNotifications.notifyClientBookingStatusChange(
@@ -778,6 +955,12 @@ export class BookingsService {
   }> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
+      select: {
+        clientUserId: true,
+        specialistId: true,
+        organizationId: true,
+        status: true,
+      },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -789,27 +972,14 @@ export class BookingsService {
       specialistId: booking.specialistId,
       organizationId: booking.organizationId,
     });
-    if (!isBookingStatusTransitionAllowed(booking.status, 'reject_by_master')) {
-      throw new BadRequestException({
-        code: 'BOOKING_NOT_PENDING',
-        message: 'Only a pending booking can be rejected by the specialist',
-      });
-    }
 
     const fromStatus = booking.status;
     await this.prisma.$transaction(async (tx) => {
-      await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: 'reject_by_master', pendingExpiresAt: null },
-      });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          fromStatus,
-          toStatus: 'reject_by_master',
-          actorUserId: specialistUserId,
-          reason: null,
-        },
+      await this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.rejected,
+        actorUserId: specialistUserId,
+        payload: { rejectParty: 'specialist' },
       });
     });
 
@@ -836,6 +1006,13 @@ export class BookingsService {
   }> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
+      select: {
+        clientUserId: true,
+        specialistId: true,
+        organizationId: true,
+        status: true,
+        startsAt: true,
+      },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -847,12 +1024,6 @@ export class BookingsService {
       specialistId: booking.specialistId,
       organizationId: booking.organizationId,
     });
-    if (!isBookingStatusTransitionAllowed(booking.status, 'in_progress')) {
-      throw new BadRequestException({
-        code: 'BOOKING_CANNOT_START_VISIT',
-        message: 'Only a confirmed booking can be started',
-      });
-    }
     const now = new Date();
     if (!isBookingSlotStartTimeReached(booking.startsAt, now)) {
       throw new BadRequestException({
@@ -863,20 +1034,13 @@ export class BookingsService {
 
     const fromStatus = booking.status;
     const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: 'in_progress' },
+      await this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.started,
+        actorUserId: specialistUserId,
+        payload: {},
       });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          fromStatus,
-          toStatus: 'in_progress',
-          actorUserId: specialistUserId,
-          reason: null,
-        },
-      });
-      return row;
+      return tx.booking.findFirstOrThrow({ where: { id: bookingId } });
     });
 
     void this.pushNotifications.notifyClientBookingStatusChange(
@@ -900,9 +1064,16 @@ export class BookingsService {
     actingUserId: string,
     bookingId: string,
     body: SpecialistCancelConfirmedBookingBody,
-  ): Promise<{ id: string; status: 'canceled_by_master' }> {
+  ): Promise<{ id: string; status: BookingStatus }> {
     const booking = await this.prisma.booking.findFirst({
       where: { id: bookingId, deletedAt: null },
+      select: {
+        clientUserId: true,
+        specialistId: true,
+        organizationId: true,
+        status: true,
+        specialist: { select: { userId: true } },
+      },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -914,13 +1085,6 @@ export class BookingsService {
       specialistId: booking.specialistId,
       organizationId: booking.organizationId,
     });
-    if (!isBookingStatusTransitionAllowed(booking.status, 'canceled_by_master')) {
-      throw new BadRequestException({
-        code: 'BOOKING_CANNOT_CANCEL',
-        message:
-          'Only a confirmed booking can be canceled by the specialist or salon',
-      });
-    }
 
     const commentTrimmed = body.cancellationComment?.trim() ?? '';
     const cancelReasonDb = body.cancelReason;
@@ -934,35 +1098,163 @@ export class BookingsService {
       historyPieces.length > 0 ? historyPieces.join(' | ') : null;
 
     const fromStatus = booking.status;
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: 'canceled_by_master',
-          pendingExpiresAt: null,
-          cancelReason: cancelReasonDb,
+    const { projection } = await this.prisma.$transaction(async (tx) =>
+      this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.canceled,
+        actorUserId: actingUserId,
+        payload: {
+          cancelParty: 'specialist',
+          reasonCode: cancelReasonDb,
           cancellationComment: cancellationCommentDb,
+          ...(historyReason !== null ?
+            { reasonText: historyReason }
+          : {}),
         },
-      });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          fromStatus,
-          toStatus: 'canceled_by_master',
-          actorUserId: actingUserId,
-          reason: historyReason,
-        },
-      });
-      return row;
-    });
+      }),
+    );
 
     void this.pushNotifications.notifyClientBookingStatusChange(
       bookingId,
       fromStatus,
-      'canceled_by_master',
+      projection.status,
     );
 
-    return { id: updated.id, status: 'canceled_by_master' };
+    return { id: bookingId, status: projection.status };
+  }
+
+  /**
+   * Перенос подтверждённого слота: `BookingEventType.rescheduled`, статус остаётся `confirmed`,
+   * обновляются `startsAt` / `endsAt`; клиент получает отдельный push/email.
+   */
+  async rescheduleConfirmedBySpecialist(
+    actingUserId: string,
+    bookingId: string,
+    body: SpecialistRescheduleConfirmedBookingBody,
+  ): Promise<{
+    id: string;
+    status: 'confirmed';
+    startsAt: string;
+    endsAt: string;
+  }> {
+    const reschedulePolicy = this.config.getOrThrow<{
+      forbidWithinMinutesBeforeOriginalStart: number;
+    }>('bookingReschedulePolicy');
+
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, deletedAt: null },
+      select: {
+        specialistId: true,
+        organizationId: true,
+        status: true,
+        startsAt: true,
+        endsAt: true,
+        durationMinutes: true,
+      },
+    });
+    if (!booking) {
+      throw new NotFoundException({
+        code: 'BOOKING_NOT_FOUND',
+        message: 'Booking not found',
+      });
+    }
+    await this.assertSalonSideMayActOnBooking(actingUserId, {
+      specialistId: booking.specialistId,
+      organizationId: booking.organizationId,
+    });
+    if (booking.status !== 'confirmed') {
+      throw new BadRequestException({
+        code: 'BOOKING_NOT_CONFIRMED',
+        message: 'Only a confirmed booking can be rescheduled',
+      });
+    }
+
+    const leadMin = reschedulePolicy.forbidWithinMinutesBeforeOriginalStart;
+    if (leadMin > 0) {
+      const originalStartMs = booking.startsAt.getTime();
+      const forbidAfterMs = originalStartMs - leadMin * 60_000;
+      if (Date.now() > forbidAfterMs) {
+        throw new BadRequestException({
+          code: 'BOOKING_RESCHEDULE_DEADLINE_PASSED',
+          message:
+            'Rescheduling is no longer allowed this close to the original start time',
+        });
+      }
+    }
+
+    const newStartsAt = parseISO(body.startsAt);
+    if (Number.isNaN(newStartsAt.getTime())) {
+      throw new BadRequestException({
+        code: 'INVALID_STARTS_AT',
+        message: 'startsAt must be a valid ISO datetime',
+      });
+    }
+    const nowMs = Date.now();
+    if (newStartsAt.getTime() < nowMs - BOOKING_START_TOLERANCE_MS) {
+      throw new BadRequestException({
+        code: 'STARTS_AT_IN_PAST',
+        message: 'New booking start time must be in the future',
+      });
+    }
+
+    const listingWorkday =
+      await this.resolveListingWorkdayForBookingOrganization(
+        booking.organizationId,
+      );
+    const newEndsAt = addMinutes(newStartsAt, booking.durationMinutes);
+    const bookability = checkListingBookability(
+      newStartsAt,
+      newEndsAt,
+      listingWorkday,
+    );
+    if (!bookability.ok) {
+      throw new BadRequestException({
+        code: bookability.code,
+        message:
+          bookability.code === 'NOT_GRID_ALIGNED'
+            ? 'startsAt must align to a 30-minute grid in the listing timezone'
+            : 'Booking must fit within the salon listing workday in the listing timezone',
+      });
+    }
+
+    const overlap = await this.bookingsRepository.findActiveOverlap(
+      booking.specialistId,
+      newStartsAt,
+      newEndsAt,
+      bookingId,
+    );
+    if (overlap) {
+      throw new BadRequestException({
+        code: 'SLOT_NOT_AVAILABLE',
+        message: 'This time overlaps an existing active booking',
+      });
+    }
+
+    await this.prisma.$transaction(async (tx) =>
+      this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.rescheduled,
+        actorUserId: actingUserId,
+        payload: {
+          previousStartsAt: booking.startsAt.toISOString(),
+          previousEndsAt: booking.endsAt.toISOString(),
+          nextStartsAt: newStartsAt.toISOString(),
+          nextEndsAt: newEndsAt.toISOString(),
+          ...(body.reasonCode != null && body.reasonCode.trim().length > 0 ?
+            { reasonCode: body.reasonCode.trim() }
+          : {}),
+        },
+      }),
+    );
+
+    void this.pushNotifications.notifyClientBookingRescheduled(bookingId);
+
+    return {
+      id: bookingId,
+      status: 'confirmed',
+      startsAt: newStartsAt.toISOString(),
+      endsAt: newEndsAt.toISOString(),
+    };
   }
 
   async cancelByClient(
@@ -976,6 +1268,12 @@ export class BookingsService {
         clientUserId,
         deletedAt: null,
       },
+      select: {
+        status: true,
+        specialistId: true,
+        clientUserId: true,
+        specialist: { select: { userId: true } },
+      },
     });
     if (!booking) {
       throw new NotFoundException({
@@ -985,9 +1283,9 @@ export class BookingsService {
     }
     const fromStatus = booking.status;
     const isPending = booking.status === 'pending';
-    const toStatus = isPending ? 'reject_by_client' : 'canceled_by_client';
+    const isConfirmed = booking.status === 'confirmed';
 
-    if (!isBookingStatusTransitionAllowed(fromStatus, toStatus)) {
+    if (!isPending && !isConfirmed) {
       throw new BadRequestException({
         code: 'BOOKING_NOT_CANCELLABLE',
         message: 'Booking cannot be canceled in its current state',
@@ -996,18 +1294,13 @@ export class BookingsService {
 
     let cancelReasonDb: string | null = null;
     let cancellationCommentDb: string | null = null;
-    let historyReason: string | null = null;
 
-    if (isPending) {
-      cancelReasonDb = null;
-      cancellationCommentDb = null;
-      historyReason = null;
-    } else {
+    if (!isPending) {
       if (body.cancelReason == null) {
         throw new BadRequestException({
           code: 'BOOKING_CANCEL_REASON_REQUIRED',
           message:
-            'cancelReason is required when canceling a confirmed or in-progress booking',
+            'cancelReason is required when canceling a confirmed booking',
         });
       }
       const commentTrimmed = body.cancellationComment?.trim() ?? '';
@@ -1020,32 +1313,27 @@ export class BookingsService {
       }
       cancelReasonDb = body.cancelReason;
       cancellationCommentDb = commentTrimmed.length > 0 ? commentTrimmed : null;
-      historyReason = [body.cancelReason, cancellationCommentDb ?? '']
-        .filter((s) => s.length > 0)
-        .join(' | ');
-      historyReason = historyReason.length > 0 ? historyReason : null;
     }
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const row = await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: toStatus,
-          pendingExpiresAt: null,
-          cancelReason: cancelReasonDb,
+    const { projection } = await this.prisma.$transaction(async (tx) => {
+      if (isPending) {
+        return this.bookingAppend.appendBookingEvent(tx, {
+          bookingId,
+          type: BookingEventType.rejected,
+          actorUserId: clientUserId,
+          payload: { rejectParty: 'client' },
+        });
+      }
+      return this.bookingAppend.appendBookingEvent(tx, {
+        bookingId,
+        type: BookingEventType.canceled,
+        actorUserId: clientUserId,
+        payload: {
+          cancelParty: 'client',
+          reasonCode: cancelReasonDb,
           cancellationComment: cancellationCommentDb,
         },
       });
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId,
-          fromStatus,
-          toStatus,
-          actorUserId: clientUserId,
-          reason: historyReason,
-        },
-      });
-      return row;
     });
 
     void this.pushNotifications.notifySpecialistBookingCancelledByClient(
@@ -1053,8 +1341,8 @@ export class BookingsService {
     );
 
     return {
-      id: updated.id,
-      status: updated.status,
+      id: bookingId,
+      status: projection.status,
     };
   }
 

@@ -3,23 +3,19 @@ import type { ApiLocale } from '../../../common/i18n';
 
 const ORG_TEXT_SEARCH_LOCALES: ApiLocale[] = ['en', 'vi', 'ru'];
 
-/** Условие на `Specialist` sp: витринный профиль мастера одобрен или показываем снимок до модерации правки. */
+/** Условие на `Specialist` sp: витринный профиль мастера одобрен или есть гостевой снимок (опубликованная ревизия / строка). */
 const specialistVitrineProfileSql = Prisma.sql`(
   sp."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
   OR (
-    sp."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
-    AND (
-      sp."catalogListedBio" IS NOT NULL
-      OR sp."catalogListedImageUrl" IS NOT NULL
-      OR sp."catalogListedListingName" IS NOT NULL
+    sp."profilePublicationModerationStatus" IN (
+      'pending_review'::"PublicationModerationStatus",
+      'rejected'::"PublicationModerationStatus"
     )
-  )
-  OR (
-    sp."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
     AND (
-      sp."catalogListedBio" IS NOT NULL
-      OR sp."catalogListedImageUrl" IS NOT NULL
-      OR sp."catalogListedListingName" IS NOT NULL
+      sp."publishedProfileRevisionId" IS NOT NULL
+      OR length(trim(COALESCE(sp."listingName", ''))) > 0
+      OR length(trim(COALESCE(sp."bio", ''))) > 0
+      OR (sp."imageUrl" IS NOT NULL AND length(trim(COALESCE(sp."imageUrl", ''))) > 0)
     )
   )
 )`;
@@ -27,24 +23,20 @@ const specialistVitrineProfileSql = Prisma.sql`(
 const specialistVitrineProfileSqlSp0 = Prisma.sql`(
   sp0."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
   OR (
-    sp0."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
-    AND (
-      sp0."catalogListedBio" IS NOT NULL
-      OR sp0."catalogListedImageUrl" IS NOT NULL
-      OR sp0."catalogListedListingName" IS NOT NULL
+    sp0."profilePublicationModerationStatus" IN (
+      'pending_review'::"PublicationModerationStatus",
+      'rejected'::"PublicationModerationStatus"
     )
-  )
-  OR (
-    sp0."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
     AND (
-      sp0."catalogListedBio" IS NOT NULL
-      OR sp0."catalogListedImageUrl" IS NOT NULL
-      OR sp0."catalogListedListingName" IS NOT NULL
+      sp0."publishedProfileRevisionId" IS NOT NULL
+      OR length(trim(COALESCE(sp0."listingName", ''))) > 0
+      OR length(trim(COALESCE(sp0."bio", ''))) > 0
+      OR (sp0."imageUrl" IS NOT NULL AND length(trim(COALESCE(sp0."imageUrl", ''))) > 0)
     )
   )
 )`;
 
-/** Имя мастера во витрине: живое одобренное или замороженное при модерации (не из `User.name`). */
+/** Имя мастера во витрине: одобренное на строке или из опубликованной ревизии (или строка до первой публикации). */
 const specialistVitrineListingNameSql = Prisma.sql`(
   (
     sp."profilePublicationModerationStatus" = 'approved'::"PublicationModerationStatus"
@@ -52,14 +44,24 @@ const specialistVitrineListingNameSql = Prisma.sql`(
     AND length(trim(COALESCE(sp."listingName", ''))) > 0
   )
   OR (
-    sp."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
-    AND sp."catalogListedListingName" IS NOT NULL
-    AND length(trim(COALESCE(sp."catalogListedListingName", ''))) > 0
-  )
-  OR (
-    sp."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
-    AND sp."catalogListedListingName" IS NOT NULL
-    AND length(trim(COALESCE(sp."catalogListedListingName", ''))) > 0
+    sp."profilePublicationModerationStatus" IN (
+      'pending_review'::"PublicationModerationStatus",
+      'rejected'::"PublicationModerationStatus"
+    )
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM "SpecialistProfileRevision" spr
+        WHERE spr.id = sp."publishedProfileRevisionId"
+          AND spr.status = 'published'::"SpecialistProfileRevisionStatus"
+          AND length(trim(COALESCE(spr."listingName", ''))) > 0
+      )
+      OR (
+        sp."publishedProfileRevisionId" IS NULL
+        AND sp."listingName" IS NOT NULL
+        AND length(trim(COALESCE(sp."listingName", ''))) > 0
+      )
+    )
   )
 )`;
 
@@ -70,20 +72,28 @@ const specialistVitrineListingNameSqlSp0 = Prisma.sql`(
     AND length(trim(COALESCE(sp0."listingName", ''))) > 0
   )
   OR (
-    sp0."profilePublicationModerationStatus" = 'pending_review'::"PublicationModerationStatus"
-    AND sp0."catalogListedListingName" IS NOT NULL
-    AND length(trim(COALESCE(sp0."catalogListedListingName", ''))) > 0
-  )
-  OR (
-    sp0."profilePublicationModerationStatus" = 'rejected'::"PublicationModerationStatus"
-    AND sp0."catalogListedListingName" IS NOT NULL
-    AND length(trim(COALESCE(sp0."catalogListedListingName", ''))) > 0
+    sp0."profilePublicationModerationStatus" IN (
+      'pending_review'::"PublicationModerationStatus",
+      'rejected'::"PublicationModerationStatus"
+    )
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM "SpecialistProfileRevision" spr0
+        WHERE spr0.id = sp0."publishedProfileRevisionId"
+          AND spr0.status = 'published'::"SpecialistProfileRevisionStatus"
+          AND length(trim(COALESCE(spr0."listingName", ''))) > 0
+      )
+      OR (
+        sp0."publishedProfileRevisionId" IS NULL
+        AND sp0."listingName" IS NOT NULL
+        AND length(trim(COALESCE(sp0."listingName", ''))) > 0
+      )
+    )
   )
 )`;
 
-/** Подкатегория объявлена у салона и закрыта активным мастером из каталога с забронируемой услугой (VND).
- * Скоуп услуги совпадает с {@link isSalonCounterServiceScope} в `services/domain/service-catalog-visibility.ts`.
- */
+/** Подкатегория в OSC закрыта активным мастером с назначением на опубликованный оффер точки и активной ценой VND. */
 export function vitrineCategoryCoverageExists(): Prisma.Sql {
   return Prisma.sql`
     EXISTS (
@@ -92,12 +102,18 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
       INNER JOIN "Specialist" sp ON sp.id = e."specialistId"
         AND ${specialistVitrineProfileSql}
         AND ${specialistVitrineListingNameSql}
-      INNER JOIN "Service" s ON s."specialistId" = e."specialistId"
-        AND s."categoryId" = osc."serviceCategoryId"
-        AND s."deletedAt" IS NULL
-        AND s."isActive" = true
-        AND (s."scope" = 'personal'::"ServiceCatalogScope" OR s."organizationId" = e."organizationId")
-      INNER JOIN "ServicePriceOption" po ON po."serviceId" = s.id AND po."currency" = 'VND'
+      INNER JOIN "SpecialistOffering" so ON so."specialistId" = e."specialistId"
+        AND so."deletedAt" IS NULL
+        AND so."status" = 'active'::"SpecialistOfferingStatus"
+      INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+        AND oo."organizationId" = e."organizationId"
+        AND oo."categoryId" = osc."serviceCategoryId"
+        AND oo."deletedAt" IS NULL
+        AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+      INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+        AND po."currency" = 'VND'
+        AND po."deletedAt" IS NULL
+        AND po."status" = 'active'::"OfferingPriceOptionStatus"
       WHERE e."organizationId" = osc."organizationId"
         AND e."isActive" = true
         AND sp."listedInDirectory" = true
@@ -347,7 +363,7 @@ export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
     Prisma.sql`
       SELECT DISTINCT sp.id::text AS id
       FROM "Specialist" sp
-      INNER JOIN "SpecialistServiceCategory" ssc ON ssc."specialistId" = sp.id
+      INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
       INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
       INNER JOIN "MajorServiceCategory" msc ON msc.id = sc."majorServiceCategoryId"
       INNER JOIN "OrganizationServiceCategory" osc
@@ -389,7 +405,7 @@ export async function querySpecialistIdsMatchingStorefrontCategoryTextSearch(
     Prisma.sql`
       SELECT DISTINCT sp.id::text AS id
       FROM "Specialist" sp
-      INNER JOIN "SpecialistServiceCategory" ssc ON ssc."specialistId" = sp.id
+      INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
       INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
       INNER JOIN "OrganizationServiceCategory" osc
         ON osc."organizationId" = sp."activeOrganizationId"

@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { BookingsModule } from '../bookings/bookings.module';
 import { ModerationModule } from '../moderation/moderation.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { SpecialistOnboardingService } from './application/specialist-onboarding.service';
-import { SpecialistPersonalCatalogService } from './application/specialist-personal-catalog.service';
+import { DirectoryModule } from '../directory/directory.module';
 import { SpecialistWorkplaceService } from './application/specialist-workplace.service';
 import { SpecialistsCabinetController } from './presentation/specialists-cabinet.controller';
 
@@ -16,13 +16,10 @@ import { SpecialistsCabinetController } from './presentation/specialists-cabinet
     BookingsModule,
     ModerationModule,
     NotificationsModule,
+    forwardRef(() => DirectoryModule),
   ],
   controllers: [SpecialistsCabinetController],
-  providers: [
-    SpecialistOnboardingService,
-    SpecialistWorkplaceService,
-    SpecialistPersonalCatalogService,
-  ],
+  providers: [SpecialistOnboardingService, SpecialistWorkplaceService],
   exports: [SpecialistOnboardingService],
 })
 export class SpecialistsModule {}

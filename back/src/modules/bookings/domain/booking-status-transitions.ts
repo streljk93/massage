@@ -1,7 +1,10 @@
 import type { BookingStatus } from '@prisma/client';
 
 /**
- * Разрешённые целевые статусы по текущему статусу (продуктовая матрица).
+ * Разрешённые целевые статусы по текущему статусу (**продуктовая модель**, UI, документация, dev-shortest-path).
+ * Операционный append статусами из этой таблицы **не сверяет**: см. coarse {@link BOOKING_COARSE_ALLOWED_EVENT_TYPES}
+ * и reconciling журнала в {@link BookingAppendService}.
+ *
  * Переходы из `confirmed` в `in_progress`, `no_show_by_client`, `no_show_by_master`
  * дополнительно требуют наступившего времени начала слота `startsAt`
  * (см. {@link isBookingSlotStartTimeReached}).
@@ -9,9 +12,9 @@ import type { BookingStatus } from '@prisma/client';
  *
  * Исключения, не сводящиеся к одной строке таблицы:
  * - `in_progress` → `canceled_by_master` — только системная массовая отмена при смене активной
- *   организации у специалиста ({@link BookingsRepository.cancelActiveBookingsAtOrganization}).
+ *   организации у специалиста (append `BookingEventType.canceled`, см. {@link appendInputMassOrganizationCancelBooking}).
  * - `in_progress` → `done` — также по cron, когда `endsAt` ≤ текущее время
- *   ({@link BookingsRepository.completeInProgressPastEndsAt}).
+ *   (append `BookingEventType.completed`, см. {@link BookingsService.completeInProgressPastEndsAt}).
  */
 export const BOOKING_STATUS_TRANSITION_MAP: Record<
   BookingStatus,

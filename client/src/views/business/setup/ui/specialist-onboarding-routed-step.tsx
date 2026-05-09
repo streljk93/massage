@@ -27,8 +27,8 @@ const StepWorkplace = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-workplace"),
   { ssr: false },
 );
-const StepServices = dynamic(
-  () => import("./setup-steps/specialist-onboarding-step-services"),
+const StepSkills = dynamic(
+  () => import("./setup-steps/specialist-onboarding-step-skills"),
   { ssr: false },
 );
 const StepDone = dynamic(
@@ -43,7 +43,7 @@ const byUi = {
   4: StepProfile,
   5: StepMassage,
   6: StepWorkplace,
-  7: StepServices,
+  7: StepSkills,
   8: StepDone,
 } as const;
 

@@ -28,7 +28,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     draftMajorSlugs,
     introSubmitting,
     profileSaving,
-    servicesSubmitting,
+    skillsSubmitting,
     workplaceSubmitting,
     createOrgSubmitting,
     doneSubmitting,
@@ -36,22 +36,23 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     majorsSubmitting,
     massageSaving,
     spec,
+    draftSkillCategoryIds,
     onIntroContinue,
     onWorkPatternContinue,
     onMajorsContinue,
     onProfileContinue,
     onMassageContinue,
-    onServicesContinue,
+    onSkillsContinue,
     onOrgContinue,
     onWorkplaceSkip,
     onDone,
   } = useSpecialistOnboarding();
 
-  const serviceStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 7);
-  const servicesContinueBlocked =
+  const skillsStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 7);
+  const skillsContinueBlocked =
     activeUi === 7 &&
-    (serviceStepCatalog.isLoading ||
-      !(serviceStepCatalog.data?.categories?.length ?? 0));
+    (skillsStepCatalog.isLoading ||
+      !(skillsStepCatalog.data?.categories?.length ?? 0));
 
   const topChromeRef = useRef<HTMLDivElement | null>(null);
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
@@ -242,11 +243,15 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               type="button"
               className="h-12 w-full rounded-full"
               onClick={() => {
-                void onServicesContinue();
+                void onSkillsContinue();
               }}
-              disabled={servicesSubmitting || servicesContinueBlocked}
+              disabled={
+                skillsSubmitting ||
+                skillsContinueBlocked ||
+                draftSkillCategoryIds.size < 1
+              }
             >
-              {servicesSubmitting ? t("saving") : t("continue")}
+              {skillsSubmitting ? t("saving") : t("continue")}
             </Button>
           : null}
           {activeUi === 8 ?

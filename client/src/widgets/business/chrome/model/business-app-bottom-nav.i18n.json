@@ -7,7 +7,7 @@
         "dashboard": "Dashboard",
         "organizations": "My organizations",
         "bookings": "Bookings",
-        "services": "Services",
+        "skills": "Skills",
         "profile": "Specialist profile",
         "activeWorkplaceBarLabel": "Active workplace"
       }
@@ -19,6 +19,7 @@
         "dashboard": "Bảng điều khiển",
         "organizations": "Tổ chức của tôi",
         "bookings": "Lịch hẹn",
+        "skills": "Kỹ năng",
         "profile": "Hồ sơ chuyên viên",
         "activeWorkplaceBarLabel": "Nơi làm việc hiện tại"
       }
@@ -30,7 +31,7 @@
         "dashboard": "Панель",
         "organizations": "Мои организации",
         "bookings": "Записи",
-        "services": "Услуги",
+        "skills": "Навыки",
         "profile": "Профиль специалиста",
         "activeWorkplaceBarLabel": "Текущее место приёма"
       }

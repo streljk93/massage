@@ -110,6 +110,25 @@ const REMINDER_EMAIL_CTA: Record<'en' | 'ru' | 'vi', string> = {
   vi: 'Lịch của tôi',
 };
 
+/** Клиент: перенос времени подтверждённой записи мастером/салоном (статус тот же `confirmed`). */
+const CLIENT_BOOKING_RESCHEDULED_COPY: Record<
+  'en' | 'ru' | 'vi',
+  { title: string; bodyPrefix: string }
+> = {
+  en: {
+    title: 'Appointment rescheduled',
+    bodyPrefix: 'New time',
+  },
+  ru: {
+    title: 'Запись перенесена',
+    bodyPrefix: 'Новое время',
+  },
+  vi: {
+    title: 'Đã đổi lịch',
+    bodyPrefix: 'Giờ hẹn mới',
+  },
+};
+
 /** Тема и короткий текст письма/пуша мастеру — на той же локали, что и таблица в письме. */
 const SPECIALIST_BOOKING_NOTIFY_COPY: Record<
   'en' | 'ru' | 'vi',
@@ -291,6 +310,84 @@ export class PushNotificationsService {
       }
     } catch (e) {
       this.logger.warn(`notifyClientBookingStatusChange: ${e}`);
+    }
+  }
+
+  /**
+   * Клиент: мастер/салон перенёс подтверждённый визит (`BookingEventType.rescheduled`).
+   * Статус в БД остаётся `confirmed`, поэтому отдельный канал вместо {@link notifyClientBookingStatusChange}.
+   */
+  async notifyClientBookingRescheduled(bookingId: string): Promise<void> {
+    try {
+      const ctx = await findClientReminderContext(
+        this.bookingContext,
+        bookingId,
+      );
+      if (!ctx) {
+        return;
+      }
+      const loc = localeFromSavedUserProfile(ctx.clientLocale);
+      const serviceDisplay = this.displayServiceName(
+        ctx.categoryShortName,
+        loc,
+      );
+      const timeLabel = this.formatLocalAppointmentTime(ctx.startsAt, loc);
+      const line = `${timeLabel} · ${serviceDisplay} · ${ctx.specialistName}`;
+      const copy = CLIENT_BOOKING_RESCHEDULED_COPY[loc];
+      const title = copy.title;
+      const body = `${copy.bodyPrefix} — ${line}`;
+      const webLink = `/${loc}/bookings`;
+      if (this.fcm.isEnabled) {
+        await this.sendToUser(
+          ctx.clientUserId,
+          { title, body },
+          {
+            bookingId: String(bookingId),
+            type: 'booking_rescheduled',
+            toStatus: 'confirmed',
+            timeLabel,
+            categoryShortName: serviceDisplay,
+            specialistName: ctx.specialistName,
+          },
+          { webLink },
+        );
+      }
+      const emailCard = {
+        loc,
+        audience: 'client' as const,
+        specialistName: ctx.specialistName,
+        clientName: '',
+        serviceName: serviceDisplay,
+        priceLine: this.formatPriceLine(
+          ctx.priceAmountSnapshot,
+          ctx.currencySnapshot,
+          loc,
+        ),
+        salonName: ctx.organization?.displayName ?? '—',
+        addressText: ctx.organization?.addressText ?? '—',
+        addressLatitude: ctx.organization?.latitude ?? null,
+        addressLongitude: ctx.organization?.longitude ?? null,
+        appointmentText: this.formatBookingAppointmentRange(
+          ctx.startsAt,
+          ctx.endsAt,
+          loc,
+        ),
+        statusText: ctx.statusLabel,
+        cancellationComment: ctx.cancellationComment,
+      };
+      const mailParts = this.buildBookingEmailParts(title, emailCard);
+      void this.mail.sendTransactionalNotification({
+        to: ctx.clientEmail,
+        subject: title,
+        text: mailParts.text,
+        template: mailParts.template,
+        resendTags: [
+          { name: 'booking_event', value: 'client_rescheduled' },
+          { name: 'to_status', value: 'confirmed' },
+        ],
+      });
+    } catch (e) {
+      this.logger.warn(`notifyClientBookingRescheduled: ${e}`);
     }
   }
 

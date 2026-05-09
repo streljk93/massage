@@ -29,7 +29,11 @@ import { Link, useRouter } from "@/app/i18n/navigation";
 import { goBackOrFallback } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
 import { useClientFavorite } from "@/entities/favorites";
-import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
+import {
+  bookingsCreate,
+  createBrowserSdkClient,
+  type BookingsCreateData,
+} from "@/shared/api";
 import {
   majorSphereTabsFromBookableRows,
   priceForDuration,
@@ -101,6 +105,8 @@ function pickToBookableOptions(pick: SalonSpecialistPick | undefined) {
       majorSortOrder: b.majorSortOrder,
       durationMinutes: b.durationMinutes,
       priceVndByDuration: b.priceVndByDuration,
+      organizationOfferingId: b.organizationOfferingId,
+      marketplaceOfferingPriceOptionIds: b.marketplaceOfferingPriceOptionIds,
     }),
   );
 }
@@ -354,7 +360,7 @@ export function OrganizationProfilePage({
     salonBookableServiceOptions,
   ]);
 
-  const serviceId = selectedServiceRow?.id ?? "";
+  const bookableRowId = selectedServiceRow?.id ?? "";
 
   const selectedService = useMemo((): BookableServiceOption | undefined => {
     if (!selectedServiceRow) {
@@ -368,6 +374,9 @@ export function OrganizationProfilePage({
       majorSortOrder: selectedServiceRow.majorSortOrder,
       durationMinutes: selectedServiceRow.durationMinutes,
       priceVndByDuration: selectedServiceRow.priceVndByDuration,
+      organizationOfferingId: selectedServiceRow.organizationOfferingId,
+      marketplaceOfferingPriceOptionIds:
+        selectedServiceRow.marketplaceOfferingPriceOptionIds,
     };
   }, [selectedServiceRow]);
 
@@ -406,7 +415,7 @@ export function OrganizationProfilePage({
 
   const urlBookingSlotKey =
     bookingSlotFromSearch != null
-      ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}-${serviceId}-${dayIndex}`
+      ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}-${bookableRowId}-${dayIndex}`
       : null;
   const urlSlotDurationApplyKeyRef = useRef<string | null>(null);
 
@@ -726,14 +735,30 @@ export function OrganizationProfilePage({
     });
     setBookingPending(true);
     try {
+      const mktOpts = selectedService.marketplaceOfferingPriceOptionIds;
+      const mktOfferingId = selectedService.organizationOfferingId;
+      const ix = selectedService.durationMinutes.indexOf(selectedBookingMinutes);
+      const offeringPriceOptionId =
+        ix >= 0 ? (mktOpts[ix] ?? undefined) : undefined;
+      if (
+        offeringPriceOptionId == null ||
+        offeringPriceOptionId.trim().length === 0
+      ) {
+        setBookingErrorKey("bookingPickSlotOrganization");
+        setBookingPending(false);
+        return;
+      }
+      const body: BookingsCreateData["body"] = {
+        specialistId: selectedSalonSpecialistId,
+        startsAt,
+        organizationOfferingId: mktOfferingId.trim(),
+        offeringPriceOptionId: offeringPriceOptionId.trim(),
+        durationMinutes: selectedBookingMinutes,
+      };
+
       const res = await bookingsCreate({
         client: createBrowserSdkClient(accessToken, { locale }),
-        body: {
-          specialistId: selectedSalonSpecialistId,
-          serviceId,
-          durationMinutes: selectedBookingMinutes,
-          startsAt,
-        },
+        body,
         query: { locale },
       });
       const outcome = interpretBookingCreateResponse(res);
@@ -758,7 +783,6 @@ export function OrganizationProfilePage({
     selectedBookingMinutes,
     selectedSalonSpecialistId,
     selectedService,
-    serviceId,
     sessionStatus,
     t,
   ]);

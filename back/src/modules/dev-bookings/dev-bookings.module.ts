@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BookingsModule } from '../bookings/bookings.module';
 import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { DirectoryModule } from '../directory/directory.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -7,6 +8,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { FilesModule } from '../files/files.module';
 import { ModerationModule } from '../moderation/moderation.module';
 import { DevBookingStatusService } from './application/dev-booking-status.service';
+import { DevDirectorySearchIndexService } from './application/dev-directory-search-index.service';
 import { DevFcmTestService } from './application/dev-fcm-test.service';
 import { DevPersonalizationRecomputeService } from './application/dev-personalization-recompute.service';
 import { DevTestRoutesGuard } from './guards/dev-test-routes.guard';
@@ -16,10 +18,12 @@ import { DevPersonalizationController } from './presentation/dev-personalization
 import { DevWorkplaceJoinReviewController } from './presentation/dev-workplace-join-review.controller';
 import { DevModerationController } from './presentation/dev-moderation.controller';
 import { DevModerationQueueService } from './application/dev-moderation-queue.service';
+import { DevSearchIndexController } from './presentation/dev-search-index.controller';
 
 @Module({
   imports: [
     PrismaModule,
+    BookingsModule,
     NotificationsModule,
     PersonalizationModule,
     DirectoryModule,
@@ -33,6 +37,7 @@ import { DevModerationQueueService } from './application/dev-moderation-queue.se
     DevPersonalizationController,
     DevWorkplaceJoinReviewController,
     DevModerationController,
+    DevSearchIndexController,
   ],
   providers: [
     DevBookingStatusService,
@@ -40,6 +45,7 @@ import { DevModerationQueueService } from './application/dev-moderation-queue.se
     DevPersonalizationRecomputeService,
     DevTestRoutesGuard,
     DevModerationQueueService,
+    DevDirectorySearchIndexService,
   ],
 })
 export class DevBookingsModule {}

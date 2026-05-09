@@ -26,6 +26,19 @@ enum BookingStatus {
   done
 }
 
+/// Событие жизненного цикла бронирования (append-only лог источника правды перед проекцией на строку Booking).
+enum BookingEventType {
+  created
+  confirmed
+  rejected
+  canceled
+  no_show
+  completed
+  started
+  expired
+  rescheduled
+}
+
 /// Локализованные подписи статусов бронирования для API (веб, мобильные клиенты).
 model BookingStatusLocale {
   status BookingStatus
@@ -62,19 +75,6 @@ enum SpecialistGender {
   female
 }
 
-/// Тип услуги в личном каталоге специалиста.
-enum ServiceKind {
-  standard
-  combo
-}
-
-/// Скоуп строки каталога: `personal` — личная услуга мастера; `organization` — строка каталога конкретной организации (см. CHECK: согласование с `organizationId`).
-enum ServiceCatalogScope {
-  personal
-  organization
-}
-
-/// Заявка мастера на работу в существующем салоне (онбординг / смена места).
 enum SpecialistWorkplaceJoinRequestStatus {
   pending
   withdrawn
@@ -89,6 +89,38 @@ enum OrganizationType {
   solo
   business
 }
+
+/// Публикация коммерческого оффера точки (`OrganizationOffering`).
+enum OfferingPublicationStatus {
+  draft
+  pending_review
+  published
+  archived
+  rejected
+  hidden
+}
+
+enum OfferingPriceOptionStatus {
+  active
+  hidden
+  archived
+}
+
+/// Привязка мастера к офферам точки: исполнение, не канонический прайс.
+enum SpecialistOfferingStatus {
+  active
+  paused
+  hidden
+  removed
+}
+
+/// Статус записи transactional outbox (§3.0.9).
+enum TransactionalOutboxStatus {
+  pending
+  dispatched
+  failed
+}
+
 /// Выбор режима работы при онбординге (до привязки к месту или параллельно черновику).
 enum SpecialistWorkPattern {
   solo
@@ -184,7 +216,7 @@ model User {
 
   specialistProfile  Specialist?
   clientBookings     Booking[]              @relation("ClientBookings")
-  bookingChanges     BookingStatusHistory[]
+  bookingEventsActor BookingEvent[]           @relation("BookingEventActorUser")
   orgReviews         OrganizationReview[]
   specialistReviews  SpecialistReview[]
   ownedOrganizations Organization[]         @relation("OrganizationOwner")
@@ -202,6 +234,8 @@ model User {
   platformRole         PlatformRole                @default(standard)
 
   contentModerationCasesResolved ContentModerationCase[] @relation("ContentModerationResolvedBy")
+  contentModerationCasesAssigned ContentModerationCase[] @relation("ContentModerationCaseAssignee")
+  contentModerationCasesLocked   ContentModerationCase[] @relation("ContentModerationCaseLockHolder")
 }
 
 /// Привязка внешнего аккаунта (Google) к `User`.
@@ -308,7 +342,7 @@ model MajorServiceCategory {
   /// Салоны, у которых эта большая категория выбрана как сфера деятельности (N:M).
   organizationMajorServiceCategories OrganizationMajorServiceCategory[]
   bodyZones                          BodyZone[]
-  specialistOnboardingSelections      SpecialistOnboardingMajorServiceCategory[]
+  specialistOnboardingSelections     SpecialistOnboardingMajorServiceCategory[]
 }
 
 /// Локализованное имя большой категории (en / vi / ru; позже de и др. — новые строки без смены схемы).
@@ -347,13 +381,12 @@ model ServiceCategory {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  services   Service[]
   locales    ServiceCategoryLocale[]
-  comboItems ServiceComboItem[]
 
-  specialistTags   SpecialistServiceCategory[]
-  organizationTags OrganizationServiceCategory[]
-  revisionTags     OrganizationProfileRevisionServiceCategory[]
+  specialistSkills      SpecialistSkill[]
+  organizationTags      OrganizationServiceCategory[]
+  revisionTags          OrganizationProfileRevisionServiceCategory[]
+  organizationOfferings OrganizationOffering[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -391,7 +424,6 @@ model BodyZone {
   deletedAt DateTime?
 
   locales  BodyZoneLocale[]
-  services ServiceBodyZone[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -480,17 +512,17 @@ model Organization {
   publishedProfileRevision    OrganizationProfileRevision? @relation("OrganizationPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
 
   reviews                    OrganizationReview[]
-  services                   Service[]
   bookings                   Booking[]
   specialistEmployments      SpecialistOrganizationEmployment[]
   /// Мастера, у которых эта организация выбрана как текущее место приёма.
-  specialistsActiveWorkplace Specialist[]                          @relation("SpecialistActiveOrganization")
+  specialistsActiveWorkplace Specialist[]                       @relation("SpecialistActiveOrganization")
   locales                    OrganizationLocale[]
   serviceCategories          OrganizationServiceCategory[]
   /// Сферы деятельности: большие категории каталога, доступные для организации (выбор владельца).
   majorServiceCategories     OrganizationMajorServiceCategory[]
   workplaceJoinRequests      SpecialistWorkplaceJoinRequest[]
-  profileRevisions           OrganizationProfileRevision[]         @relation("OrganizationProfileRevisions")
+  profileRevisions           OrganizationProfileRevision[]      @relation("OrganizationProfileRevisions")
+  offerings                  OrganizationOffering[]
 
   @@index([ownerUserId])
   @@index([addressId])
@@ -696,11 +728,8 @@ model Specialist {
   publishedProfileRevisionId String?                    @unique
   publishedProfileRevision   SpecialistProfileRevision? @relation("SpecialistPublishedRevision", fields: [publishedProfileRevisionId], references: [id], onDelete: SetNull)
 
-  /// Публикация полей профиля для каталога: одобрено / на модерации; legacy-заморозка в `catalogListed*` при миграции со старой модели.
+  /// Публикация полей профиля для каталога. Гостевая витрина при pending/rejected — снимок из опубликованной ревизии (`publishedProfileRevisionId`).
   profilePublicationModerationStatus PublicationModerationStatus @default(approved)
-  catalogListedBio                   String?
-  catalogListedListingName           String?
-  catalogListedImageUrl              String?
 
   /// Параметры, специфичные для вертикали «массаж» (сила нажима и т.д.); другие крупные категории — отдельные 1:1.
   massageProfile SpecialistMassageProfile?
@@ -729,11 +758,11 @@ model Specialist {
 
   employments           SpecialistOrganizationEmployment[]
   workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
-  services              Service[]
   bookings              Booking[]
   reviews               SpecialistReview[]
-  serviceCategories     SpecialistServiceCategory[]
-  onboardingMajorPicks SpecialistOnboardingMajorServiceCategory[]
+  skills                SpecialistSkill[]
+  onboardingMajorPicks  SpecialistOnboardingMajorServiceCategory[]
+  offeringsExecution    SpecialistOffering[]
 
   @@index([activeOrganizationId])
 }
@@ -765,8 +794,8 @@ model SpecialistMassageProfile {
   updatedAt DateTime @updatedAt
 }
 
-/// Выбранные подкатегории каталога у специалиста.
-model SpecialistServiceCategory {
+/// Навыки мастера: подкатегории каталога без цены/длительности (прайс — у `OrganizationOffering`).
+model SpecialistSkill {
   specialistId      String
   serviceCategoryId String
   specialist        Specialist      @relation(fields: [specialistId], references: [id], onDelete: Cascade)
@@ -821,88 +850,6 @@ model SpecialistWorkplaceJoinRequest {
   @@index([organizationId, status])
 }
 
-/// Строка каталога услуг: `scope` = organization (салонная) или personal (личная мастера без привязки к организации).
-model Service {
-  id             String        @id @default(uuid())
-  organizationId String?
-  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  /// Явный скоуп совпадает с `organizationId`: personal ↔ null, organization ↔ не null (CHECK в миграции).
-  scope ServiceCatalogScope @default(organization)
-
-  categoryId String
-  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-
-  specialistId String?
-  specialist   Specialist?        @relation(fields: [specialistId], references: [id], onDelete: SetNull)
-  bodyZones    ServiceBodyZone[]
-  comboItems   ServiceComboItem[] @relation("ServiceComboItems")
-
-  /// Стабильный ключ в пределах организации / личного каталога; отображаемое имя — у `ServiceCategory`.
-  slug        String
-  description String?
-  kind        ServiceKind @default(standard)
-  sortOrder   Int         @default(0)
-  isActive    Boolean     @default(true)
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  priceOptions ServicePriceOption[]
-  bookings     Booking[]
-
-  /// Уникальность slug по скоупам (организация / личный каталог мастера) задаётся частичными индексами в SQL-миграции; для personal в БД `organizationId IS NULL`.
-  @@index([organizationId, slug])
-  @@index([specialistId, slug])
-  @@index([categoryId])
-  @@index([specialistId])
-}
-
-model ServiceBodyZone {
-  serviceId  String
-  bodyZoneId String
-  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  bodyZone   BodyZone @relation(fields: [bodyZoneId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@id([serviceId, bodyZoneId])
-  @@index([bodyZoneId])
-}
-
-/// Состав combo-услуги: набор подкатегорий (MVP бронируется как единая услуга).
-model ServiceComboItem {
-  comboServiceId        String
-  itemServiceCategoryId String
-  sortOrder             Int             @default(0)
-  comboService          Service         @relation("ServiceComboItems", fields: [comboServiceId], references: [id], onDelete: Cascade)
-  itemServiceCategory   ServiceCategory @relation(fields: [itemServiceCategoryId], references: [id], onDelete: Restrict)
-
-  createdAt DateTime @default(now())
-
-  @@id([comboServiceId, itemServiceCategoryId])
-  @@index([itemServiceCategoryId])
-}
-
-/// Варианты длительности и цены для услуги.
-model ServicePriceOption {
-  id        String  @id @default(uuid())
-  serviceId String
-  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  durationMinutes Int
-  /// Сумма в минимальных единицах валюты (например донги VND целиком).
-  priceAmount     Int
-  currency        String @default("VND")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([serviceId, durationMinutes])
-  @@index([serviceId])
-}
-
 /// Отзыв о специалисте.
 model SpecialistReview {
   id           String     @id @default(uuid())
@@ -944,6 +891,18 @@ model ContentModerationCase {
   moderatorUserId String?
   moderatorUser   User?   @relation("ContentModerationResolvedBy", fields: [moderatorUserId], references: [id], onDelete: SetNull)
 
+  /// Очередь ручной проверки: назначенный модератор (до resolve).
+  assignedToUserId String?
+  assignee         User?   @relation("ContentModerationCaseAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  priority         Int     @default(0)
+  attemptCount     Int     @default(0)
+  lastProcessedAt  DateTime?
+
+  /// Безопасная выдача воркеру (lease): кто держит блокировку и до какого момента.
+  lockedByUserId String?
+  lockHolder     User?     @relation("ContentModerationCaseLockHolder", fields: [lockedByUserId], references: [id], onDelete: SetNull)
+  lockedUntil    DateTime?
+
   moderatorReason String? @db.Text
 
   resolvedAt DateTime?
@@ -953,9 +912,173 @@ model ContentModerationCase {
 
   @@unique([kind, subjectId])
   @@index([status, createdAt])
+  @@index([assignedToUserId])
+  @@index([lockedByUserId])
 }
 
-/// Бронирование (запись к специалисту); текущее состояние в `status`, история — в BookingStatusHistory.
+/// Неизменяемый снимок брони на момент создания (аудит/UI «как было»). Не обновлять после финализации брони.
+model BookingSnapshot {
+  bookingId String  @id
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  organizationOfferingId String
+  offeringPriceOptionId  String
+
+  /// Отображаемое имя услуги/оффера для клиента на момент записи.
+  organizationOfferingTitleSnapshot String?
+
+  organizationNameSnapshot      String?
+  specialistDisplayNameSnapshot String?
+
+  durationMinutesSnapshot Int
+  priceAmountSnapshot     Int?
+  currencySnapshot        String? @default("VND")
+
+  addressLineSnapshot String?
+  citySnapshot        String?
+
+  /// Редкие расширения без миграций; обязательные поля — колонки.
+  payload Json?
+
+  /// Версия контракта снимка; сериализатор в домене брони (`booking-snapshot.builder`).
+  snapshotSchemaVersion Int @default(1)
+
+  createdAt DateTime @default(now())
+}
+
+/// Коммерческое предложение организации (оффер точки) — канонический прайс салона для витрины и записи.
+model OrganizationOffering {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  slug              String
+  publicationStatus OfferingPublicationStatus @default(draft)
+  /// Первый go-live в продаже гостю; не сбрасывается.
+  firstPublishedAt  DateTime?
+  /// Каждый последующий republish после снятия с продажи.
+  lastPublishedAt   DateTime?
+
+  title       String
+  description String?
+  sortOrder   Int     @default(0)
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  priceOptions          OfferingPriceOption[]
+  specialistAssignments SpecialistOffering[]
+  bookings              Booking[]
+
+  @@index([organizationId])
+  @@index([organizationId, slug])
+}
+
+/// Вариант цены/длительности оффера точки; lifecycle — status + soft-delete.
+model OfferingPriceOption {
+  id                     String               @id @default(uuid())
+  organizationOfferingId String
+  organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Cascade)
+
+  durationMinutes Int
+  priceAmount     Int
+  currency        String @default("VND")
+
+  status    OfferingPriceOptionStatus @default(active)
+  deletedAt DateTime?
+  sortOrder Int                       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priceOverrides SpecialistOfferingPriceOverride[]
+  bookings       Booking[]
+
+  @@index([organizationOfferingId])
+  @@index([organizationOfferingId, durationMinutes])
+}
+
+/// Исполнитель оффера точки (мастер допущен к SKU).
+model SpecialistOffering {
+  id String @id @default(uuid())
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  organizationOfferingId String
+  organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Cascade)
+
+  status    SpecialistOfferingStatus @default(active)
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  priceOverrides SpecialistOfferingPriceOverride[]
+
+  @@unique([specialistId, organizationOfferingId])
+  @@index([organizationOfferingId])
+}
+
+model SpecialistOfferingPriceOverride {
+  id                   String             @id @default(uuid())
+  specialistOfferingId String
+  specialistOffering   SpecialistOffering @relation(fields: [specialistOfferingId], references: [id], onDelete: Cascade)
+
+  offeringPriceOptionId String
+  offeringPriceOption   OfferingPriceOption @relation(fields: [offeringPriceOptionId], references: [id], onDelete: Restrict)
+
+  customPrice Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([specialistOfferingId, offeringPriceOptionId])
+  @@index([offeringPriceOptionId])
+}
+
+/// Теневая копия документа поиска для диффа/отладки (опционально; индекс может жить только во внешнем движке).
+model SearchDocumentProjection {
+  organizationOfferingId String @id
+
+  /// Контракт JSON (читатели listing); не путать с {@link projectionBuildVersion}.
+  schemaVersion Int  @default(1)
+  document      Json
+
+  /// Операционная версия сборщика / rebuild.
+  projectionBuildVersion Int @default(0)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Запись transactional outbox в той же БД, что OLTP.
+model TransactionalOutboxEntry {
+  id String @id @default(uuid())
+
+  topic         String
+  aggregateType String
+  aggregateId   String
+  eventType     String
+
+  payload Json
+
+  /// Идемпотентность consumer at-least-once.
+  dedupeKey String? @unique
+
+  status       TransactionalOutboxStatus @default(pending)
+  lastError    String?                   @db.Text
+  createdAt    DateTime                  @default(now())
+  dispatchedAt DateTime?
+
+  @@index([status, createdAt])
+  @@index([aggregateType, aggregateId])
+}
+
+/// Бронирование (запись к специалисту); `status`/слот/`cancel*` — материализованная проекция после `BookingEvent`.
 model Booking {
   id String @id @default(uuid())
 
@@ -968,8 +1091,11 @@ model Booking {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  serviceId String?
-  service   Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  organizationOfferingId String
+  organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Restrict)
+
+  offeringPriceOptionId String
+  offeringPriceOption   OfferingPriceOption @relation(fields: [offeringPriceOptionId], references: [id], onDelete: Restrict)
 
   /// Локализованный `shortName` подкатегории на момент записи.
   categoryShortNameSnapshot String?
@@ -997,9 +1123,10 @@ model Booking {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  statusHistory      BookingStatusHistory[]
+  events             BookingEvent[]
   organizationReview OrganizationReview?    @relation("OrganizationReviewBooking")
   specialistReview   SpecialistReview?      @relation("SpecialistReviewBooking")
+  snapshot           BookingSnapshot?
 
   @@index([clientUserId])
   @@index([specialistId])
@@ -1007,25 +1134,33 @@ model Booking {
   @@index([startsAt])
   @@index([status])
   @@index([status, pendingExpiresAt])
+  @@index([organizationOfferingId])
+  @@index([offeringPriceOptionId])
 }
 
-/// История переходов статусов бронирования.
-model BookingStatusHistory {
-  id        String  @id @default(uuid())
+/// Событие жизненного цикла бронирования (append-only журнал домена перед проекцией на строку Booking).
+model BookingEvent {
+  id String @id @default(uuid())
+
   bookingId String
   booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  fromStatus BookingStatus?
-  toStatus   BookingStatus
+  type BookingEventType
 
-  /// Кто инициировал смену (клиент, специалист, система — userId может быть null для cron).
+  /// client | specialist | staff | system
+  actorKind String
+
   actorUserId String?
-  actor       User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actor       User?   @relation("BookingEventActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
 
-  reason    String?
+  /// Тип специфичный payload — схемы Zod по `type`; для BI допускаются расширения через versioned keys.
+  payload Json?
+
   createdAt DateTime @default(now())
 
-  @@index([bookingId])
+  @@index([bookingId, createdAt])
+  @@index([bookingId, id])
+  @@index([type])
 }
 
 /// Рекламное объявление / баннер по слоту показа (`placement`), с мультиязычными текстами.

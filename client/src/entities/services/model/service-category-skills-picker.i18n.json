@@ -1,0 +1,13 @@
+{
+  "messages": {
+    "en": {
+      "emptySections": "No categories are available for your selected areas yet."
+    },
+    "vi": {
+      "emptySections": "Chưa có danh mục con cho các lĩnh vực bạn đã chọn."
+    },
+    "ru": {
+      "emptySections": "Для выбранных сфер пока нет доступных подкатегорий."
+    }
+  }
+}

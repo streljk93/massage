@@ -3,10 +3,10 @@ export const BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT =
   'pending_confirmation_timeout' as const;
 
 /**
- * Запись в `BookingStatusHistory.reason` при автозавершении приёма по наступлению `endsAt` (cron).
- * Не пишется в `Booking.cancelReason` (завершение не отмена).
+ * Постоянное значение `reasonCode` / `reasonText` в payload события `BookingEventType.completed`,
+ * когда cron завершил приём по наступлению `endsAt`. Не пишется в `Booking.cancelReason`.
  */
-export const BOOKING_STATUS_HISTORY_REASON_AUTO_DONE_AT_SLOT_END =
+export const BOOKING_COMPLETED_EVENT_REASON_CODE_AUTO_DONE_AT_SLOT_END =
   'auto_done_at_slot_end' as const;
 
 /**

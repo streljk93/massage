@@ -7,6 +7,8 @@ export type StaffBookableServiceRow = {
   majorSortOrder: number;
   durationMinutes: readonly number[];
   priceVndByDuration: readonly number[];
+  organizationOfferingId: string;
+  marketplaceOfferingPriceOptionIds: readonly string[];
 };
 
 /** Снимок специалиста для выбора в контексте организации (салона). */

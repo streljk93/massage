@@ -14,9 +14,11 @@ import {
   OrganizationMembershipRole,
   OrganizationProfileRevisionStatus,
   OrganizationType,
+  OfferingPublicationStatus,
   PublicationModerationStatus,
   SpecialistWorkPattern,
   SpecialistWorkplaceJoinRequestStatus,
+  type BookingStatus,
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
@@ -28,7 +30,9 @@ import {
   pickLocalizedOrganizationListItem,
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { BookingAppendService } from '../../bookings/application/booking-append.service';
 import { BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN } from '../../bookings/domain/booking-cancel-reason';
+import { appendInputMassOrganizationCancelBooking } from '../../bookings/domain/booking-mass-organization-cancel';
 import { BookingStatusLocaleRepository } from '../../bookings/infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
 import { organizationNonCategoryTextSearchWhere } from '../../directory/infrastructure/directory-list-query-filters';
@@ -37,11 +41,12 @@ import { AddressResolutionService } from '../../address/application/address-reso
 import { GalleryService } from '../../gallery/application/gallery.service';
 import { ModerationEnqueueService } from '../../moderation/application/moderation-enqueue.service';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
+import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
 import { mergeOrganizationMajorIdsAndSlugsFromDb } from '../lib/merge-organization-major-categories';
-import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../infrastructure/organization-service-category-sync';
+import { syncOrganizationServiceCategoriesFromPublishedOfferings } from '../infrastructure/organization-service-category-sync';
 import type { WorkplaceOrganizationSearchResponseDto } from '../dto/workplace-organization-search.dto';
 import type {
   WorkplaceJoinRequestListQuery,
@@ -124,9 +129,55 @@ export class OrganizationCabinetService {
     private readonly specialistOnboarding: SpecialistOnboardingService,
     private readonly moderationEnqueue: ModerationEnqueueService,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly bookingAppend: BookingAppendService,
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
+    private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
   ) {}
+
+  /** Все активные брони организации (все мастера) — append массовой отмены при удалении салона. */
+  private async massCancelAllActiveBookingsAtOrganizationTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      organizationId: string;
+      actorUserId: string;
+      cancelReason: string;
+      cancellationComment: string | null;
+    },
+  ): Promise<
+    Array<{ id: string; fromStatus: BookingStatus; toStatus: BookingStatus }>
+  > {
+    const rows =
+      await this.bookingsRepository.findActiveMinimalForOrganizationAll(
+        tx,
+        args.organizationId,
+      );
+    const out: Array<{
+      id: string;
+      fromStatus: BookingStatus;
+      toStatus: BookingStatus;
+    }> = [];
+    for (const r of rows) {
+      const appendInput = appendInputMassOrganizationCancelBooking({
+        bookingId: r.id,
+        granularStatus: r.status,
+        actorUserId: args.actorUserId,
+        texts: {
+          cancelReason: args.cancelReason,
+          cancellationComment: args.cancellationComment,
+        },
+        masterLeftWorkplace: false,
+      });
+      const { previousStatus, projection } =
+        await this.bookingAppend.appendBookingEvent(tx, appendInput);
+      out.push({
+        id: r.id,
+        fromStatus: previousStatus,
+        toStatus: projection.status,
+      });
+    }
+    return out;
+  }
 
   private async syncSpecialistListedInDirectory(
     tx: Prisma.TransactionClient,
@@ -295,15 +346,12 @@ export class OrganizationCabinetService {
         });
       }
       const bookingsOut =
-        await this.bookingsRepository.cancelAllActiveBookingsAtOrganization(
-          tx,
-          {
-            organizationId,
-            actorUserId: userId,
-            cancelReason: BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN,
-            cancellationComment: null,
-          },
-        );
+        await this.massCancelAllActiveBookingsAtOrganizationTx(tx, {
+          organizationId,
+          actorUserId: userId,
+          cancelReason: BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN,
+          cancellationComment: null,
+        });
       const workplaceSpecialists = await tx.specialist.findMany({
         where: { activeOrganizationId: organizationId },
         select: { id: true },
@@ -315,9 +363,12 @@ export class OrganizationCabinetService {
         });
         await this.syncSpecialistListedInDirectory(tx, s.id);
       }
-      await tx.service.updateMany({
+      await tx.organizationOffering.updateMany({
         where: { organizationId, deletedAt: null },
-        data: { deletedAt: now, isActive: false },
+        data: {
+          deletedAt: now,
+          publicationStatus: OfferingPublicationStatus.archived,
+        },
       });
       await tx.specialistOrganizationEmployment.updateMany({
         where: { organizationId, isActive: true },
@@ -706,6 +757,9 @@ export class OrganizationCabinetService {
           organizationId,
         );
       });
+      await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+        joinRow.specialistId,
+      );
     } else if (body.decision === 'reject') {
       await this.prisma.specialistWorkplaceJoinRequest.update({
         where: { id: requestId },
@@ -1095,13 +1149,17 @@ export class OrganizationCabinetService {
         });
       }
 
-      await syncOrganizationServiceCategoriesFromSpecialistServices(tx, orgId);
+      await syncOrganizationServiceCategoriesFromPublishedOfferings(tx, orgId);
 
       /** Снимок онбординговых сфер удаляем в SpecialistOnboardingService.complete — до finish клиент может объединить их с сферами организации для каталога услуг. */
     });
 
     await this.moderationEnqueue.enqueueOrganizationProfileModeration(
       profileRevisionId,
+    );
+
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialist.id,
     );
 
     return this.specialistOnboarding.getOnboarding(userId);
@@ -1475,7 +1533,7 @@ export class OrganizationCabinetService {
         );
       }
 
-      await syncOrganizationServiceCategoriesFromSpecialistServices(
+      await syncOrganizationServiceCategoriesFromPublishedOfferings(
         tx,
         organizationId,
       );

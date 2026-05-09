@@ -1,11 +1,11 @@
 "use client";
 
-import { Building2 } from "lucide-react";
+import { Building2, ChevronRight } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "@/app/i18n/navigation";
+import { Link, useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
@@ -339,6 +339,25 @@ export function BusinessOrganizationEditPage() {
         avatarFallback="B"
         cabinetBack={backToOrgs}
       />
+
+      <Link
+        href={`/business/organizations/${organizationId}/offerings`}
+        className={cn(
+          motion.interactive,
+          "flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 text-left text-card-foreground shadow-none transition-colors hover:bg-muted/40",
+        )}
+        aria-label={tPage("organizationEditOfferingsAria")}
+      >
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="font-heading text-sm font-semibold leading-snug">
+            {tPage("organizationEditOfferingsLink")}
+          </span>
+          <span className="text-pretty text-xs leading-snug text-muted-foreground">
+            {tPage("organizationEditOfferingsHint")}
+          </span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+      </Link>
 
       <OrganizationSalonCabinetForm
         t={t}

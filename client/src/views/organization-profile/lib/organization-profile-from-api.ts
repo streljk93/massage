@@ -34,6 +34,9 @@ export function organizationProfileFromApiDetail(
       majorSortOrder: b.majorSortOrder,
       durationMinutes: b.durationMinutes as readonly number[],
       priceVndByDuration: b.priceVndByDuration as readonly number[],
+      organizationOfferingId: b.organizationOfferingId,
+      marketplaceOfferingPriceOptionIds:
+        b.marketplaceOfferingPriceOptionIds as readonly string[],
     })),
     occupiedListingSlotKeys: s.occupiedListingSlotKeys ?? [],
   }));

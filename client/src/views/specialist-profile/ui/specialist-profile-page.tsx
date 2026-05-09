@@ -21,7 +21,11 @@ import { Link, useRouter } from "@/app/i18n/navigation";
 import { goBackOrFallback } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
 import { useClientFavorite } from "@/entities/favorites";
-import { bookingsCreate, createBrowserSdkClient } from "@/shared/api";
+import {
+  bookingsCreate,
+  createBrowserSdkClient,
+  type BookingsCreateData,
+} from "@/shared/api";
 import {
   majorSphereTabsFromBookableRows,
   priceForDuration,
@@ -166,8 +170,10 @@ export function SpecialistProfilePage({
     () => profile.timeSlotsByDay[dayIndex] ?? [],
     [profile.timeSlotsByDay, dayIndex],
   );
-  const [serviceId, setServiceId] = useState(profile.services[0]?.id ?? "");
-  const [durationByService, setDurationByService] = useState<
+  const [bookableRowId, setBookableRowId] = useState(
+    profile.services[0]?.id ?? "",
+  );
+  const [durationByBookableRow, setDurationByBookableRow] = useState<
     Record<string, number>
   >(() => {
     const init: Record<string, number> = {};
@@ -210,7 +216,7 @@ export function SpecialistProfilePage({
     : (serviceSphereTabs[0]?.slug ?? "");
 
   useEffect(() => {
-    setServiceId((cur) =>
+    setBookableRowId((cur) =>
       visibleBookingServices.some((s) => s.id === cur) ?
         cur
       : (visibleBookingServices[0]?.id ?? ""),
@@ -225,8 +231,8 @@ export function SpecialistProfilePage({
   const nameLine2 = nameParts.slice(1).join(" ");
 
   const selectedService = useMemo(
-    () => profile.services.find((s) => s.id === serviceId),
-    [profile.services, serviceId],
+    () => profile.services.find((s) => s.id === bookableRowId),
+    [profile.services, bookableRowId],
   );
 
   const selectedBookingMinutes = useMemo(() => {
@@ -234,9 +240,9 @@ export function SpecialistProfilePage({
       return undefined;
     }
     return (
-      durationByService[serviceId] ?? selectedService.durationMinutes[0]
+      durationByBookableRow[bookableRowId] ?? selectedService.durationMinutes[0]
     );
-  }, [durationByService, selectedService, serviceId]);
+  }, [durationByBookableRow, selectedService, bookableRowId]);
 
   const filteredDaySlots = useMemo(() => {
     if (selectedBookingMinutes === undefined) {
@@ -257,7 +263,7 @@ export function SpecialistProfilePage({
 
   const urlBookingSlotKey =
     bookingSlotFromSearch != null
-      ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}-${serviceId}-${dayIndex}`
+      ? `${bookingSlotFromSearch.calendarDate}-${bookingSlotFromSearch.time}-${bookableRowId}-${dayIndex}`
       : null;
   const urlSlotDurationApplyKeyRef = useRef<string | null>(null);
 
@@ -296,9 +302,9 @@ export function SpecialistProfilePage({
     );
     if (minDur !== undefined && minDur !== selectedBookingMinutes) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- длительность под URL-слот (иначе слот пропадает из сетки)
-      setDurationByService((prev) => ({
+      setDurationByBookableRow((prev) => ({
         ...prev,
-        [serviceId]: minDur,
+        [bookableRowId]: minDur,
       }));
     }
     urlSlotDurationApplyKeyRef.current = urlBookingSlotKey;
@@ -308,7 +314,7 @@ export function SpecialistProfilePage({
     profile.timeSlotsByDay,
     selectedBookingMinutes,
     selectedService,
-    serviceId,
+    bookableRowId,
     urlBookingSlotKey,
   ]);
 
@@ -355,14 +361,30 @@ export function SpecialistProfilePage({
     });
     setBookingPending(true);
     try {
+      const mktOpts = selectedService.marketplaceOfferingPriceOptionIds;
+      const mktOfferingId = selectedService.organizationOfferingId;
+      const ix = selectedService.durationMinutes.indexOf(selectedBookingMinutes);
+      const offeringPriceOptionId =
+        ix >= 0 ? (mktOpts[ix] ?? undefined) : undefined;
+      if (
+        offeringPriceOptionId == null ||
+        offeringPriceOptionId.trim().length === 0
+      ) {
+        setBookingErrorKey("bookingPickSlotSpecialist");
+        setBookingPending(false);
+        return;
+      }
+      const body: BookingsCreateData["body"] = {
+        specialistId: profile.id,
+        startsAt,
+        organizationOfferingId: mktOfferingId.trim(),
+        offeringPriceOptionId: offeringPriceOptionId.trim(),
+        durationMinutes: selectedBookingMinutes,
+      };
+
       const res = await bookingsCreate({
         client: createBrowserSdkClient(accessToken, { locale }),
-        body: {
-          specialistId: profile.id,
-          serviceId,
-          durationMinutes: selectedBookingMinutes,
-          startsAt,
-        },
+        body,
         query: { locale },
       });
       const outcome = interpretBookingCreateResponse(res);
@@ -386,7 +408,6 @@ export function SpecialistProfilePage({
     router,
     selectedBookingMinutes,
     selectedService,
-    serviceId,
     sessionStatus,
     effectiveSlot,
     locale,
@@ -698,9 +719,9 @@ export function SpecialistProfilePage({
                     </Empty>
                   : null}
                   {visibleBookingServices.map((svc) => {
-                    const selected = svc.id === serviceId;
+                    const selected = svc.id === bookableRowId;
                     const dur =
-                      durationByService[svc.id] ?? svc.durationMinutes[0];
+                      durationByBookableRow[svc.id] ?? svc.durationMinutes[0];
                     return (
                       <ProfileServicePickCard
                         key={svc.id}
@@ -711,13 +732,13 @@ export function SpecialistProfilePage({
                         formatDurationMinutes={(m) =>
                           t("durationMin", { n: m })
                         }
-                        onSelectService={() => setServiceId(svc.id)}
+                        onSelectService={() => setBookableRowId(svc.id)}
                         onSelectDuration={(m) => {
-                          setDurationByService((prev) => ({
+                          setDurationByBookableRow((prev) => ({
                             ...prev,
                             [svc.id]: m,
                           }));
-                          setServiceId(svc.id);
+                          setBookableRowId(svc.id);
                         }}
                       />
                     );

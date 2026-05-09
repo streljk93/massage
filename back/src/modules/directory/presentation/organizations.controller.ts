@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  BadRequestException,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -17,9 +18,11 @@ import {
   ApiParam,
   ApiQuery,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 import {
+  JwtAccessGuard,
   JwtAccessOptionalGuard,
   type AuthenticatedUser,
 } from '../../../common/guards';
@@ -50,13 +53,18 @@ import {
   organizationDetailResponseSchema,
   organizationsListResponseSchema,
 } from './directory.openapi-schemas';
+import { OrganizationCabinetService } from '../../organizations/application/organization-cabinet.service';
+import { workplaceOrganizationSearchResponseSchema } from '../../organizations/presentation/organizations-cabinet.openapi-schemas';
 
 type AuthedOrGuest = Request & { user?: AuthenticatedUser };
 
 @ApiTags('directory-organizations')
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(private readonly directoryService: DirectoryService) {}
+  constructor(
+    private readonly directoryService: DirectoryService,
+    private readonly organizationCabinet: OrganizationCabinetService,
+  ) {}
 
   @Get()
   @UseGuards(JwtAccessOptionalGuard)
@@ -182,6 +190,59 @@ export class OrganizationsController {
             },
       userId: req.user?.id ?? null,
     });
+  }
+
+  /**
+   * Статический сегмент **до** `:id`/`:id/reviews`: иначе `workplace-search` попадает под
+   * `ParseUUIDPipe` («Validation failed (uuid is expected)» при двух контроллерах на `organizations`).
+   */
+  @Get('workplace-search')
+  @ApiTags('cabinet-organizations')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Поиск салона для заявки на место работы (без фильтров публичной витрины по мастерам).',
+    description:
+      'Только салоны с **одобренной** публикацией (`approved` после модерации). Пустой `q` — первые `limit` по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    description: 'Строка поиска (до 200 символов).',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: '1–50, по умолчанию 30.',
+    schema: { type: 'integer', minimum: 1, maximum: 50 },
+  })
+  @ApiOkResponse({ schema: workplaceOrganizationSearchResponseSchema })
+  @ApiBadRequestResponse({ description: 'Неверный limit' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getWorkplaceOrganizationSearch(
+    @RequestLocale() locale: ApiLocale,
+    @Query('q') qRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    let limit = 30;
+    if (limitRaw !== undefined && limitRaw !== '') {
+      const n = Number.parseInt(limitRaw, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 50) {
+        throw new BadRequestException({
+          code: 'INVALID_LIMIT',
+          message: 'limit must be an integer from 1 to 50',
+        });
+      }
+      limit = n;
+    }
+    const q = parseListSearchQ(qRaw);
+    return this.organizationCabinet.searchOrganizationsForWorkplaceJoin(
+      locale,
+      q,
+      limit,
+    );
   }
 
   @Get(':id/reviews')

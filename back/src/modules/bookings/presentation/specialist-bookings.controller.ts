@@ -30,10 +30,16 @@ import {
   type SpecialistCancelConfirmedBookingBody,
 } from '../dto/specialist-cancel-confirmed-booking-body.schema';
 import {
+  specialistRescheduleConfirmedBookingBodySchema,
+  type SpecialistRescheduleConfirmedBookingBody,
+} from '../dto/specialist-reschedule-confirmed-booking-body.schema';
+import {
   specialistCancelConfirmedBookingRequestSchema,
   specialistCancelConfirmedBookingResponseSchema,
   specialistConfirmBookingResponseSchema,
   specialistRejectPendingBookingResponseSchema,
+  specialistRescheduleConfirmedBookingRequestSchema,
+  specialistRescheduleConfirmedBookingResponseSchema,
   specialistStartVisitResponseSchema,
 } from './bookings.openapi-schemas';
 
@@ -127,6 +133,41 @@ export class SpecialistBookingsController {
     body: SpecialistCancelConfirmedBookingBody,
   ) {
     return this.bookingsService.cancelConfirmedBySpecialist(
+      req.user.id,
+      id,
+      body,
+    );
+  }
+
+  @Post('me/:id/reschedule')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Перенести подтверждённую запись',
+    description:
+      'Только `confirmed`: добавляет `BookingEvent` типа `rescheduled`, обновляет `startsAt`/`endsAt` через проекцию, статус остаётся `confirmed`. Те же проверки сетки слота и пересечений, что при создании записи; клиенту — push и письмо о новом времени.',
+  })
+  @ApiParam({ name: 'id', format: 'uuid' })
+  @ApiBody({ schema: specialistRescheduleConfirmedBookingRequestSchema })
+  @ApiOkResponse({ schema: specialistRescheduleConfirmedBookingResponseSchema })
+  @ApiBadRequestResponse({
+    description:
+      'Не `confirmed`, слот занят, не по сетке, вне listing workday, в прошлом, или слишком близко к старту при включённой политике (`BOOKING_RESCHEDULE_*`)',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'Нет профиля специалиста или нет права на эту бронь (`BOOKING_SALON_ACTION_FORBIDDEN`)',
+  })
+  @ApiNotFoundResponse({ description: 'Бронь не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет access token' })
+  async rescheduleConfirmed(
+    @Req() req: AuthedRequest,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body(new ZodValidationPipe(specialistRescheduleConfirmedBookingBodySchema))
+    body: SpecialistRescheduleConfirmedBookingBody,
+  ) {
+    return this.bookingsService.rescheduleConfirmedBySpecialist(
       req.user.id,
       id,
       body,

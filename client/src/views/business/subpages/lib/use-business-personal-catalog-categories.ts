@@ -21,7 +21,7 @@ import {
 const ONBOARDING_PAYLOAD_QK_ROOT = ["specialistOnboarding"] as const;
 
 /**
- * Тот же набор больших категорий и рубрик, что на шаге услуг онбординга,
+ * Тот же набор больших категорий и рубрик, что на шаге навыков онбординга,
  * но для экранов ЛК без провайдера визарда. Дублирует ключ запроса
  * {@link SpecialistOnboardingProvider} для кэша.
  */
@@ -100,5 +100,6 @@ export function useBusinessPersonalServiceCatalogCategories(enabled: boolean) {
         () => undefined,
       ),
     workplaceMajorsEmpty: resolvedCatalog.workplaceMajorsEmpty,
+    specialist: cabSpec ?? null,
   };
 }

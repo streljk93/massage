@@ -5,15 +5,20 @@
  *
  * Гео (Phú Quốc + карта), категории, отзывы/рейтинги (`applyDemoDirectoryReviewPack`),
  * listedInDirectory (владелец в каталоге мастеров — скрыт, сотрудники — да).
- * Инвариант демо: у мастера число `Service` с `specialistId` = числу строк в
- * `SpecialistServiceCategory` (одна услуга на выбранную подкатегорию).
+ * Витрина поиска: для каждой точки — опубликованные `OrganizationOffering` + VND-опции
+ * и `SpecialistOffering` у мастеров с `listedInDirectory` (клиент шлёт `majorSlug`).
+ * Инвариант демо: навыки мастера — строки `SpecialistSkill` (подкатегории без личного прайса;
+ * цены гостю — из `OrganizationOffering`).
  * Клиенты-авторы отзывов: нейтральные имена, email `demo.client.*@example.com` (без бренда салона).
  * Идемпотентно: фиксированные email/slug. Пароль (демо): `Demo123456!` — bcrypt 12 раундов.
  */
 import bcrypt from 'bcrypt';
 import {
+  OfferingPriceOptionStatus,
+  OfferingPublicationStatus,
   OrganizationMembershipRole,
   PublicationModerationStatus,
+  SpecialistOfferingStatus,
 } from '@prisma/client';
 
 const SALT_ROUNDS = 12;
@@ -110,16 +115,241 @@ function avatarForSeed(i) {
   return AVATAR_POOL[i % AVATAR_POOL.length];
 }
 
+/** Slug оффера точки в сиде: уникален в пределах организации. */
+function seedOrgOfferingSlug(orgSlug, categorySlug) {
+  const base = `offer-${orgSlug}-${categorySlug}`
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return base.length > 120 ? base.slice(0, 120) : base;
+}
+
 /**
+ * Опубликованный оффер + активные VND-опции для каждой подкатегории (карточки поиска / бронь).
  * @param {import('@prisma/client').PrismaClient} prisma
  * @param {string} organizationId
- * @param {{
- *   addressLine: string;
- *   city: string;
- *   latitude: number;
- *   longitude: number;
- * }} payload
+ * @param {string} orgSlug
+ * @param {Array<{ id: string; slug: string; name: string }>} categories
  */
+async function ensurePublishedOrgOfferingsForOrgCategories(
+  prisma,
+  organizationId,
+  orgSlug,
+  categories,
+) {
+  const now = new Date();
+  for (const cat of categories) {
+    const slug = seedOrgOfferingSlug(orgSlug, cat.slug);
+    const title =
+      typeof cat.name === 'string' && cat.name.trim() !== ''
+        ? cat.name.trim()
+        : cat.slug;
+    const existing = await prisma.organizationOffering.findFirst({
+      where: { organizationId, slug, deletedAt: null },
+    });
+    if (existing == null) {
+      await prisma.organizationOffering.create({
+        data: {
+          organizationId,
+          categoryId: cat.id,
+          slug,
+          publicationStatus: OfferingPublicationStatus.published,
+          firstPublishedAt: now,
+          lastPublishedAt: now,
+          title,
+          priceOptions: {
+            create: [
+              {
+                durationMinutes: 60,
+                priceAmount: 400_000,
+                currency: 'VND',
+                status: OfferingPriceOptionStatus.active,
+              },
+              {
+                durationMinutes: 90,
+                priceAmount: 550_000,
+                currency: 'VND',
+                status: OfferingPriceOptionStatus.active,
+              },
+            ],
+          },
+        },
+      });
+      continue;
+    }
+    await prisma.organizationOffering.update({
+      where: { id: existing.id },
+      data: {
+        publicationStatus: OfferingPublicationStatus.published,
+        deletedAt: null,
+        lastPublishedAt: now,
+      },
+    });
+    const activeVndCount = await prisma.offeringPriceOption.count({
+      where: {
+        organizationOfferingId: existing.id,
+        deletedAt: null,
+        status: OfferingPriceOptionStatus.active,
+        currency: 'VND',
+      },
+    });
+    if (activeVndCount === 0) {
+      await prisma.offeringPriceOption.createMany({
+        data: [
+          {
+            organizationOfferingId: existing.id,
+            durationMinutes: 60,
+            priceAmount: 400_000,
+            currency: 'VND',
+            status: OfferingPriceOptionStatus.active,
+          },
+          {
+            organizationOfferingId: existing.id,
+            durationMinutes: 90,
+            priceAmount: 550_000,
+            currency: 'VND',
+            status: OfferingPriceOptionStatus.active,
+          },
+        ],
+      });
+    }
+  }
+}
+
+/**
+ * Пересборка `OrganizationServiceCategory` из опубликованных офферов ∩ сферы организации.
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} organizationId
+ */
+async function syncOrgOscFromPublishedOfferings(prisma, organizationId) {
+  const offerings = await prisma.organizationOffering.findMany({
+    where: {
+      organizationId,
+      deletedAt: null,
+      publicationStatus: OfferingPublicationStatus.published,
+    },
+    select: { categoryId: true },
+  });
+  const orgMajors = await prisma.organizationMajorServiceCategory.findMany({
+    where: { organizationId },
+    select: { majorServiceCategoryId: true },
+  });
+  const majorSet = new Set(orgMajors.map((m) => m.majorServiceCategoryId));
+  /** @type {Set<string>} */
+  const categoryIds = new Set();
+  for (const o of offerings) {
+    const sc = await prisma.serviceCategory.findFirst({
+      where: { id: o.categoryId, deletedAt: null },
+      select: { majorServiceCategoryId: true },
+    });
+    if (
+      sc &&
+      typeof sc.majorServiceCategoryId === 'string' &&
+      majorSet.has(sc.majorServiceCategoryId)
+    ) {
+      categoryIds.add(o.categoryId);
+    }
+  }
+  await prisma.organizationServiceCategory.deleteMany({
+    where: { organizationId },
+  });
+  for (const serviceCategoryId of categoryIds) {
+    await prisma.organizationServiceCategory.create({
+      data: { organizationId, serviceCategoryId },
+    });
+  }
+}
+
+/**
+ * Активные назначения мастеров из каталога на офферы своей точки по пересечению SSC ∩ офферов точки.
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} organizationId
+ */
+async function ensureSpecialistOfferingAssignmentsForListedAtOrg(
+  prisma,
+  organizationId,
+) {
+  const specs = await prisma.specialist.findMany({
+    where: {
+      deletedAt: null,
+      listedInDirectory: true,
+      activeOrganizationId: organizationId,
+    },
+    select: { id: true },
+  });
+  const offerings = await prisma.organizationOffering.findMany({
+    where: {
+      organizationId,
+      deletedAt: null,
+      publicationStatus: OfferingPublicationStatus.published,
+    },
+    select: { id: true, categoryId: true },
+  });
+  /** @type {Map<string, string>} */
+  const offeringByCategory = new Map(
+    offerings.map((o) => [o.categoryId, o.id]),
+  );
+  for (const spec of specs) {
+    const ssc = await prisma.specialistSkill.findMany({
+      where: { specialistId: spec.id },
+      select: { serviceCategoryId: true },
+    });
+    for (const row of ssc) {
+      const organizationOfferingId = offeringByCategory.get(
+        row.serviceCategoryId,
+      );
+      if (organizationOfferingId == null) {
+        continue;
+      }
+      await prisma.specialistOffering.upsert({
+        where: {
+          specialistId_organizationOfferingId: {
+            specialistId: spec.id,
+            organizationOfferingId,
+          },
+        },
+        create: {
+          specialistId: spec.id,
+          organizationOfferingId,
+          status: SpecialistOfferingStatus.active,
+        },
+        update: {
+          deletedAt: null,
+          status: SpecialistOfferingStatus.active,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * Сферы организации ({@link OrganizationMajorServiceCategory}): без этого API бронирования отклоняет оффер
+ * (`BOOKING_OFFERING_NOT_FOUND`; проверка совпадения major с точкой в `isOrganizationOfferingBookableMatchingDirectoryVitrineRules`).
+ *
+ * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} organizationId
+ * @param {string} massageMajorId
+ */
+async function ensureOrganizationMassageMajorScope(
+  prisma,
+  organizationId,
+  massageMajorId,
+) {
+  await prisma.organizationMajorServiceCategory.upsert({
+    where: {
+      organizationId_majorServiceCategoryId: {
+        organizationId,
+        majorServiceCategoryId: massageMajorId,
+      },
+    },
+    create: {
+      organizationId,
+      majorServiceCategoryId: massageMajorId,
+    },
+    update: {},
+  });
+}
+
 async function ensureDemoOrganizationAddress(prisma, organizationId, payload) {
   const o = await prisma.organization.findUnique({
     where: { id: organizationId },
@@ -379,6 +609,8 @@ export async function seedDemoSpecialists(prisma) {
     throw new Error('[seed-demo-specialists] major category massage not found');
   }
 
+  await ensureOrganizationMassageMajorScope(prisma, org.id, massageMajor.id);
+
   const categorySlugs = [
     'neck-shoulder-back-therapy',
     'deep-tissue-massage',
@@ -396,19 +628,18 @@ export async function seedDemoSpecialists(prisma) {
     },
   });
 
-  await prisma.organizationServiceCategory.deleteMany({
-    where: { organizationId: org.id },
-  });
   const bySlug = Object.fromEntries(categories.map((x) => [x.slug, x]));
   /** Все выбранные для витрины подкатегории (порядок как в `categorySlugs`). */
   const orgCategoryRows = categorySlugs.map((s) => bySlug[s]).filter(Boolean);
-  for (const c of orgCategoryRows) {
-    await prisma.organizationServiceCategory.create({
-      data: { organizationId: org.id, serviceCategoryId: c.id },
-    });
-  }
+  await ensurePublishedOrgOfferingsForOrgCategories(
+    prisma,
+    org.id,
+    org.slug,
+    orgCategoryRows,
+  );
+  await syncOrgOscFromPublishedOfferings(prisma, org.id);
 
-  await prisma.specialistServiceCategory.deleteMany({
+  await prisma.specialistSkill.deleteMany({
     where: {
       specialistId: { in: [ownerSpecialist.id, workerSpecialist.id] },
     },
@@ -420,7 +651,7 @@ export async function seedDemoSpecialists(prisma) {
     .map((s) => bySlug[s])
     .filter(Boolean);
   for (const c of ownerPick) {
-    await prisma.specialistServiceCategory.create({
+    await prisma.specialistSkill.create({
       data: {
         specialistId: ownerSpecialist.id,
         serviceCategoryId: c.id,
@@ -428,7 +659,7 @@ export async function seedDemoSpecialists(prisma) {
     });
   }
   for (const c of workerPick) {
-    await prisma.specialistServiceCategory.create({
+    await prisma.specialistSkill.create({
       data: {
         specialistId: workerSpecialist.id,
         serviceCategoryId: c.id,
@@ -436,121 +667,7 @@ export async function seedDemoSpecialists(prisma) {
     });
   }
 
-  /** Услуги мастеров: `Service` + `ServicePriceOption` (варианты длительности/цены); отображаемое имя — у подкатегории (`ServiceCategory`). */
-  await prisma.service.deleteMany({
-    where: {
-      organizationId: org.id,
-      slug: {
-        in: [
-          'demo-seed-owner-neck',
-          'demo-seed-owner-back',
-          'demo-seed-owner-sports',
-          'demo-seed-worker-relax',
-          'demo-seed-worker-foot',
-          'demo-seed-worker-neck',
-        ],
-      },
-    },
-  });
-
-  /**
-   * По одной услуге на каждую привязанную к мастеру подкатегорию
-   * (`SpecialistServiceCategory` — см. `ownerPick` / `workerPick` выше).
-   */
-  const serviceSeedRows = [
-    {
-      specialistId: ownerSpecialist.id,
-      categorySlug: 'neck-shoulder-back-therapy',
-      slug: 'demo-seed-owner-neck',
-      sortOrder: 0,
-      priceTiers: [
-        [30, 290_000],
-        [45, 390_000],
-        [60, 490_000],
-      ],
-    },
-    {
-      specialistId: ownerSpecialist.id,
-      categorySlug: 'deep-tissue-massage',
-      slug: 'demo-seed-owner-back',
-      sortOrder: 1,
-      priceTiers: [
-        [60, 420_000],
-        [90, 580_000],
-        [120, 740_000],
-      ],
-    },
-    {
-      specialistId: ownerSpecialist.id,
-      categorySlug: 'thai-massage',
-      slug: 'demo-seed-owner-sports',
-      sortOrder: 2,
-      priceTiers: [
-        [60, 450_000],
-        [90, 620_000],
-        [120, 790_000],
-      ],
-    },
-    {
-      specialistId: workerSpecialist.id,
-      categorySlug: 'herbal-massage',
-      slug: 'demo-seed-worker-relax',
-      sortOrder: 0,
-      priceTiers: [
-        [60, 400_000],
-        [90, 550_000],
-        [120, 700_000],
-      ],
-    },
-    {
-      specialistId: workerSpecialist.id,
-      categorySlug: 'foot-massage',
-      slug: 'demo-seed-worker-foot',
-      sortOrder: 1,
-      priceTiers: [
-        [60, 320_000],
-        [90, 450_000],
-        [120, 580_000],
-      ],
-    },
-    {
-      specialistId: workerSpecialist.id,
-      categorySlug: 'neck-shoulder-back-therapy',
-      slug: 'demo-seed-worker-neck',
-      sortOrder: 2,
-      priceTiers: [
-        [30, 280_000],
-        [45, 380_000],
-        [60, 480_000],
-      ],
-    },
-  ];
-
-  for (const row of serviceSeedRows) {
-    const cat = bySlug[row.categorySlug];
-    if (!cat) {
-      throw new Error(
-        `[seed-demo-specialists] category slug not found: ${row.categorySlug}`,
-      );
-    }
-    await prisma.service.create({
-      data: {
-        organizationId: org.id,
-        categoryId: cat.id,
-        specialistId: row.specialistId,
-        slug: row.slug,
-        sortOrder: row.sortOrder,
-        isActive: true,
-        priceOptions: {
-          create: row.priceTiers.map(([durationMinutes, priceAmount]) => ({
-            durationMinutes,
-            priceAmount,
-            currency: 'VND',
-          })),
-        },
-      },
-    });
-  }
+  await ensureSpecialistOfferingAssignmentsForListedAtOrg(prisma, org.id);
 
   /** Отзывы и агрегаты рейтинга — единым пакетом в конце сида, см. `applyDemoDirectoryReviewPack`. */
   await topUpOriginalSalon(prisma, { passwordHash, bySlug, orgSlug: ORG_SLUG });
@@ -898,6 +1015,13 @@ async function topUpOriginalSalon(prisma, ctx) {
     return;
   }
 
+  const massageMajor = await prisma.majorServiceCategory.findUnique({
+    where: { slug: 'massage' },
+  });
+  if (massageMajor) {
+    await ensureOrganizationMassageMajorScope(prisma, org.id, massageMajor.id);
+  }
+
   const employments = await prisma.specialistOrganizationEmployment.findMany({
     where: { organizationId: org.id, isActive: true },
     select: { specialistId: true },
@@ -913,7 +1037,15 @@ async function topUpOriginalSalon(prisma, ctx) {
     'demo.salon.worker4@example.com',
   ].slice(0, need);
 
-  await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
+  const seedCats = await getOrgCategoryRows(prisma, org.id, ctx.bySlug);
+  await ensurePublishedOrgOfferingsForOrgCategories(
+    prisma,
+    org.id,
+    org.slug,
+    seedCats,
+  );
+  await syncOrgOscFromPublishedOfferings(prisma, org.id);
+
   let specIndex = employments.length;
 
   for (const email of topUpEmails) {
@@ -969,57 +1101,19 @@ async function topUpOriginalSalon(prisma, ctx) {
     const pick = ['herbal-massage', 'deep-tissue-massage', 'neck-shoulder-back-therapy']
       .map((s) => ctx.bySlug[s])
       .filter(Boolean);
-    await prisma.specialistServiceCategory.deleteMany({
+    await prisma.specialistSkill.deleteMany({
       where: { specialistId: specialist.id },
     });
     for (const c of pick) {
-      await prisma.specialistServiceCategory.create({
+      await prisma.specialistSkill.create({
         data: { specialistId: specialist.id, serviceCategoryId: c.id },
-      });
-    }
-
-    const legacyTopupSlugs = [
-      `demo-seed-topup-w${specIndex}-relax`,
-      ...pick.map((c) => `demo-seed-topup-w${specIndex}-${c.slug}`),
-    ];
-    await prisma.service.deleteMany({
-      where: {
-        organizationId: org.id,
-        specialistId: specialist.id,
-        slug: { in: legacyTopupSlugs },
-      },
-    });
-
-    for (let j = 0; j < pick.length; j++) {
-      const cat = pick[j];
-      if (!cat) {
-        continue;
-      }
-      const slug = `demo-seed-topup-w${specIndex}-${cat.slug}`;
-      await prisma.service.create({
-        data: {
-          organizationId: org.id,
-          categoryId: cat.id,
-          specialistId: specialist.id,
-          slug,
-          sortOrder: j,
-          isActive: true,
-          priceOptions: {
-            create: [
-              [60, 360_000 + j * 15_000],
-              [90, 500_000 + j * 20_000],
-            ].map(([durationMinutes, priceAmount]) => ({
-              durationMinutes,
-              priceAmount,
-              currency: 'VND',
-            })),
-          },
-        },
       });
     }
 
     specIndex += 1;
   }
+
+  await ensureSpecialistOfferingAssignmentsForListedAtOrg(prisma, org.id);
 
   await syncOrganizationRating(prisma, org.id);
 }
@@ -1044,6 +1138,14 @@ async function topUpOriginalSalon(prisma, ctx) {
  */
 async function upsertFullSalon(prisma, args) {
   const { passwordHash, bySlug, def, seedOffset, workday } = args;
+  const massageMajor = await prisma.majorServiceCategory.findUnique({
+    where: { slug: 'massage' },
+  });
+  if (!massageMajor) {
+    throw new Error(
+      '[seed-demo-specialists] major category massage not found (upsertFullSalon)',
+    );
+  }
   const ownerEmail = `demo.${def.slug}.owner@example.com`;
 
   const ownerUser = await prisma.user.upsert({
@@ -1114,6 +1216,8 @@ async function upsertFullSalon(prisma, args) {
     DEMO_ORG_COVER_IMAGE_URL,
   );
 
+  await ensureOrganizationMassageMajorScope(prisma, org.id, massageMajor.id);
+
   await ensureEmployment(
     prisma,
     ownerSpecialist.id,
@@ -1175,17 +1279,16 @@ async function upsertFullSalon(prisma, args) {
     'herbal-massage',
     'foot-massage',
   ];
-  await prisma.organizationServiceCategory.deleteMany({
-    where: { organizationId: org.id },
-  });
   const orgCategoryRows = orgCategorySlugs
     .map((s) => bySlug[s])
     .filter(Boolean);
-  for (const c of orgCategoryRows) {
-    await prisma.organizationServiceCategory.create({
-      data: { organizationId: org.id, serviceCategoryId: c.id },
-    });
-  }
+  await ensurePublishedOrgOfferingsForOrgCategories(
+    prisma,
+    org.id,
+    def.slug,
+    orgCategoryRows,
+  );
+  await syncOrgOscFromPublishedOfferings(prisma, org.id);
 
   const allSpecs = [ownerSpecialist, ...workerSpecs];
   for (const spec of allSpecs) {
@@ -1211,57 +1314,17 @@ async function upsertFullSalon(prisma, args) {
     ]
       .map((s) => bySlug[s])
       .filter(Boolean);
-    await prisma.specialistServiceCategory.deleteMany({
+    await prisma.specialistSkill.deleteMany({
       where: { specialistId: spec.id },
     });
     for (const c of slugsPick) {
-      await prisma.specialistServiceCategory.create({
+      await prisma.specialistSkill.create({
         data: { specialistId: spec.id, serviceCategoryId: c.id },
       });
     }
-
-    /** По одной услуге на каждую подкатегорию в `slugsPick` (как в продукте при выборе категории). */
-    const serviceSlugsForSpec = [
-      `seed-${def.slug}-spec-${i}-main`,
-      ...slugsPick.map((c) => `seed-${def.slug}-spec-${i}-cat-${c.slug}`),
-    ];
-    await prisma.service.deleteMany({
-      where: {
-        organizationId: org.id,
-        specialistId: spec.id,
-        slug: { in: serviceSlugsForSpec },
-      },
-    });
-
-    for (let j = 0; j < slugsPick.length; j++) {
-      const c = slugsPick[j];
-      if (!c) {
-        continue;
-      }
-      const svcSlug = `seed-${def.slug}-spec-${i}-cat-${c.slug}`;
-      await prisma.service.create({
-        data: {
-          organizationId: org.id,
-          categoryId: c.id,
-          specialistId: spec.id,
-          slug: svcSlug,
-          sortOrder: j,
-          isActive: true,
-          priceOptions: {
-            create: [
-              [60, 400_000 + i * 10_000 + j * 8_000],
-              [90, 540_000 + i * 10_000 + j * 8_000],
-              [120, 680_000 + i * 10_000 + j * 8_000],
-            ].map(([durationMinutes, priceAmount]) => ({
-              durationMinutes,
-              priceAmount,
-              currency: 'VND',
-            })),
-          },
-        },
-      });
-    }
   }
+
+  await ensureSpecialistOfferingAssignmentsForListedAtOrg(prisma, org.id);
 
   await syncOrganizationRating(prisma, org.id);
 }

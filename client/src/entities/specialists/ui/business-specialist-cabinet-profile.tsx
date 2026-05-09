@@ -3,45 +3,26 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Award,
-  ChevronDown,
   FileText,
-  ListChecks,
   Phone,
   Sparkles,
 } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState, type ReactNode } from "react";
+import { Link } from "@/app/i18n/navigation";
 import type { CabinetSpecialistBlob } from "../model/cabinet-specialist.types";
 import {
   specialistCabinetExpTranslationKey,
   specialistCabinetYearsToKey,
 } from "../lib/specialist-cabinet-experience";
 import { displaySpecialistCabinetPhone } from "../lib/specialist-cabinet-phone-display";
-import { specialistPersonalServicesFromCabinetBlob } from "../lib/specialist-cabinet-personal-services";
 import {
   cn,
   motion,
   previewSrcForPersistedGalleryUrl,
   telHrefFromDisplayPhone,
 } from "@/shared/lib";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-  FullScreenPhotoGallery,
-} from "@/shared/ui";
-
-function formatServicePriceLine(
-  fmt: ReturnType<typeof useFormatter>,
-  amount: number,
-  currency: string,
-): string {
-  try {
-    return fmt.number(amount, { style: "currency", currency });
-  } catch {
-    return fmt.number(amount);
-  }
-}
+import { FullScreenPhotoGallery } from "@/shared/ui";
 
 function ProfileInfoRow({
   icon: Icon,
@@ -88,13 +69,15 @@ export function BusinessSpecialistCabinetProfile({
 }: BusinessSpecialistCabinetProfileProps) {
   const t = useTranslations("businessAppSubpages");
   const tOnb = useTranslations("specialistOnboarding");
-  const format = useFormatter();
-  const collapsibleBaseId = useId();
 
-  const personalServices = useMemo(
-    () => specialistPersonalServicesFromCabinetBlob(specialist),
-    [specialist],
-  );
+  const skillCategories = useMemo(() => {
+    const rows = (
+      specialist as {
+        skillCategories?: Array<{ categoryId: string; name: string }>;
+      }
+    ).skillCategories;
+    return Array.isArray(rows) ? rows : [];
+  }, [specialist]);
 
   const vitrineName =
     specialist?.listingName != null && String(specialist.listingName).trim().length > 0
@@ -160,9 +143,6 @@ export function BusinessSpecialistCabinetProfile({
     String(specialist?.userName ?? "").trim().slice(0, 2) ||
     "B"
   ).toUpperCase();
-
-  const personalHeadingId = `${collapsibleBaseId}-personal-services-heading`;
-  const personalPanelId = `${collapsibleBaseId}-personal-services-panel`;
 
   return (
     <section
@@ -304,97 +284,36 @@ export function BusinessSpecialistCabinetProfile({
         </ProfileInfoRow>
       </div>
 
-      {personalServices.length > 0 ?
-        <Collapsible
-          defaultOpen
-          className="group flex w-full flex-col gap-2.5 overflow-hidden rounded-xl border border-border/45 bg-muted/12 px-3 py-2.5 dark:bg-muted/18"
-          aria-label={t("profilePersonalServicesSectionAria")}
-        >
-          <CollapsibleTrigger
+      <div
+        className="flex w-full flex-col gap-2 rounded-xl border border-border/45 bg-muted/12 px-3 py-2.5 dark:bg-muted/18"
+        aria-label={t("profileSkillsSectionAria")}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">
+            {t("profileSkillsTitle")}
+          </h2>
+          <Link
+            href="/business/skills"
             className={cn(
-              motion.interactivePressStrong,
-              "flex w-full touch-manipulation items-center justify-between gap-2 rounded-lg py-0.5 text-left outline-none hover:bg-muted/20 focus-visible:ring-2 focus-visible:ring-ring/45 dark:hover:bg-muted/25",
+              motion.interactive,
+              "shrink-0 text-xs font-medium text-primary underline-offset-4 hover:underline",
             )}
-            id={personalHeadingId}
           >
-            <h2 className="flex items-center gap-2 font-heading text-sm font-semibold tracking-tight text-foreground">
-              <ListChecks className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span>
-                {t("profilePersonalServicesTitle")}
-                <span className="ml-1.5 font-normal text-muted-foreground tabular-nums">
-                  ({personalServices.length})
+            {t("profileSkillsEditLink")}
+          </Link>
+        </div>
+        {skillCategories.length > 0 ?
+          <ul className="flex flex-wrap gap-2" role="list">
+            {skillCategories.map((row) => (
+              <li key={row.categoryId} role="listitem">
+                <span className="inline-flex rounded-full border border-border/55 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
+                  {row.name}
                 </span>
-              </span>
-            </h2>
-            <ChevronDown
-              className="size-5 shrink-0 rotate-0 text-muted-foreground transition-transform duration-300 ease-out group-data-[state=open]:rotate-180"
-              aria-hidden
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent
-            id={personalPanelId}
-            role="region"
-            aria-labelledby={personalHeadingId}
-          >
-            <ul className="flex flex-col gap-3 pt-2">
-              {personalServices.map((svc) => (
-                <li
-                  key={svc.id}
-                  className={cn(
-                    "rounded-xl border px-3 py-2.5 shadow-sm dark:shadow-none",
-                    !svc.listedAtActiveWorkplace
-                      ? "border-dashed border-muted-foreground/40 bg-muted/25 dark:bg-muted/15"
-                      : "border-border/45 bg-white dark:bg-card",
-                  )}
-                  {...(!svc.listedAtActiveWorkplace ?
-                    {
-                      "aria-label": t("profilePersonalServiceInactiveAria", {
-                        name: svc.categoryName,
-                      }),
-                    }
-                  : {})}
-                >
-                  <p
-                    className={cn(
-                      "font-heading text-sm font-semibold leading-snug",
-                      !svc.listedAtActiveWorkplace ? "text-muted-foreground" : "text-foreground",
-                    )}
-                  >
-                    {svc.categoryName}
-                  </p>
-                  {!svc.listedAtActiveWorkplace ?
-                    <span className="mt-1 inline-flex w-fit rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {t("profilePersonalServiceInactiveBadge")}
-                    </span>
-                  : null}
-                  {!svc.listedAtActiveWorkplace ?
-                    <p className="mt-1.5 text-pretty text-xs leading-snug text-muted-foreground">
-                      {t("profilePersonalServiceInactiveHint")}
-                    </p>
-                  : null}
-                  <ul className="mt-2 space-y-1">
-                    {svc.priceOptions.map((o, idx) => (
-                      <li
-                        key={`${svc.id}-${o.durationMinutes}-${idx}`}
-                        className={cn(
-                          "text-sm tabular-nums",
-                          !svc.listedAtActiveWorkplace ? "text-muted-foreground" : "text-foreground",
-                        )}
-                      >
-                        {o.durationMinutes}
-                        {"\u00a0"}
-                        {tOnb("duration")}
-                        {" · "}
-                        {formatServicePriceLine(format, o.priceAmount, o.currency)}
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </CollapsibleContent>
-        </Collapsible>
-      : null}
+              </li>
+            ))}
+          </ul>
+        : <p className="text-pretty text-sm text-muted-foreground">{t("profileSkillsEmptyHint")}</p>}
+      </div>
     </section>
   );
 }

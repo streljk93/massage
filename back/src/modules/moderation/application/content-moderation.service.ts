@@ -13,10 +13,14 @@ import {
 } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
-import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
+import { syncOrganizationServiceCategoriesFromPublishedOfferings } from '../../organizations/infrastructure/organization-service-category-sync';
 import { ImageNsfwModerationService } from './image-nsfw-moderation.service';
 import { ModerationOllamaService } from './moderation-ollama.service';
 import { hydrateContentModerationCaseRows } from './hydrate-content-moderation-cases';
+import {
+  assertOrganizationPublishedPointerCoherent,
+  assertSpecialistPublishedPointerCoherent,
+} from '../domain/profile-published-revision.invariant';
 
 const CONTENT_MOD_KIND_SPECIALIST_PROFILE =
   'specialist_profile' as ContentModerationCaseKind;
@@ -857,15 +861,29 @@ export class ContentModerationService {
         profilePublicationModerationStatus:
           PublicationModerationStatus.approved,
         publishedProfileRevisionId: revisionId,
-        catalogListedBio: null,
-        catalogListedListingName: null,
-        catalogListedImageUrl: null,
       },
     });
 
     await tx.specialistProfileRevision.update({
       where: { id: revisionId },
       data: { status: SpecialistProfileRevisionStatus.published },
+    });
+    await assertSpecialistPublishedPointerCoherent(tx, specialistId);
+  }
+
+  /**
+   * После промоута галерея ревизии больше не нужна (медиа скопированы на витрину организации);
+   * удаление снимает orphan `Gallery` × `GalleryOwnerKind.organization_profile_revision`.
+   */
+  private async deleteGalleryForOrganizationProfileRevisionTx(
+    tx: Prisma.TransactionClient,
+    revisionId: string,
+  ): Promise<void> {
+    await tx.gallery.deleteMany({
+      where: {
+        ownerKind: GalleryOwnerKind.organization_profile_revision,
+        ownerId: revisionId,
+      },
     });
   }
 
@@ -894,6 +912,10 @@ export class ContentModerationService {
         where: { id: prevPublishedId },
         data: { status: OrganizationProfileRevisionStatus.superseded },
       });
+      await this.deleteGalleryForOrganizationProfileRevisionTx(
+        tx,
+        prevPublishedId,
+      );
     }
 
     const localesBefore = await tx.organizationLocale.findMany({
@@ -963,8 +985,9 @@ export class ContentModerationService {
         order += 1;
       }
     }
+    await this.deleteGalleryForOrganizationProfileRevisionTx(tx, revisionId);
 
-    await syncOrganizationServiceCategoriesFromSpecialistServices(
+    await syncOrganizationServiceCategoriesFromPublishedOfferings(
       tx,
       organizationId,
     );
@@ -1020,6 +1043,7 @@ export class ContentModerationService {
       where: { id: revisionId },
       data: { status: OrganizationProfileRevisionStatus.published },
     });
+    await assertOrganizationPublishedPointerCoherent(tx, organizationId);
   }
 
   private async refreshOrgReviewAggregates(

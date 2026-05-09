@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetBulkCategoriesByMajorSlugsData, CatalogGetBulkCategoriesByMajorSlugsErrors, CatalogGetBulkCategoriesByMajorSlugsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, ContentModerationApproveData, ContentModerationApproveErrors, ContentModerationListCasesData, ContentModerationListCasesErrors, ContentModerationListCasesResponses, ContentModerationRejectData, ContentModerationRejectErrors, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevModerationGetQueueData, DevModerationGetQueueResponses, DevModerationImageEvalData, DevModerationImageEvalErrors, DevModerationImageEvalResponses, DevModerationOllamaEvalData, DevModerationOllamaEvalResponses, DevModerationResolveCaseData, DevModerationResolveCaseErrors, DevModerationResolveCaseResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, GalleryCabinetGetOrganizationVitrineGalleryData, GalleryCabinetGetOrganizationVitrineGalleryErrors, GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetPatchItemsOrderData, GalleryCabinetPatchItemsOrderErrors, GalleryCabinetPatchItemsOrderResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationsCabinetDeleteOrganizationAsOwnerData, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditData, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetGetWorkplaceOrganizationSearchData, OrganizationsCabinetGetWorkplaceOrganizationSearchErrors, OrganizationsCabinetGetWorkplaceOrganizationSearchResponses, OrganizationsCabinetPatchOrganizationData, OrganizationsCabinetPatchOrganizationErrors, OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsCancelConfirmedData, SpecialistBookingsCancelConfirmedErrors, SpecialistBookingsCancelConfirmedResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsRejectPendingData, SpecialistBookingsRejectPendingErrors, SpecialistBookingsRejectPendingResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetDeleteSpecialistPersonalServiceData, SpecialistsCabinetDeleteSpecialistPersonalServiceErrors, SpecialistsCabinetDeleteSpecialistPersonalServiceResponses, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewErrors, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses, SpecialistsCabinetGetSpecialistMyOrganizationsData, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetGetSpecialistSalonBookingsData, SpecialistsCabinetGetSpecialistSalonBookingsErrors, SpecialistsCabinetGetSpecialistSalonBookingsResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistOnboardingPreferencesData, SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors, SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses, SpecialistsCabinetPatchSpecialistPersonalServiceData, SpecialistsCabinetPatchSpecialistPersonalServiceErrors, SpecialistsCabinetPatchSpecialistPersonalServiceResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistPersonalServiceData, SpecialistsCabinetPostSpecialistPersonalServiceErrors, SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
+import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CatalogGetBulkCategoriesByMajorSlugsData, CatalogGetBulkCategoriesByMajorSlugsErrors, CatalogGetBulkCategoriesByMajorSlugsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, ContentModerationApproveData, ContentModerationApproveErrors, ContentModerationListCasesData, ContentModerationListCasesErrors, ContentModerationListCasesResponses, ContentModerationRejectData, ContentModerationRejectErrors, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevModerationGetQueueData, DevModerationGetQueueResponses, DevModerationImageEvalData, DevModerationImageEvalErrors, DevModerationImageEvalResponses, DevModerationOllamaEvalData, DevModerationOllamaEvalResponses, DevModerationResolveCaseData, DevModerationResolveCaseErrors, DevModerationResolveCaseResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevSearchIndexReindexListingEdgesData, DevSearchIndexReindexListingEdgesErrors, DevSearchIndexReindexListingEdgesResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, GalleryCabinetGetOrganizationVitrineGalleryData, GalleryCabinetGetOrganizationVitrineGalleryErrors, GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetPatchItemsOrderData, GalleryCabinetPatchItemsOrderErrors, GalleryCabinetPatchItemsOrderResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationOfferingsCabinetCreateDraftData, OrganizationOfferingsCabinetCreateDraftErrors, OrganizationOfferingsCabinetCreateDraftResponses, OrganizationOfferingsCabinetCreatePriceOptionData, OrganizationOfferingsCabinetCreatePriceOptionErrors, OrganizationOfferingsCabinetCreatePriceOptionResponses, OrganizationOfferingsCabinetCreatePriceOverrideData, OrganizationOfferingsCabinetCreatePriceOverrideErrors, OrganizationOfferingsCabinetCreatePriceOverrideResponses, OrganizationOfferingsCabinetCreateSpecialistAssignmentData, OrganizationOfferingsCabinetCreateSpecialistAssignmentErrors, OrganizationOfferingsCabinetCreateSpecialistAssignmentResponses, OrganizationOfferingsCabinetDeletePriceOverrideData, OrganizationOfferingsCabinetDeletePriceOverrideErrors, OrganizationOfferingsCabinetDeletePriceOverrideResponses, OrganizationOfferingsCabinetListAssignableSpecialistsData, OrganizationOfferingsCabinetListAssignableSpecialistsErrors, OrganizationOfferingsCabinetListAssignableSpecialistsResponses, OrganizationOfferingsCabinetListMineData, OrganizationOfferingsCabinetListMineErrors, OrganizationOfferingsCabinetListMineResponses, OrganizationOfferingsCabinetPatchOfferingData, OrganizationOfferingsCabinetPatchOfferingErrors, OrganizationOfferingsCabinetPatchOfferingResponses, OrganizationOfferingsCabinetPatchPriceOptionData, OrganizationOfferingsCabinetPatchPriceOptionErrors, OrganizationOfferingsCabinetPatchPriceOptionResponses, OrganizationOfferingsCabinetPatchPriceOverrideData, OrganizationOfferingsCabinetPatchPriceOverrideErrors, OrganizationOfferingsCabinetPatchPriceOverrideResponses, OrganizationOfferingsCabinetPatchSpecialistAssignmentData, OrganizationOfferingsCabinetPatchSpecialistAssignmentErrors, OrganizationOfferingsCabinetPatchSpecialistAssignmentResponses, OrganizationOfferingsCabinetPublishOfferingData, OrganizationOfferingsCabinetPublishOfferingErrors, OrganizationOfferingsCabinetPublishOfferingResponses, OrganizationsCabinetDeleteOrganizationAsOwnerData, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditData, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetPatchOrganizationData, OrganizationsCabinetPatchOrganizationErrors, OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsGetWorkplaceOrganizationSearchData, OrganizationsGetWorkplaceOrganizationSearchErrors, OrganizationsGetWorkplaceOrganizationSearchResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsCancelConfirmedData, SpecialistBookingsCancelConfirmedErrors, SpecialistBookingsCancelConfirmedResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsRejectPendingData, SpecialistBookingsRejectPendingErrors, SpecialistBookingsRejectPendingResponses, SpecialistBookingsRescheduleConfirmedData, SpecialistBookingsRescheduleConfirmedErrors, SpecialistBookingsRescheduleConfirmedResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewErrors, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses, SpecialistsCabinetGetSpecialistMyOrganizationsData, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetGetSpecialistSalonBookingsData, SpecialistsCabinetGetSpecialistSalonBookingsErrors, SpecialistsCabinetGetSpecialistSalonBookingsResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistCabinetSkillsData, SpecialistsCabinetPatchSpecialistCabinetSkillsErrors, SpecialistsCabinetPatchSpecialistCabinetSkillsResponses, SpecialistsCabinetPatchSpecialistOnboardingPreferencesData, SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors, SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,22 +19,57 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Подсказки по адресу (внешний сервис на стороне API)
+ * Список специалистов (курсорная пагинация)
  *
- * Сервер идёт по цепочке геокодеров (см. `back/.env.example`: LocationIQ, Geoapify, OpenCage, Nominatim). Клиент не зовёт внешние API напрямую.
+ * Активные профили специалистов (не удалённые). Сортировка: `sort` — `popularity` (по умолчанию, отзывы), `newest`, `rating`, `price_asc` / `price_desc`, `recommended` (релевантность по портрету; нужен Bearer и готовность персонализации). Вертикаль: `majorSlug`. Фильтры: `q`, `categories`, цена, радиус. `sort=recommended` требует валидный access token и доступность персонализации (как GET /personalization/recommendations).
  */
-export const addressSuggestions = <ThrowOnError extends boolean = false>(options: Options<AddressSuggestionsData, ThrowOnError>) => (options.client ?? client).get<AddressSuggestionsResponses, AddressSuggestionsErrors, ThrowOnError>({
+export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/address/suggestions',
+    url: '/specialists',
     ...options
 });
 
 /**
- * Разрешить place id поставщика в канонический адрес (координаты + строки для БД)
+ * Отзывы о специалисте
+ *
+ * Список `SpecialistReview` (курсор). Отдельно от отзывов о салоне (`OrganizationReview`).
  */
-export const addressResolve = <ThrowOnError extends boolean = false>(options: Options<AddressResolveData, ThrowOnError>) => (options.client ?? client).post<AddressResolveResponses, AddressResolveErrors, ThrowOnError>({
+export const specialistsListReviews = <ThrowOnError extends boolean = false>(options: Options<SpecialistsListReviewsData, ThrowOnError>) => (options.client ?? client).get<SpecialistsListReviewsResponses, SpecialistsListReviewsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/address/resolve',
+    url: '/specialists/{id}/reviews',
+    ...options
+});
+
+/**
+ * Специалист по id
+ *
+ * Профиль мастера: те же поля, что в списке специалистов.
+ */
+export const specialistsGetById = <ThrowOnError extends boolean = false>(options: Options<SpecialistsGetByIdData, ThrowOnError>) => (options.client ?? client).get<SpecialistsGetByIdResponses, SpecialistsGetByIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/{id}',
+    ...options
+});
+
+/**
+ * Список организаций (курсорная пагинация)
+ *
+ * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
+ */
+export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations',
+    ...options
+});
+
+/**
+ * Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, членство owner.
+ *
+ * Требует Bearer. Если у мастера уже выбрано активное место приёма, оно не меняется; новый салон создаётся как дополнительное владение. Публичный список салонов — `GET /organizations`. В ответе — актуальное состояние онбординга мастера.
+ */
+export const organizationsCabinetPostCreateOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostCreateOrganizationData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostCreateOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -43,13 +78,53 @@ export const addressResolve = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Обратное геокодирование (координаты → канонический адрес)
+ * Поиск салона для заявки на место работы (без фильтров публичной витрины по мастерам).
  *
- * Сервер проходит по тому же порядку провайдеров, что и подсказки, пока один не вернёт адрес.
+ * Только салоны с **одобренной** публикацией (`approved` после модерации). Пустой `q` — первые `limit` по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).
  */
-export const addressReverse = <ThrowOnError extends boolean = false>(options: Options<AddressReverseData, ThrowOnError>) => (options.client ?? client).post<AddressReverseResponses, AddressReverseErrors, ThrowOnError>({
+export const organizationsGetWorkplaceOrganizationSearch = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsGetWorkplaceOrganizationSearchData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsGetWorkplaceOrganizationSearchResponses, OrganizationsGetWorkplaceOrganizationSearchErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/address/reverse',
+    url: '/organizations/workplace-search',
+    ...options
+});
+
+/**
+ * Отзывы о салоне
+ *
+ * Список `OrganizationReview` для витрины (курсор). Отдельно от отзывов о мастерах (`SpecialistReview`).
+ */
+export const organizationsListReviews = <ThrowOnError extends boolean = false>(options: Options<OrganizationsListReviewsData, ThrowOnError>) => (options.client ?? client).get<OrganizationsListReviewsResponses, OrganizationsListReviewsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}/reviews',
+    ...options
+});
+
+/**
+ * Организация по id
+ *
+ * Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).
+ */
+export const organizationsGetById = <ThrowOnError extends boolean = false>(options: Options<OrganizationsGetByIdData, ThrowOnError>) => (options.client ?? client).get<OrganizationsGetByIdResponses, OrganizationsGetByIdErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{id}',
+    ...options
+});
+
+/**
+ * Опции фильтра каталога (поиск / карта)
+ *
+ * Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.
+ */
+export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = false>(options: Options<DirectoryGetCatalogFilterOptionsData, ThrowOnError>) => (options.client ?? client).get<DirectoryGetCatalogFilterOptionsResponses, DirectoryGetCatalogFilterOptionsErrors, ThrowOnError>({ url: '/directory/catalog-filter-options', ...options });
+
+/**
+ * События витрины (для портрета и рекомендаций)
+ *
+ * Без токена передавайте `sessionId` (8+ символов). `metadata` — только slug’и категорий, id фильтра, `lat`/`lng` (числа), `majorSlug`; без PII и текста поиска.
+ */
+export const personalizationIngestEvents = <ThrowOnError extends boolean = false>(options: Options<PersonalizationIngestEventsData, ThrowOnError>) => (options.client ?? client).post<PersonalizationIngestEventsResponses, PersonalizationIngestEventsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/personalization/events',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -58,56 +133,13 @@ export const addressReverse = <ThrowOnError extends boolean = false>(options: Op
 });
 
 /**
- * Проверка доступности сервиса
- */
-export const healthGetHealth = <ThrowOnError extends boolean = false>(options?: Options<HealthGetHealthData, ThrowOnError>) => (options?.client ?? client).get<HealthGetHealthResponses, unknown, ThrowOnError>({ url: '/health', ...options });
-
-/**
- * Загрузить публичный файл
+ * Персональные рекомендации (салоны и мастера)
  *
- * Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.
+ * **Блок «Рекомендуем» на клиенте:** для `personalizationReady: true` нужен **валидный Bearer access** (без заголовка или с refresh вместо access — пользователь считается гостем: `source: guest_popular`, `personalizationReady: false`). Пересчёт портрета по email (dev) не подменяет пользователя в запросе — в токене должен быть тот же аккаунт. Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.
  */
-export const filesUploadPublic = <ThrowOnError extends boolean = false>(options: Options<FilesUploadPublicData, ThrowOnError>) => (options.client ?? client).post<FilesUploadPublicResponses, FilesUploadPublicErrors, ThrowOnError>({
-    ...formDataBodySerializer,
-    url: '/files/public',
-    ...options,
-    headers: {
-        'Content-Type': null,
-        ...options.headers
-    }
-});
-
-/**
- * Загрузить приватный файл
- *
- * Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.
- */
-export const filesUploadPrivate = <ThrowOnError extends boolean = false>(options: Options<FilesUploadPrivateData, ThrowOnError>) => (options.client ?? client).post<FilesUploadPrivateResponses, FilesUploadPrivateErrors, ThrowOnError>({
-    ...formDataBodySerializer,
+export const personalizationGetRecommendations = <ThrowOnError extends boolean = false>(options?: Options<PersonalizationGetRecommendationsData, ThrowOnError>) => (options?.client ?? client).get<PersonalizationGetRecommendationsResponses, unknown, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/files/private',
-    ...options,
-    headers: {
-        'Content-Type': null,
-        ...options.headers
-    }
-});
-
-/**
- * Получить публичный файл
- *
- * Имя файла — из ответа POST /files/public (`filename`).
- */
-export const filesDownloadPublic = <ThrowOnError extends boolean = false>(options: Options<FilesDownloadPublicData, ThrowOnError>) => (options.client ?? client).get<FilesDownloadPublicResponses, unknown, ThrowOnError>({ url: '/files/public/{filename}', ...options });
-
-/**
- * Получить приватный файл
- *
- * Имя файла — из ответа POST /files/private. Требуется **Bearer access**.
- */
-export const filesDownloadPrivate = <ThrowOnError extends boolean = false>(options: Options<FilesDownloadPrivateData, ThrowOnError>) => (options.client ?? client).get<FilesDownloadPrivateResponses, FilesDownloadPrivateErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/files/private/{filename}',
+    url: '/personalization/recommendations',
     ...options
 });
 
@@ -223,48 +255,295 @@ export const contentModerationReject = <ThrowOnError extends boolean = false>(op
 });
 
 /**
- * Удалить FCM token (отписка от push на этом устройстве)
- */
-export const pushTokensRevoke = <ThrowOnError extends boolean = false>(options: Options<PushTokensRevokeData, ThrowOnError>) => (options.client ?? client).delete<PushTokensRevokeResponses, PushTokensRevokeErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/push-tokens',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Сохранить FCM token (web push)
+ * Поля салона для формы редактирования (владелец БД или активный admin).
  *
- * Регистрирует токен устройства для текущего пользователя. Повтор с тем же token переназначит userId (другой логин с того же браузера).
+ * В отличие от публичного `GET /organizations/:id`, доступно админам орг без статуса `approved` по витрине.
  */
-export const pushTokensRegister = <ThrowOnError extends boolean = false>(options: Options<PushTokensRegisterData, ThrowOnError>) => (options.client ?? client).post<PushTokensRegisterResponses, PushTokensRegisterErrors, ThrowOnError>({
+export const organizationsCabinetGetCabinetOrganizationProfileForEdit = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetCabinetOrganizationProfileForEditData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me/push-tokens',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Текущий пользователь (профиль)
- */
-export const usersMe = <ThrowOnError extends boolean = false>(options?: Options<UsersMeData, ThrowOnError>) => (options?.client ?? client).get<UsersMeResponses, UsersMeErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me',
+    url: '/organizations/{organizationId}/cabinet-edit',
     ...options
 });
 
 /**
- * Обновить профиль (имя, аватар, локаль UI)
+ * Превью активных записей салона перед удалением организации владельцем.
+ *
+ * Тот же тип списка, что при смене места приёма для одного мастера, но по всей организации; плюс имя принимающего специалиста.
  */
-export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Options<UsersPatchMeData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchMeResponses, UsersPatchMeErrors, ThrowOnError>({
+export const organizationsCabinetGetDeleteOrganizationBookingsPreview = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/me',
+    url: '/organizations/{organizationId}/delete-bookings-preview',
+    ...options
+});
+
+/**
+ * Удалить организацию из кабинета (soft delete): только владелец платформенной записи салона.
+ *
+ * Активные записи отменяются, услуги салона архивируются, членства и заявки в штат закрываются.
+ */
+export const organizationsCabinetDeleteOrganizationAsOwner = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetDeleteOrganizationAsOwnerData, ThrowOnError>) => (options.client ?? client).delete<OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}',
+    ...options
+});
+
+/**
+ * Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.
+ *
+ * Тело как у `POST /organizations`. Slug салона не меняется. При смене сфер деятельности каталог салона под категории витрины перестраивается по текущим сферам; строки услуг мастеров не включаются/выключаются автоматически.
+ */
+export const organizationsCabinetPatchOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPatchOrganizationData, ThrowOnError>) => (options.client ?? client).patch<OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPatchOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Подать заявку на работу в салоне; членство — после решения владельца или админа.
+ */
+export const organizationsCabinetPostRequestWorkplaceJoin = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostRequestWorkplaceJoinData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostRequestWorkplaceJoinErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-requests',
+    ...options
+});
+
+/**
+ * Заявки мастеров в салон (владелец организации или мастер owner/admin).
+ *
+ * По умолчанию только status=pending; передайте status=all для полного списка.
+ */
+export const organizationsCabinetGetWorkplaceJoinRequestsForOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-join-requests',
+    ...options
+});
+
+/**
+ * Профиль мастера для решения по заявке (как экран «Мой профиль» в кабинете мастера).
+ *
+ * Доступно только при наличии **pending** заявки этого мастера в указанную организацию; иначе 404.
+ */
+export const organizationsCabinetGetWorkplaceJoinApplicantCabinetProfile = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-join-applicants/{specialistId}/cabinet-profile',
+    ...options
+});
+
+/**
+ * Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.
+ */
+export const organizationsCabinetPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Список коммерческих офферов точки (OrganizationOffering): опции и привязки мастеров.
+ */
+export const organizationOfferingsCabinetListMine = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetListMineData, ThrowOnError>) => (options.client ?? client).get<OrganizationOfferingsCabinetListMineResponses, OrganizationOfferingsCabinetListMineErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings',
+    ...options
+});
+
+/**
+ * Создать черновик оффера точки (draft).
+ */
+export const organizationOfferingsCabinetCreateDraft = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetCreateDraftData, ThrowOnError>) => (options.client ?? client).post<OrganizationOfferingsCabinetCreateDraftResponses, OrganizationOfferingsCabinetCreateDraftErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Список специалистов с активным employment в точке (для ручной привязки к офферу).
+ */
+export const organizationOfferingsCabinetListAssignableSpecialists = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetListAssignableSpecialistsData, ThrowOnError>) => (options.client ?? client).get<OrganizationOfferingsCabinetListAssignableSpecialistsResponses, OrganizationOfferingsCabinetListAssignableSpecialistsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/assignable-specialists',
+    ...options
+});
+
+/**
+ * Обновить оффер (slug/category — только до первой публикации; title/description — всегда).
+ */
+export const organizationOfferingsCabinetPatchOffering = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetPatchOfferingData, ThrowOnError>) => (options.client ?? client).patch<OrganizationOfferingsCabinetPatchOfferingResponses, OrganizationOfferingsCabinetPatchOfferingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Опубликовать оффер (нужна ≥1 активная VND опция). Переиндексация marketplace-рёбер активных мастеров точки.
+ */
+export const organizationOfferingsCabinetPublishOffering = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetPublishOfferingData, ThrowOnError>) => (options.client ?? client).post<OrganizationOfferingsCabinetPublishOfferingResponses, OrganizationOfferingsCabinetPublishOfferingErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/publish',
+    ...options
+});
+
+/**
+ * Добавить вариант цены/длительности оффера.
+ */
+export const organizationOfferingsCabinetCreatePriceOption = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetCreatePriceOptionData, ThrowOnError>) => (options.client ?? client).post<OrganizationOfferingsCabinetCreatePriceOptionResponses, OrganizationOfferingsCabinetCreatePriceOptionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/price-options',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Изменить статус/цену опции; remove=true — soft-delete (архив + deletedAt).
+ */
+export const organizationOfferingsCabinetPatchPriceOption = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetPatchPriceOptionData, ThrowOnError>) => (options.client ?? client).patch<OrganizationOfferingsCabinetPatchPriceOptionResponses, OrganizationOfferingsCabinetPatchPriceOptionErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/price-options/{optionId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Привязать мастера к офферу (employment в точке обязателен). Восстанавливает soft-removed привязку.
+ */
+export const organizationOfferingsCabinetCreateSpecialistAssignment = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetCreateSpecialistAssignmentData, ThrowOnError>) => (options.client ?? client).post<OrganizationOfferingsCabinetCreateSpecialistAssignmentResponses, OrganizationOfferingsCabinetCreateSpecialistAssignmentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/specialist-assignments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Изменить статус привязки мастера (`removed` — soft-delete привязки и рёбер листинга после reconcile).
+ */
+export const organizationOfferingsCabinetPatchSpecialistAssignment = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetPatchSpecialistAssignmentData, ThrowOnError>) => (options.client ?? client).patch<OrganizationOfferingsCabinetPatchSpecialistAssignmentResponses, OrganizationOfferingsCabinetPatchSpecialistAssignmentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/specialist-assignments/{assignmentId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Персональная цена мастера по конкретной опции оффера (upsert по паре привязка+опция).
+ */
+export const organizationOfferingsCabinetCreatePriceOverride = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetCreatePriceOverrideData, ThrowOnError>) => (options.client ?? client).post<OrganizationOfferingsCabinetCreatePriceOverrideResponses, OrganizationOfferingsCabinetCreatePriceOverrideErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/specialist-assignments/{assignmentId}/price-overrides',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Удалить персональную цену мастера по опции.
+ */
+export const organizationOfferingsCabinetDeletePriceOverride = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetDeletePriceOverrideData, ThrowOnError>) => (options.client ?? client).delete<OrganizationOfferingsCabinetDeletePriceOverrideResponses, OrganizationOfferingsCabinetDeletePriceOverrideErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/specialist-assignments/{assignmentId}/price-overrides/{overrideId}',
+    ...options
+});
+
+/**
+ * Изменить сумму персональной цены мастера.
+ */
+export const organizationOfferingsCabinetPatchPriceOverride = <ThrowOnError extends boolean = false>(options: Options<OrganizationOfferingsCabinetPatchPriceOverrideData, ThrowOnError>) => (options.client ?? client).patch<OrganizationOfferingsCabinetPatchPriceOverrideResponses, OrganizationOfferingsCabinetPatchPriceOverrideErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/offerings/{offeringId}/specialist-assignments/{assignmentId}/price-overrides/{overrideId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Подсказки по адресу (внешний сервис на стороне API)
+ *
+ * Сервер идёт по цепочке геокодеров (см. `back/.env.example`: LocationIQ, Geoapify, OpenCage, Nominatim). Клиент не зовёт внешние API напрямую.
+ */
+export const addressSuggestions = <ThrowOnError extends boolean = false>(options: Options<AddressSuggestionsData, ThrowOnError>) => (options.client ?? client).get<AddressSuggestionsResponses, AddressSuggestionsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/address/suggestions',
+    ...options
+});
+
+/**
+ * Разрешить place id поставщика в канонический адрес (координаты + строки для БД)
+ */
+export const addressResolve = <ThrowOnError extends boolean = false>(options: Options<AddressResolveData, ThrowOnError>) => (options.client ?? client).post<AddressResolveResponses, AddressResolveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/address/resolve',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Обратное геокодирование (координаты → канонический адрес)
+ *
+ * Сервер проходит по тому же порядку провайдеров, что и подсказки, пока один не вернёт адрес.
+ */
+export const addressReverse = <ThrowOnError extends boolean = false>(options: Options<AddressReverseData, ThrowOnError>) => (options.client ?? client).post<AddressReverseResponses, AddressReverseErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/address/reverse',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Галерея витрины организации (кабинет)
+ *
+ * Возвращает `galleryId` и элементы в порядке `sortOrder` для последующего PATCH `/galleries/{galleryId}/items/order`.
+ */
+export const galleryCabinetGetOrganizationVitrineGallery = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetGetOrganizationVitrineGalleryData, ThrowOnError>) => (options.client ?? client).get<GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetGetOrganizationVitrineGalleryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/galleries/by-owner/organization/{organizationId}',
+    ...options
+});
+
+/**
+ * Задать порядок элементов галереи
+ *
+ * Обновляет sortOrder у элементов; первый в списке становится «главным» кадром (для витрины организации — это обложка в каталоге).
+ */
+export const galleryCabinetPatchItemsOrder = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetPatchItemsOrderData, ThrowOnError>) => (options.client ?? client).patch<GalleryCabinetPatchItemsOrderResponses, GalleryCabinetPatchItemsOrderErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/galleries/{galleryId}/items/order',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -340,7 +619,7 @@ export const specialistsCabinetGetSpecialistOnboarding = <ThrowOnError extends b
 });
 
 /**
- * Онбординг: сохранить режим работы (solo / business / employed_salon) и/или большие категории до привязки к салону.
+ * Онбординг: режим работы, большие категории и/или навыки (подкатегории без цены).
  */
 export const specialistsCabinetPatchSpecialistOnboardingPreferences = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistOnboardingPreferencesData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses, SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -366,7 +645,7 @@ export const specialistsCabinetPatchSpecialistProfile = <ThrowOnError extends bo
 });
 
 /**
- * Завершить онбординг после шага 13 (до этого должны быть место работы и личные услуги).
+ * Завершить онбординг после шага 13 (место работы и хотя бы один навык — подкатегория).
  */
 export const specialistsCabinetPostSpecialistOnboardingComplete = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsCabinetPostSpecialistOnboardingCompleteData, ThrowOnError>) => (options?.client ?? client).post<SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -375,33 +654,11 @@ export const specialistsCabinetPostSpecialistOnboardingComplete = <ThrowOnError 
 });
 
 /**
- * Создать личную услугу мастера (скоуп каталога `personal`; строка относится к текущему `specialistId`).
+ * Кабинет: полная замена навыков мастера (подкатегории каталога без цены).
  */
-export const specialistsCabinetPostSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPostSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).post<SpecialistsCabinetPostSpecialistPersonalServiceResponses, SpecialistsCabinetPostSpecialistPersonalServiceErrors, ThrowOnError>({
+export const specialistsCabinetPatchSpecialistCabinetSkills = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistCabinetSkillsData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistCabinetSkillsResponses, SpecialistsCabinetPatchSpecialistCabinetSkillsErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists/me/services',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Удалить личную услугу мастера (soft delete). Допускаются только строки каталога со скоупом personal.
- */
-export const specialistsCabinetDeleteSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetDeleteSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).delete<SpecialistsCabinetDeleteSpecialistPersonalServiceResponses, SpecialistsCabinetDeleteSpecialistPersonalServiceErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists/me/services/{serviceId}',
-    ...options
-});
-
-/**
- * Обновить личную услугу мастера (категория, описание, варианты цены). Идентификатор услуги сохраняется.
- */
-export const specialistsCabinetPatchSpecialistPersonalService = <ThrowOnError extends boolean = false>(options: Options<SpecialistsCabinetPatchSpecialistPersonalServiceData, ThrowOnError>) => (options.client ?? client).patch<SpecialistsCabinetPatchSpecialistPersonalServiceResponses, SpecialistsCabinetPatchSpecialistPersonalServiceErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists/me/services/{serviceId}',
+    url: '/specialists/me/skills',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -503,6 +760,21 @@ export const specialistBookingsCancelConfirmed = <ThrowOnError extends boolean =
 });
 
 /**
+ * Перенести подтверждённую запись
+ *
+ * Только `confirmed`: добавляет `BookingEvent` типа `rescheduled`, обновляет `startsAt`/`endsAt` через проекцию, статус остаётся `confirmed`. Те же проверки сетки слота и пересечений, что при создании записи; клиенту — push и письмо о новом времени.
+ */
+export const specialistBookingsRescheduleConfirmed = <ThrowOnError extends boolean = false>(options: Options<SpecialistBookingsRescheduleConfirmedData, ThrowOnError>) => (options.client ?? client).post<SpecialistBookingsRescheduleConfirmedResponses, SpecialistBookingsRescheduleConfirmedErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/bookings/me/{id}/reschedule',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Начать приём (in_progress)
  *
  * Переводит `confirmed` → `in_progress`. Допустимо не раньше `startsAt` (с допуском `BOOKING_START_TOLERANCE_MS`). Принимающий мастер или owner/admin организации из брони.
@@ -514,35 +786,11 @@ export const specialistBookingsStartVisit = <ThrowOnError extends boolean = fals
 });
 
 /**
- * Поиск салона для заявки на место работы (без фильтров публичной витрины по мастерам).
- *
- * Только салоны с **одобренной** публикацией (`approved` после модерации). Пустой `q` — первые `limit` по имени. Иначе — по названию, slug, адресу и локализованным полям (не по подкатегориям витрины).
+ * Удалить FCM token (отписка от push на этом устройстве)
  */
-export const organizationsCabinetGetWorkplaceOrganizationSearch = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsCabinetGetWorkplaceOrganizationSearchData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsCabinetGetWorkplaceOrganizationSearchResponses, OrganizationsCabinetGetWorkplaceOrganizationSearchErrors, ThrowOnError>({
+export const pushTokensRevoke = <ThrowOnError extends boolean = false>(options: Options<PushTokensRevokeData, ThrowOnError>) => (options.client ?? client).delete<PushTokensRevokeResponses, PushTokensRevokeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/workplace-search',
-    ...options
-});
-
-/**
- * Список организаций (курсорная пагинация)
- *
- * Активные организации (салоны), не удалённые. Сортировка: `popularity` (по умолчанию), `recommended`, `newest`, `price_asc`, `price_desc`, `rating`. `recommended` — релевантность по портрету; нужен Bearer и готовность персонализации. Фильтры: `q`, `categories`, радиус.
- */
-export const organizationsList = <ThrowOnError extends boolean = false>(options?: Options<OrganizationsListData, ThrowOnError>) => (options?.client ?? client).get<OrganizationsListResponses, OrganizationsListErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations',
-    ...options
-});
-
-/**
- * Создать салон (текущий пользователь = владелец в БД), локаль витрины, подкатегории, членство owner.
- *
- * Требует Bearer. Если у мастера уже выбрано активное место приёма, оно не меняется; новый салон создаётся как дополнительное владение. Публичный список салонов — `GET /organizations`. В ответе — актуальное состояние онбординга мастера.
- */
-export const organizationsCabinetPostCreateOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostCreateOrganizationData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostCreateOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations',
+    url: '/users/me/push-tokens',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -551,46 +799,13 @@ export const organizationsCabinetPostCreateOrganization = <ThrowOnError extends 
 });
 
 /**
- * Поля салона для формы редактирования (владелец БД или активный admin).
+ * Сохранить FCM token (web push)
  *
- * В отличие от публичного `GET /organizations/:id`, доступно админам орг без статуса `approved` по витрине.
+ * Регистрирует токен устройства для текущего пользователя. Повтор с тем же token переназначит userId (другой логин с того же браузера).
  */
-export const organizationsCabinetGetCabinetOrganizationProfileForEdit = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetCabinetOrganizationProfileForEditData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, ThrowOnError>({
+export const pushTokensRegister = <ThrowOnError extends boolean = false>(options: Options<PushTokensRegisterData, ThrowOnError>) => (options.client ?? client).post<PushTokensRegisterResponses, PushTokensRegisterErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/cabinet-edit',
-    ...options
-});
-
-/**
- * Превью активных записей салона перед удалением организации владельцем.
- *
- * Тот же тип списка, что при смене места приёма для одного мастера, но по всей организации; плюс имя принимающего специалиста.
- */
-export const organizationsCabinetGetDeleteOrganizationBookingsPreview = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/delete-bookings-preview',
-    ...options
-});
-
-/**
- * Удалить организацию из кабинета (soft delete): только владелец платформенной записи салона.
- *
- * Активные записи отменяются, услуги салона архивируются, членства и заявки в штат закрываются.
- */
-export const organizationsCabinetDeleteOrganizationAsOwner = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetDeleteOrganizationAsOwnerData, ThrowOnError>) => (options.client ?? client).delete<OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}',
-    ...options
-});
-
-/**
- * Обновить профиль салона (витрина, адрес, категории, галерея); новая ревизия — модерация.
- *
- * Тело как у `POST /organizations`. Slug салона не меняется. При смене сфер деятельности каталог салона под категории витрины перестраивается по текущим сферам; строки услуг мастеров не включаются/выключаются автоматически.
- */
-export const organizationsCabinetPatchOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPatchOrganizationData, ThrowOnError>) => (options.client ?? client).patch<OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPatchOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}',
+    url: '/users/me/push-tokens',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -599,68 +814,74 @@ export const organizationsCabinetPatchOrganization = <ThrowOnError extends boole
 });
 
 /**
- * Подать заявку на работу в салоне; членство — после решения владельца или админа.
+ * Проверка доступности сервиса
  */
-export const organizationsCabinetPostRequestWorkplaceJoin = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostRequestWorkplaceJoinData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostRequestWorkplaceJoinErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/workplace-requests',
-    ...options
-});
+export const healthGetHealth = <ThrowOnError extends boolean = false>(options?: Options<HealthGetHealthData, ThrowOnError>) => (options?.client ?? client).get<HealthGetHealthResponses, unknown, ThrowOnError>({ url: '/health', ...options });
 
 /**
- * Заявки мастеров в салон (владелец организации или мастер owner/admin).
+ * Загрузить публичный файл
  *
- * По умолчанию только status=pending; передайте status=all для полного списка.
+ * Объект в бакете с префиксом `public/`. Выдача через GET /files/public/:filename без JWT. Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.
  */
-export const organizationsCabinetGetWorkplaceJoinRequestsForOrganization = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/workplace-join-requests',
-    ...options
-});
-
-/**
- * Профиль мастера для решения по заявке (как экран «Мой профиль» в кабинете мастера).
- *
- * Доступно только при наличии **pending** заявки этого мастера в указанную организацию; иначе 404.
- */
-export const organizationsCabinetGetWorkplaceJoinApplicantCabinetProfile = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/workplace-join-applicants/{specialistId}/cabinet-profile',
-    ...options
-});
-
-/**
- * Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.
- */
-export const organizationsCabinetPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
+export const filesUploadPublic = <ThrowOnError extends boolean = false>(options: Options<FilesUploadPublicData, ThrowOnError>) => (options.client ?? client).post<FilesUploadPublicResponses, FilesUploadPublicErrors, ThrowOnError>({
+    ...formDataBodySerializer,
+    url: '/files/public',
     ...options,
     headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': null,
         ...options.headers
     }
 });
 
 /**
- * Галерея витрины организации (кабинет)
+ * Загрузить приватный файл
  *
- * Возвращает `galleryId` и элементы в порядке `sortOrder` для последующего PATCH `/galleries/{galleryId}/items/order`.
+ * Объект с префиксом `private/`. Скачивание только с **Bearer access** (тот же токен, что для защищённых ручек). Поле multipart: `file`. Только фото: JPEG, PNG, WebP (без GIF); до 10 МБ.
  */
-export const galleryCabinetGetOrganizationVitrineGallery = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetGetOrganizationVitrineGalleryData, ThrowOnError>) => (options.client ?? client).get<GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetGetOrganizationVitrineGalleryErrors, ThrowOnError>({
+export const filesUploadPrivate = <ThrowOnError extends boolean = false>(options: Options<FilesUploadPrivateData, ThrowOnError>) => (options.client ?? client).post<FilesUploadPrivateResponses, FilesUploadPrivateErrors, ThrowOnError>({
+    ...formDataBodySerializer,
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/galleries/by-owner/organization/{organizationId}',
+    url: '/files/private',
+    ...options,
+    headers: {
+        'Content-Type': null,
+        ...options.headers
+    }
+});
+
+/**
+ * Получить публичный файл
+ *
+ * Имя файла — из ответа POST /files/public (`filename`).
+ */
+export const filesDownloadPublic = <ThrowOnError extends boolean = false>(options: Options<FilesDownloadPublicData, ThrowOnError>) => (options.client ?? client).get<FilesDownloadPublicResponses, unknown, ThrowOnError>({ url: '/files/public/{filename}', ...options });
+
+/**
+ * Получить приватный файл
+ *
+ * Имя файла — из ответа POST /files/private. Требуется **Bearer access**.
+ */
+export const filesDownloadPrivate = <ThrowOnError extends boolean = false>(options: Options<FilesDownloadPrivateData, ThrowOnError>) => (options.client ?? client).get<FilesDownloadPrivateResponses, FilesDownloadPrivateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/files/private/{filename}',
     ...options
 });
 
 /**
- * Задать порядок элементов галереи
- *
- * Обновляет sortOrder у элементов; первый в списке становится «главным» кадром (для витрины организации — это обложка в каталоге).
+ * Текущий пользователь (профиль)
  */
-export const galleryCabinetPatchItemsOrder = <ThrowOnError extends boolean = false>(options: Options<GalleryCabinetPatchItemsOrderData, ThrowOnError>) => (options.client ?? client).patch<GalleryCabinetPatchItemsOrderResponses, GalleryCabinetPatchItemsOrderErrors, ThrowOnError>({
+export const usersMe = <ThrowOnError extends boolean = false>(options?: Options<UsersMeData, ThrowOnError>) => (options?.client ?? client).get<UsersMeResponses, UsersMeErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/galleries/{galleryId}/items/order',
+    url: '/users/me',
+    ...options
+});
+
+/**
+ * Обновить профиль (имя, аватар, локаль UI)
+ */
+export const usersPatchMe = <ThrowOnError extends boolean = false>(options: Options<UsersPatchMeData, ThrowOnError>) => (options.client ?? client).patch<UsersPatchMeResponses, UsersPatchMeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/me',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -695,94 +916,6 @@ export const catalogGetCategoryByMajorAndSlug = <ThrowOnError extends boolean = 
  * Возвращает большую категорию (например massage) и список активных подкатегорий (ServiceCategory), отсортированных по sortOrder. Названия подставляются по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.
  */
 export const catalogGetCategoriesByMajorSlug = <ThrowOnError extends boolean = false>(options: Options<CatalogGetCategoriesByMajorSlugData, ThrowOnError>) => (options.client ?? client).get<CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoriesByMajorSlugErrors, ThrowOnError>({ url: '/catalog/major-categories/{majorSlug}/categories', ...options });
-
-/**
- * Список специалистов (курсорная пагинация)
- *
- * Активные профили специалистов (не удалённые). Сортировка: `sort` — `popularity` (по умолчанию, отзывы), `newest`, `rating`, `price_asc` / `price_desc`, `recommended` (релевантность по портрету; нужен Bearer и готовность персонализации). Вертикаль: `majorSlug`. Фильтры: `q`, `categories`, цена, радиус. `sort=recommended` требует валидный access token и доступность персонализации (как GET /personalization/recommendations).
- */
-export const specialistsList = <ThrowOnError extends boolean = false>(options?: Options<SpecialistsListData, ThrowOnError>) => (options?.client ?? client).get<SpecialistsListResponses, SpecialistsListErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists',
-    ...options
-});
-
-/**
- * Отзывы о специалисте
- *
- * Список `SpecialistReview` (курсор). Отдельно от отзывов о салоне (`OrganizationReview`).
- */
-export const specialistsListReviews = <ThrowOnError extends boolean = false>(options: Options<SpecialistsListReviewsData, ThrowOnError>) => (options.client ?? client).get<SpecialistsListReviewsResponses, SpecialistsListReviewsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists/{id}/reviews',
-    ...options
-});
-
-/**
- * Специалист по id
- *
- * Профиль мастера: те же поля, что в списке специалистов.
- */
-export const specialistsGetById = <ThrowOnError extends boolean = false>(options: Options<SpecialistsGetByIdData, ThrowOnError>) => (options.client ?? client).get<SpecialistsGetByIdResponses, SpecialistsGetByIdErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/specialists/{id}',
-    ...options
-});
-
-/**
- * Отзывы о салоне
- *
- * Список `OrganizationReview` для витрины (курсор). Отдельно от отзывов о мастерах (`SpecialistReview`).
- */
-export const organizationsListReviews = <ThrowOnError extends boolean = false>(options: Options<OrganizationsListReviewsData, ThrowOnError>) => (options.client ?? client).get<OrganizationsListReviewsResponses, OrganizationsListReviewsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{id}/reviews',
-    ...options
-});
-
-/**
- * Организация по id
- *
- * Карточка салона для профиля: те же поля, что в списке, плюс сотрудники (`staff`).
- */
-export const organizationsGetById = <ThrowOnError extends boolean = false>(options: Options<OrganizationsGetByIdData, ThrowOnError>) => (options.client ?? client).get<OrganizationsGetByIdResponses, OrganizationsGetByIdErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/organizations/{id}',
-    ...options
-});
-
-/**
- * Опции фильтра каталога (поиск / карта)
- *
- * Подкатегории и (если есть) min/max VND-цен в базе для выбранного типа витрины. Используется в модалке фильтра при `?tab=...&locale=...`.
- */
-export const directoryGetCatalogFilterOptions = <ThrowOnError extends boolean = false>(options: Options<DirectoryGetCatalogFilterOptionsData, ThrowOnError>) => (options.client ?? client).get<DirectoryGetCatalogFilterOptionsResponses, DirectoryGetCatalogFilterOptionsErrors, ThrowOnError>({ url: '/directory/catalog-filter-options', ...options });
-
-/**
- * События витрины (для портрета и рекомендаций)
- *
- * Без токена передавайте `sessionId` (8+ символов). `metadata` — только slug’и категорий, id фильтра, `lat`/`lng` (числа), `majorSlug`; без PII и текста поиска.
- */
-export const personalizationIngestEvents = <ThrowOnError extends boolean = false>(options: Options<PersonalizationIngestEventsData, ThrowOnError>) => (options.client ?? client).post<PersonalizationIngestEventsResponses, PersonalizationIngestEventsErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/personalization/events',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Персональные рекомендации (салоны и мастера)
- *
- * **Блок «Рекомендуем» на клиенте:** для `personalizationReady: true` нужен **валидный Bearer access** (без заголовка или с refresh вместо access — пользователь считается гостем: `source: guest_popular`, `personalizationReady: false`). Пересчёт портрета по email (dev) не подменяет пользователя в запросе — в токене должен быть тот же аккаунт. Авторизованный — портрет и фильтрация категориями; `majorSlug` и `categories` с поиска переопределяют портрет, если заданы.
- */
-export const personalizationGetRecommendations = <ThrowOnError extends boolean = false>(options?: Options<PersonalizationGetRecommendationsData, ThrowOnError>) => (options?.client ?? client).get<PersonalizationGetRecommendationsResponses, unknown, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/personalization/recommendations',
-    ...options
-});
 
 /**
  * Реклама и баннеры по слоту показа
@@ -896,6 +1029,13 @@ export const devModerationResolveCase = <ThrowOnError extends boolean = false>(o
         ...options.headers
     }
 });
+
+/**
+ * [Dev] Переиндексировать listing edges (`SpecialistOffering`) в Typesense
+ *
+ * Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Нужен настроенный Typesense и `TYPESENSE_API_KEY`. Вызывайте после первого включения indexed listing.
+ */
+export const devSearchIndexReindexListingEdges = <ThrowOnError extends boolean = false>(options?: Options<DevSearchIndexReindexListingEdgesData, ThrowOnError>) => (options?.client ?? client).post<DevSearchIndexReindexListingEdgesResponses, DevSearchIndexReindexListingEdgesErrors, ThrowOnError>({ url: '/dev/search/reindex-listing-edges', ...options });
 
 /**
  * Список избранного текущего пользователя

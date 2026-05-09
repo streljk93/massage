@@ -35,7 +35,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <SessionProvider refetchInterval={300}>
       <QueryClientProvider client={queryClient}>
         <ThemePreferenceProvider>
-        <FavoritesSyncOnAuth />
+        {/* <FavoritesSyncOnAuth /> */}
         {/* <SyncUserLocaleWithApp /> */}
         {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
         <NotificationToaster />

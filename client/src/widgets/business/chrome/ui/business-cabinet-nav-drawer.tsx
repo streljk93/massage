@@ -6,8 +6,8 @@ import {
   Building2,
   CalendarDays,
   LayoutDashboard,
-  ListChecks,
   Menu,
+  Sparkles,
   UserRound,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -32,7 +32,7 @@ export type CabinetDrawerNavItem = {
   href:
     | "/business"
     | "/business/bookings"
-    | "/business/services"
+    | "/business/skills"
     | "/business/profile"
     | "/business/organizations";
   /** Ключ строки из `businessAppNav` */
@@ -69,10 +69,10 @@ const CABINET_DRAWER_NAV: readonly CabinetDrawerNavSection[] = [
         labelKey: "bookings",
       },
       {
-        id: "services",
-        icon: ListChecks,
-        href: "/business/services",
-        labelKey: "services",
+        id: "skills",
+        icon: Sparkles,
+        href: "/business/skills",
+        labelKey: "skills",
       },
       {
         id: "profile",
@@ -94,8 +94,8 @@ function resolveActiveId(pathname: string): string | null {
   if (pathname.startsWith("/business/bookings")) {
     return "bookings";
   }
-  if (pathname.startsWith("/business/services")) {
-    return "services";
+  if (pathname.startsWith("/business/skills")) {
+    return "skills";
   }
   if (pathname.startsWith("/business/profile")) {
     return "profile";

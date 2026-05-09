@@ -3,25 +3,26 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { addMinutes } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { BookingAppendService } from '../../bookings/application/booking-append.service';
+import { devBookingStatusHopToAppend } from '../../bookings/domain/dev-booking-transition-to-append';
 import { isBookingSlotStartTimeReached } from '../../bookings/domain/booking-in-progress-start-policy';
+import { shortestBookingStatusTransitionPath } from '../../bookings/domain/booking-status-shortest-path';
 import { isBookingStatusTransitionAllowed } from '../../bookings/domain/booking-status-transitions';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { SetTestBookingStatusBody } from '../dto/set-test-booking-status-body.schema';
-
-const DEV_PENDING_GRACE_MINUTES = 15;
 
 @Injectable()
 export class DevBookingStatusService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly bookingAppend: BookingAppendService,
     private readonly push: PushNotificationsService,
   ) {}
 
   /**
    * Принудительная смена статуса по `bookingId` для отладки (без роли мастера).
-   * Переходы те же, что в проде: {@link isBookingStatusTransitionAllowed}.
+   * Пишется цепочка {@link BookingEvent} по кратчайшему допустимому пути матрицы.
    */
   async setBookingStatusForDev(body: SetTestBookingStatusBody) {
     const booking = await this.prisma.booking.findFirst({
@@ -75,60 +76,59 @@ export class DevBookingStatusService {
       });
     }
 
-    const historyReason =
+    if (fromStatus === toStatus) {
+      return {
+        id: booking.id,
+        status: booking.status,
+        previousStatus: fromStatus,
+      };
+    }
+
+    const path = shortestBookingStatusTransitionPath(fromStatus, toStatus);
+    if (path === null || path.length < 2) {
+      throw new BadRequestException({
+        code: 'BOOKING_INVALID_STATUS_PATH',
+        message: `No admissible event path ${fromStatus} → ${toStatus}`,
+      });
+    }
+
+    const reasonGlue =
       [body.reason, body.cancelReason].filter(Boolean).join(' | ') || null;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const cancelLike =
-        toStatus === 'canceled_by_master' ||
-        toStatus === 'canceled_by_client' ||
-        toStatus === 'reject_by_master' ||
-        toStatus === 'reject_by_client' ||
-        toStatus === 'expired';
-
-      const row = await tx.booking.update({
-        where: { id: body.bookingId },
-        data: {
-          status: toStatus,
-          pendingExpiresAt:
-            toStatus === 'pending'
-              ? addMinutes(new Date(), DEV_PENDING_GRACE_MINUTES)
-              : null,
-          ...(cancelLike && body.cancelReason !== undefined
-            ? { cancelReason: body.cancelReason }
-            : {}),
-          ...(cancelLike && body.cancellationComment !== undefined
-            ? { cancellationComment: body.cancellationComment }
-            : {}),
-        },
-      });
-
-      await tx.bookingStatusHistory.create({
-        data: {
-          bookingId: body.bookingId,
-          fromStatus,
-          toStatus,
-          actorUserId: null,
-          reason: historyReason,
-        },
-      });
-
-      return row;
+    let finalGranularStatus = fromStatus;
+    await this.prisma.$transaction(async (tx) => {
+      let cur = fromStatus;
+      for (let i = 1; i < path.length; i++) {
+        const next = path[i]!;
+        const hop = devBookingStatusHopToAppend(body.bookingId, {
+          fromStatus: cur,
+          toStatus: next,
+          reasonFreeText: reasonGlue,
+          cancelReason: body.cancelReason ?? null,
+          cancellationComment: body.cancellationComment ?? null,
+        });
+        const { projection } = await this.bookingAppend.appendBookingEvent(
+          tx,
+          hop,
+        );
+        cur = projection.status;
+      }
+      finalGranularStatus = cur;
     });
 
-    if (fromStatus !== toStatus) {
+    if (fromStatus !== finalGranularStatus) {
       // await: FCM + контекст брони — до ответа 200, иначе при void фоновая задача
       // (serverless/таймаут/рестарт) могла не успеть, в т.ч. для `pending` → `confirmed`.
       await this.push.notifyClientBookingStatusChange(
         body.bookingId,
         fromStatus,
-        toStatus,
+        finalGranularStatus,
       );
     }
 
     return {
-      id: updated.id,
-      status: updated.status,
+      id: booking.id,
+      status: finalGranularStatus,
       previousStatus: fromStatus,
     };
   }

@@ -24,6 +24,9 @@ function bookableServicesFromApi(
     majorSortOrder: s.majorSortOrder,
     durationMinutes: s.durationMinutes as readonly number[],
     priceVndByDuration: s.priceVndByDuration as readonly number[],
+    organizationOfferingId: s.organizationOfferingId,
+    marketplaceOfferingPriceOptionIds:
+      s.marketplaceOfferingPriceOptionIds as readonly string[],
   }));
 }
 

@@ -99,9 +99,7 @@ const specialistListedHydrationSelect = {
   imageUrl: true,
   imageAlt: true,
   profilePublicationModerationStatus: true,
-  catalogListedBio: true,
-  catalogListedListingName: true,
-  catalogListedImageUrl: true,
+  publishedProfileRevisionId: true,
 } as const;
 
 const specialistProfileRevisionHydrationSelect = {
@@ -227,9 +225,7 @@ export async function hydrateContentModerationCaseRows<
         imageUrl: string | null;
         imageAlt: string | null;
         profilePublicationModerationStatus: PublicationModerationStatus;
-        catalogListedBio: string | null;
-        catalogListedListingName: string | null;
-        catalogListedImageUrl: string | null;
+        publishedProfileRevisionId: string | null;
       } | null;
       targetUser: {
         id: string;
@@ -440,9 +436,7 @@ export async function hydrateContentModerationCaseRows<
               imageAlt: rev.imageAlt,
               profilePublicationModerationStatus:
                 sp.profilePublicationModerationStatus,
-              catalogListedBio: sp.catalogListedBio,
-              catalogListedListingName: sp.catalogListedListingName,
-              catalogListedImageUrl: sp.catalogListedImageUrl,
+              publishedProfileRevisionId: sp.publishedProfileRevisionId,
             };
           })()
         : null,

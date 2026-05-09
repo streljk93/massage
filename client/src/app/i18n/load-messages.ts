@@ -10,7 +10,11 @@ import {
   businessActiveOrganizationContextCardI18n,
   organizationCardI18n,
 } from "@/entities/organizations";
-import { categoryCardI18n, profileServiceSphereChipsI18n } from "@/entities/services";
+import {
+  categoryCardI18n,
+  profileServiceSphereChipsI18n,
+  serviceCategorySkillsPickerI18n,
+} from "@/entities/services";
 import { specialistCardI18n } from "@/entities/specialists";
 import { comingSoonI18n } from "@/features/coming-soon";
 import { fcmInAppI18n } from "@/features/push-notifications";
@@ -24,7 +28,8 @@ import {
 } from "@/views/bookings";
 import {
   businessAppSubpagesI18n,
-  businessServicesPageI18n,
+  businessOrganizationOfferingsPageI18n,
+  businessSkillsPageI18n,
 } from "@/views/business/subpages";
 import { businessOnboardingPageI18n } from "@/views/business/onboarding";
 import {
@@ -87,12 +92,14 @@ const bundles: ColocatedI18nBundle[] = [
   specialistAccountSetupPageI18n,
   specialistOnboardingWizardI18n,
   businessAppSubpagesI18n,
-  businessServicesPageI18n,
+  businessOrganizationOfferingsPageI18n,
+  businessSkillsPageI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,
   categoryCardI18n,
   profileServiceSphereChipsI18n,
+  serviceCategorySkillsPickerI18n,
   bookingCardI18n,
   bookingListCardI18n,
   bookingHistoryCardI18n,

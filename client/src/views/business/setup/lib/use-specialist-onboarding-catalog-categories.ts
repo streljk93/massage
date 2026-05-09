@@ -20,8 +20,8 @@ export function specialistOnboardingCatalogQueryKey(
 }
 
 /**
- * Каталог рубрик для онбординга (шаг личных услуг).
- * Возвращает сферы и подкатегории с `majorSlug` — UI выбирает сферу и показывает только её рубрики.
+ * Каталог рубрик для онбординга (шаг навыков: подкатегории без прайса) и личных услуг в ЛК.
+ * Возвращает сферы и подкатегории с `majorSlug` — UI группирует по сфере.
  */
 export function useSpecialistOnboardingCatalogCategories(enabled: boolean) {
   const { sdk, locale, accessToken, ready, spec } = useSpecialistOnboarding();

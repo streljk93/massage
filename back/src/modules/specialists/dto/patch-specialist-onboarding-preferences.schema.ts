@@ -8,13 +8,22 @@ export const patchSpecialistOnboardingPreferencesBodySchema = z
       .array(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/))
       .max(20)
       .optional(),
+    /**
+     * Подкатегории каталога как «навыки» (без цены/времени); хранятся в `SpecialistSkill`.
+     */
+    serviceCategoryIds: z.array(z.string().uuid()).max(80).optional(),
   })
   .strict()
   .superRefine((data, ctx) => {
-    if (data.workPattern == null && data.majorCategorySlugs == null) {
+    if (
+      data.workPattern == null &&
+      data.majorCategorySlugs == null &&
+      data.serviceCategoryIds == null
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Provide workPattern and/or majorCategorySlugs',
+        message:
+          'Provide workPattern, majorCategorySlugs and/or serviceCategoryIds',
       });
     }
   });

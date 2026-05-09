@@ -1,3 +1,9 @@
+export { default as serviceCategorySkillsPickerI18n } from "./model/service-category-skills-picker.i18n.json";
+export type {
+  ServiceCategorySkillSection,
+  ServiceCategorySkillsPickerProps,
+} from "./model/service-category-skills-picker.types";
+export { ServiceCategorySkillsPicker } from "./ui/service-category-skills-picker";
 export { default as categoryCardI18n } from "./model/category-card.i18n.json";
 export { default as profileServiceSphereChipsI18n } from "./model/profile-service-sphere-chips.i18n.json";
 export type { BookableServiceOption } from "./model/bookable-service-option";

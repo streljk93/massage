@@ -27,7 +27,7 @@ import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared
 import {
   createBrowserSdkClient,
   filesUploadPublic,
-  organizationsCabinetGetWorkplaceOrganizationSearch,
+  organizationsGetWorkplaceOrganizationSearch,
   organizationsCabinetPostCreateOrganization,
   organizationsCabinetPostRequestWorkplaceJoin,
   specialistsCabinetGetSpecialistOnboarding,
@@ -35,22 +35,17 @@ import {
   specialistsCabinetPatchSpecialistProfile,
   specialistsCabinetPostEnsureSpecialist,
   specialistsCabinetPostSpecialistOnboardingComplete,
-  specialistsCabinetPostSpecialistPersonalService,
 } from "@/shared/api";
 import type { OrganizationSalonCabinetSubmitBody } from "@/entities/organizations";
 import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 import type { ExperienceKey } from "../lib/specialist-onboarding-utils";
 import {
   clampUi,
-  defaultSvc,
-  DURATION_MINUTES_MAX,
-  DURATION_MINUTES_MIN,
   isPlausibleVnNational,
   keyToYears,
   parseVnLocalForInput,
   toE164Vietnam,
   yearsToKey,
-  type SvcForm,
 } from "../lib/specialist-onboarding-utils";
 
 export const ONB_QK = ["specialistOnboarding"] as const;
@@ -83,6 +78,9 @@ export type SpecialistOnboardingSpec = {
     organizationId: string;
     organizationName: string;
   } | null;
+  /** Навыки (подкатегории каталога), без цены — `SpecialistServiceCategory`. */
+  skillServiceCategoryIds?: string[];
+  skillCategories?: Array<{ categoryId: string; name: string }>;
 };
 
 export type SpecialistOnboardingContextValue = {
@@ -118,10 +116,8 @@ export type SpecialistOnboardingContextValue = {
   setStrength: (v: number) => void;
   adapt: boolean;
   setAdapt: (v: boolean) => void;
-  services: SvcForm[];
-  setServices: Dispatch<SetStateAction<SvcForm[]>>;
-  servicePanelOpen: Record<number, boolean>;
-  setServicePanelOpen: Dispatch<SetStateAction<Record<number, boolean>>>;
+  draftSkillCategoryIds: ReadonlySet<string>;
+  setDraftSkillCategoryIds: Dispatch<SetStateAction<Set<string>>>;
 
   orgQ: string;
   setOrgQ: (v: string) => void;
@@ -141,7 +137,7 @@ export type SpecialistOnboardingContextValue = {
   createOrgSubmitting: boolean;
   workplaceSubmitting: boolean;
   introSubmitting: boolean;
-  servicesSubmitting: boolean;
+  skillsSubmitting: boolean;
   doneSubmitting: boolean;
   workPatternSubmitting: boolean;
   majorsSubmitting: boolean;
@@ -166,18 +162,13 @@ export type SpecialistOnboardingContextValue = {
   onMajorsContinue: () => Promise<void>;
   onProfileContinue: () => Promise<void>;
   onMassageContinue: () => Promise<void>;
-  onServicesContinue: () => Promise<void>;
+  onSkillsContinue: () => Promise<void>;
   onOrgContinue: () => Promise<void>;
   submitCreateOrganizationFromOnboarding: (
     body: OrganizationSalonCabinetSubmitBody,
   ) => Promise<void>;
   onWorkplaceSkip: () => void;
   onDone: () => Promise<void>;
-
-  addService: () => void;
-  removeService: (i: number) => void;
-  updateSvc: (i: number, p: SvcForm) => void;
-  isServicePanelOpen: (si: number) => boolean;
 };
 
 const SpecialistOnboardingContext =
@@ -231,9 +222,8 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [pExp, setPExp] = useState<ExperienceKey | null>(null);
   const [strength, setStrength] = useState(3);
   const [adapt, setAdapt] = useState(true);
-  const [services, setServices] = useState<SvcForm[]>([]);
-  const [servicePanelOpen, setServicePanelOpen] = useState<Record<number, boolean>>(
-    {},
+  const [draftSkillCategoryIds, setDraftSkillCategoryIds] = useState(
+    () => new Set<string>(),
   );
   const [orgQ, setOrgQ] = useState("");
   const [orgHits, setOrgHits] = useState<
@@ -246,7 +236,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
   const [workplaceSubmitting, setWorkplaceSubmitting] = useState(false);
   const [introSubmitting, setIntroSubmitting] = useState(false);
-  const [servicesSubmitting, setServicesSubmitting] = useState(false);
+  const [skillsSubmitting, setSkillsSubmitting] = useState(false);
   const [doneSubmitting, setDoneSubmitting] = useState(false);
   const [workPatternSubmitting, setWorkPatternSubmitting] = useState(false);
   const [majorsSubmitting, setMajorsSubmitting] = useState(false);
@@ -283,6 +273,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setDraftWorkPattern(spec.onboardingWorkPattern ?? null);
     setDraftMajorSlugs([...(spec.onboardingMajorCategorySlugs ?? [])]);
   }, [spec]);
+
+  useEffect(() => {
+    const ids = spec?.skillServiceCategoryIds ?? [];
+    setDraftSkillCategoryIds(new Set(ids));
+  }, [spec?.skillServiceCategoryIds]);
 
   useEffect(() => {
     if (!pendingPhotoFile) {
@@ -535,79 +530,29 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     }
   };
 
-  const validateServices = () => {
-    if (services.length === 0) {
-      return false;
-    }
-    for (const s of services) {
-      if (!s.categoryId || s.durationPrices.length === 0) {
-        return false;
-      }
-      if (s.kind === "combo" && s.comboCategoryIds.length < 1) {
-        return false;
-      }
-      for (const d of s.durationPrices) {
-        if (
-          !Number.isInteger(d.minutes) ||
-          d.minutes < DURATION_MINUTES_MIN ||
-          d.minutes > DURATION_MINUTES_MAX
-        ) {
-          return false;
-        }
-        const digits = String(d.priceVnd).replace(/\D/g, "");
-        const n = digits.length > 0 ? Number(digits) : Number.NaN;
-        if (!Number.isFinite(n) || n < 1) {
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const onServicesContinue = async () => {
-    if (!validateServices()) {
-      setFormError(t("vErrService"));
+  const onSkillsContinue = async () => {
+    if (draftSkillCategoryIds.size < 1) {
+      setFormError(t("vErrSkillsPickOne"));
       return;
     }
     setFormError(null);
-    setServicesSubmitting(true);
+    setSkillsSubmitting(true);
     try {
-      for (const s of services) {
-        const priceOptions = s.durationPrices.map((d) => ({
-          durationMinutes: d.minutes,
-          priceAmount: Math.round(
-            Number(String(d.priceVnd).replace(/\D/g, "")),
-          ),
-        }));
-        const serviceBody = {
-          categoryId: s.categoryId,
-          kind: s.kind,
-          ...(s.comboCategoryIds.length > 0 ?
-            ({ comboCategoryIds: s.comboCategoryIds } as Record<string, unknown>)
-          : {}),
-          ...(s.bodyZoneSlugs.length > 0 ?
-            ({ bodyZoneSlugs: s.bodyZoneSlugs } as Record<string, unknown>)
-          : {}),
-          priceOptions: priceOptions.map((o) => ({ ...o, currency: "VND" })),
-        } as unknown as NonNullable<
-          Parameters<typeof specialistsCabinetPostSpecialistPersonalService>[0]["body"]
-        >;
-        const { error } = await specialistsCabinetPostSpecialistPersonalService({
-          client: sdk,
-          query: { locale },
-          body: serviceBody,
-        });
-        if (error) {
-          setFormError(t("vErrService"));
-          return;
-        }
+      const { error } = await specialistsCabinetPatchSpecialistOnboardingPreferences({
+        client: sdk,
+        query: { locale },
+        body: { serviceCategoryIds: [...draftSkillCategoryIds] },
+      });
+      if (error) {
+        setFormError(t("vErrName"));
+        return;
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
     } finally {
-      setServicesSubmitting(false);
+      setSkillsSubmitting(false);
     }
   };
 
@@ -628,7 +573,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setOrgPending(true);
     const tmr = setTimeout(() => {
       void (async () => {
-        const { data, error } = await organizationsCabinetGetWorkplaceOrganizationSearch({
+        const { data, error } = await organizationsGetWorkplaceOrganizationSearch({
           client: sdk,
           query: {
             ...(q ? { q } : {}),
@@ -736,21 +681,6 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     }
   };
 
-  const addService = () => {
-    setServices((prev) => [
-      ...prev,
-      defaultSvc(prev[0]?.categoryId || ""),
-    ]);
-  };
-  const removeService = (i: number) => {
-    setServices((prev) => (prev.length <= 1 ? prev : prev.filter((_, j) => j !== i)));
-    setServicePanelOpen({});
-  };
-  const updateSvc = (i: number, p: SvcForm) => {
-    setServices((prev) => prev.map((s, j) => (j === i ? p : s)));
-  };
-  const isServicePanelOpen = (si: number) => servicePanelOpen[si] !== false;
-
   const specialistImagePath =
     spec?.imageUrl != null && String(spec.imageUrl).length > 0
       ? String(spec.imageUrl)
@@ -807,10 +737,8 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     setStrength,
     adapt,
     setAdapt,
-    services,
-    setServices,
-    servicePanelOpen,
-    setServicePanelOpen,
+    draftSkillCategoryIds,
+    setDraftSkillCategoryIds,
     orgQ,
     setOrgQ,
     orgHits,
@@ -824,7 +752,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     createOrgSubmitting,
     workplaceSubmitting,
     introSubmitting,
-    servicesSubmitting,
+    skillsSubmitting,
     doneSubmitting,
     workPatternSubmitting,
     majorsSubmitting,
@@ -843,15 +771,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     onMajorsContinue,
     onProfileContinue,
     onMassageContinue,
-    onServicesContinue,
+    onSkillsContinue,
     onOrgContinue,
     submitCreateOrganizationFromOnboarding,
     onWorkplaceSkip,
     onDone,
-    addService,
-    removeService,
-    updateSvc,
-    isServicePanelOpen,
   };
 
   return (

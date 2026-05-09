@@ -21,12 +21,4 @@ export {
   toE164Vietnam,
 } from "@/shared/lib/vn-phone-contact";
 
-export type { Cat, DurPrice, SvcForm } from "@/entities/specialists/lib/personal-service-catalog-draft";
-export {
-  defaultSvc,
-  DURATION_MINUTES_MAX,
-  DURATION_MINUTES_MIN,
-  digitsFromVndPriceInput,
-  formatVndPriceForInput,
-  nextMinutesWhenAddingDuration,
-} from "@/entities/specialists/lib/personal-service-catalog-draft";
+export type { Cat } from "@/entities/specialists";

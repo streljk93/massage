@@ -10,7 +10,7 @@ import { BusinessEmptyState } from "@/entities/business";
 import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   createBrowserSdkClient,
-  organizationsCabinetGetWorkplaceOrganizationSearch,
+  organizationsGetWorkplaceOrganizationSearch,
   organizationsCabinetPostRequestWorkplaceJoin,
 } from "@/shared/api";
 import { Button, SearchAutocomplete } from "@/shared/ui";
@@ -57,7 +57,7 @@ export function BusinessOrganizationJoinPage() {
     const tmr = setTimeout(() => {
       setOrgPending(true);
       void (async () => {
-        const { data, error } = await organizationsCabinetGetWorkplaceOrganizationSearch({
+        const { data, error } = await organizationsGetWorkplaceOrganizationSearch({
           client: sdk,
           query: {
             q,

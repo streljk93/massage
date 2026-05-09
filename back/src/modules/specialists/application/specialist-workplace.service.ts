@@ -4,8 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN } from '../../bookings/domain/booking-cancel-reason';
+import { appendInputMassOrganizationCancelBooking } from '../../bookings/domain/booking-mass-organization-cancel';
+import { BookingAppendService } from '../../bookings/application/booking-append.service';
 import { BookingStatusLocaleRepository } from '../../bookings/infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
+import type { BookingStatus, Prisma } from '@prisma/client';
 import {
   GalleryMediaKind,
   GalleryOwnerKind,
@@ -23,16 +26,68 @@ import {
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
-import { syncOrganizationServiceCategoriesFromSpecialistServices } from '../../organizations/infrastructure/organization-service-category-sync';
+import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 
 @Injectable()
 export class SpecialistWorkplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bookingsRepository: BookingsRepository,
+    private readonly bookingAppend: BookingAppendService,
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
+    private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
   ) {}
+
+  /**
+   * Активные брони мастера в организации перед сменой места приёма: append событий массовой отмены.
+   */
+  private async massCancelBookingsAtSpecialistOrganizationTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      specialistId: string;
+      organizationId: string;
+      actorUserId: string;
+      cancelReason: string;
+      cancellationComment: string | null;
+    },
+  ): Promise<
+    Array<{ id: string; fromStatus: BookingStatus; toStatus: BookingStatus }>
+  > {
+    const rows =
+      await this.bookingsRepository.findActiveMinimalForSpecialistOrganization(
+        tx,
+        {
+          specialistId: args.specialistId,
+          organizationId: args.organizationId,
+        },
+      );
+    const out: Array<{
+      id: string;
+      fromStatus: BookingStatus;
+      toStatus: BookingStatus;
+    }> = [];
+    for (const r of rows) {
+      const appendInput = appendInputMassOrganizationCancelBooking({
+        bookingId: r.id,
+        granularStatus: r.status,
+        actorUserId: args.actorUserId,
+        texts: {
+          cancelReason: args.cancelReason,
+          cancellationComment: args.cancellationComment,
+        },
+        masterLeftWorkplace: true,
+      });
+      const { previousStatus, projection } =
+        await this.bookingAppend.appendBookingEvent(tx, appendInput);
+      out.push({
+        id: r.id,
+        fromStatus: previousStatus,
+        toStatus: projection.status,
+      });
+    }
+    return out;
+  }
 
   /**
    * Организации мастера: активные членства и салоны, по которым висит заявка на вступление (pending).
@@ -427,7 +482,7 @@ export class SpecialistWorkplaceService {
             },
           });
         }
-        return this.bookingsRepository.cancelActiveBookingsAtOrganization(tx, {
+        return this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
           specialistId: specialist.id,
           organizationId: previousOrgId,
           actorUserId: userId,
@@ -442,9 +497,8 @@ export class SpecialistWorkplaceService {
           row.toStatus,
         );
       }
-      await syncOrganizationServiceCategoriesFromSpecialistServices(
-        this.prisma,
-        previousOrgId,
+      await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+        specialist.id,
       );
       return {
         activeOrganizationId: null,
@@ -508,11 +562,9 @@ export class SpecialistWorkplaceService {
         });
       }
       if (!previousOrgId) {
-        return [] as Awaited<
-          ReturnType<BookingsRepository['cancelActiveBookingsAtOrganization']>
-        >;
+        return [];
       }
-      return this.bookingsRepository.cancelActiveBookingsAtOrganization(tx, {
+      return this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
         specialistId: specialist.id,
         organizationId: previousOrgId,
         actorUserId: userId,
@@ -528,9 +580,8 @@ export class SpecialistWorkplaceService {
       );
     }
 
-    await syncOrganizationServiceCategoriesFromSpecialistServices(
-      this.prisma,
-      body.organizationId,
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialist.id,
     );
 
     return {

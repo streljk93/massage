@@ -8,7 +8,7 @@ export const specialistOnboardingResponseSchema = {
       type: 'integer',
       enum: [1, 2, 3, 4, 5, 6, 11, 12, 13],
       description:
-        '1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — личные услуги; 13 — финальный экран перед complete; 6 — онбординг завершён.',
+        '1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.',
     },
     specialist: {
       type: 'object',
@@ -39,6 +39,13 @@ export const patchSpecialistOnboardingPreferencesRequestSchema = {
       },
       description:
         'Слаги больших категорий каталога; после привязки к организации список не меняется через эту ручку.',
+    },
+    serviceCategoryIds: {
+      type: 'array',
+      maxItems: 80,
+      items: { type: 'string', format: 'uuid' },
+      description:
+        'Подкатегории каталога как навыки мастера (`SpecialistSkill`); должны принадлежать объединению сфер онбординга и сфер активной организации.',
     },
   },
 };
@@ -244,61 +251,17 @@ export const patchSpecialistProfileRequestSchema = {
   },
 };
 
-export const createSpecialistPersonalServiceRequestSchema = {
+export const patchSpecialistSkillsRequestSchema = {
   type: 'object',
-  required: ['categoryId', 'priceOptions'],
+  required: ['serviceCategoryIds'],
   properties: {
-    categoryId: { type: 'string', format: 'uuid' },
-    kind: { type: 'string', enum: ['standard', 'combo'] },
-    comboCategoryIds: {
+    serviceCategoryIds: {
       type: 'array',
-      maxItems: 20,
+      maxItems: 80,
       items: { type: 'string', format: 'uuid' },
       description:
-        'Состав combo-услуги: набор категорий, которые специалист включает в пакет.',
+        'Полная замена навыков мастера (`SpecialistSkill`); те же правила majors, что при онбординге.',
     },
-    bodyZoneSlugs: {
-      type: 'array',
-      maxItems: 24,
-      items: { type: 'string' },
-      description:
-        'Зоны анатомии по slug (только для категорий в major massage).',
-    },
-    description: { type: 'string', maxLength: 4000 },
-    priceOptions: {
-      type: 'array',
-      minItems: 1,
-      maxItems: 20,
-      items: {
-        type: 'object',
-        required: ['durationMinutes', 'priceAmount'],
-        properties: {
-          durationMinutes: { type: 'integer', minimum: 15, maximum: 1440 },
-          priceAmount: { type: 'integer', minimum: 1 },
-          currency: { type: 'string', minLength: 3, maxLength: 3 },
-        },
-      },
-    },
-  },
-};
-
-export const createSpecialistPersonalServiceResponseSchema = {
-  type: 'object',
-  required: ['serviceId'],
-  properties: {
-    serviceId: { type: 'string', format: 'uuid' },
-  },
-};
-
-/** Тело PATCH совпадает с POST: полная замена редактируемых полей и набора priceOptions. */
-export const patchSpecialistPersonalServiceRequestSchema =
-  createSpecialistPersonalServiceRequestSchema;
-
-export const deleteSpecialistPersonalServiceResponseSchema = {
-  type: 'object',
-  required: ['ok'],
-  properties: {
-    ok: { type: 'boolean', enum: [true] },
   },
 };
 

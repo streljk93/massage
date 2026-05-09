@@ -3,7 +3,7 @@ import type { ListingSlotGroupSeed } from '../domain/listing-slot-groups';
 import type { CursorPageMetaDto } from './cursor-page.dto';
 import type { DirectoryCategoryTagDto } from './directory-category-tag.dto';
 
-/** Услуги мастера из каталога (`Service` + `ServicePriceOption` по длительности). */
+/** Услуги мастера для записи: оффер активной точки (`OrganizationOffering`) + опции цены. */
 export type SpecialistBookableServiceDto = {
   id: string;
   /** Подкатегория каталога (локализованный `shortName` для `?locale=`). */
@@ -17,6 +17,13 @@ export type SpecialistBookableServiceDto = {
   durationMinutes: number[];
   /** Суммы в VND, по индексу совпадают с `durationMinutes`. */
   priceVndByDuration: number[];
+  /** Id `OrganizationOffering`; совпадает с `id`, если витрина строится из marketplace. */
+  organizationOfferingId: string;
+  /**
+   * По индексу с `durationMinutes`: id опций цены оффера; бронь —
+   * `organizationOfferingId` + `offeringPriceOptionId` из этого массива.
+   */
+  marketplaceOfferingPriceOptionIds: string[];
 };
 
 export type SpecialistListItemDto = {
