@@ -1,0 +1,49 @@
+{
+  "messages": {
+    "en": {
+      "businessOrganizationCabinetPage": {
+        "pageTitle": "Organization",
+        "backAria": "Back to my organizations",
+        "staffSectionTitle": "Team",
+        "staffListAria": "Organization members and roles",
+        "manageOfferingsTitle": "Offering catalog",
+        "manageOfferingsHint": "Publish listings, prices, and specialist assignments.",
+        "manageOfferingsAria": "Open full marketplace offerings for this organization",
+        "editProfileTitle": "Public listing",
+        "editProfileHint": "Name, address, gallery, and spheres shown to guests.",
+        "editProfileAria": "Edit organization public listing",
+        "specialistCabinetHint": "Only owners and admins can manage offerings and the public listing."
+      }
+    },
+    "vi": {
+      "businessOrganizationCabinetPage": {
+        "pageTitle": "Tổ chức",
+        "backAria": "Quay lại danh sách tổ chức",
+        "staffSectionTitle": "Đội ngũ",
+        "staffListAria": "Thành viên và vai trò trong tổ chức",
+        "manageOfferingsTitle": "Danh mục offering",
+        "manageOfferingsHint": "Xuất bản dịch vụ, giá và gán chuyên gia.",
+        "manageOfferingsAria": "Mở đầy đủ marketplace offerings của tổ chức này",
+        "editProfileTitle": "Trang công khai",
+        "editProfileHint": "Tên, địa chỉ, gallery và lĩnh vực hiển thị cho khách.",
+        "editProfileAria": "Chỉnh sửa hồ sơ công khai của tổ chức",
+        "specialistCabinetHint": "Chỉ chủ sở hữu hoặc quản trị viên mới quản lý offering và trang công khai."
+      }
+    },
+    "ru": {
+      "businessOrganizationCabinetPage": {
+        "pageTitle": "Организация",
+        "backAria": "Назад к моим организациям",
+        "staffSectionTitle": "Команда",
+        "staffListAria": "Участники организации и роли",
+        "manageOfferingsTitle": "Каталог офферов",
+        "manageOfferingsHint": "Публикация услуг, цен и назначение мастеров.",
+        "manageOfferingsAria": "Открыть полный экран офферов маркетплейса для этой организации",
+        "editProfileTitle": "Публичная витрина",
+        "editProfileHint": "Название, адрес, галерея и сферы, которые видят гости.",
+        "editProfileAria": "Редактировать публичную карточку организации",
+        "specialistCabinetHint": "Офферы и витрину могут вести только владелец или администратор."
+      }
+    }
+  }
+}

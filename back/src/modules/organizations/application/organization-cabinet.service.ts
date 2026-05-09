@@ -451,6 +451,108 @@ export class OrganizationCabinetService {
     }
   }
 
+  /** Владелец записи `Organization` или активное employment в точке. */
+  private async assertUserEmployedAtOrganization(
+    userId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const org = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true, ownerUserId: true },
+    });
+    if (!org) {
+      throw new NotFoundException({
+        code: 'ORGANIZATION_NOT_FOUND',
+        message: 'Organization not found',
+      });
+    }
+    if (org.ownerUserId === userId) {
+      return;
+    }
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new ForbiddenException({
+        code: 'NOT_ORGANIZATION_MEMBER',
+        message: 'You are not a member of this organization',
+      });
+    }
+    const emp = await this.prisma.specialistOrganizationEmployment.findFirst({
+      where: {
+        specialistId: specialist.id,
+        organizationId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    if (!emp) {
+      throw new ForbiddenException({
+        code: 'NOT_ORGANIZATION_MEMBER',
+        message: 'You are not a member of this organization',
+      });
+    }
+  }
+
+  /**
+   * Участники точки (активное employment): специалист, отображаемое имя, роль в организации.
+   * Доступ любому члену точки (см. {@link assertUserEmployedAtOrganization}).
+   */
+  async listCabinetOrganizationTeamMembers(
+    userId: string,
+    organizationId: string,
+  ): Promise<{
+    members: Array<{
+      specialistId: string;
+      displayName: string | null;
+      role: OrganizationMembershipRole;
+    }>;
+  }> {
+    await this.assertUserEmployedAtOrganization(userId, organizationId);
+    const rows = await this.prisma.specialistOrganizationEmployment.findMany({
+      where: { organizationId, isActive: true },
+      select: {
+        specialistId: true,
+        role: true,
+        specialist: {
+          select: {
+            listingName: true,
+            user: { select: { name: true } },
+          },
+        },
+      },
+    });
+    const roleRank = (r: OrganizationMembershipRole): number => {
+      if (r === OrganizationMembershipRole.owner) {
+        return 0;
+      }
+      if (r === OrganizationMembershipRole.admin) {
+        return 1;
+      }
+      return 2;
+    };
+    const members = rows
+      .map((r) => ({
+        specialistId: r.specialistId,
+        role: r.role,
+        displayName:
+          r.specialist.listingName?.trim() ||
+          r.specialist.user?.name?.trim() ||
+          null,
+      }))
+      .sort((a, b) => {
+        const rd = roleRank(a.role) - roleRank(b.role);
+        if (rd !== 0) {
+          return rd;
+        }
+        const an = (a.displayName ?? a.specialistId).toLowerCase();
+        const bn = (b.displayName ?? b.specialistId).toLowerCase();
+        return an.localeCompare(bn);
+      });
+    return { members };
+  }
+
   /**
    * Заявка мастера «хочу работать в этой организации» (без членства до решения owner/admin).
    * Текущее место приёма не ограничивает отправку заявок в другие салоны.

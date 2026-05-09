@@ -8,7 +8,7 @@ export type BookingEventLike = {
 
 /**
  * Сводное состояние по журналу (для допусков следующего события).
- * Порядок: `createdAt ASC`, затем `id ASC`.
+ * Порядок событий: `localSequence ASC`, затем `id ASC` (как при чтении журнала в append).
  */
 export function reduceBookingCoarseState(events: BookingEventLike[]): BookingCoarseState {
   let state: BookingCoarseState = null;

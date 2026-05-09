@@ -50,6 +50,7 @@ import {
   organizationCabinetDeleteBookingsPreviewResponseSchema,
   organizationCabinetDeleteOrganizationResponseSchema,
   organizationCabinetEditProfileResponseSchema,
+  organizationCabinetTeamMembersResponseSchema,
   workplaceJoinApplicantCabinetProfileResponseSchema,
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
@@ -126,6 +127,34 @@ export class OrganizationsCabinetController {
       req.user.id,
       organizationId,
       locale,
+    );
+  }
+
+  @Get(':organizationId/cabinet-team')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Участники точки в кабинете (активное employment: специалист, имя, роль).',
+    description:
+      'Доступно владельцу записи организации в БД или любому мастеру с активным членством в точке.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiOkResponse({ schema: organizationCabinetTeamMembersResponseSchema })
+  @ApiForbiddenResponse({
+    description:
+      'Пользователь не состоит в организации (NOT_ORGANIZATION_MEMBER)',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getCabinetOrganizationTeamMembers(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+  ) {
+    return this.organizationCabinet.listCabinetOrganizationTeamMembers(
+      req.user.id,
+      organizationId,
     );
   }
 

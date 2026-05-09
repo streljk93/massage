@@ -39,6 +39,14 @@ enum BookingEventType {
   rescheduled
 }
 
+/// Актор события в журнале брони (BI / история; не глобальная роль User).
+enum BookingActorKind {
+  client
+  specialist
+  staff
+  system
+}
+
 /// Локализованные подписи статусов бронирования для API (веб, мобильные клиенты).
 model BookingStatusLocale {
   status BookingStatus
@@ -763,8 +771,27 @@ model Specialist {
   skills                SpecialistSkill[]
   onboardingMajorPicks  SpecialistOnboardingMajorServiceCategory[]
   offeringsExecution    SpecialistOffering[]
+  timeOffs              SpecialistTimeOff[]
 
   @@index([activeOrganizationId])
+}
+
+/// Период недоступности мастера (отпуск, личные дни). Пересечение с активной бронью запрещено при создании записи.
+model SpecialistTimeOff {
+  id           String     @id @default(uuid())
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  startsAt DateTime
+  endsAt   DateTime
+  note     String?
+
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([specialistId, startsAt])
+  @@index([specialistId, endsAt])
 }
 
 /// Большие категории (сферы), выбранные на шаге онбординга до создания организации / присоединения к салону.
@@ -930,8 +957,13 @@ model BookingSnapshot {
   organizationNameSnapshot      String?
   specialistDisplayNameSnapshot String?
 
+  /// Детерминированный хэш канонического неизменяемого содержимого: algo|entity|schemaVersion|sha256(...). См. `booking-snapshot.builder`.
+  snapshotHash String?
+
   durationMinutesSnapshot Int
+  /// Суммы в минимальных денежных единицах (филсы для VND и т.п.) согласно `currencySnapshot` (ISO 4217).
   priceAmountSnapshot     Int?
+  /// ISO 4217 (например VND); сумма — в minor units.
   currencySnapshot        String? @default("VND")
 
   addressLineSnapshot String?
@@ -1100,7 +1132,9 @@ model Booking {
   /// Локализованный `shortName` подкатегории на момент записи.
   categoryShortNameSnapshot String?
   durationMinutes           Int
+  /// Сумма в минимальных денежных единицах валюты currencySnapshot (ISO 4217).
   priceAmountSnapshot       Int?
+  /// ISO 4217; priceAmountSnapshot — в minor units этой валюты.
   currencySnapshot          String? @default("VND")
 
   startsAt DateTime
@@ -1110,6 +1144,15 @@ model Booking {
 
   /// Дедлайн авто-истечения для pending (не подтвердили за N минут).
   pendingExpiresAt DateTime?
+
+  /// Оптимистичная версия строки: инкремент при каждом применённом событии журнала (CAS при append).
+  version Int @default(0)
+
+  /// Последний применённый `BookingEvent.localSequence` (проекция синхронизирована с журналом до этого номера включительно).
+  lastAppliedSequence Int @default(0)
+
+  /// Короткий замыкатель целостности проекции (SHA-256 hex канонического среза + хвоста журнала). Источник правды — события; поле для reconcile / инвариантов.
+  projectionHash String?
 
   /// Причина отмены/истечения: код (например `pending_confirmation_timeout`) или канонический английский авто-текст.
   cancelReason        String?
@@ -1127,6 +1170,7 @@ model Booking {
   organizationReview OrganizationReview?    @relation("OrganizationReviewBooking")
   specialistReview   SpecialistReview?      @relation("SpecialistReviewBooking")
   snapshot           BookingSnapshot?
+  createIdempotency  ClientBookingCreateIdempotency?
 
   @@index([clientUserId])
   @@index([specialistId])
@@ -1138,6 +1182,19 @@ model Booking {
   @@index([offeringPriceOptionId])
 }
 
+/// Идемпотентность `POST /bookings`: повтор с тем же ключом возвращает ту же бронь (в т.ч. после BOOKING_BUSY_RETRY или фоновой обработки BOOKING_QUEUED).
+model ClientBookingCreateIdempotency {
+  clientUserId     String
+  idempotencyKey   String
+  bookingId        String  @unique
+  booking          Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([clientUserId, idempotencyKey])
+  @@index([bookingId])
+}
+
 /// Событие жизненного цикла бронирования (append-only журнал домена перед проекцией на строку Booking).
 model BookingEvent {
   id String @id @default(uuid())
@@ -1147,8 +1204,13 @@ model BookingEvent {
 
   type BookingEventType
 
-  /// client | specialist | staff | system
-  actorKind String
+  /// Монотонный порядок в рамках брони (строже wall-clock, чем `createdAt`).
+  localSequence Int
+
+  /// Идемпотентный append: повтор с тем же ключом и тем же `bookingId` не дублирует событие.
+  idempotencyKey String?
+
+  actorKind BookingActorKind
 
   actorUserId String?
   actor       User?   @relation("BookingEventActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
@@ -1158,6 +1220,8 @@ model BookingEvent {
 
   createdAt DateTime @default(now())
 
+  @@unique([bookingId, idempotencyKey])
+  @@index([bookingId, localSequence])
   @@index([bookingId, createdAt])
   @@index([bookingId, id])
   @@index([type])

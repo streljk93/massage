@@ -96,7 +96,23 @@ export class BookingsRepository {
     endsAt: Date,
     excludeBookingId?: string | null,
   ): Promise<{ id: string } | null> {
-    return this.prisma.booking.findFirst({
+    return this.findActiveOverlapTx(
+      this.prisma,
+      specialistId,
+      startsAt,
+      endsAt,
+      excludeBookingId,
+    );
+  }
+
+  findActiveOverlapTx(
+    db: Pick<Prisma.TransactionClient, 'booking'>,
+    specialistId: string,
+    startsAt: Date,
+    endsAt: Date,
+    excludeBookingId?: string | null,
+  ): Promise<{ id: string } | null> {
+    return db.booking.findFirst({
       where: {
         specialistId,
         deletedAt: null,

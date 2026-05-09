@@ -11,7 +11,6 @@ import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   catalogGetBulkCategoriesByMajorSlugs,
   createBrowserSdkClient,
-  organizationOfferingsCabinetCreateDraft,
   organizationOfferingsCabinetCreatePriceOption,
   organizationOfferingsCabinetCreateSpecialistAssignment,
   organizationOfferingsCabinetListAssignableSpecialists,
@@ -33,10 +32,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Textarea,
 } from "@/shared/ui";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { OrganizationOfferingDraftCreateSection } from "./organization-offering-draft-create-section";
 
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 const OFFERINGS_QK = ["organizationOfferingsCabinet"] as const;
@@ -51,17 +50,6 @@ type OfferingCabinetRow =
 
 type AssignableRow =
   OrganizationOfferingsCabinetListAssignableSpecialistsResponse["specialists"][number];
-
-const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function slugifyAsciiTitle(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
 
 function OrganizationOfferingCabinetCard({
   offering,
@@ -425,7 +413,6 @@ export function BusinessOrganizationOfferingsPage() {
   const params = useParams<{ organizationId: string }>();
   const organizationId = params.organizationId ?? "";
 
-  const queryClient = useQueryClient();
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
 
@@ -553,56 +540,10 @@ export function BusinessOrganizationOfferingsPage() {
     },
   });
 
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftSlug, setDraftSlug] = useState("");
-  const [draftCategoryId, setDraftCategoryId] = useState("");
-  const [draftDescription, setDraftDescription] = useState("");
-
-  const createDraftMut = useMutation({
-    mutationFn: async () => {
-      const slug = draftSlug.trim().toLowerCase();
-      if (!SLUG_RE.test(slug)) {
-        throw new Error("slug");
-      }
-      const { error } = await organizationOfferingsCabinetCreateDraft({
-        client: sdk,
-        path: { organizationId },
-        body: {
-          title: draftTitle.trim(),
-          slug,
-          categoryId: draftCategoryId.trim(),
-          description: draftDescription.trim() || null,
-        },
-      });
-      if (error) throw new Error("draft");
-    },
-    onSuccess: () => {
-      setDraftTitle("");
-      setDraftSlug("");
-      setDraftCategoryId("");
-      setDraftDescription("");
-      void queryClient.invalidateQueries({ queryKey: OFFERINGS_QK });
-    },
-  });
-
-  const backToEdit = {
-    href: `/business/organizations/${organizationId}/edit`,
+  const backToOrgCabinet = {
+    href: `/business/organizations/${organizationId}`,
     ariaLabel: t("backAria"),
   } as const;
-
-  const flatCategories = useMemo(() => {
-    const sections = catalogQuery.data?.sections ?? [];
-    const rows: { id: string; label: string }[] = [];
-    for (const sec of sections) {
-      for (const c of sec.categories) {
-        rows.push({
-          id: c.id,
-          label: `${sec.majorCategory.name} — ${c.name}`,
-        });
-      }
-    }
-    return rows;
-  }, [catalogQuery.data?.sections]);
 
   const membershipDraftName = membership?.salonCabinetPreview?.name?.trim();
   const orgTitle =
@@ -625,7 +566,7 @@ export function BusinessOrganizationOfferingsPage() {
           avatarFallback="P"
           cabinetBack={
             organizationId ?
-              backToEdit
+              backToOrgCabinet
             : {
                 href: "/business/organizations",
                 ariaLabel: tPage("organizationEditBackAria"),
@@ -652,7 +593,7 @@ export function BusinessOrganizationOfferingsPage() {
           avatarFallback="P"
           cabinetBack={
             organizationId ?
-              backToEdit
+              backToOrgCabinet
             : {
                 href: "/business/organizations",
                 ariaLabel: tPage("organizationEditBackAria"),
@@ -704,7 +645,7 @@ export function BusinessOrganizationOfferingsPage() {
           showHeadline={false}
           avatarAlt={t("pageTitle")}
           avatarFallback="P"
-          cabinetBack={backToEdit}
+          cabinetBack={backToOrgCabinet}
         />
         <BusinessEmptyState
           icon={Package}
@@ -724,7 +665,7 @@ export function BusinessOrganizationOfferingsPage() {
           showHeadline={false}
           avatarAlt={t("pageTitle")}
           avatarFallback="P"
-          cabinetBack={backToEdit}
+          cabinetBack={backToOrgCabinet}
         />
         <BusinessEmptyState
           icon={Package}
@@ -752,7 +693,7 @@ export function BusinessOrganizationOfferingsPage() {
           showHeadline={false}
           avatarAlt={t("pageTitle")}
           avatarFallback="P"
-          cabinetBack={backToEdit}
+          cabinetBack={backToOrgCabinet}
         />
         <BusinessEmptyState
           icon={Package}
@@ -773,8 +714,6 @@ export function BusinessOrganizationOfferingsPage() {
 
   const offerings = offeringsQuery.data?.offerings ?? [];
   const assignable = assignableQuery.data?.specialists ?? [];
-  const majorsMissing = majorSlugsCsv.length === 0;
-  const catalogLoading = majorSlugsCsv.length > 0 && catalogQuery.isPending;
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-8">
@@ -784,115 +723,18 @@ export function BusinessOrganizationOfferingsPage() {
         showHeadline={false}
         avatarAlt={t("pageTitle")}
         avatarFallback="P"
-        cabinetBack={backToEdit}
+        cabinetBack={backToOrgCabinet}
       />
 
-      {majorsMissing ?
-        <section
-          className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm"
-          aria-live="polite"
-        >
-          <h2 className="font-heading text-sm font-semibold text-amber-950 dark:text-amber-100">
-            {t("majorsMissingTitle")}
-          </h2>
-          <p className="mt-1 text-pretty text-xs leading-snug text-amber-950/80 dark:text-amber-100/90">
-            {t("majorsMissingHint")}
-          </p>
-        </section>
+      {cabinetProfileQuery.data ?
+        <OrganizationOfferingDraftCreateSection
+          organizationId={organizationId}
+          sdk={sdk}
+          locale={locale}
+          majorCategorySlugs={cabinetProfileQuery.data.majorCategorySlugs}
+          t={t}
+        />
       : null}
-
-      <section className="rounded-2xl border border-border/60 bg-card p-4">
-        <h2 className="font-heading text-sm font-semibold">{t("draftSectionTitle")}</h2>
-        {catalogLoading ?
-          <div
-            className="mt-3 h-28 animate-pulse rounded-xl bg-muted/50"
-            aria-busy
-          />
-        : (
-          <div className="mt-3 flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-title">
-                {t("fieldTitle")}
-              </label>
-              <Input
-                id="draft-title"
-                value={draftTitle}
-                onChange={(e) => setDraftTitle(e.target.value)}
-                onBlur={() => {
-                  if (draftSlug.trim().length === 0 && draftTitle.trim().length > 0) {
-                    const s = slugifyAsciiTitle(draftTitle);
-                    if (s.length > 0) {
-                      setDraftSlug(s);
-                    }
-                  }
-                }}
-                className="rounded-xl"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-slug">
-                {t("fieldSlug")}
-              </label>
-              <Input
-                id="draft-slug"
-                value={draftSlug}
-                onChange={(e) => setDraftSlug(e.target.value.toLowerCase())}
-                className="rounded-xl"
-                disabled={majorsMissing}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-muted-foreground">
-                {t("fieldCategory")}
-              </span>
-              <Select
-                value={draftCategoryId}
-                onValueChange={setDraftCategoryId}
-                disabled={majorsMissing || flatCategories.length === 0}
-              >
-                <SelectTrigger className="rounded-xl" id="draft-category">
-                  <SelectValue placeholder={t("fieldCategoryPlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {flatCategories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-desc">
-                {t("fieldDescription")}
-              </label>
-              <Textarea
-                id="draft-desc"
-                value={draftDescription}
-                onChange={(e) => setDraftDescription(e.target.value)}
-                className="min-h-[4.5rem] rounded-xl"
-              />
-            </div>
-            <Button
-              type="button"
-              className="rounded-xl"
-              disabled={
-                createDraftMut.isPending ||
-                majorsMissing ||
-                catalogLoading ||
-                draftTitle.trim().length === 0 ||
-                !SLUG_RE.test(draftSlug.trim().toLowerCase()) ||
-                draftCategoryId.trim().length === 0
-              }
-              onClick={() => void createDraftMut.mutate()}
-            >
-              {createDraftMut.isPending ?
-                <Loader2 className="size-4 animate-spin" aria-hidden />
-              : t("createDraft")}
-            </Button>
-          </div>
-        )}
-      </section>
 
       {offerings.length === 0 ?
         <BusinessEmptyState

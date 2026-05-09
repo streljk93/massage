@@ -18,6 +18,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -151,6 +152,15 @@ export class SpecialistBookingsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: specialistRescheduleConfirmedBookingRequestSchema })
   @ApiOkResponse({ schema: specialistRescheduleConfirmedBookingResponseSchema })
+  @ApiResponse({
+    status: HttpStatus.ACCEPTED,
+    description:
+      'Перенос принят в очередь (`BOOKING_QUEUED`, `BOOKING_COMMAND_QUEUE_ENABLED=true`).',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description: 'Перегрузка блокировки слота (`BOOKING_BUSY_RETRY`)',
+  })
   @ApiBadRequestResponse({
     description:
       'Не `confirmed`, слот занят, не по сетке, вне listing workday, в прошлом, или слишком близко к старту при включённой политике (`BOOKING_RESCHEDULE_*`)',

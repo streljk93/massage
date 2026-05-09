@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
@@ -16,11 +17,13 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiQuery,
+  ApiResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -65,6 +68,12 @@ import {
 type AuthedRequest = Request & { user: AuthenticatedUser };
 
 @ApiTags('bookings')
+@ApiHeader({
+  name: 'Idempotency-Key',
+  required: false,
+  description:
+    'Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)',
+})
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
@@ -81,6 +90,16 @@ export class BookingsController {
   @ApiBody({ schema: createBookingRequestSchema })
   @ApiCreatedResponse({ schema: createBookingResponseSchema })
   @ApiBadRequestResponse({ description: 'Невалидное тело или слот в прошлом' })
+  @ApiResponse({
+    status: HttpStatus.ACCEPTED,
+    description:
+      'Запрос принят в очередь (`BOOKING_QUEUED`) при перегрузке lock; повторите POST с тем же Idempotency-Key через несколько секунд. Включено при `BOOKING_COMMAND_QUEUE_ENABLED=true` и Redis.',
+  })
+  @ApiResponse({
+    status: HttpStatus.SERVICE_UNAVAILABLE,
+    description:
+      'Перегрузка блокировки слота (BOOKING_BUSY_RETRY). Повторите с тем же Idempotency-Key',
+  })
   @ApiTooManyRequestsResponse({
     description:
       'Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*',
@@ -88,11 +107,17 @@ export class BookingsController {
   @ApiUnauthorizedResponse({ description: 'Нет access token' })
   async create(
     @Req() req: AuthedRequest,
+    @Headers('idempotency-key') idempotencyKeyRaw: string | undefined,
     @Body(new ZodValidationPipe(createBookingBodySchema))
     body: CreateBookingBody,
     @RequestLocale() locale: ApiLocale,
   ) {
-    return this.bookingsService.createBooking(req.user.id, body, locale);
+    return this.bookingsService.createBooking(
+      req.user.id,
+      body,
+      locale,
+      idempotencyKeyRaw,
+    );
   }
 
   @Get()

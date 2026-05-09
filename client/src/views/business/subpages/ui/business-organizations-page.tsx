@@ -534,6 +534,14 @@ export function BusinessOrganizationsPage() {
             const showEditSalon = canEditSalon;
             const trailingOrgCardActions =
               (showOwnerDeleteOrg ? 1 : 0) + (showEditSalon ? 1 : 0);
+            const organizationCabinetHref =
+              org.membershipStatus === "employed" ?
+                `/business/organizations/${org.id}`
+              : `/organizations/${org.id}`;
+            const organizationPrimaryAriaLabel =
+              org.membershipStatus === "employed" ?
+                t("orgOpenOrganizationCabinet")
+              : t("orgOpenPublicProfile");
 
             return (
               <li
@@ -554,16 +562,20 @@ export function BusinessOrganizationsPage() {
                   aria-labelledby={`org-card-title-${org.id}`}
                 >
                   <div className="relative p-4">
-                    <Link
-                      href={`/organizations/${org.id}`}
+                    <div
                       className={cn(
-                        motion.interactivePress,
-                        "block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         trailingOrgCardActions >= 2 && "pr-24",
                         trailingOrgCardActions === 1 && "pr-11",
                       )}
-                      aria-label={t("orgOpenPublicProfile")}
                     >
+                      <Link
+                        href={organizationCabinetHref}
+                        className={cn(
+                          motion.interactivePress,
+                          "block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        )}
+                        aria-label={organizationPrimaryAriaLabel}
+                      >
                       <div className="flex gap-3.5">
                         <div
                           className={cn(
@@ -631,6 +643,18 @@ export function BusinessOrganizationsPage() {
                         </div>
                       </div>
                     </Link>
+                      {!isPendingMembership && org.membershipStatus === "employed" ?
+                        <Link
+                          href={`/organizations/${org.id}`}
+                          className={cn(
+                            motion.interactive,
+                            "mt-2 block text-xs font-medium text-primary underline-offset-2 hover:underline",
+                          )}
+                        >
+                          {t("orgOpenPublicProfile")}
+                        </Link>
+                      : null}
+                    </div>
                     {trailingOrgCardActions > 0 ?
                       <div className="absolute right-2 top-2 z-[1] flex items-center gap-0.5">
                         {showEditSalon ?

@@ -28,6 +28,7 @@ import {
 } from "@/views/bookings";
 import {
   businessAppSubpagesI18n,
+  businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
 } from "@/views/business/subpages";
@@ -92,6 +93,7 @@ const bundles: ColocatedI18nBundle[] = [
   specialistAccountSetupPageI18n,
   specialistOnboardingWizardI18n,
   businessAppSubpagesI18n,
+  businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
   becomeSpecialistPageI18n,

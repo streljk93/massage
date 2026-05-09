@@ -109,6 +109,24 @@ export default () => ({
     ),
   },
   /**
+   * Блокировки specialist-slot при создании/переносе брони: `lock_timeout` для хвоста очереди advisory lock.
+   * Клиент при `BOOKING_BUSY_RETRY` обязан повторить запрос с тем же `Idempotency-Key`.
+   * Фоновая очередь при перегрузке — см. `bookingCommandQueue.enabled` (`BOOKING_COMMAND_QUEUE_ENABLED`).
+   */
+  bookingConcurrency: {
+    specialistAdvisoryLockTimeoutMs: nonNegativeInt(
+      process.env.BOOKING_ADVISORY_LOCK_TIMEOUT_MS,
+      2_000,
+    ),
+  },
+  /**
+   * Очередь BullMQ `booking-command`: при перегрузке advisory-lock создание брони
+   * (с `Idempotency-Key`) и перенос уходят в фон; HTTP — `202 BOOKING_QUEUED`. Нужны Redis и корень Bull.
+   */
+  bookingCommandQueue: {
+    enabled: process.env.BOOKING_COMMAND_QUEUE_ENABLED === 'true',
+  },
+  /**
    * Превью слотов на карточках каталога / главной / поиска.
    * Меньше `calendarDays` — быстрее ответ (меньше кандидатов слотов на мастера).
    * Переопределение: `LISTING_CARD_PREVIEW_CALENDAR_DAYS` (сжатие 1–90 в DirectoryService).

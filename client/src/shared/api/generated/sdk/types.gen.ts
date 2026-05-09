@@ -1692,6 +1692,45 @@ export type OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses = 
 
 export type OrganizationsCabinetGetCabinetOrganizationProfileForEditResponse = OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses[keyof OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses];
 
+export type OrganizationsCabinetGetCabinetOrganizationTeamMembersData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/cabinet-team';
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamMembersErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Пользователь не состоит в организации (NOT_ORGANIZATION_MEMBER)
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
+    200: {
+        members: Array<{
+            specialistId: string;
+            displayName: string | null;
+            /**
+             * Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).
+             */
+            role: 'owner' | 'admin' | 'specialist';
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponse = OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses[keyof OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses];
+
 export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData = {
     body?: never;
     path: {
@@ -3202,6 +3241,12 @@ export type SpecialistsCabinetPatchSpecialistCabinetSkillsResponse = Specialists
 
 export type BookingsListData = {
     body?: never;
+    headers?: {
+        /**
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         */
+        'Idempotency-Key'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -3311,6 +3356,12 @@ export type BookingsCreateData = {
         organizationOfferingId: string;
         offeringPriceOptionId: string;
     };
+    headers?: {
+        /**
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         */
+        'Idempotency-Key'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -3334,6 +3385,10 @@ export type BookingsCreateErrors = {
      * Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*
      */
     429: unknown;
+    /**
+     * Перегрузка блокировки слота (BOOKING_BUSY_RETRY). Повторите с тем же Idempotency-Key
+     */
+    503: unknown;
 };
 
 export type BookingsCreateResponses = {
@@ -3366,6 +3421,12 @@ export type BookingsSubmitVisitReviewsData = {
          * Опционально. Пустая строка игнорируется.
          */
         specialistComment?: string;
+    };
+    headers?: {
+        /**
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         */
+        'Idempotency-Key'?: string;
     };
     path: {
         id: unknown;
@@ -3411,6 +3472,12 @@ export type BookingsCancelData = {
          * Для `pending` не передаётся. Иначе опционально, кроме случая `cancelReason` = `client_other`.
          */
         cancellationComment?: string;
+    };
+    headers?: {
+        /**
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         */
+        'Idempotency-Key'?: string;
     };
     path: {
         id: unknown;

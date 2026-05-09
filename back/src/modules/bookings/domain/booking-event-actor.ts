@@ -1,16 +1,15 @@
-import type { BookingEventType, Prisma } from '@prisma/client';
+import type { BookingActorKind, BookingEventType, Prisma } from '@prisma/client';
 
-/** Стабильные значения `BookingEvent.actorKind` для BI/API. */
-export const BOOKING_HISTORY_ACTOR_CLIENT = 'client';
-export const BOOKING_HISTORY_ACTOR_SPECIALIST = 'specialist';
-export const BOOKING_HISTORY_ACTOR_STAFF = 'staff';
-export const BOOKING_HISTORY_ACTOR_SYSTEM = 'system';
+export const BOOKING_HISTORY_ACTOR_CLIENT: BookingActorKind = 'client';
+export const BOOKING_HISTORY_ACTOR_SPECIALIST: BookingActorKind = 'specialist';
+export const BOOKING_HISTORY_ACTOR_STAFF: BookingActorKind = 'staff';
+export const BOOKING_HISTORY_ACTOR_SYSTEM: BookingActorKind = 'system';
 
 export function inferBookingEventActorKind(args: {
   actorUserId: string | null;
   clientUserId?: string | null;
   specialistUserId?: string | null;
-}): string {
+}): BookingActorKind {
   if (args.actorUserId == null) {
     return BOOKING_HISTORY_ACTOR_SYSTEM;
   }
@@ -30,7 +29,10 @@ export type AppendBookingEventInput = {
   bookingId: string;
   type: BookingEventType;
   actorUserId: string | null;
-  actorKindOverride?: string | null;
+  /** Явный актор вместо вывода по userId (dev/system и т.п.). */
+  actorKindOverride?: BookingActorKind | null;
+  /** Стабильный ключ повторяемого append (тот же ключ при BOOKING_BUSY_RETRY / сетевом retry). */
+  idempotencyKey?: string | null;
   payload: unknown | null;
   /** Системное исключение: `confirmed`/`in_progress` → отмена мастером/организацией (смена места работы и т.п.). */
   allowMassOrgSpecialistCancel?: boolean;

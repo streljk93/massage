@@ -4085,6 +4085,89 @@
         ]
       }
     },
+    "/organizations/{organizationId}/cabinet-team": {
+      "get": {
+        "description": "Доступно владельцу записи организации в БД или любому мастеру с активным членством в точке.",
+        "operationId": "OrganizationsCabinet_getCabinetOrganizationTeamMembers",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "members"
+                  ],
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "specialistId",
+                          "displayName",
+                          "role"
+                        ],
+                        "properties": {
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "owner",
+                              "admin",
+                              "specialist"
+                            ],
+                            "description": "Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`)."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Пользователь не состоит в организации (NOT_ORGANIZATION_MEMBER)"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Участники точки в кабинете (активное employment: специалист, имя, роль).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
     "/organizations/{organizationId}/delete-bookings-preview": {
       "get": {
         "description": "Тот же тип списка, что при смене места приёма для одного мастера, но по всей организации; плюс имя принимающего специалиста.",
@@ -7905,6 +7988,15 @@
         "operationId": "Bookings_create",
         "parameters": [
           {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "locale",
             "required": false,
             "in": "query",
@@ -8004,6 +8096,9 @@
               }
             }
           },
+          "202": {
+            "description": "Запрос принят в очередь (`BOOKING_QUEUED`) при перегрузке lock; повторите POST с тем же Idempotency-Key через несколько секунд. Включено при `BOOKING_COMMAND_QUEUE_ENABLED=true` и Redis."
+          },
           "400": {
             "description": "Невалидное тело или слот в прошлом"
           },
@@ -8012,6 +8107,9 @@
           },
           "429": {
             "description": "Лимит создания броней для клиента (pending / час / сутки). См. тело: code BOOKING_CLIENT_*"
+          },
+          "503": {
+            "description": "Перегрузка блокировки слота (BOOKING_BUSY_RETRY). Повторите с тем же Idempotency-Key"
           }
         },
         "security": [
@@ -8028,6 +8126,15 @@
         "description": "Список записей клиента: сверху недавно обновлённые (в т.ч. после авто-expired), затем по времени приёма. `statusLabel` — из query `locale` или `User.locale`. Опционально фильтр по статусам: повтор `?status=confirmed&status=in_progress` или скобочная форма `?status[]=confirmed&status[]=in_progress` (в Express она приходит как ключ `status[]`).",
         "operationId": "Bookings_list",
         "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "locale",
             "required": false,
@@ -8245,6 +8352,15 @@
         "operationId": "Bookings_submitVisitReviews",
         "parameters": [
           {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "id",
             "required": true,
             "in": "path",
@@ -8340,6 +8456,15 @@
         "description": "Доступно для `pending` и `confirmed` (матрица допустимых переходов — `booking-status-transitions`). Для `pending` тело можно опустить или передать `{}` — причина не сохраняется, статус `reject_by_client`. Для `confirmed` обязателен `cancelReason`; при `client_other` — непустой `cancellationComment`; статус `canceled_by_client`. В статусе `in_progress` клиентская отмена не предусмотрена — только завершение приёма (`done`) на стороне мастера/системы. Слот снова свободен.",
         "operationId": "Bookings_cancel",
         "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
           {
             "name": "id",
             "required": true,
@@ -8750,6 +8875,9 @@
               }
             }
           },
+          "202": {
+            "description": "Перенос принят в очередь (`BOOKING_QUEUED`, `BOOKING_COMMAND_QUEUE_ENABLED=true`)."
+          },
           "400": {
             "description": "Не `confirmed`, слот занят, не по сетке, вне listing workday, в прошлом, или слишком близко к старту при включённой политике (`BOOKING_RESCHEDULE_*`)"
           },
@@ -8761,6 +8889,9 @@
           },
           "404": {
             "description": "Бронь не найдена"
+          },
+          "503": {
+            "description": "Перегрузка блокировки слота (`BOOKING_BUSY_RETRY`)"
           }
         },
         "security": [
@@ -10334,6 +10465,50 @@
           }
         },
         "summary": "[Dev] Принудительно сменить статус брони по booking id",
+        "tags": [
+          "dev"
+        ]
+      }
+    },
+    "/dev/bookings/{bookingId}/rebuild-projection": {
+      "post": {
+        "description": "Только при `NODE_ENV !== production` и без `DISABLE_DEV_TEST_ROUTES=true`. Берёт advisory-lock на агрегат, читает `BookingEvent` ORDER BY `local_sequence`, пишет строку `Booking` через CAS `version`. Для аварийного выравнивания после рассинхрона; в штатном потоке не вызывается. Пустой журнал — `409 BOOKING_RECONCILE_EMPTY_JOURNAL`.",
+        "operationId": "DevBookings_rebuildProjection",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Проекция обновлена",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "example": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ручка выключена или бронь не найдена"
+          },
+          "409": {
+            "description": "Пустой журнал / нет хвоста / гонка версии при записи (коды BOOKING_RECONCILE_*)"
+          }
+        },
+        "summary": "[Dev] Пересобрать проекцию брони из журнала (lenient replay)",
         "tags": [
           "dev"
         ]

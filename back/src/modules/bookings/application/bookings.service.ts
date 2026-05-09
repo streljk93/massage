@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { addMinutes, parseISO, subHours } from 'date-fns';
@@ -20,6 +21,7 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { normalizeDirectoryListingWorkdayBounds } from '../../../common/availability/directory-listing-workday';
+import { collectListingSlotInvalidationSurface } from '../../../common/availability/listing-slot-cache-invalidation';
 import {
   BOOKING_START_TOLERANCE_MS,
   checkListingBookability,
@@ -48,13 +50,27 @@ import type { CreateBookingBody } from '../dto/create-booking-body.schema';
 import type { SubmitBookingVisitReviewsBody } from '../dto/submit-booking-visit-reviews-body.schema';
 import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-locale.repository';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
-import { BookingsRepository, type SalonCabinetBookingRow } from '../infrastructure/bookings.repository';
+import {
+  BookingsRepository,
+  type SalonCabinetBookingRow,
+} from '../infrastructure/bookings.repository';
 import { isBookingSlotStartTimeReached } from '../domain/booking-in-progress-start-policy';
 import { isOrganizationOfferingBookableMatchingDirectoryVitrineRules } from '../../services/domain/service-catalog-visibility';
 import {
   OfferingPricingResolver,
   isOfferingPricingResolverError,
 } from '../domain/offering-pricing-resolver.service';
+import {
+  isExclusionConstraintViolation,
+  isPostgresLockTimeoutError,
+} from '../domain/booking-db-errors';
+import { BookingTxLocks } from '../domain/booking-tx-locks';
+import {
+  BOOKING_EXCLUDE_MAX_RETRIES,
+  BOOKING_SLOT_TX_ATTEMPT_CAP,
+  bookingExcludeRetryJitterMs,
+} from '../domain/booking-slot-exclude-retry.policy';
+import { BookingCommandEnqueueService } from '../queue/booking-command-enqueue.service';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
@@ -94,7 +110,13 @@ export class BookingsService {
     private readonly outbox: TransactionalOutboxService,
     private readonly offeringPricingResolver: OfferingPricingResolver,
     private readonly bookingAppend: BookingAppendService,
+    @Optional()
+    private readonly bookingCommandEnqueue?: BookingCommandEnqueueService,
   ) {}
+
+  async #sleepMs(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   private async resolveBookingsListLocale(
     clientUserId: string,
@@ -170,7 +192,41 @@ export class BookingsService {
     clientUserId: string,
     body: CreateBookingBody,
     locale: ApiLocale,
+    idempotencyKeyFromHeader?: string | null,
+    options?: { slotRetryMode?: 'http' | 'worker' },
   ) {
+    const trimmed =
+      typeof idempotencyKeyFromHeader === 'string'
+        ? idempotencyKeyFromHeader.trim()
+        : '';
+    const idempotencyKey = trimmed.length > 0 ? trimmed : null;
+    if (idempotencyKey != null && idempotencyKey.length > 200) {
+      throw new BadRequestException({
+        code: 'BOOKING_IDEMPOTENCY_KEY_TOO_LONG',
+        message: 'Idempotency-Key must be at most 200 characters',
+      });
+    }
+
+    if (idempotencyKey != null) {
+      const existing =
+        await this.prisma.clientBookingCreateIdempotency.findUnique({
+          where: {
+            clientUserId_idempotencyKey: { clientUserId, idempotencyKey },
+          },
+          include: { booking: true },
+        });
+      if (existing?.booking != null && existing.booking.deletedAt == null) {
+        const b = existing.booking;
+        return {
+          id: b.id,
+          status: b.status,
+          startsAt: b.startsAt.toISOString(),
+          endsAt: b.endsAt.toISOString(),
+          pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
+        };
+      }
+    }
+
     await this.assertClientBookingCreationLimits(clientUserId);
 
     const startsAt = parseISO(body.startsAt);
@@ -192,6 +248,8 @@ export class BookingsService {
       clientUserId,
       body,
       locale,
+      idempotencyKey,
+      options?.slotRetryMode ?? 'http',
     );
   }
 
@@ -202,6 +260,8 @@ export class BookingsService {
     clientUserId: string,
     body: CreateBookingBody,
     locale: ApiLocale,
+    idempotencyKey: string | null,
+    slotRetryMode: 'http' | 'worker',
   ) {
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: body.specialistId, deletedAt: null },
@@ -271,8 +331,8 @@ export class BookingsService {
       );
     }
 
-    const orgOfferingId = body.organizationOfferingId!;
-    const optId = body.offeringPriceOptionId!;
+    const orgOfferingId = body.organizationOfferingId;
+    const optId = body.offeringPriceOptionId;
 
     const startsAt = parseISO(body.startsAt);
 
@@ -347,8 +407,7 @@ export class BookingsService {
     if (
       !isOrganizationOfferingBookableMatchingDirectoryVitrineRules({
         offeringOrganizationId: off.organizationId,
-        categoryMajorServiceCategoryId:
-          off.category.majorServiceCategoryId,
+        categoryMajorServiceCategoryId: off.category.majorServiceCategoryId,
         specialistListedInDirectory: specialist.listedInDirectory,
         workplaceOrganizationId: organizationId,
         workplaceOrganizationMajorCategoryIds: workplaceOrgMajorCategoryIds,
@@ -395,9 +454,7 @@ export class BookingsService {
       resolved = this.offeringPricingResolver.resolve({
         priceOption: priceOpt,
         override:
-          overrideRow != null ?
-            { customPrice: overrideRow.customPrice }
-          : null,
+          overrideRow != null ? { customPrice: overrideRow.customPrice } : null,
       });
     } catch (e: unknown) {
       if (isOfferingPricingResolverError(e)) {
@@ -444,16 +501,18 @@ export class BookingsService {
       });
     }
 
-    const overlap = await this.bookingsRepository.findActiveOverlap(
-      body.specialistId,
-      startsAt,
-      endsAt,
-      null,
-    );
-    if (overlap) {
+    const timeOff = await this.prisma.specialistTimeOff.findFirst({
+      where: {
+        specialistId: body.specialistId,
+        deletedAt: null,
+        startsAt: { lt: endsAt },
+        endsAt: { gt: startsAt },
+      },
+    });
+    if (timeOff != null) {
       throw new BadRequestException({
-        code: 'SLOT_NOT_AVAILABLE',
-        message: 'This time overlaps an existing active booking',
+        code: 'SPECIALIST_TIME_OFF_BLOCKS_SLOT',
+        message: 'Specialist is not available during this window',
       });
     }
 
@@ -463,7 +522,9 @@ export class BookingsService {
     );
     const categoryShortNameSnapshot = categoryPresentation.shortName;
     const titleSnapshot =
-      off.title.trim().length > 0 ? off.title.trim() : categoryPresentation.name;
+      off.title.trim().length > 0
+        ? off.title.trim()
+        : categoryPresentation.name;
 
     const now = Date.now();
     const shouldAutoConfirm = specialist.autoConfirmBookings;
@@ -471,77 +532,281 @@ export class BookingsService {
       ? null
       : addMinutes(new Date(now), graceMinutes);
 
-    const booking = await this.prisma.$transaction(async (tx) => {
-      const b = await tx.booking.create({
-        data: {
-          clientUserId,
-          specialistId: body.specialistId,
-          organizationId,
-          organizationOfferingId: orgOfferingId,
-          offeringPriceOptionId: optId,
-          categoryShortNameSnapshot,
-          durationMinutes: resolved.durationMinutes,
-          priceAmountSnapshot: resolved.priceAmount,
-          currencySnapshot: resolved.currency ?? 'VND',
-          startsAt,
-          endsAt,
-          pendingExpiresAt: null,
-        },
-      });
-      await tx.bookingSnapshot.create({
-        data: buildBookingSnapshotCreateData({
-          bookingId: b.id,
-          organizationOfferingId: orgOfferingId,
-          offeringPriceOptionId: optId,
-          organizationOfferingTitleSnapshot: titleSnapshot,
-          organizationNameSnapshot: organizationNameForSnapshot,
-          specialistDisplayNameSnapshot:
-            specialist.listingName?.trim() ??
-            specialist.user.name?.trim() ??
+    const lockCfg = this.config.getOrThrow<{
+      specialistAdvisoryLockTimeoutMs: number;
+    }>('bookingConcurrency');
+
+    const runCreateTx = (): Promise<{
+      id: string;
+      status: BookingStatus;
+      startsAt: string;
+      endsAt: string;
+      pendingExpiresAt: string | null;
+      shouldNotifySpecialist: boolean;
+    }> =>
+      this.prisma.$transaction(
+        async (tx) => {
+          await BookingTxLocks.setLockTimeoutMsForThisTransaction(
+            tx,
+            lockCfg.specialistAdvisoryLockTimeoutMs,
+          );
+
+          if (idempotencyKey != null) {
+            await BookingTxLocks.acquireClientCreateIdempotency(tx, {
+              clientUserId,
+              idempotencyKey,
+            });
+            const idemEarly =
+              await tx.clientBookingCreateIdempotency.findUnique({
+                where: {
+                  clientUserId_idempotencyKey: {
+                    clientUserId,
+                    idempotencyKey,
+                  },
+                },
+                include: { booking: true },
+              });
+            if (
+              idemEarly?.booking != null &&
+              idemEarly.booking.deletedAt == null
+            ) {
+              const b = idemEarly.booking;
+              return {
+                id: b.id,
+                status: b.status,
+                startsAt: b.startsAt.toISOString(),
+                endsAt: b.endsAt.toISOString(),
+                pendingExpiresAt: b.pendingExpiresAt?.toISOString() ?? null,
+                shouldNotifySpecialist: false,
+              };
+            }
+          }
+
+          await BookingTxLocks.acquireSpecialistActiveSlotExclusion(
+            tx,
+            body.specialistId,
+          );
+
+          const overlap = await this.bookingsRepository.findActiveOverlapTx(
+            tx,
+            body.specialistId,
+            startsAt,
+            endsAt,
             null,
-          durationMinutesSnapshot: resolved.durationMinutes,
-          priceAmountSnapshot: resolved.priceAmount,
-          currencySnapshot: resolved.currency ?? 'VND',
-          addressLineSnapshot: addressLineForSnapshot,
-          citySnapshot: cityForSnapshot,
-        }),
-      });
-      await this.outbox.enqueueBookingCreated(tx, b.id);
-      await this.bookingAppend.appendBookingEvent(tx, {
-        bookingId: b.id,
-        type: BookingEventType.created,
-        actorUserId: clientUserId,
-        payload: {
-          startsAt: startsAt.toISOString(),
-          endsAt: endsAt.toISOString(),
-          ...(pendingExpiresAt == null ?
-            { pendingExpiresAt: null }
-          : { pendingExpiresAt: pendingExpiresAt.toISOString() }),
+          );
+          if (overlap != null) {
+            throw new BadRequestException({
+              code: 'SLOT_ALREADY_TAKEN',
+              message: 'This time overlaps an existing active booking',
+            });
+          }
+
+          const b = await tx.booking.create({
+            data: {
+              clientUserId,
+              specialistId: body.specialistId,
+              organizationId,
+              organizationOfferingId: orgOfferingId,
+              offeringPriceOptionId: optId,
+              categoryShortNameSnapshot,
+              durationMinutes: resolved.durationMinutes,
+              priceAmountSnapshot: resolved.priceAmount,
+              currencySnapshot: resolved.currency ?? 'VND',
+              startsAt,
+              endsAt,
+              pendingExpiresAt: null,
+            },
+          });
+          await tx.bookingSnapshot.create({
+            data: buildBookingSnapshotCreateData({
+              bookingId: b.id,
+              organizationOfferingId: orgOfferingId,
+              offeringPriceOptionId: optId,
+              organizationOfferingTitleSnapshot: titleSnapshot,
+              organizationNameSnapshot: organizationNameForSnapshot,
+              specialistDisplayNameSnapshot:
+                specialist.listingName?.trim() ??
+                specialist.user.name?.trim() ??
+                null,
+              durationMinutesSnapshot: resolved.durationMinutes,
+              priceAmountSnapshot: resolved.priceAmount,
+              currencySnapshot: resolved.currency ?? 'VND',
+              addressLineSnapshot: addressLineForSnapshot,
+              citySnapshot: cityForSnapshot,
+            }),
+          });
+          await this.outbox.enqueueBookingCreated(tx, b.id);
+          await this.bookingAppend.appendBookingEvent(tx, {
+            bookingId: b.id,
+            type: BookingEventType.created,
+            actorUserId: clientUserId,
+            idempotencyKey,
+            payload: {
+              startsAt: startsAt.toISOString(),
+              endsAt: endsAt.toISOString(),
+              ...(pendingExpiresAt == null
+                ? { pendingExpiresAt: null }
+                : { pendingExpiresAt: pendingExpiresAt.toISOString() }),
+            },
+          });
+          if (shouldAutoConfirm) {
+            await this.bookingAppend.appendBookingEvent(tx, {
+              bookingId: b.id,
+              type: BookingEventType.confirmed,
+              actorUserId: specialist.userId,
+              payload: {},
+            });
+          }
+          if (idempotencyKey != null) {
+            try {
+              await tx.clientBookingCreateIdempotency.create({
+                data: { clientUserId, idempotencyKey, bookingId: b.id },
+              });
+            } catch (e: unknown) {
+              const err = e as { code?: string };
+              if (err.code === 'P2002') {
+                const row = await tx.clientBookingCreateIdempotency.findUnique({
+                  where: {
+                    clientUserId_idempotencyKey: {
+                      clientUserId,
+                      idempotencyKey,
+                    },
+                  },
+                  include: { booking: true },
+                });
+                if (row?.booking != null && row.booking.deletedAt == null) {
+                  const br = row.booking;
+                  return {
+                    id: br.id,
+                    status: br.status,
+                    startsAt: br.startsAt.toISOString(),
+                    endsAt: br.endsAt.toISOString(),
+                    pendingExpiresAt:
+                      br.pendingExpiresAt?.toISOString() ?? null,
+                    shouldNotifySpecialist: false,
+                  };
+                }
+              }
+              throw e;
+            }
+          }
+          const fresh = await tx.booking.findFirstOrThrow({
+            where: { id: b.id },
+          });
+          return {
+            id: fresh.id,
+            status: fresh.status,
+            startsAt: fresh.startsAt.toISOString(),
+            endsAt: fresh.endsAt.toISOString(),
+            pendingExpiresAt: fresh.pendingExpiresAt?.toISOString() ?? null,
+            shouldNotifySpecialist: true,
+          };
         },
-      });
-      if (shouldAutoConfirm) {
-        await this.bookingAppend.appendBookingEvent(tx, {
-          bookingId: b.id,
-          type: BookingEventType.confirmed,
-          actorUserId: specialist.userId,
-          payload: {},
+        { timeout: 60_000 },
+      );
+
+    for (let attempt = 0; attempt < BOOKING_SLOT_TX_ATTEMPT_CAP; attempt++) {
+      try {
+        const booking = await runCreateTx();
+        void collectListingSlotInvalidationSurface({
+          intervals: [{ startsAt, endsAt }],
         });
+        if (booking.shouldNotifySpecialist) {
+          void this.pushNotifications.notifySpecialistNewBooking(booking.id);
+        }
+        return {
+          id: booking.id,
+          status: booking.status,
+          startsAt: booking.startsAt,
+          endsAt: booking.endsAt,
+          pendingExpiresAt: booking.pendingExpiresAt,
+        };
+      } catch (e: unknown) {
+        if (isPostgresLockTimeoutError(e)) {
+          if (
+            slotRetryMode === 'http' &&
+            this.bookingCommandEnqueue != null &&
+            idempotencyKey != null
+          ) {
+            const enqueued =
+              await this.bookingCommandEnqueue.enqueueClientBookingCreate({
+                clientUserId,
+                body,
+                locale,
+                idempotencyKey,
+              });
+            if (enqueued) {
+              throw new HttpException(
+                {
+                  code: 'BOOKING_QUEUED',
+                  message:
+                    'Создание записи поставлено в очередь из‑за высокой нагрузки; повторите POST с тем же Idempotency-Key через несколько секунд.',
+                },
+                HttpStatus.ACCEPTED,
+              );
+            }
+          }
+          if (slotRetryMode === 'worker') {
+            throw e;
+          }
+          throw new HttpException(
+            {
+              code: 'BOOKING_BUSY_RETRY',
+              message:
+                'Server is busy; retry the request with the same Idempotency-Key header',
+            },
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+        if (isExclusionConstraintViolation(e)) {
+          if (attempt < BOOKING_EXCLUDE_MAX_RETRIES) {
+            await this.#sleepMs(bookingExcludeRetryJitterMs());
+            continue;
+          }
+          const overlap2 = await this.bookingsRepository.findActiveOverlap(
+            body.specialistId,
+            startsAt,
+            endsAt,
+            null,
+          );
+          if (overlap2 == null) {
+            try {
+              const booking = await runCreateTx();
+              void collectListingSlotInvalidationSurface({
+                intervals: [{ startsAt, endsAt }],
+              });
+              if (booking.shouldNotifySpecialist) {
+                void this.pushNotifications.notifySpecialistNewBooking(
+                  booking.id,
+                );
+              }
+              return {
+                id: booking.id,
+                status: booking.status,
+                startsAt: booking.startsAt,
+                endsAt: booking.endsAt,
+                pendingExpiresAt: booking.pendingExpiresAt,
+              };
+            } catch (e2: unknown) {
+              if (isExclusionConstraintViolation(e2)) {
+                throw new BadRequestException({
+                  code: 'SLOT_ALREADY_TAKEN',
+                  message: 'This time slot is no longer available',
+                });
+              }
+              throw e2;
+            }
+          }
+          throw new BadRequestException({
+            code: 'SLOT_ALREADY_TAKEN',
+            message: 'This time overlaps an existing active booking',
+          });
+        }
+        throw e;
       }
-      const fresh = await tx.booking.findFirstOrThrow({
-        where: { id: b.id },
-      });
-      return fresh;
-    });
+    }
 
-    void this.pushNotifications.notifySpecialistNewBooking(booking.id);
-
-    return {
-      id: booking.id,
-      status: booking.status,
-      startsAt: booking.startsAt.toISOString(),
-      endsAt: booking.endsAt.toISOString(),
-      pendingExpiresAt: booking.pendingExpiresAt?.toISOString() ?? null,
-    };
+    throw new Error('booking_create_unexpected');
   }
 
   async listMine(
@@ -1107,9 +1372,7 @@ export class BookingsService {
           cancelParty: 'specialist',
           reasonCode: cancelReasonDb,
           cancellationComment: cancellationCommentDb,
-          ...(historyReason !== null ?
-            { reasonText: historyReason }
-          : {}),
+          ...(historyReason !== null ? { reasonText: historyReason } : {}),
         },
       }),
     );
@@ -1131,6 +1394,7 @@ export class BookingsService {
     actingUserId: string,
     bookingId: string,
     body: SpecialistRescheduleConfirmedBookingBody,
+    options?: { slotRetryMode?: 'http' | 'worker' },
   ): Promise<{
     id: string;
     status: 'confirmed';
@@ -1217,36 +1481,145 @@ export class BookingsService {
       });
     }
 
-    const overlap = await this.bookingsRepository.findActiveOverlap(
-      booking.specialistId,
-      newStartsAt,
-      newEndsAt,
-      bookingId,
-    );
-    if (overlap) {
+    const timeOff = await this.prisma.specialistTimeOff.findFirst({
+      where: {
+        specialistId: booking.specialistId,
+        deletedAt: null,
+        startsAt: { lt: newEndsAt },
+        endsAt: { gt: newStartsAt },
+      },
+    });
+    if (timeOff != null) {
       throw new BadRequestException({
-        code: 'SLOT_NOT_AVAILABLE',
-        message: 'This time overlaps an existing active booking',
+        code: 'SPECIALIST_TIME_OFF_BLOCKS_SLOT',
+        message: 'Specialist is not available during this window',
       });
     }
 
-    await this.prisma.$transaction(async (tx) =>
-      this.bookingAppend.appendBookingEvent(tx, {
-        bookingId,
-        type: BookingEventType.rescheduled,
-        actorUserId: actingUserId,
-        payload: {
-          previousStartsAt: booking.startsAt.toISOString(),
-          previousEndsAt: booking.endsAt.toISOString(),
-          nextStartsAt: newStartsAt.toISOString(),
-          nextEndsAt: newEndsAt.toISOString(),
-          ...(body.reasonCode != null && body.reasonCode.trim().length > 0 ?
-            { reasonCode: body.reasonCode.trim() }
-          : {}),
-        },
-      }),
-    );
+    const lockCfg = this.config.getOrThrow<{
+      specialistAdvisoryLockTimeoutMs: number;
+    }>('bookingConcurrency');
 
+    const runRescheduleTx = (): Promise<void> =>
+      this.prisma.$transaction(
+        async (tx) => {
+          await BookingTxLocks.setLockTimeoutMsForThisTransaction(
+            tx,
+            lockCfg.specialistAdvisoryLockTimeoutMs,
+          );
+          await BookingTxLocks.acquireSpecialistActiveSlotExclusion(
+            tx,
+            booking.specialistId,
+          );
+          const overlapTx = await this.bookingsRepository.findActiveOverlapTx(
+            tx,
+            booking.specialistId,
+            newStartsAt,
+            newEndsAt,
+            bookingId,
+          );
+          if (overlapTx != null) {
+            throw new BadRequestException({
+              code: 'SLOT_ALREADY_TAKEN',
+              message: 'This time overlaps an existing active booking',
+            });
+          }
+          await this.bookingAppend.appendBookingEvent(tx, {
+            bookingId,
+            type: BookingEventType.rescheduled,
+            actorUserId: actingUserId,
+            payload: {
+              previousStartsAt: booking.startsAt.toISOString(),
+              previousEndsAt: booking.endsAt.toISOString(),
+              nextStartsAt: newStartsAt.toISOString(),
+              nextEndsAt: newEndsAt.toISOString(),
+              ...(body.reasonCode != null && body.reasonCode.trim().length > 0
+                ? { reasonCode: body.reasonCode.trim() }
+                : {}),
+            },
+          });
+        },
+        { timeout: 60_000 },
+      );
+
+    const slotRetryMode = options?.slotRetryMode ?? 'http';
+
+    for (let attempt = 0; attempt < BOOKING_SLOT_TX_ATTEMPT_CAP; attempt++) {
+      try {
+        await runRescheduleTx();
+        break;
+      } catch (e: unknown) {
+        if (isPostgresLockTimeoutError(e)) {
+          if (slotRetryMode === 'http' && this.bookingCommandEnqueue != null) {
+            const enqueued =
+              await this.bookingCommandEnqueue.enqueueSpecialistReschedule({
+                actingUserId,
+                bookingId,
+                body,
+              });
+            if (enqueued) {
+              throw new HttpException(
+                {
+                  code: 'BOOKING_QUEUED',
+                  message:
+                    'Перенос поставлен в очередь из‑за высокой нагрузки; повторите запрос через несколько секунд или дождитесь применения.',
+                },
+                HttpStatus.ACCEPTED,
+              );
+            }
+          }
+          if (slotRetryMode === 'worker') {
+            throw e;
+          }
+          throw new HttpException(
+            {
+              code: 'BOOKING_BUSY_RETRY',
+              message:
+                'Server is busy; retry the same reschedule request shortly',
+            },
+            HttpStatus.SERVICE_UNAVAILABLE,
+          );
+        }
+        if (isExclusionConstraintViolation(e)) {
+          if (attempt < BOOKING_EXCLUDE_MAX_RETRIES) {
+            await this.#sleepMs(bookingExcludeRetryJitterMs());
+            continue;
+          }
+          const overlap2 = await this.bookingsRepository.findActiveOverlap(
+            booking.specialistId,
+            newStartsAt,
+            newEndsAt,
+            bookingId,
+          );
+          if (overlap2 == null) {
+            try {
+              await runRescheduleTx();
+            } catch (e2: unknown) {
+              if (isExclusionConstraintViolation(e2)) {
+                throw new BadRequestException({
+                  code: 'SLOT_ALREADY_TAKEN',
+                  message: 'This time slot is no longer available',
+                });
+              }
+              throw e2;
+            }
+            break;
+          }
+          throw new BadRequestException({
+            code: 'SLOT_ALREADY_TAKEN',
+            message: 'This time overlaps an existing active booking',
+          });
+        }
+        throw e;
+      }
+    }
+
+    void collectListingSlotInvalidationSurface({
+      intervals: [
+        { startsAt: booking.startsAt, endsAt: booking.endsAt },
+        { startsAt: newStartsAt, endsAt: newEndsAt },
+      ],
+    });
     void this.pushNotifications.notifyClientBookingRescheduled(bookingId);
 
     return {
@@ -1281,7 +1654,6 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    const fromStatus = booking.status;
     const isPending = booking.status === 'pending';
     const isConfirmed = booking.status === 'confirmed';
 
@@ -1393,9 +1765,9 @@ export class BookingsService {
 
     const [localeRows, bookingRows] = await Promise.all([
       this.bookingStatusLocaleRepository.findAll(),
-      scope === 'managed' ?
-        this.loadManagedSalonCabinetBookings(specialist.id)
-      : this.loadActiveWorkplaceSalonCabinetBookings(specialist),
+      scope === 'managed'
+        ? this.loadManagedSalonCabinetBookings(specialist.id)
+        : this.loadActiveWorkplaceSalonCabinetBookings(specialist),
     ]);
 
     const labelMap = buildBookingStatusLabelMap(localeRows);
@@ -1462,12 +1834,10 @@ export class BookingsService {
       : null;
     const visitReviewComplete = orgRev != null && spRev != null;
     const visitReviewExcerpt = visitReviewComplete
-      ? visitReviewSpecialistExcerpt ||
-        visitReviewOrganizationExcerpt ||
-        null
+      ? visitReviewSpecialistExcerpt || visitReviewOrganizationExcerpt || null
       : null;
     const visitReviewDisplayRating = visitReviewComplete
-      ? Math.round(((orgRev!.rating + spRev!.rating) / 2) * 10) / 10
+      ? Math.round(((orgRev.rating + spRev.rating) / 2) * 10) / 10
       : null;
     return {
       visitReviewComplete,
@@ -1489,8 +1859,9 @@ export class BookingsService {
       row.specialist.listingName?.trim() ||
       row.specialist.user.name?.trim() ||
       '—';
-    const clientDisplayName =
-      row.client.name?.trim() ? row.client.name.trim() : '—';
+    const clientDisplayName = row.client.name?.trim()
+      ? row.client.name.trim()
+      : '—';
     const preview = this.buildVisitReviewPreview(
       row.organizationReview ?? null,
       row.specialistReview ?? null,
@@ -1507,9 +1878,9 @@ export class BookingsService {
       clientDisplayName,
       categoryShortName:
         row.categoryShortNameSnapshot?.trim() &&
-        row.categoryShortNameSnapshot.trim().length > 0 ?
-          row.categoryShortNameSnapshot.trim()
-        : '—',
+        row.categoryShortNameSnapshot.trim().length > 0
+          ? row.categoryShortNameSnapshot.trim()
+          : '—',
       amount: row.priceAmountSnapshot ?? null,
       currency: row.currencySnapshot ?? 'VND',
       startsAt: row.startsAt.toISOString(),

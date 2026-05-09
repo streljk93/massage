@@ -25,6 +25,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:integration": "jest --config ./test/jest-integration.json --runInBand",
     "openapi:export": "prisma generate && tsx scripts/generate-openapi.ts"
   },
   "dependencies": {
@@ -71,6 +72,7 @@
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",
+    "fast-check": "^4.4.0",
     "globals": "^17.0.0",
     "jest": "^30.0.0",
     "mjml": "^4.18.0",

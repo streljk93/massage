@@ -1,4 +1,4 @@
-import { BookingEventType, type BookingStatus } from '@prisma/client';
+import { BookingActorKind, BookingEventType, type BookingStatus } from '@prisma/client';
 import type { AppendBookingEventInput } from './booking-event-actor';
 import {
   BOOKING_CANCEL_REASON_PENDING_CONFIRMATION_TIMEOUT,
@@ -76,7 +76,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.confirmed,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {},
     };
   }
@@ -85,7 +85,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.rejected,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         rejectParty: 'specialist',
         reasonText:
@@ -98,7 +98,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.canceled,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         cancelParty: 'client',
         ...meta,
@@ -110,7 +110,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.expired,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         reasonCode:
           typeof args.cancelReason === 'string' && args.cancelReason.length > 0 ?
@@ -127,7 +127,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.started,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {},
     };
   }
@@ -137,7 +137,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.no_show,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         party: 'client',
         ...meta,
@@ -149,7 +149,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.no_show,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         party: 'specialist',
         ...meta,
@@ -165,7 +165,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.canceled,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload: {
         cancelParty:
           to === 'canceled_by_client' ? 'client' : 'specialist',
@@ -186,7 +186,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.canceled,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       allowMassOrgSpecialistCancel: true,
       payload: {
         cancelParty:
@@ -210,7 +210,7 @@ export function devBookingStatusHopToAppend(
       bookingId,
       type: BookingEventType.completed,
       actorUserId: null,
-      actorKindOverride: 'system',
+      actorKindOverride: BookingActorKind.system,
       payload:
         reasonTextJoined != null ?
           {

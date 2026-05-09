@@ -28,8 +28,13 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { SpecialistsModule } from './modules/specialists/specialists.module';
 import { UsersModule } from './modules/users/users.module';
 import { isModerationContentQueueEnabled } from './modules/moderation/queue/moderation-queue-enabled';
+import { isBookingCommandQueueEnabled } from './modules/bookings/queue/booking-command-queue-enabled';
 
-const bullRootImports = isModerationContentQueueEnabled()
+function isBullMqRootEnabled(): boolean {
+  return isModerationContentQueueEnabled() || isBookingCommandQueueEnabled();
+}
+
+const bullRootImports = isBullMqRootEnabled()
   ? [
       BullModule.forRootAsync({
         imports: [ConfigModule],

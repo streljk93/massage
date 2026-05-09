@@ -1,9 +1,11 @@
 export { default as businessAppSubpagesI18n } from "./model/business-app-subpages.i18n.json";
+export { default as businessOrganizationCabinetPageI18n } from "./model/business-organization-cabinet-page.i18n.json";
 export { default as businessOrganizationOfferingsPageI18n } from "./model/business-organization-offerings-page.i18n.json";
 export { default as businessSkillsPageI18n } from "./model/business-skills-page.i18n.json";
 export { BusinessBookingsPage } from "./ui/business-bookings-page";
 export { BusinessOrganizationCreatePage } from "./ui/business-organization-create-page";
 export { BusinessOrganizationJoinPage } from "./ui/business-organization-join-page";
+export { BusinessOrganizationCabinetPage } from "./ui/business-organization-cabinet-page";
 export { BusinessOrganizationEditPage } from "./ui/business-organization-edit-page";
 export { BusinessOrganizationOfferingsPage } from "./ui/business-organization-offerings-page";
 export { BusinessOrganizationsPage } from "./ui/business-organizations-page";

@@ -96,7 +96,10 @@ function tryHintedBookingStatus(raw: unknown): BookingStatus | null {
 
 /**
  * Детерминированная проекция строки Booking по упорядоченному журналу событий.
- * Порядок: `createdAt ASC`, затем `id ASC`.
+ * Порядок: `localSequence ASC`, затем `id ASC`.
+ *
+ * Применение проекции после записи в журнал — **lenient** по смыслу плана v14: парсинг payload
+ * через Zod; **strict** (матрица статусов) выполняется на входе append до INSERT.
  */
 export function projectBookingRowFromTimeline(
   events: BookingTimelineEvent[],

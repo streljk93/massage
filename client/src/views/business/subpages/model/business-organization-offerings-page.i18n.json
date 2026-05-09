@@ -4,7 +4,7 @@
       "businessOrganizationOfferingsPage": {
         "pageTitle": "Marketplace offerings",
         "loadingAria": "Loading offerings",
-        "backAria": "Back to organization edit",
+        "backAria": "Back to organization workspace",
         "majorsMissingTitle": "Add activity spheres first",
         "majorsMissingHint": "Choose at least one major category on the organization profile screen to attach service categories to offerings.",
         "emptyTitle": "No offerings yet",
@@ -51,7 +51,7 @@
       "businessOrganizationOfferingsPage": {
         "pageTitle": "Dịch vụ marketplace",
         "loadingAria": "Đang tải dịch vụ",
-        "backAria": "Quay lại chỉnh sửa tổ chức",
+        "backAria": "Quay lại không gian quản trị tổ chức",
         "majorsMissingTitle": "Hãy thêm lĩnh vực hoạt động trước",
         "majorsMissingHint": "Chọn ít nhất một major trên màn hồ sơ tổ chức để gắn danh mục dịch vụ cho offering.",
         "emptyTitle": "Chưa có offering",
@@ -98,7 +98,7 @@
       "businessOrganizationOfferingsPage": {
         "pageTitle": "Офферы маркетплейса",
         "loadingAria": "Загрузка офферов",
-        "backAria": "Назад к редактированию организации",
+        "backAria": "Назад в кабинет организации",
         "majorsMissingTitle": "Сначала добавьте сферы деятельности",
         "majorsMissingHint": "На экране профиля организации выберите хотя бы один major, чтобы привязать категории услуг к офферам.",
         "emptyTitle": "Офферов пока нет",

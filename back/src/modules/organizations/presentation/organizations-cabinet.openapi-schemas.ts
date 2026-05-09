@@ -1,3 +1,30 @@
+export const organizationCabinetTeamMemberSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialistId', 'displayName', 'role'],
+  properties: {
+    specialistId: { type: 'string', format: 'uuid' },
+    displayName: { type: 'string', nullable: true },
+    role: {
+      type: 'string',
+      enum: ['owner', 'admin', 'specialist'],
+      description: 'Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).',
+    },
+  },
+};
+
+export const organizationCabinetTeamMembersResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['members'],
+  properties: {
+    members: {
+      type: 'array',
+      items: organizationCabinetTeamMemberSchema,
+    },
+  },
+};
+
 export const organizationCabinetEditProfileResponseSchema = {
   type: 'object',
   required: [
