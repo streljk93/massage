@@ -65,7 +65,7 @@ export function buildOrganizationPermissions(
       manageAll: manageAllBookings,
       manageOwn: manageOwnBookings,
       confirm: canManageBookings,
-      cancel: canManageBookings,
+      cancel: manageAllBookings,
       reschedule: canManageBookings,
     },
   };

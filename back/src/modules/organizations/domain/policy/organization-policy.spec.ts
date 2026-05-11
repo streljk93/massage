@@ -46,7 +46,7 @@ describe('organization policy', () => {
     expect(
       canOrganization(specialist, OrganizationCapabilities.BOOKINGS, {
         type: 'Booking',
-        action: OrganizationBookingActions.CANCEL,
+        action: OrganizationBookingActions.CONFIRM,
         organizationId: 'org-1',
         specialistId: 'sp-1',
       }),
@@ -57,7 +57,7 @@ describe('organization policy', () => {
       OrganizationCapabilities.BOOKINGS,
       {
         type: 'Booking',
-        action: OrganizationBookingActions.CANCEL,
+        action: OrganizationBookingActions.CONFIRM,
         organizationId: 'org-1',
         specialistId: 'sp-2',
       },
@@ -66,8 +66,32 @@ describe('organization policy', () => {
     if (!decision.allowed) {
       expect(decision.reason).toBe('NOT_OWN_BOOKING');
       expect(decision.metadata?.subjectAction).toBe(
-        OrganizationBookingActions.CANCEL,
+        OrganizationBookingActions.CONFIRM,
       );
+    }
+  });
+
+  it('forbids specialist-role booking cancellation even for own organization booking', () => {
+    const specialist = {
+      ...baseCtx,
+      role: 'specialist' as const,
+      specialistId: 'sp-1',
+    };
+
+    const decision = explainOrganizationPolicy(
+      specialist,
+      OrganizationCapabilities.BOOKINGS,
+      {
+        type: 'Booking',
+        action: OrganizationBookingActions.CANCEL,
+        organizationId: 'org-1',
+        specialistId: 'sp-1',
+      },
+    );
+
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) {
+      expect(decision.reason).toBe('NOT_MANAGER');
     }
   });
 
@@ -110,7 +134,8 @@ describe('organization policy', () => {
     expect(buildOrganizationPermissions(specialist).bookings).toMatchObject({
       manageAll: false,
       manageOwn: true,
-      cancel: true,
+      confirm: true,
+      cancel: false,
     });
   });
 

@@ -1078,10 +1078,10 @@ export class BookingsService {
         message: 'Only specialist accounts can act on salon bookings',
       });
     }
-    if (booking.specialistId === specialist.id) {
-      return;
-    }
     if (booking.organizationId == null) {
+      if (booking.specialistId === specialist.id) {
+        return;
+      }
       throw new ForbiddenException({
         code: 'BOOKING_SALON_ACTION_FORBIDDEN',
         message:

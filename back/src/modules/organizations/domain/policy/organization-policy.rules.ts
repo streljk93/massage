@@ -54,6 +54,23 @@ export const Rules = {
     return deny('NOT_OWN_BOOKING');
   },
 
+  canCancelBooking: (
+    ctx: OrganizationAccessContext,
+    subject?: OrganizationPolicySubject,
+  ): OrganizationPolicyDecision => {
+    if (!Rules.isMember(ctx)) {
+      return deny('NOT_MEMBER');
+    }
+    const booking = parseOrganizationSubject(subject, 'Booking');
+    if (!booking.ok) {
+      return deny(booking.reason);
+    }
+    if (canAccessAllBookings(ctx)) {
+      return allow();
+    }
+    return deny('NOT_MANAGER');
+  },
+
   canViewBooking: (
     ctx: OrganizationAccessContext,
     subject?: OrganizationPolicySubject,

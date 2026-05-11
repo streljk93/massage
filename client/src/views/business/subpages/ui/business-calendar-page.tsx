@@ -13,6 +13,7 @@ import {
   isBookingStatus,
 } from "@/entities/booking";
 import {
+  OrganizationBookingActions,
   OrganizationCalendarActions,
   OrganizationCapabilities,
   canOrganization,
@@ -178,6 +179,21 @@ export function BusinessCalendarPage() {
     activeWorkplace,
     OrganizationCapabilities.CALENDAR,
     { calendarAction: OrganizationCalendarActions.MANAGE },
+  );
+  const canConfirmActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.CONFIRM },
+  );
+  const canCancelActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.CANCEL },
+  );
+  const canManageActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.MANAGE },
   );
 
   const calendarApiEnabled =
@@ -445,6 +461,9 @@ export function BusinessCalendarPage() {
             sdk={sdk}
             accessToken={accessToken}
             salonBookingsQueryEnabled={calendarApiEnabled}
+            canConfirmBooking={canConfirmActiveWorkplaceBookings}
+            canCancelBooking={canCancelActiveWorkplaceBookings}
+            canManageBooking={canManageActiveWorkplaceBookings}
             onClose={onClose}
             onBookingMutateSuccess={handleEventsRefresh}
           />

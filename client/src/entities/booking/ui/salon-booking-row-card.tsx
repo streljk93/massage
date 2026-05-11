@@ -26,7 +26,6 @@ export function specialistSalonBookingAvatarSrc(
 
 export function SalonBookingRowCard({
   row,
-  scope: _scope,
   onPendingExpired,
   onPendingAccept,
   onPendingReject,
@@ -53,89 +52,117 @@ export function SalonBookingRowCard({
   );
 
   const visitWindowReady =
-    row.status === "confirmed" ?
-      bookingSlotStartTimeReachedClient(row.startsAt)
-    : false;
+    row.status === "confirmed"
+      ? bookingSlotStartTimeReachedClient(row.startsAt)
+      : false;
 
   const resolvedStatusLabel =
     row.statusLabel.trim() !== "" ? row.statusLabel.trim() : "\u2014";
 
   const secondaryNoteRaw = row.cancelNote?.trim();
   const secondaryNote =
-    secondaryNoteRaw != null && secondaryNoteRaw !== "" ?
-      secondaryNoteRaw
-    : undefined;
+    secondaryNoteRaw != null && secondaryNoteRaw !== ""
+      ? secondaryNoteRaw
+      : undefined;
 
   const pendingActions =
-    row.status === "pending" && onPendingAccept != null && onPendingReject != null ?
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(BOOKING_ACTION_OUTLINE_BUTTON_CLASS, "text-primary hover:text-primary")}
-          onClick={onPendingAccept}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-        >
-          {t("incomingAccept")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
-            "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
-          )}
-          onClick={onPendingReject}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-        >
-          {t("incomingReject")}
-        </Button>
+    row.status === "pending" &&
+    (onPendingAccept != null || onPendingReject != null) ? (
+      <div
+        className={cn(
+          "grid gap-2",
+          onPendingAccept != null && onPendingReject != null
+            ? "grid-cols-2"
+            : "grid-cols-1",
+        )}
+      >
+        {onPendingAccept != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
+              "text-primary hover:text-primary",
+            )}
+            onClick={onPendingAccept}
+            disabled={salonActionsBusy}
+            aria-busy={salonActionsBusy}
+          >
+            {t("incomingAccept")}
+          </Button>
+        ) : null}
+        {onPendingReject != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
+              "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
+            )}
+            onClick={onPendingReject}
+            disabled={salonActionsBusy}
+            aria-busy={salonActionsBusy}
+          >
+            {t("incomingReject")}
+          </Button>
+        ) : null}
       </div>
-    : null;
+    ) : null;
 
   const confirmedActions =
     row.status === "confirmed" &&
-    onConfirmedStartVisit != null &&
-    onConfirmedOpenCancel != null ?
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(BOOKING_ACTION_OUTLINE_BUTTON_CLASS, "text-primary hover:text-primary")}
-          onClick={() => {
-            if (!visitWindowReady) {
-              notify.info(
-                t("bookingsStartVisitTooEarlyToast"),
-                t("bookingsStartVisitTooEarlyToastDescription"),
-              );
-              return;
-            }
-            onConfirmedStartVisit();
-          }}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-          aria-label={t("bookingsConfirmedStartVisit")}
-        >
-          {t("bookingsConfirmedStartVisit")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
-            "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
-          )}
-          onClick={onConfirmedOpenCancel}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-          aria-label={t("bookingsConfirmedCancel")}
-        >
-          {t("bookingsConfirmedCancel")}
-        </Button>
+    (onConfirmedStartVisit != null || onConfirmedOpenCancel != null) ? (
+      <div
+        className={cn(
+          "grid gap-2",
+          onConfirmedStartVisit != null && onConfirmedOpenCancel != null
+            ? "grid-cols-2"
+            : "grid-cols-1",
+        )}
+      >
+        {onConfirmedStartVisit != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
+              "text-primary hover:text-primary",
+            )}
+            onClick={() => {
+              if (!visitWindowReady) {
+                notify.info(
+                  t("bookingsStartVisitTooEarlyToast"),
+                  t("bookingsStartVisitTooEarlyToastDescription"),
+                );
+                return;
+              }
+              onConfirmedStartVisit();
+            }}
+            disabled={salonActionsBusy}
+            aria-busy={salonActionsBusy}
+            aria-label={t("bookingsConfirmedStartVisit")}
+          >
+            {t("bookingsConfirmedStartVisit")}
+          </Button>
+        ) : null}
+        {onConfirmedOpenCancel != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className={cn(
+              BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
+              "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
+            )}
+            onClick={onConfirmedOpenCancel}
+            disabled={salonActionsBusy}
+            aria-busy={salonActionsBusy}
+            aria-label={t("bookingsConfirmedCancel")}
+          >
+            {t("bookingsConfirmedCancel")}
+          </Button>
+        ) : null}
       </div>
-    : null;
+    ) : null;
 
   const doneVisitReviewFooter =
     row.status === "done" &&
@@ -144,31 +171,39 @@ export function SalonBookingRowCard({
       (row.visitReviewOrganizationExcerpt != null &&
         row.visitReviewOrganizationExcerpt.trim() !== "") ||
       (row.visitReviewSpecialistExcerpt != null &&
-        row.visitReviewSpecialistExcerpt.trim() !== "")) ?
+        row.visitReviewSpecialistExcerpt.trim() !== "")) ? (
       <BookingDoneVisitReviewSummary
         organizationRating={row.visitReviewOrganizationRating}
         specialistRating={row.visitReviewSpecialistRating}
         organizationExcerpt={row.visitReviewOrganizationExcerpt}
         specialistExcerpt={row.visitReviewSpecialistExcerpt}
       />
-    : undefined;
+    ) : undefined;
 
   const dateMuted = bookingHistoryDateTagsMuted(row.status);
   const isInProgress = row.status === "in_progress";
 
   const statusColor =
-    row.status === "in_progress" ? "text-primary"
-    : row.status === "confirmed" ? "text-emerald-600 dark:text-emerald-400"
-    : row.status === "pending" ? "text-amber-600 dark:text-amber-400"
-    : row.status === "done" ? "text-muted-foreground"
-    : "text-destructive/80";
+    row.status === "in_progress"
+      ? "text-primary"
+      : row.status === "confirmed"
+        ? "text-emerald-600 dark:text-emerald-400"
+        : row.status === "pending"
+          ? "text-amber-600 dark:text-amber-400"
+          : row.status === "done"
+            ? "text-muted-foreground"
+            : "text-destructive/80";
 
   const statusDotColor =
-    row.status === "in_progress" ? "bg-primary"
-    : row.status === "confirmed" ? "bg-emerald-500"
-    : row.status === "pending" ? "bg-amber-500"
-    : row.status === "done" ? "bg-muted-foreground/40"
-    : "bg-destructive/60";
+    row.status === "in_progress"
+      ? "bg-primary"
+      : row.status === "confirmed"
+        ? "bg-emerald-500"
+        : row.status === "pending"
+          ? "bg-amber-500"
+          : row.status === "done"
+            ? "bg-muted-foreground/40"
+            : "bg-destructive/60";
 
   const clientInitials = row.clientDisplayName
     .split(" ")
@@ -199,11 +234,21 @@ export function SalonBookingRowCard({
           <p className="font-heading text-base font-semibold tabular-nums leading-tight text-foreground">
             {row.timeRange}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{row.dateLabel}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {row.dateLabel}
+          </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <div className={cn("flex items-center gap-1.5 text-xs font-medium", statusColor)}>
-            <span className={cn("size-1.5 shrink-0 rounded-full", statusDotColor)} aria-hidden />
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              statusColor,
+            )}
+          >
+            <span
+              className={cn("size-1.5 shrink-0 rounded-full", statusDotColor)}
+              aria-hidden
+            />
             {resolvedStatusLabel}
           </div>
           {row.status === "pending" && countdown != null && (
@@ -236,18 +281,22 @@ export function SalonBookingRowCard({
           <p className="truncate font-heading text-sm font-semibold leading-tight text-foreground">
             {row.clientDisplayName}
           </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{row.serviceLine}</p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {row.serviceLine}
+          </p>
         </div>
       </div>
 
-      {specialistHref != null ?
+      {specialistHref != null ? (
         <Link
           href={specialistHref}
           className={cn(
             motion.interactivePressStrong,
             "mt-3 flex min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-left outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/45",
           )}
-          aria-label={tList("openSpecialistProfile", { name: row.specialistName })}
+          aria-label={tList("openSpecialistProfile", {
+            name: row.specialistName,
+          })}
         >
           <UserAvatar
             src={specialistSalonBookingAvatarSrc(row.specialistImageUrl)}
@@ -264,7 +313,8 @@ export function SalonBookingRowCard({
             </p>
           </div>
         </Link>
-      : <div className="mt-3 flex min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5">
+      ) : (
+        <div className="mt-3 flex min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5">
           <UserAvatar
             src={specialistSalonBookingAvatarSrc(row.specialistImageUrl)}
             alt=""
@@ -280,7 +330,7 @@ export function SalonBookingRowCard({
             </p>
           </div>
         </div>
-      }
+      )}
 
       {secondaryNote != null && (
         <p

@@ -23,7 +23,11 @@ import {
 import { useSalonBookingMutations } from "../lib/use-salon-booking-mutations";
 import { SalonConfirmedCancelDialog } from "./salon-confirmed-cancel-dialog";
 import { Button } from "@/shared/ui/shadcn/button";
-import { DialogFooter, DialogHeader, DialogTitle } from "@/shared/ui/shadcn/dialog";
+import {
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/shadcn/dialog";
 
 type Sdk = ReturnType<typeof createBrowserSdkClient>;
 
@@ -32,6 +36,9 @@ export function BusinessCalendarBookingDetail({
   sdk,
   accessToken,
   salonBookingsQueryEnabled = true,
+  canConfirmBooking,
+  canCancelBooking,
+  canManageBooking,
   onClose,
   onBookingMutateSuccess,
 }: {
@@ -40,6 +47,9 @@ export function BusinessCalendarBookingDetail({
   accessToken: string;
   /** Выключать запрос салонных броней, если нет активного места приёма (календарь не должен бить API). */
   salonBookingsQueryEnabled?: boolean;
+  canConfirmBooking: boolean;
+  canCancelBooking: boolean;
+  canManageBooking: boolean;
   onClose: () => void;
   onBookingMutateSuccess?: () => void;
 }) {
@@ -67,10 +77,11 @@ export function BusinessCalendarBookingDetail({
     queryKey: salonBookingsActiveWorkplaceQueryKey(accessToken, locale),
     enabled: accessToken.length > 0 && salonBookingsQueryEnabled,
     queryFn: async () => {
-      const { data: res, error: err } = await specialistsCabinetGetSpecialistSalonBookings({
-        client: sdk,
-        query: { scope: SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE, locale },
-      });
+      const { data: res, error: err } =
+        await specialistsCabinetGetSpecialistSalonBookings({
+          client: sdk,
+          query: { scope: SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE, locale },
+        });
       if (err || !res) {
         throw err ?? new Error("salon-bookings");
       }
@@ -79,7 +90,9 @@ export function BusinessCalendarBookingDetail({
   });
 
   const onPendingExpired = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QUERY_KEY_PREFIX] });
+    void queryClient.invalidateQueries({
+      queryKey: [...SALON_BOOKINGS_QUERY_KEY_PREFIX],
+    });
   }, [queryClient]);
 
   const {
@@ -93,7 +106,9 @@ export function BusinessCalendarBookingDetail({
     onMutationSuccess: onBookingMutateSuccess,
   });
 
-  const [salonCancelTargetId, setSalonCancelTargetId] = useState<string | null>(null);
+  const [salonCancelTargetId, setSalonCancelTargetId] = useState<string | null>(
+    null,
+  );
 
   const openSalonCancelConfirmedDialog = useCallback((bookingId: string) => {
     setSalonCancelTargetId(bookingId);
@@ -103,8 +118,12 @@ export function BusinessCalendarBookingDetail({
     if (event.type !== "booking" || event.booking == null) {
       return null;
     }
-    const fromApi = bookingsQuery.data?.bookings?.find((b) => b.id === event.booking?.id);
-    return fromApi ?? buildSalonBookingRowFromCalendarEvent(event, getStatusLabel);
+    const fromApi = bookingsQuery.data?.bookings?.find(
+      (b) => b.id === event.booking?.id,
+    );
+    return (
+      fromApi ?? buildSalonBookingRowFromCalendarEvent(event, getStatusLabel)
+    );
   }, [bookingsQuery.data?.bookings, event, getStatusLabel]);
 
   const enriched = useMemo(() => {
@@ -139,35 +158,39 @@ export function BusinessCalendarBookingDetail({
         <DialogTitle>{tBusinessCalendar("bookingDetailTitle")}</DialogTitle>
       </DialogHeader>
       <div className="max-h-[min(70vh,520px)] overflow-y-auto py-1">
-        {enriched == null ?
-          <div className="h-36 animate-pulse rounded-2xl bg-muted/50" aria-busy />
-        : <SalonBookingRowCard
+        {enriched == null ? (
+          <div
+            className="h-36 animate-pulse rounded-2xl bg-muted/50"
+            aria-busy
+          />
+        ) : (
+          <SalonBookingRowCard
             row={enriched}
             scope={SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}
             onPendingExpired={onPendingExpired}
             onPendingAccept={
-              enriched.status === "pending"
+              enriched.status === "pending" && canConfirmBooking
                 ? () => confirmSalonPendingBooking(enriched.id)
                 : undefined
             }
             onPendingReject={
-              enriched.status === "pending"
+              enriched.status === "pending" && canCancelBooking
                 ? () => void rejectSalonPendingBookingAfterConfirm(enriched.id)
                 : undefined
             }
             onConfirmedStartVisit={
-              enriched.status === "confirmed"
+              enriched.status === "confirmed" && canManageBooking
                 ? () => startSalonVisit(enriched.id)
                 : undefined
             }
             onConfirmedOpenCancel={
-              enriched.status === "confirmed"
+              enriched.status === "confirmed" && canCancelBooking
                 ? () => openSalonCancelConfirmedDialog(enriched.id)
                 : undefined
             }
             salonActionsBusy={salonRowActionsBusy}
           />
-        }
+        )}
       </div>
       <DialogFooter>
         <Button type="button" variant="ghost" onClick={onClose}>
