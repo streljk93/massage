@@ -1,20 +1,20 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import {
   OfferingPriceOptionStatus,
   OfferingPublicationStatus,
-  OrganizationMembershipRole,
   SpecialistOfferingStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { MarketplaceListingEdgesIndexService } from '../../directory/application/marketplace-listing-edges-index.service';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { syncOrganizationServiceCategoriesFromPublishedOfferings } from '../infrastructure/organization-service-category-sync';
+import { OrganizationAccessPolicyService } from './organization-access-policy.service';
+import { OrganizationCapabilities } from '../domain/policy';
 import type { PatchOrganizationOfferingBody } from '../dto/patch-organization-offering-body.schema';
 import type { PostOfferingPriceOptionBody } from '../dto/post-offering-price-option-body.schema';
 import type { PatchOfferingPriceOptionBody } from '../dto/patch-offering-price-option-body.schema';
@@ -28,57 +28,19 @@ export class OrganizationOfferingsCabinetService {
     private readonly prisma: PrismaService,
     private readonly listingEdges: MarketplaceListingEdgesIndexService,
     private readonly edgeLifecycle: SpecialistOfferingEdgeLifecycleService,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
   private async assertUserCanManageOrganizationOfferings(
     userId: string,
     organizationId: string,
   ): Promise<void> {
-    const org = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { id: true, ownerUserId: true },
-    });
-    if (!org) {
-      throw new NotFoundException({
-        code: 'ORGANIZATION_NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    if (org.ownerUserId === userId) {
-      return;
-    }
-    const specialist = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!specialist) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage offerings',
-      });
-    }
-    const emp = await this.prisma.specialistOrganizationEmployment.findFirst({
-      where: {
-        specialistId: specialist.id,
-        organizationId,
-        isActive: true,
-        role: {
-          in: [
-            OrganizationMembershipRole.owner,
-            OrganizationMembershipRole.admin,
-          ],
-        },
-      },
-      select: { id: true },
-    });
-    if (!emp) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage offerings',
-      });
-    }
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.OFFERINGS_MANAGE,
+      { type: 'Organization', organizationId },
+    );
   }
 
   private async getOrganizationMajorCategoryIds(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Calendar, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,7 +12,12 @@ import {
   BOOKING_CALENDAR_HIDDEN_STATUSES,
   isBookingStatus,
 } from "@/entities/booking";
-import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
+import {
+  OrganizationCalendarActions,
+  OrganizationCapabilities,
+  canOrganization,
+  specialistMyOrganizationsQueryKey,
+} from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   calendarListEvents,
@@ -49,7 +54,9 @@ const EVENTS_QK = ["businessCalendarEvents"] as const;
 
 function dayRangeUtc(key: string): { from: string; to: string } {
   const [y, m, d] = key.split("-").map(Number);
-  const next = formatListingCalendarYmd(addDays(vnNoonUtcForCalendarYmd(key), 1));
+  const next = formatListingCalendarYmd(
+    addDays(vnNoonUtcForCalendarYmd(key), 1),
+  );
   const [ny, nm, nd] = next.split("-").map(Number);
   return {
     from: vnWallClockToUtcDate(y!, m!, d!, 0, 0).toISOString(),
@@ -59,7 +66,9 @@ function dayRangeUtc(key: string): { from: string; to: string } {
 
 function weekRangeUtc(mondayKey: string): { from: string; to: string } {
   const [y, m, d] = mondayKey.split("-").map(Number);
-  const end = formatListingCalendarYmd(addDays(vnNoonUtcForCalendarYmd(mondayKey), 7));
+  const end = formatListingCalendarYmd(
+    addDays(vnNoonUtcForCalendarYmd(mondayKey), 7),
+  );
   const [ey, em, ed] = end.split("-").map(Number);
   return {
     from: vnWallClockToUtcDate(y!, m!, d!, 0, 0).toISOString(),
@@ -89,7 +98,13 @@ function getMondayKey(dayKey: string): string {
     weekday: "short",
   }).format(noon);
   const dow: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
   };
   const d = dow[short] ?? 1;
   const fromMon = d === 0 ? 6 : d - 1;
@@ -100,7 +115,11 @@ function getMondayKey(dayKey: string): string {
 function isHiddenCancelledBooking(ev: CalendarEvent): boolean {
   if (ev.type !== "booking") return false;
   const bs = ev.booking?.status;
-  return bs != null && isBookingStatus(bs) && BOOKING_CALENDAR_HIDDEN_STATUSES.has(bs);
+  return (
+    bs != null &&
+    isBookingStatus(bs) &&
+    BOOKING_CALENDAR_HIDDEN_STATUSES.has(bs)
+  );
 }
 
 // ─── Page component ───────────────────────────────────────────────
@@ -115,7 +134,9 @@ export function BusinessCalendarPage() {
   const queryClient = useQueryClient();
 
   const todayKey = useMemo(() => formatListingCalendarYmd(new Date()), []);
-  const [dayKey, setDayKey] = useState(() => formatListingCalendarYmd(new Date()));
+  const [dayKey, setDayKey] = useState(() =>
+    formatListingCalendarYmd(new Date()),
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   const [selectedResourceId, setSelectedResourceId] = useState<string>("all");
   const [dialogState, setDialogState] = useState<CalendarBlockDialogState>({
@@ -131,9 +152,10 @@ export function BusinessCalendarPage() {
     queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
-      const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
-        client: sdk,
-      });
+      const { data: res, error: err } =
+        await specialistsCabinetGetSpecialistMyOrganizations({
+          client: sdk,
+        });
       if (err || !res) {
         throw err ?? new Error("organizations");
       }
@@ -141,18 +163,25 @@ export function BusinessCalendarPage() {
     },
   });
 
-  const hasActiveWorkplace = useMemo(() => {
+  const activeWorkplace = useMemo(() => {
     const orgs = orgsQuery.data?.organizations ?? [];
-    return orgs.some((o) => o.isActiveWorkplace === true);
+    return orgs.find((o) => o.isActiveWorkplace === true) ?? null;
   }, [orgsQuery.data?.organizations]);
 
-  const calendarApiEnabled = authed && orgsQuery.isSuccess && hasActiveWorkplace;
+  const hasActiveWorkplace = activeWorkplace != null;
+  const canViewActiveWorkplaceCalendar = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.CALENDAR,
+    { calendarAction: OrganizationCalendarActions.VIEW },
+  );
+  const canManageActiveWorkplaceCalendar = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.CALENDAR,
+    { calendarAction: OrganizationCalendarActions.MANAGE },
+  );
 
-  useEffect(() => {
-    if (!calendarApiEnabled) {
-      setDialogState({ type: "closed" });
-    }
-  }, [calendarApiEnabled]);
+  const calendarApiEnabled =
+    authed && orgsQuery.isSuccess && canViewActiveWorkplaceCalendar;
 
   // ── Диапазон дат для запроса ─────────────────────────────────
   const mondayKey = useMemo(
@@ -162,7 +191,8 @@ export function BusinessCalendarPage() {
 
   const queryRange = useMemo(() => {
     if (viewMode === "week") return weekRangeUtc(mondayKey);
-    if (viewMode === "month" || viewMode === "list") return monthRangeUtc(dayKey);
+    if (viewMode === "month" || viewMode === "list")
+      return monthRangeUtc(dayKey);
     return dayRangeUtc(dayKey);
   }, [viewMode, dayKey, mondayKey]);
 
@@ -232,7 +262,12 @@ export function BusinessCalendarPage() {
   }, [queryClient]);
 
   const handleCreateBlock = useCallback(
-    (resourceId: string, targetDayKey: string, startHHMM: string, endHHMM: string) => {
+    (
+      resourceId: string,
+      targetDayKey: string,
+      startHHMM: string,
+      endHHMM: string,
+    ) => {
       setDialogState({
         type: "create",
         dayKey: targetDayKey,
@@ -244,21 +279,29 @@ export function BusinessCalendarPage() {
     [],
   );
 
-  const handleEventClick = useCallback((event: CalendarEvent) => {
-    if (event.type === "block") {
-      setDialogState({
-        type: "edit",
-        event,
-        dayKey: formatListingCalendarYmd(parseISO(event.startsAt)),
-      });
-    } else {
-      setDialogState({ type: "detail", event });
-    }
-  }, []);
+  const handleEventClick = useCallback(
+    (event: CalendarEvent) => {
+      if (
+        event.type === "block" &&
+        canManageActiveWorkplaceCalendar &&
+        event.permissions.manage
+      ) {
+        setDialogState({
+          type: "edit",
+          event,
+          dayKey: formatListingCalendarYmd(parseISO(event.startsAt)),
+        });
+      } else if (event.type === "block") {
+        setDialogState({ type: "closed" });
+      } else {
+        setDialogState({ type: "detail", event });
+      }
+    },
+    [canManageActiveWorkplaceCalendar],
+  );
 
   return (
     <main className="flex w-full flex-1 min-h-0 flex-col gap-0">
-
       {/* Требуется вход */}
       {!isLoading && (sessionStatus === "unauthenticated" || !accessToken) && (
         <div className="px-4 pt-3">
@@ -288,7 +331,9 @@ export function BusinessCalendarPage() {
           role="alert"
         >
           <p className="font-medium">{t("orgsLoadErrorTitle")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{t("orgsLoadErrorHint")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("orgsLoadErrorHint")}
+          </p>
           <button
             type="button"
             className="mt-2 text-sm font-medium text-primary hover:underline"
@@ -301,17 +346,31 @@ export function BusinessCalendarPage() {
 
       {/* Нет текущего места приёма — календарь не запрашиваем */}
       {!orgsQuery.isPending &&
-       authed &&
+        authed &&
         orgsQuery.isSuccess &&
         !hasActiveWorkplace && (
-        <div className="px-4 pt-3">
-          <BusinessEmptyState
-            icon={Calendar}
-            title={t("emptyActiveWorkplaceTitle")}
-            description={t("emptyActiveWorkplaceHint")}
-          />
-        </div>
-      )}
+          <div className="px-4 pt-3">
+            <BusinessEmptyState
+              icon={Calendar}
+              title={t("emptyActiveWorkplaceTitle")}
+              description={t("emptyActiveWorkplaceHint")}
+            />
+          </div>
+        )}
+
+      {!orgsQuery.isPending &&
+        authed &&
+        orgsQuery.isSuccess &&
+        hasActiveWorkplace &&
+        !canViewActiveWorkplaceCalendar && (
+          <div className="px-4 pt-3">
+            <BusinessEmptyState
+              icon={Calendar}
+              title={t("noCalendarAccessTitle")}
+              description={t("noCalendarAccessHint")}
+            />
+          </div>
+        )}
 
       {/* Ошибка загрузки календаря */}
       {calendarApiEnabled && !calendarDataPending && calendarLoadError && (
@@ -320,7 +379,9 @@ export function BusinessCalendarPage() {
           role="alert"
         >
           <p className="font-medium">{t("loadErrorTitle")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{t("loadErrorHint")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("loadErrorHint")}
+          </p>
           <button
             type="button"
             className="mt-2 text-sm font-medium text-primary hover:underline"
@@ -339,35 +400,37 @@ export function BusinessCalendarPage() {
         !calendarLoadError &&
         !calendarDataPending &&
         resources.length === 0 && (
-        <div className="px-4 pt-3">
-          <BusinessEmptyState
-            icon={Calendar}
-            title={t("emptyResourcesTitle")}
-            description={t("emptyResourcesHint")}
-          />
-        </div>
-      )}
+          <div className="px-4 pt-3">
+            <BusinessEmptyState
+              icon={Calendar}
+              title={t("emptyResourcesTitle")}
+              description={t("emptyResourcesHint")}
+            />
+          </div>
+        )}
 
       {/* Сам календарь */}
       {calendarApiEnabled &&
         !calendarLoadError &&
         (calendarDataPending || resources.length > 0) && (
-        <CalendarWidget
-          resources={resources}
-          events={events}
-          isLoading={calendarDataPending}
-          isFetching={isFetching}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          dayKey={dayKey}
-          onDayKeyChange={setDayKey}
-          selectedResourceId={selectedResourceId}
-          onSelectedResourceIdChange={setSelectedResourceId}
-          todayKey={todayKey}
-          onEventClick={handleEventClick}
-          onCreateBlock={handleCreateBlock}
-        />
-      )}
+          <CalendarWidget
+            resources={resources}
+            events={events}
+            isLoading={calendarDataPending}
+            isFetching={isFetching}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            dayKey={dayKey}
+            onDayKeyChange={setDayKey}
+            selectedResourceId={selectedResourceId}
+            onSelectedResourceIdChange={setSelectedResourceId}
+            todayKey={todayKey}
+            onEventClick={handleEventClick}
+            onCreateBlock={
+              canManageActiveWorkplaceCalendar ? handleCreateBlock : undefined
+            }
+          />
+        )}
 
       {/* Диалог блока / записей */}
       <BusinessCalendarBlockDialog

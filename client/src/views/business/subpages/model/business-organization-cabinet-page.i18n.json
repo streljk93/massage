@@ -14,7 +14,10 @@
         "editProfileAria": "Edit organization public listing",
         "specialistCabinetHint": "Only owners and admins can manage offerings and the public listing.",
         "heroNoAddressHint": "Add the address in listing settings so guests know how to find you.",
-        "heroSpecialistAddressHint": "Owners and admins manage the address in listing settings."
+        "heroSpecialistAddressHint": "Owners and admins manage the address in listing settings.",
+        "changeRoleAria": "Change role for {name}",
+        "removeMemberAria": "Remove {name} from the team",
+        "teamMutationError": "Could not update the team. Please try again."
       }
     },
     "vi": {
@@ -31,7 +34,10 @@
         "editProfileAria": "Chỉnh sửa hồ sơ công khai của tổ chức",
         "specialistCabinetHint": "Chỉ chủ sở hữu hoặc quản trị viên mới quản lý offering và trang công khai.",
         "heroNoAddressHint": "Thêm địa chỉ trong cài đặt hồ sơ công khai để khách biết cách tìm bạn.",
-        "heroSpecialistAddressHint": "Chủ và quản trị viên quản lý địa chỉ trong cài đặt hồ sơ công khai."
+        "heroSpecialistAddressHint": "Chủ và quản trị viên quản lý địa chỉ trong cài đặt hồ sơ công khai.",
+        "changeRoleAria": "Đổi vai trò của {name}",
+        "removeMemberAria": "Xóa {name} khỏi đội ngũ",
+        "teamMutationError": "Không thể cập nhật đội ngũ. Vui lòng thử lại."
       }
     },
     "ru": {
@@ -48,7 +54,10 @@
         "editProfileAria": "Редактировать публичную карточку организации",
         "specialistCabinetHint": "Офферы и витрину могут вести только владелец или администратор.",
         "heroNoAddressHint": "Добавьте адрес в настройках витрины, чтобы гости знали, как вас найти.",
-        "heroSpecialistAddressHint": "Адрес в настройках витрины меняют владелец или администратор."
+        "heroSpecialistAddressHint": "Адрес в настройках витрины меняют владелец или администратор.",
+        "changeRoleAria": "Изменить роль для {name}",
+        "removeMemberAria": "Удалить {name} из команды",
+        "teamMutationError": "Не удалось обновить команду. Попробуйте ещё раз."
       }
     }
   }

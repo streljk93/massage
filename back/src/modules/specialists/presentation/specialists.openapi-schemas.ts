@@ -1,4 +1,5 @@
 import { BOOKING_STATUS_ALL_ORDERED } from '../../bookings/domain/booking-status-all-ordered';
+import { organizationScopedPermissionsSchema } from '../../organizations/presentation/organizations-cabinet.openapi-schemas';
 
 export const specialistOnboardingResponseSchema = {
   type: 'object',
@@ -135,6 +136,7 @@ export const specialistMyOrganizationsResponseSchema = {
           'membershipStatus',
           'workplaceJoinRequestId',
           'role',
+          'permissions',
           'isActiveWorkplace',
           'publicationModerationStatus',
           'salonCabinetPreview',
@@ -165,6 +167,7 @@ export const specialistMyOrganizationsResponseSchema = {
               { type: 'null' },
             ],
           },
+          permissions: organizationScopedPermissionsSchema,
           isActiveWorkplace: {
             type: 'boolean',
             description:

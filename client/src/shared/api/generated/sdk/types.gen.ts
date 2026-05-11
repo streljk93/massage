@@ -1718,18 +1718,123 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersErrors = {
 
 export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
     200: {
+        permissions: {
+            profile: {
+                manage: boolean;
+                delete: boolean;
+            };
+            team: {
+                view: boolean;
+                manageRoles: boolean;
+                removeMembers: boolean;
+            };
+            joinRequests: {
+                review: boolean;
+            };
+            offerings: {
+                manage: boolean;
+            };
+            calendar: {
+                view: boolean;
+                viewAll: boolean;
+                manage: boolean;
+                manageAll: boolean;
+            };
+            bookings: {
+                view: boolean;
+                manage: boolean;
+                manageAll: boolean;
+                manageOwn: boolean;
+                confirm: boolean;
+                cancel: boolean;
+                reschedule: boolean;
+            };
+        };
         members: Array<{
+            employmentId: string;
             specialistId: string;
             displayName: string | null;
             /**
              * Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).
              */
             role: 'owner' | 'admin' | 'specialist';
+            permissions: {
+                manageRole: boolean;
+                remove: boolean;
+            };
         }>;
     };
 };
 
 export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponse = OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses[keyof OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses];
+
+export type OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleData = {
+    body: {
+        role: 'admin' | 'specialist';
+    };
+    path: {
+        employmentId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/cabinet-team/{employmentId}/role';
+};
+
+export type OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав менять роли или попытка изменить владельца
+     */
+    403: unknown;
+    /**
+     * Участник команды не найден
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponses = {
+    200: {
+        ok: boolean;
+    };
+};
+
+export type OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponse = OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponses[keyof OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponses];
+
+export type OrganizationsCabinetDeleteCabinetOrganizationTeamMemberData = {
+    body?: never;
+    path: {
+        employmentId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/cabinet-team/{employmentId}';
+};
+
+export type OrganizationsCabinetDeleteCabinetOrganizationTeamMemberErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав удалить участника или попытка удалить владельца
+     */
+    403: unknown;
+    /**
+     * Участник команды не найден
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponses = {
+    200: {
+        ok: boolean;
+    };
+};
+
+export type OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponse = OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponses[keyof OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponses];
 
 export type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData = {
     body?: never;
@@ -2702,6 +2807,38 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
              * Роль в организации для employed; для pending_join — null до принятия заявки.
              */
             role: 'owner' | 'admin' | 'specialist' | unknown;
+            permissions: {
+                profile: {
+                    manage: boolean;
+                    delete: boolean;
+                };
+                team: {
+                    view: boolean;
+                    manageRoles: boolean;
+                    removeMembers: boolean;
+                };
+                joinRequests: {
+                    review: boolean;
+                };
+                offerings: {
+                    manage: boolean;
+                };
+                calendar: {
+                    view: boolean;
+                    viewAll: boolean;
+                    manage: boolean;
+                    manageAll: boolean;
+                };
+                bookings: {
+                    view: boolean;
+                    manage: boolean;
+                    manageAll: boolean;
+                    manageOwn: boolean;
+                    confirm: boolean;
+                    cancel: boolean;
+                    reschedule: boolean;
+                };
+            };
             /**
              * Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false.
              */
@@ -3828,6 +3965,7 @@ export type CalendarListEventsResponses = {
             status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
             blockReason: 'break' | 'vacation' | 'manual';
             notes: string | null;
+            createdByDisplayName: string | null;
             version: number;
             resources: Array<{
                 id: string;
@@ -3836,6 +3974,9 @@ export type CalendarListEventsResponses = {
                 specialistId: string | null;
                 role: string | null;
             }>;
+            permissions: {
+                manage: boolean;
+            };
             booking: {
                 id: string;
                 status: string;
@@ -3892,6 +4033,7 @@ export type CalendarCreateBlockResponses = {
             status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
             blockReason: 'break' | 'vacation' | 'manual';
             notes: string | null;
+            createdByDisplayName: string | null;
             version: number;
             resources: Array<{
                 id: string;
@@ -3900,6 +4042,9 @@ export type CalendarCreateBlockResponses = {
                 specialistId: string | null;
                 role: string | null;
             }>;
+            permissions: {
+                manage: boolean;
+            };
             booking: {
                 id: string;
                 status: string;
@@ -3993,6 +4138,7 @@ export type CalendarUpdateBlockResponses = {
             status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
             blockReason: 'break' | 'vacation' | 'manual';
             notes: string | null;
+            createdByDisplayName: string | null;
             version: number;
             resources: Array<{
                 id: string;
@@ -4001,6 +4147,9 @@ export type CalendarUpdateBlockResponses = {
                 specialistId: string | null;
                 role: string | null;
             }>;
+            permissions: {
+                manage: boolean;
+            };
             booking: {
                 id: string;
                 status: string;

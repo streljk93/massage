@@ -20,12 +20,25 @@ import {
   type CalendarEventListRow,
   type CalendarResourceRow,
 } from '../infrastructure/calendar.repository';
+import { OrganizationAccessPolicyService } from '../../organizations/application/organization-access-policy.service';
+import {
+  OrganizationCalendarActions,
+  OrganizationCapabilities,
+  assertCanOrganization,
+  canOrganization,
+  type OrganizationAccessContext,
+} from '../../organizations/domain/policy';
+import {
+  buildOrganizationScope,
+  type OrganizationDataScope,
+} from '../../organizations/domain/organization-scope';
 
 type CalendarAccessContext = {
   userId: string;
   specialistId: string;
   organizationId: string;
-  isManager: boolean;
+  scope: OrganizationDataScope;
+  access: OrganizationAccessContext;
 };
 
 function parseCalendarInstant(raw: string, field: string): Date {
@@ -43,9 +56,9 @@ function encodeCursor(row: { startsAt: string; id: string }): string {
   return Buffer.from(`${row.startsAt}|${row.id}`, 'utf8').toString('base64url');
 }
 
-function decodeCursor(raw: string | undefined):
-  | { startsAt: Date; id: string }
-  | null {
+function decodeCursor(
+  raw: string | undefined,
+): { startsAt: Date; id: string } | null {
   if (raw == null) {
     return null;
   }
@@ -66,12 +79,46 @@ function decodeCursor(raw: string | undefined):
   }
 }
 
-function mapEvent(row: CalendarEventListRow) {
+function eventSpecialistIdForPolicy(
+  ctx: CalendarAccessContext,
+  row: Pick<CalendarEventListRow, 'resources'>,
+): string | null {
+  const eventSpecialistIds = row.resources
+    .map((er) => er.resource.specialistId)
+    .filter((id): id is string => id != null);
+  return eventSpecialistIds.length > 0 &&
+    eventSpecialistIds.every((id) => id === ctx.specialistId)
+    ? ctx.specialistId
+    : null;
+}
+
+function canManageCalendarEvent(
+  ctx: CalendarAccessContext,
+  row: CalendarEventListRow,
+) {
+  if (row.type !== CalendarEventType.block) {
+    return false;
+  }
+  return canOrganization(ctx.access, OrganizationCapabilities.CALENDAR, {
+    type: 'Resource',
+    action: OrganizationCalendarActions.MANAGE,
+    organizationId: ctx.organizationId,
+    specialistId: eventSpecialistIdForPolicy(ctx, row),
+    createdByUserId: row.createdByUserId,
+  });
+}
+
+function mapEvent(
+  row: CalendarEventListRow,
+  permissions: { manage: boolean } = { manage: false },
+) {
   const booking = row.booking;
   const specialistName =
     booking?.specialist.listingName?.trim() ||
     booking?.specialist.user.name?.trim() ||
     null;
+  const createdByDisplayName =
+    row.createdByUser?.name?.trim() || row.createdByUser?.email?.trim() || null;
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -82,6 +129,7 @@ function mapEvent(row: CalendarEventListRow) {
     status: row.status,
     blockReason: row.blockReason,
     notes: row.notes,
+    createdByDisplayName,
     version: row.version,
     resources: row.resources.map((er) => ({
       id: er.resource.id,
@@ -90,6 +138,7 @@ function mapEvent(row: CalendarEventListRow) {
       specialistId: er.resource.specialistId,
       role: er.role,
     })),
+    permissions,
     booking:
       booking == null
         ? null
@@ -111,6 +160,7 @@ export class CalendarService {
     private readonly prisma: PrismaService,
     private readonly calendarRepository: CalendarRepository,
     private readonly availability: CalendarAvailabilityService,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
   async ensureSpecialistResourceForOrganizationTx(
@@ -142,7 +192,8 @@ export class CalendarService {
     if (specialist == null || organization == null) {
       throw new BadRequestException({
         code: 'CALENDAR_RESOURCE_CONTEXT_NOT_FOUND',
-        message: 'Specialist or organization was not found for calendar resource',
+        message:
+          'Specialist or organization was not found for calendar resource',
       });
     }
     return this.calendarRepository.createSpecialistResourceTx(tx, {
@@ -175,11 +226,12 @@ export class CalendarService {
         specialistId: ctx.specialistId,
       }),
     );
-    const resources = await this.calendarRepository.listResourcesForOrganization({
-      organizationId: ctx.organizationId,
-      type: CalendarResourceType.specialist,
-      ...(ctx.isManager ? {} : { specialistId: ctx.specialistId }),
-    });
+    const resources =
+      await this.calendarRepository.listResourcesForOrganization({
+        organizationId: ctx.organizationId,
+        type: CalendarResourceType.specialist,
+        ...ctx.scope.resources,
+      });
     const list = resources.length > 0 ? resources : [ownResource];
     return {
       organizationId: ctx.organizationId,
@@ -217,7 +269,7 @@ export class CalendarService {
       await this.calendarRepository.listResourcesForOrganization({
         organizationId: ctx.organizationId,
         type: CalendarResourceType.specialist,
-        ...(ctx.isManager ? {} : { specialistId: ctx.specialistId }),
+        ...ctx.scope.resources,
       });
     const allowedIds = new Set(allowedResources.map((r) => r.id));
     const requested = args.resourceIds?.length
@@ -250,11 +302,16 @@ export class CalendarService {
     const tail = rows.length > limit ? page[page.length - 1] : null;
     return {
       organizationId: ctx.organizationId,
-      events: page.map(mapEvent),
+      events: page.map((row) =>
+        mapEvent(row, { manage: canManageCalendarEvent(ctx, row) }),
+      ),
       nextCursor:
         tail == null
           ? null
-          : encodeCursor({ startsAt: tail.startsAt.toISOString(), id: tail.id }),
+          : encodeCursor({
+              startsAt: tail.startsAt.toISOString(),
+              id: tail.id,
+            }),
     };
   }
 
@@ -291,7 +348,11 @@ export class CalendarService {
         resourceIds,
       });
     });
-    return { event: mapEvent(created) };
+    return {
+      event: mapEvent(created, {
+        manage: canManageCalendarEvent(ctx, created),
+      }),
+    };
   }
 
   async updateBlock(
@@ -312,11 +373,16 @@ export class CalendarService {
     const resourceIds = [...new Set(args.resourceIds)].sort();
     await this.assertResourcesAllowed(ctx, resourceIds);
     const updated = await this.prisma.$transaction(async (tx) => {
+      const orgAccessCtx = await this.organizationAccess.resolveContextTx(
+        tx,
+        userId,
+        ctx.organizationId,
+      );
       const event = await this.calendarRepository.findEventForCommandTx(
         tx,
         eventId,
       );
-      this.assertBlockCommandAllowed(ctx, event);
+      this.assertBlockCommandAllowed({ ...ctx, access: orgAccessCtx }, event);
       await this.availability.assertSlotAvailableForResourcesTx(tx, {
         organizationId: ctx.organizationId,
         resourceIds,
@@ -343,7 +409,11 @@ export class CalendarService {
         message: 'Calendar event was changed by another request',
       });
     }
-    return { event: mapEvent(updated) };
+    return {
+      event: mapEvent(updated, {
+        manage: canManageCalendarEvent(ctx, updated),
+      }),
+    };
   }
 
   async deleteBlock(
@@ -353,11 +423,16 @@ export class CalendarService {
   ): Promise<{ id: string; deleted: true }> {
     const ctx = await this.resolveAccessContext(userId);
     const deleted = await this.prisma.$transaction(async (tx) => {
+      const orgAccessCtx = await this.organizationAccess.resolveContextTx(
+        tx,
+        userId,
+        ctx.organizationId,
+      );
       const event = await this.calendarRepository.findEventForCommandTx(
         tx,
         eventId,
       );
-      this.assertBlockCommandAllowed(ctx, event);
+      this.assertBlockCommandAllowed({ ...ctx, access: orgAccessCtx }, event);
       return this.calendarRepository.deleteBlockEventTx(tx, {
         eventId,
         expectedVersion: version,
@@ -380,7 +455,7 @@ export class CalendarService {
     const allowed = await this.calendarRepository.listResourcesForOrganization({
       organizationId: ctx.organizationId,
       type: CalendarResourceType.specialist,
-      ...(ctx.isManager ? {} : { specialistId: ctx.specialistId }),
+      ...ctx.scope.resources,
     });
     const allowedIds = new Set(allowed.map((r) => r.id));
     if (resourceIds.some((id) => !allowedIds.has(id))) {
@@ -398,12 +473,24 @@ export class CalendarService {
       organizationId: string;
       type: CalendarEventType;
       status: string;
+      createdByUserId: string | null;
+      resources: Array<{
+        resource: {
+          specialistId: string | null;
+        };
+      }>;
     } | null,
   ): asserts event is {
     id: string;
     organizationId: string;
     type: CalendarEventType;
     status: string;
+    createdByUserId: string | null;
+    resources: Array<{
+      resource: {
+        specialistId: string | null;
+      };
+    }>;
   } {
     if (event == null) {
       throw new NotFoundException({
@@ -420,9 +507,25 @@ export class CalendarService {
     if (event.type !== CalendarEventType.block) {
       throw new BadRequestException({
         code: 'CALENDAR_BOOKING_EVENT_IMMUTABLE',
-        message: 'Booking calendar events can only be changed through booking lifecycle',
+        message:
+          'Booking calendar events can only be changed through booking lifecycle',
       });
     }
+    const eventSpecialistIds = event.resources
+      .map((er) => er.resource.specialistId)
+      .filter((id): id is string => id != null);
+    const specialistId =
+      eventSpecialistIds.length > 0 &&
+      eventSpecialistIds.every((id) => id === ctx.specialistId)
+        ? ctx.specialistId
+        : null;
+    assertCanOrganization(ctx.access, OrganizationCapabilities.CALENDAR, {
+      type: 'Resource',
+      action: OrganizationCalendarActions.MANAGE,
+      organizationId: ctx.organizationId,
+      specialistId,
+      createdByUserId: event.createdByUserId,
+    });
   }
 
   private async resolveAccessContext(
@@ -444,26 +547,22 @@ export class CalendarService {
         message: 'Active organization is required for calendar',
       });
     }
-    const employment =
-      await this.prisma.specialistOrganizationEmployment.findFirst({
-        where: {
-          specialistId: specialist.id,
-          organizationId: specialist.activeOrganizationId,
-          isActive: true,
-        },
-        select: { role: true },
-      });
-    if (employment == null) {
-      throw new ForbiddenException({
-        code: 'CALENDAR_ACTIVE_WORKPLACE_FORBIDDEN',
-        message: 'Specialist is not active in this organization',
-      });
-    }
+    const orgCtx = await this.organizationAccess.resolveContext(
+      userId,
+      specialist.activeOrganizationId,
+    );
+    assertCanOrganization(orgCtx, OrganizationCapabilities.CALENDAR, {
+      type: 'Resource',
+      action: OrganizationCalendarActions.VIEW,
+      organizationId: specialist.activeOrganizationId,
+      specialistId: specialist.id,
+    });
     return {
       userId,
       specialistId: specialist.id,
       organizationId: specialist.activeOrganizationId,
-      isManager: employment.role === 'owner' || employment.role === 'admin',
+      scope: buildOrganizationScope(orgCtx),
+      access: orgCtx,
     };
   }
 }

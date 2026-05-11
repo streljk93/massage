@@ -4108,20 +4108,161 @@
                   "type": "object",
                   "additionalProperties": false,
                   "required": [
+                    "permissions",
                     "members"
                   ],
                   "properties": {
+                    "permissions": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "profile",
+                        "team",
+                        "joinRequests",
+                        "offerings",
+                        "calendar",
+                        "bookings"
+                      ],
+                      "properties": {
+                        "profile": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "manage",
+                            "delete"
+                          ],
+                          "properties": {
+                            "manage": {
+                              "type": "boolean"
+                            },
+                            "delete": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "team": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view",
+                            "manageRoles",
+                            "removeMembers"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "manageRoles": {
+                              "type": "boolean"
+                            },
+                            "removeMembers": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "joinRequests": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "review"
+                          ],
+                          "properties": {
+                            "review": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "offerings": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "manage"
+                          ],
+                          "properties": {
+                            "manage": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "calendar": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view",
+                            "viewAll",
+                            "manage",
+                            "manageAll"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "viewAll": {
+                              "type": "boolean"
+                            },
+                            "manage": {
+                              "type": "boolean"
+                            },
+                            "manageAll": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "bookings": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view",
+                            "manage",
+                            "manageAll",
+                            "manageOwn",
+                            "confirm",
+                            "cancel",
+                            "reschedule"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "manage": {
+                              "type": "boolean"
+                            },
+                            "manageAll": {
+                              "type": "boolean"
+                            },
+                            "manageOwn": {
+                              "type": "boolean"
+                            },
+                            "confirm": {
+                              "type": "boolean"
+                            },
+                            "cancel": {
+                              "type": "boolean"
+                            },
+                            "reschedule": {
+                              "type": "boolean"
+                            }
+                          }
+                        }
+                      }
+                    },
                     "members": {
                       "type": "array",
                       "items": {
                         "type": "object",
                         "additionalProperties": false,
                         "required": [
+                          "employmentId",
                           "specialistId",
                           "displayName",
-                          "role"
+                          "role",
+                          "permissions"
                         ],
                         "properties": {
+                          "employmentId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
                           "specialistId": {
                             "type": "string",
                             "format": "uuid"
@@ -4138,6 +4279,22 @@
                               "specialist"
                             ],
                             "description": "Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`)."
+                          },
+                          "permissions": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "manageRole",
+                              "remove"
+                            ],
+                            "properties": {
+                              "manageRole": {
+                                "type": "boolean"
+                              },
+                              "remove": {
+                                "type": "boolean"
+                              }
+                            }
                           }
                         }
                       }
@@ -4163,6 +4320,157 @@
           }
         ],
         "summary": "Участники точки в кабинете (активное employment: специалист, имя, роль).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/cabinet-team/{employmentId}/role": {
+      "patch": {
+        "description": "Доступно только владельцу организации. Роль owner через этот endpoint не выдается.",
+        "operationId": "OrganizationsCabinet_patchCabinetOrganizationTeamMemberRole",
+        "parameters": [
+          {
+            "name": "employmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "specialist"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав менять роли или попытка изменить владельца"
+          },
+          "404": {
+            "description": "Участник команды не найден"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Сменить роль участника команды организации.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/cabinet-team/{employmentId}": {
+      "delete": {
+        "description": "Доступно только владельцу организации. Владельца нельзя удалить через team API.",
+        "operationId": "OrganizationsCabinet_deleteCabinetOrganizationTeamMember",
+        "parameters": [
+          {
+            "name": "employmentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав удалить участника или попытка удалить владельца"
+          },
+          "404": {
+            "description": "Участник команды не найден"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Деактивировать участника команды организации.",
         "tags": [
           "cabinet-organizations"
         ]
@@ -6754,6 +7062,7 @@
                           "membershipStatus",
                           "workplaceJoinRequestId",
                           "role",
+                          "permissions",
                           "isActiveWorkplace",
                           "publicationModerationStatus",
                           "salonCabinetPreview",
@@ -6802,6 +7111,140 @@
                                 "type": "null"
                               }
                             ]
+                          },
+                          "permissions": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "profile",
+                              "team",
+                              "joinRequests",
+                              "offerings",
+                              "calendar",
+                              "bookings"
+                            ],
+                            "properties": {
+                              "profile": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "manage",
+                                  "delete"
+                                ],
+                                "properties": {
+                                  "manage": {
+                                    "type": "boolean"
+                                  },
+                                  "delete": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "team": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view",
+                                  "manageRoles",
+                                  "removeMembers"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "manageRoles": {
+                                    "type": "boolean"
+                                  },
+                                  "removeMembers": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "joinRequests": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "review"
+                                ],
+                                "properties": {
+                                  "review": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "offerings": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "manage"
+                                ],
+                                "properties": {
+                                  "manage": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "calendar": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view",
+                                  "viewAll",
+                                  "manage",
+                                  "manageAll"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "viewAll": {
+                                    "type": "boolean"
+                                  },
+                                  "manage": {
+                                    "type": "boolean"
+                                  },
+                                  "manageAll": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
+                              "bookings": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view",
+                                  "manage",
+                                  "manageAll",
+                                  "manageOwn",
+                                  "confirm",
+                                  "cancel",
+                                  "reschedule"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "manage": {
+                                    "type": "boolean"
+                                  },
+                                  "manageAll": {
+                                    "type": "boolean"
+                                  },
+                                  "manageOwn": {
+                                    "type": "boolean"
+                                  },
+                                  "confirm": {
+                                    "type": "boolean"
+                                  },
+                                  "cancel": {
+                                    "type": "boolean"
+                                  },
+                                  "reschedule": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
                           },
                           "isActiveWorkplace": {
                             "type": "boolean",
@@ -9147,8 +9590,10 @@
                           "status",
                           "blockReason",
                           "notes",
+                          "createdByDisplayName",
                           "version",
                           "resources",
+                          "permissions",
                           "booking"
                         ],
                         "properties": {
@@ -9202,6 +9647,10 @@
                             "type": "string",
                             "nullable": true
                           },
+                          "createdByDisplayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "version": {
                             "type": "integer"
                           },
@@ -9241,6 +9690,18 @@
                                   "type": "string",
                                   "nullable": true
                                 }
+                              }
+                            }
+                          },
+                          "permissions": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "manage"
+                            ],
+                            "properties": {
+                              "manage": {
+                                "type": "boolean"
                               }
                             }
                           },
@@ -9388,8 +9849,10 @@
                         "status",
                         "blockReason",
                         "notes",
+                        "createdByDisplayName",
                         "version",
                         "resources",
+                        "permissions",
                         "booking"
                       ],
                       "properties": {
@@ -9443,6 +9906,10 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "createdByDisplayName": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "version": {
                           "type": "integer"
                         },
@@ -9482,6 +9949,18 @@
                                 "type": "string",
                                 "nullable": true
                               }
+                            }
+                          }
+                        },
+                        "permissions": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "manage"
+                          ],
+                          "properties": {
+                            "manage": {
+                              "type": "boolean"
                             }
                           }
                         },
@@ -9640,8 +10119,10 @@
                         "status",
                         "blockReason",
                         "notes",
+                        "createdByDisplayName",
                         "version",
                         "resources",
+                        "permissions",
                         "booking"
                       ],
                       "properties": {
@@ -9695,6 +10176,10 @@
                           "type": "string",
                           "nullable": true
                         },
+                        "createdByDisplayName": {
+                          "type": "string",
+                          "nullable": true
+                        },
                         "version": {
                           "type": "integer"
                         },
@@ -9734,6 +10219,18 @@
                                 "type": "string",
                                 "nullable": true
                               }
+                            }
+                          }
+                        },
+                        "permissions": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "manage"
+                          ],
+                          "properties": {
+                            "manage": {
+                              "type": "boolean"
                             }
                           }
                         },

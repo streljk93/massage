@@ -10,7 +10,9 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
   OrganizationSalonCabinetForm,
+  OrganizationCapabilities,
   SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
+  canOrganization,
   specialistMyOrganizationsQueryKey,
   type OrganizationSalonCabinetFormInitialValues,
   type OrganizationSalonCabinetSubmitBody,
@@ -29,9 +31,6 @@ import { parseVnLocalForInput } from "@/views/business/setup/lib/specialist-onbo
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
-function roleAllowsSalonCabinetEditing(role: string): boolean {
-  return role === "owner" || role === "admin";
-}
 
 function cabinetProfileToFormInitialValues(
   profile: OrganizationsCabinetGetCabinetOrganizationProfileForEditResponse,
@@ -136,7 +135,7 @@ export function BusinessOrganizationEditPage() {
   const canManage =
     membership != null &&
     membership.membershipStatus === "employed" &&
-    roleAllowsSalonCabinetEditing(membership.role as "owner" | "admin" | "specialist");
+    canOrganization(membership, OrganizationCapabilities.PROFILE_MANAGE);
 
   const cabinetProfileQuery = useQuery({
     queryKey: [...CABINET_EDIT_QK, organizationId, accessToken, locale] as const,

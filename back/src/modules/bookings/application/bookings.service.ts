@@ -13,7 +13,6 @@ import { addMinutes, parseISO, subHours } from 'date-fns';
 import {
   OfferingPriceOptionStatus,
   OfferingPublicationStatus,
-  OrganizationMembershipRole,
   PublicationModerationStatus,
   SpecialistOfferingStatus,
   BookingEventType,
@@ -75,6 +74,15 @@ import { BookingCommandEnqueueService } from '../queue/booking-command-enqueue.s
 import { CalendarService } from '../../calendar/application/calendar.service';
 import { CalendarAvailabilityService } from '../../calendar/application/calendar-availability.service';
 import { CalendarRepository } from '../../calendar/infrastructure/calendar.repository';
+import { OrganizationAccessPolicyService } from '../../organizations/application/organization-access-policy.service';
+import {
+  OrganizationBookingActions,
+  OrganizationCapabilities,
+  assertCanOrganization,
+  canAccessAllBookings,
+  type OrganizationBookingAction,
+} from '../../organizations/domain/policy';
+import { buildOrganizationScope } from '../../organizations/domain/organization-scope';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
@@ -96,12 +104,6 @@ type VisitReviewSnapshotRow = {
   pendingCommentDraft: string | null;
 };
 
-/** Кто может нажать «принять / отклонить» в кабинете: принимающий мастер или owner/admin салона из брони. */
-const SALON_SIDE_PENDING_ACTOR_ROLES: OrganizationMembershipRole[] = [
-  OrganizationMembershipRole.owner,
-  OrganizationMembershipRole.admin,
-];
-
 @Injectable()
 export class BookingsService {
   constructor(
@@ -117,6 +119,7 @@ export class BookingsService {
     private readonly calendarService: CalendarService,
     private readonly calendarAvailability: CalendarAvailabilityService,
     private readonly calendarRepository: CalendarRepository,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
     @Optional()
     private readonly bookingCommandEnqueue?: BookingCommandEnqueueService,
   ) {}
@@ -588,13 +591,16 @@ export class BookingsService {
                 specialistId: body.specialistId,
               },
             );
-          await this.calendarAvailability.assertSlotAvailableForResourcesTx(tx, {
-            organizationId,
-            resourceIds: [resource.id],
-            startsAt,
-            endsAt,
-            requireWorkingAvailability: true,
-          });
+          await this.calendarAvailability.assertSlotAvailableForResourcesTx(
+            tx,
+            {
+              organizationId,
+              resourceIds: [resource.id],
+              startsAt,
+              endsAt,
+              requireWorkingAvailability: true,
+            },
+          );
           const calendarEvent =
             await this.calendarRepository.createBookingCalendarEventTx(tx, {
               organizationId,
@@ -1060,6 +1066,7 @@ export class BookingsService {
       specialistId: string;
       organizationId: string | null;
     },
+    action: OrganizationBookingAction = OrganizationBookingActions.MANAGE,
   ): Promise<void> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId: actingUserId, deletedAt: null },
@@ -1081,23 +1088,16 @@ export class BookingsService {
           'You do not have permission to perform this action on this booking',
       });
     }
-    const employment =
-      await this.prisma.specialistOrganizationEmployment.findFirst({
-        where: {
-          specialistId: specialist.id,
-          organizationId: booking.organizationId,
-          isActive: true,
-          role: { in: SALON_SIDE_PENDING_ACTOR_ROLES },
-        },
-        select: { id: true },
-      });
-    if (!employment) {
-      throw new ForbiddenException({
-        code: 'BOOKING_SALON_ACTION_FORBIDDEN',
-        message:
-          'Only the assigned specialist or salon owner/admin may perform this action on this booking',
-      });
-    }
+    const ctx = await this.organizationAccess.resolveContext(
+      actingUserId,
+      booking.organizationId,
+    );
+    assertCanOrganization(ctx, OrganizationCapabilities.BOOKINGS, {
+      type: 'Booking',
+      action,
+      organizationId: booking.organizationId,
+      specialistId: booking.specialistId,
+    });
   }
 
   /** Границы витринного рабочего дня точки для проверки слота (как при создании брони). */
@@ -1154,10 +1154,14 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    await this.assertSalonSideMayActOnBooking(specialistUserId, {
-      specialistId: booking.specialistId,
-      organizationId: booking.organizationId,
-    });
+    await this.assertSalonSideMayActOnBooking(
+      specialistUserId,
+      {
+        specialistId: booking.specialistId,
+        organizationId: booking.organizationId,
+      },
+      OrganizationBookingActions.CONFIRM,
+    );
 
     const fromStatus = booking.status;
     const updated = await this.prisma.$transaction(async (tx) => {
@@ -1211,10 +1215,14 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    await this.assertSalonSideMayActOnBooking(specialistUserId, {
-      specialistId: booking.specialistId,
-      organizationId: booking.organizationId,
-    });
+    await this.assertSalonSideMayActOnBooking(
+      specialistUserId,
+      {
+        specialistId: booking.specialistId,
+        organizationId: booking.organizationId,
+      },
+      OrganizationBookingActions.CANCEL,
+    );
 
     const fromStatus = booking.status;
     await this.prisma.$transaction(async (tx) => {
@@ -1263,10 +1271,14 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    await this.assertSalonSideMayActOnBooking(specialistUserId, {
-      specialistId: booking.specialistId,
-      organizationId: booking.organizationId,
-    });
+    await this.assertSalonSideMayActOnBooking(
+      specialistUserId,
+      {
+        specialistId: booking.specialistId,
+        organizationId: booking.organizationId,
+      },
+      OrganizationBookingActions.MANAGE,
+    );
     const now = new Date();
     if (!isBookingSlotStartTimeReached(booking.startsAt, now)) {
       throw new BadRequestException({
@@ -1324,10 +1336,14 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    await this.assertSalonSideMayActOnBooking(actingUserId, {
-      specialistId: booking.specialistId,
-      organizationId: booking.organizationId,
-    });
+    await this.assertSalonSideMayActOnBooking(
+      actingUserId,
+      {
+        specialistId: booking.specialistId,
+        organizationId: booking.organizationId,
+      },
+      OrganizationBookingActions.CANCEL,
+    );
 
     const commentTrimmed = body.cancellationComment?.trim() ?? '';
     const cancelReasonDb = body.cancelReason;
@@ -1401,10 +1417,14 @@ export class BookingsService {
         message: 'Booking not found',
       });
     }
-    await this.assertSalonSideMayActOnBooking(actingUserId, {
-      specialistId: booking.specialistId,
-      organizationId: booking.organizationId,
-    });
+    await this.assertSalonSideMayActOnBooking(
+      actingUserId,
+      {
+        specialistId: booking.specialistId,
+        organizationId: booking.organizationId,
+      },
+      OrganizationBookingActions.RESCHEDULE,
+    );
     if (booking.status !== 'confirmed') {
       throw new BadRequestException({
         code: 'BOOKING_NOT_CONFIRMED',
@@ -1485,14 +1505,17 @@ export class BookingsService {
                 specialistId: booking.specialistId,
               },
             );
-          await this.calendarAvailability.assertSlotAvailableForResourcesTx(tx, {
-            organizationId: booking.organizationId,
-            resourceIds: [resource.id],
-            startsAt: newStartsAt,
-            endsAt: newEndsAt,
-            requireWorkingAvailability: true,
-            excludeEventId: booking.calendarEventId,
-          });
+          await this.calendarAvailability.assertSlotAvailableForResourcesTx(
+            tx,
+            {
+              organizationId: booking.organizationId,
+              resourceIds: [resource.id],
+              startsAt: newStartsAt,
+              endsAt: newEndsAt,
+              requireWorkingAvailability: true,
+              excludeEventId: booking.calendarEventId,
+            },
+          );
           await this.bookingAppend.appendBookingEvent(tx, {
             bookingId,
             type: BookingEventType.rescheduled,
@@ -1717,8 +1740,11 @@ export class BookingsService {
     const [localeRows, bookingRows] = await Promise.all([
       this.bookingStatusLocaleRepository.findAll(),
       scope === 'managed'
-        ? this.loadManagedSalonCabinetBookings(specialist.id)
-        : this.loadActiveWorkplaceSalonCabinetBookings(specialist),
+        ? this.loadManagedSalonCabinetBookings(userId, specialist.id)
+        : this.loadActiveWorkplaceSalonCabinetBookings({
+            ...specialist,
+            userId,
+          }),
     ]);
 
     const labelMap = buildBookingStatusLabelMap(localeRows);
@@ -1731,6 +1757,7 @@ export class BookingsService {
   }
 
   private async loadManagedSalonCabinetBookings(
+    userId: string,
     specialistId: string,
   ): Promise<SalonCabinetBookingRow[]> {
     const employments =
@@ -1738,44 +1765,46 @@ export class BookingsService {
         where: {
           specialistId,
           isActive: true,
-          role: { in: ['owner', 'admin'] },
         },
         select: { organizationId: true },
       });
     const orgIds = [...new Set(employments.map((e) => e.organizationId))];
-    return this.bookingsRepository.findManyForSalonCabinetManaged(orgIds);
+    const accessCache = this.organizationAccess.createContextCache();
+    const scopes = (
+      await Promise.all(
+        orgIds.map(async (organizationId) => {
+          const ctx = await accessCache.resolve(userId, organizationId);
+          if (!canAccessAllBookings(ctx)) {
+            return null;
+          }
+          return {
+            organizationId,
+            bookingScope: buildOrganizationScope(ctx).bookings,
+          };
+        }),
+      )
+    ).filter((scope): scope is NonNullable<typeof scope> => scope != null);
+    return this.bookingsRepository.findManyForSalonCabinetScoped(scopes);
   }
 
   private async loadActiveWorkplaceSalonCabinetBookings(specialist: {
+    userId: string;
     id: string;
     activeOrganizationId: string | null;
   }): Promise<SalonCabinetBookingRow[]> {
     if (specialist.activeOrganizationId == null) {
       return [];
     }
-    const employment =
-      await this.prisma.specialistOrganizationEmployment.findFirst({
-        where: {
-          specialistId: specialist.id,
-          organizationId: specialist.activeOrganizationId,
-          isActive: true,
-        },
-        select: { role: true },
-      });
-    if (employment == null) {
-      return [];
-    }
-    const isManager =
-      employment.role === 'owner' || employment.role === 'admin';
-    if (isManager) {
-      return this.bookingsRepository.findManyForSalonCabinetManaged([
-        specialist.activeOrganizationId,
-      ]);
-    }
-    return this.bookingsRepository.findManyForSalonCabinetActiveWorkplace(
-      specialist.id,
+    const ctx = await this.organizationAccess.resolveContext(
+      specialist.userId,
       specialist.activeOrganizationId,
     );
+    return this.bookingsRepository.findManyForSalonCabinetScoped([
+      {
+        organizationId: specialist.activeOrganizationId,
+        bookingScope: buildOrganizationScope(ctx).bookings,
+      },
+    ]);
   }
 
   private buildVisitReviewPreview(

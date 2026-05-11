@@ -8,10 +8,13 @@ import {
   LISTING_DISPLAY_TZ,
   vnNoonUtcForCalendarYmd,
 } from "@/shared/lib/datetime/vn-listing-datetime";
-import type { CalendarEvent, CalendarWidgetProps, ViewMode } from "../model/types";
+import type { CalendarEvent, CalendarWidgetProps } from "../model/types";
 import { CalendarSkeleton } from "./calendar-skeleton";
 import { CalendarToolbar } from "./calendar-toolbar";
-import { CalendarTimeGrid, type CalendarGridColumn } from "./calendar-time-grid";
+import {
+  CalendarTimeGrid,
+  type CalendarGridColumn,
+} from "./calendar-time-grid";
 import { CalendarMonthView } from "./calendar-month-view";
 import { CalendarListView } from "./calendar-list-view";
 import { getWeekDays, minutesFromDayStart } from "../lib/calendar-date";
@@ -37,7 +40,10 @@ export function CalendarWidget({
   const [nowMin, setNowMin] = useState(() => minutesFromDayStart(new Date()));
 
   useEffect(() => {
-    const id = setInterval(() => setNowMin(minutesFromDayStart(new Date())), 30_000);
+    const id = setInterval(
+      () => setNowMin(minutesFromDayStart(new Date())),
+      30_000,
+    );
     return () => clearInterval(id);
   }, []);
 
@@ -57,14 +63,18 @@ export function CalendarWidget({
   }, [viewMode, dayKey, weekDays, todayKey]);
 
   const currentPeriodLabel =
-    viewMode === "day" ? t("today")
-    : viewMode === "week" ? t("thisWeek")
-    : t("thisMonth");
+    viewMode === "day"
+      ? t("today")
+      : viewMode === "week"
+        ? t("thisWeek")
+        : t("thisMonth");
 
   function shiftPeriod(delta: number) {
     if (viewMode === "week") {
       onDayKeyChange(
-        formatListingCalendarYmd(addDays(vnNoonUtcForCalendarYmd(dayKey), delta * 7)),
+        formatListingCalendarYmd(
+          addDays(vnNoonUtcForCalendarYmd(dayKey), delta * 7),
+        ),
       );
       return;
     }
@@ -106,7 +116,10 @@ export function CalendarWidget({
   }
 
   function evSubtitle(event: CalendarEvent) {
-    return event.type === "booking" ? (event.booking?.categoryShortName ?? null) : null;
+    if (event.type === "booking") {
+      return event.booking?.categoryShortName ?? null;
+    }
+    return null;
   }
 
   const gridColumns = useMemo<CalendarGridColumn[]>(() => {
@@ -120,7 +133,9 @@ export function CalendarWidget({
         resourceId: r.id,
         colDayKey: dayKey,
         isToday,
-        colEvents: events.filter((e) => e.resources.some((er) => er.id === r.id)),
+        colEvents: events.filter((e) =>
+          e.resources.some((er) => er.id === r.id),
+        ),
         label: r.name,
         sublabel: null,
       }));
@@ -136,7 +151,9 @@ export function CalendarWidget({
       return {
         key: dk,
         resourceId:
-          selectedResourceId !== "all" ? selectedResourceId : (resources[0]?.id ?? ""),
+          selectedResourceId !== "all"
+            ? selectedResourceId
+            : (resources[0]?.id ?? ""),
         colDayKey: dk,
         isToday: dk === todayKey,
         colEvents: filtered,
@@ -150,7 +167,17 @@ export function CalendarWidget({
         }),
       };
     });
-  }, [viewMode, resources, events, selectedResourceId, dayKey, weekDays, todayKey, isToday, format]);
+  }, [
+    viewMode,
+    resources,
+    events,
+    selectedResourceId,
+    dayKey,
+    weekDays,
+    todayKey,
+    isToday,
+    format,
+  ]);
 
   const dateLabelText = useMemo(() => {
     if (viewMode === "week" && weekDays.length > 0) {
@@ -227,16 +254,16 @@ export function CalendarWidget({
 
       {!isLoading && viewMode === "month" ? (
         <div className="flex min-h-0 flex-1 flex-col">
-        <CalendarMonthView
-          dayKey={dayKey}
-          todayKey={todayKey}
-          events={events}
-          fmtTime={fmtTime}
-          evTitle={evTitle}
-          onDayKeyChange={onDayKeyChange}
-          onViewModeChange={onViewModeChange}
-          onEventClick={onEventClick}
-        />
+          <CalendarMonthView
+            dayKey={dayKey}
+            todayKey={todayKey}
+            events={events}
+            fmtTime={fmtTime}
+            evTitle={evTitle}
+            onDayKeyChange={onDayKeyChange}
+            onViewModeChange={onViewModeChange}
+            onEventClick={onEventClick}
+          />
         </div>
       ) : null}
 

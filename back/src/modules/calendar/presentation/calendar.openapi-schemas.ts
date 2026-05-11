@@ -7,7 +7,14 @@ export const calendarResourcesResponseSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'type', 'specialistId', 'name', 'capacity', 'isActive'],
+        required: [
+          'id',
+          'type',
+          'specialistId',
+          'name',
+          'capacity',
+          'isActive',
+        ],
         properties: {
           id: { type: 'string', format: 'uuid' },
           type: { type: 'string', enum: ['specialist', 'room', 'equipment'] },
@@ -33,8 +40,10 @@ const calendarEventSchema = {
     'status',
     'blockReason',
     'notes',
+    'createdByDisplayName',
     'version',
     'resources',
+    'permissions',
     'booking',
   ],
   properties: {
@@ -54,6 +63,7 @@ const calendarEventSchema = {
       nullable: true,
     },
     notes: { type: 'string', nullable: true },
+    createdByDisplayName: { type: 'string', nullable: true },
     version: { type: 'integer' },
     resources: {
       type: 'array',
@@ -67,6 +77,14 @@ const calendarEventSchema = {
           specialistId: { type: 'string', format: 'uuid', nullable: true },
           role: { type: 'string', nullable: true },
         },
+      },
+    },
+    permissions: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['manage'],
+      properties: {
+        manage: { type: 'boolean' },
       },
     },
     booking: {

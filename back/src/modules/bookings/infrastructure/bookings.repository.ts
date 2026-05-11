@@ -252,7 +252,6 @@ export class BookingsRepository {
       );
   }
 
-
   /**
    * Превью активных записей всего салона (все специалисты) перед удалением организации.
    */
@@ -303,7 +302,11 @@ export class BookingsRepository {
           const listing = (r.specialist.listingName ?? '').trim();
           const userName = (r.specialist.user.name ?? '').trim();
           const specialistDisplayName =
-            listing.length > 0 ? listing : userName.length > 0 ? userName : null;
+            listing.length > 0
+              ? listing
+              : userName.length > 0
+                ? userName
+                : null;
           return {
             id: r.id,
             status: r.status,
@@ -321,7 +324,6 @@ export class BookingsRepository {
       );
   }
 
-
   /**
    * Все активные записи по организации (доступ только для пользователей с проверкой в сервисе).
    */
@@ -336,6 +338,32 @@ export class BookingsRepository {
       where: {
         deletedAt: null,
         organizationId: { in: organizationIds },
+        ...(statuses !== undefined && statuses.length > 0
+          ? { status: { in: statuses } }
+          : {}),
+      },
+      select: salonCabinetBookingSelect,
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  findManyForSalonCabinetScoped(
+    scopes: Array<{
+      organizationId: string;
+      bookingScope: Prisma.BookingWhereInput;
+    }>,
+    statuses?: BookingStatus[],
+  ): Promise<SalonCabinetBookingRow[]> {
+    if (scopes.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.booking.findMany({
+      where: {
+        deletedAt: null,
+        OR: scopes.map((scope) => ({
+          organizationId: scope.organizationId,
+          ...scope.bookingScope,
+        })),
         ...(statuses !== undefined && statuses.length > 0
           ? { status: { in: statuses } }
           : {}),

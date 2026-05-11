@@ -1,14 +1,110 @@
+export const organizationScopedPermissionsSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'profile',
+    'team',
+    'joinRequests',
+    'offerings',
+    'calendar',
+    'bookings',
+  ],
+  properties: {
+    profile: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['manage', 'delete'],
+      properties: {
+        manage: { type: 'boolean' },
+        delete: { type: 'boolean' },
+      },
+    },
+    team: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['view', 'manageRoles', 'removeMembers'],
+      properties: {
+        view: { type: 'boolean' },
+        manageRoles: { type: 'boolean' },
+        removeMembers: { type: 'boolean' },
+      },
+    },
+    joinRequests: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['review'],
+      properties: { review: { type: 'boolean' } },
+    },
+    offerings: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['manage'],
+      properties: { manage: { type: 'boolean' } },
+    },
+    calendar: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['view', 'viewAll', 'manage', 'manageAll'],
+      properties: {
+        view: { type: 'boolean' },
+        viewAll: { type: 'boolean' },
+        manage: { type: 'boolean' },
+        manageAll: { type: 'boolean' },
+      },
+    },
+    bookings: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'view',
+        'manage',
+        'manageAll',
+        'manageOwn',
+        'confirm',
+        'cancel',
+        'reschedule',
+      ],
+      properties: {
+        view: { type: 'boolean' },
+        manage: { type: 'boolean' },
+        manageAll: { type: 'boolean' },
+        manageOwn: { type: 'boolean' },
+        confirm: { type: 'boolean' },
+        cancel: { type: 'boolean' },
+        reschedule: { type: 'boolean' },
+      },
+    },
+  },
+};
+
 export const organizationCabinetTeamMemberSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['specialistId', 'displayName', 'role'],
+  required: [
+    'employmentId',
+    'specialistId',
+    'displayName',
+    'role',
+    'permissions',
+  ],
   properties: {
+    employmentId: { type: 'string', format: 'uuid' },
     specialistId: { type: 'string', format: 'uuid' },
     displayName: { type: 'string', nullable: true },
     role: {
       type: 'string',
       enum: ['owner', 'admin', 'specialist'],
-      description: 'Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).',
+      description:
+        'Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).',
+    },
+    permissions: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['manageRole', 'remove'],
+      properties: {
+        manageRole: { type: 'boolean' },
+        remove: { type: 'boolean' },
+      },
     },
   },
 };
@@ -16,12 +112,31 @@ export const organizationCabinetTeamMemberSchema = {
 export const organizationCabinetTeamMembersResponseSchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['members'],
+  required: ['permissions', 'members'],
   properties: {
+    permissions: organizationScopedPermissionsSchema,
     members: {
       type: 'array',
       items: organizationCabinetTeamMemberSchema,
     },
+  },
+};
+
+export const organizationTeamRoleRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['role'],
+  properties: {
+    role: { type: 'string', enum: ['admin', 'specialist'] },
+  },
+};
+
+export const organizationTeamMutationResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['ok'],
+  properties: {
+    ok: { type: 'boolean', const: true },
   },
 };
 

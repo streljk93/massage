@@ -7,7 +7,11 @@ import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
-import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
+import {
+  OrganizationCapabilities,
+  canOrganization,
+  specialistMyOrganizationsQueryKey,
+} from "@/entities/organizations";
 import {
   catalogGetBulkCategoriesByMajorSlugs,
   createBrowserSdkClient,
@@ -40,10 +44,6 @@ import { OrganizationOfferingDraftCreateSection } from "./organization-offering-
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 const OFFERINGS_QK = ["organizationOfferingsCabinet"] as const;
 const ASSIGNABLE_QK = ["organizationOfferingsAssignableSpecialists"] as const;
-
-function roleAllowsSalonCabinetEditing(role: string): boolean {
-  return role === "owner" || role === "admin";
-}
 
 type OfferingCabinetRow =
   OrganizationOfferingsCabinetListMineResponse["offerings"][number];
@@ -447,7 +447,7 @@ export function BusinessOrganizationOfferingsPage() {
   const canManage =
     membership != null &&
     membership.membershipStatus === "employed" &&
-    roleAllowsSalonCabinetEditing(membership.role as string);
+    canOrganization(membership, OrganizationCapabilities.OFFERINGS_MANAGE);
 
   const cabinetProfileQuery = useQuery({
     queryKey: [...CABINET_EDIT_QK, organizationId, accessToken, locale] as const,

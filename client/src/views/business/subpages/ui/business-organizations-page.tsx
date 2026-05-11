@@ -17,6 +17,8 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
+  OrganizationCapabilities,
+  canOrganization,
   displayNameForCabinetOrganization,
   specialistMyOrganizationsQueryKey,
   SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
@@ -53,10 +55,6 @@ import { cn, motion, previewSrcForPersistedGalleryUrl } from "@/shared/lib";
 const ONB_QK = ["specialistOnboarding"] as const;
 const ORG_INCOMING_QK = ["orgIncomingWorkplaceJoinRequests"] as const;
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
-
-function roleAllowsSalonCabinetEditing(role: string): boolean {
-  return role === "owner" || role === "admin";
-}
 
 function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRoleSpecialist" {
   if (role === "owner") {
@@ -316,7 +314,7 @@ export function BusinessOrganizationsPage() {
     return orgs.filter(
       (o) =>
         o.membershipStatus === "employed" &&
-        roleAllowsSalonCabinetEditing(o.role as "owner" | "admin" | "specialist"),
+        canOrganization(o, OrganizationCapabilities.JOIN_REQUESTS_REVIEW),
     );
   }, [data]);
 
@@ -508,7 +506,7 @@ export function BusinessOrganizationsPage() {
               : null;
             const canEditSalon =
               org.membershipStatus === "employed" &&
-              roleAllowsSalonCabinetEditing(org.role as "owner" | "admin" | "specialist");
+              canOrganization(org, OrganizationCapabilities.PROFILE_MANAGE);
             const statusBadges =
               isPendingMembership ||
               showModerationPendingBadge ||
@@ -522,7 +520,8 @@ export function BusinessOrganizationsPage() {
               previewSwitchAwayBusy ||
               deleteOrgInteractionBusy;
             const showOwnerDeleteOrg =
-              org.membershipStatus === "employed" && org.role === "owner";
+              org.membershipStatus === "employed" &&
+              canOrganization(org, OrganizationCapabilities.DELETE);
             const showEditSalon = canEditSalon;
             const trailingOrgCardActions =
               (showOwnerDeleteOrg ? 1 : 0) + (showEditSalon ? 1 : 0);

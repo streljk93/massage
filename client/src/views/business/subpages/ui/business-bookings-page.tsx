@@ -13,7 +13,12 @@ import {
   SalonBookingRowCard,
 } from "@/entities/booking";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
-import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
+import {
+  canOrganization,
+  OrganizationBookingActions,
+  OrganizationCapabilities,
+  specialistMyOrganizationsQueryKey,
+} from "@/entities/organizations";
 import {
   createBrowserSdkClient,
   specialistsCabinetGetSpecialistMyOrganizations,
@@ -25,9 +30,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/shadcn/collapsible";
-import { bookingSlotStartTimeReachedClient, useBookingStartWindowPulseWhenWaiting } from "@/shared/lib/booking-slot-start-client";
+import {
+  bookingSlotStartTimeReachedClient,
+  useBookingStartWindowPulseWhenWaiting,
+} from "@/shared/lib/booking-slot-start-client";
 import { cn, motion } from "@/shared/lib";
-import { notify } from "@/shared/lib/notifications";
 import { SalonConfirmedCancelDialog } from "./salon-confirmed-cancel-dialog";
 import {
   SALON_BOOKINGS_QUERY_KEY_PREFIX,
@@ -65,9 +72,10 @@ export function BusinessBookingsPage() {
     queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
-      const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
-        client: sdk,
-      });
+      const { data: res, error: err } =
+        await specialistsCabinetGetSpecialistMyOrganizations({
+          client: sdk,
+        });
       if (err || !res) {
         throw err ?? new Error("organizations");
       }
@@ -75,23 +83,10 @@ export function BusinessBookingsPage() {
     },
   });
 
-  const bookingsQuery = useQuery({
-    queryKey: salonBookingsActiveWorkplaceQueryKey(accessToken, locale),
-    enabled: authed,
-    queryFn: async () => {
-      const { data: res, error: err } = await specialistsCabinetGetSpecialistSalonBookings({
-        client: sdk,
-        query: { scope: SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE, locale },
-      });
-      if (err || !res) {
-        throw err ?? new Error("salon-bookings");
-      }
-      return res;
-    },
-  });
-
   const onSalonBookingPendingExpired = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QUERY_KEY_PREFIX] });
+    void queryClient.invalidateQueries({
+      queryKey: [...SALON_BOOKINGS_QUERY_KEY_PREFIX],
+    });
   }, [queryClient]);
 
   const {
@@ -102,16 +97,56 @@ export function BusinessBookingsPage() {
     salonRowActionsBusy,
   } = useSalonBookingMutations({ sdk });
 
-  const [salonCancelTargetId, setSalonCancelTargetId] = useState<string | null>(null);
+  const [salonCancelTargetId, setSalonCancelTargetId] = useState<string | null>(
+    null,
+  );
 
   const openSalonCancelConfirmedDialog = useCallback((bookingId: string) => {
     setSalonCancelTargetId(bookingId);
   }, []);
 
-  const hasActiveWorkplace = useMemo(() => {
+  const activeWorkplace = useMemo(() => {
     const orgs = orgsQuery.data?.organizations ?? [];
-    return orgs.some((o) => o.isActiveWorkplace === true);
+    return orgs.find((o) => o.isActiveWorkplace === true) ?? null;
   }, [orgsQuery.data?.organizations]);
+
+  const hasActiveWorkplace = activeWorkplace != null;
+  const canViewActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.VIEW },
+  );
+  const canConfirmActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.CONFIRM },
+  );
+  const canCancelActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.CANCEL },
+  );
+  const canManageActiveWorkplaceBookings = canOrganization(
+    activeWorkplace,
+    OrganizationCapabilities.BOOKINGS,
+    { bookingAction: OrganizationBookingActions.MANAGE },
+  );
+
+  const bookingsQuery = useQuery({
+    queryKey: salonBookingsActiveWorkplaceQueryKey(accessToken, locale),
+    enabled: authed && orgsQuery.isSuccess && canViewActiveWorkplaceBookings,
+    queryFn: async () => {
+      const { data: res, error: err } =
+        await specialistsCabinetGetSpecialistSalonBookings({
+          client: sdk,
+          query: { scope: SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE, locale },
+        });
+      if (err || !res) {
+        throw err ?? new Error("salon-bookings");
+      }
+      return res;
+    },
+  });
 
   const cards = useMemo(() => {
     const rows = bookingsQuery.data?.bookings ?? [];
@@ -191,7 +226,7 @@ export function BusinessBookingsPage() {
       </p>
 
       <div>
-        {(bookingsQuery.isPending || !orgsQuery.isFetched) ? (
+        {bookingsQuery.isPending || !orgsQuery.isFetched ? (
           <div
             className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"
             aria-busy
@@ -222,6 +257,12 @@ export function BusinessBookingsPage() {
             title={t("emptyBookingsMineNoWorkplaceTitle")}
             description={t("emptyBookingsMineNoWorkplaceHint")}
           />
+        ) : hasActiveWorkplace && !canViewActiveWorkplaceBookings ? (
+          <BusinessEmptyState
+            icon={CalendarDays}
+            title={t("emptyBookingsNoAccessTitle")}
+            description={t("emptyBookingsNoAccessHint")}
+          />
         ) : cards.length === 0 ? (
           <BusinessEmptyState
             icon={CalendarDays}
@@ -231,7 +272,10 @@ export function BusinessBookingsPage() {
         ) : (
           <div className="space-y-4" aria-label={t("bookingsListAria")}>
             {newSectionCards.length > 0 ? (
-              <Collapsible defaultOpen className="group w-full overflow-hidden p-0">
+              <Collapsible
+                defaultOpen
+                className="group w-full overflow-hidden p-0"
+              >
                 <CollapsibleTrigger
                   className={cn(
                     motion.interactivePressStrong,
@@ -263,22 +307,29 @@ export function BusinessBookingsPage() {
                           scope={SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}
                           onPendingExpired={onSalonBookingPendingExpired}
                           onPendingAccept={
-                            row.status === "pending"
+                            row.status === "pending" &&
+                            canConfirmActiveWorkplaceBookings
                               ? () => confirmSalonPendingBooking(row.id)
                               : undefined
                           }
                           onPendingReject={
-                            row.status === "pending"
-                              ? () => void rejectSalonPendingBookingAfterConfirm(row.id)
+                            row.status === "pending" &&
+                            canCancelActiveWorkplaceBookings
+                              ? () =>
+                                  void rejectSalonPendingBookingAfterConfirm(
+                                    row.id,
+                                  )
                               : undefined
                           }
                           onConfirmedStartVisit={
-                            row.status === "confirmed"
+                            row.status === "confirmed" &&
+                            canManageActiveWorkplaceBookings
                               ? () => startSalonVisit(row.id)
                               : undefined
                           }
                           onConfirmedOpenCancel={
-                            row.status === "confirmed"
+                            row.status === "confirmed" &&
+                            canCancelActiveWorkplaceBookings
                               ? () => openSalonCancelConfirmedDialog(row.id)
                               : undefined
                           }
@@ -292,7 +343,10 @@ export function BusinessBookingsPage() {
             ) : null}
 
             {historySectionCards.length > 0 ? (
-              <Collapsible defaultOpen={newSectionCards.length === 0} className="group w-full overflow-hidden p-0">
+              <Collapsible
+                defaultOpen={newSectionCards.length === 0}
+                className="group w-full overflow-hidden p-0"
+              >
                 <CollapsibleTrigger
                   className={cn(
                     motion.interactivePressStrong,
@@ -324,22 +378,29 @@ export function BusinessBookingsPage() {
                           scope={SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}
                           onPendingExpired={onSalonBookingPendingExpired}
                           onPendingAccept={
-                            row.status === "pending"
+                            row.status === "pending" &&
+                            canConfirmActiveWorkplaceBookings
                               ? () => confirmSalonPendingBooking(row.id)
                               : undefined
                           }
                           onPendingReject={
-                            row.status === "pending"
-                              ? () => void rejectSalonPendingBookingAfterConfirm(row.id)
+                            row.status === "pending" &&
+                            canCancelActiveWorkplaceBookings
+                              ? () =>
+                                  void rejectSalonPendingBookingAfterConfirm(
+                                    row.id,
+                                  )
                               : undefined
                           }
                           onConfirmedStartVisit={
-                            row.status === "confirmed"
+                            row.status === "confirmed" &&
+                            canManageActiveWorkplaceBookings
                               ? () => startSalonVisit(row.id)
                               : undefined
                           }
                           onConfirmedOpenCancel={
-                            row.status === "confirmed"
+                            row.status === "confirmed" &&
+                            canCancelActiveWorkplaceBookings
                               ? () => openSalonCancelConfirmedDialog(row.id)
                               : undefined
                           }

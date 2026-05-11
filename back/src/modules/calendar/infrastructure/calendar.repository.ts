@@ -48,6 +48,13 @@ export const calendarEventListSelect = {
   blockReason: true,
   notes: true,
   version: true,
+  createdByUserId: true,
+  createdByUser: {
+    select: {
+      name: true,
+      email: true,
+    },
+  },
   resources: {
     select: {
       id: true,
@@ -160,7 +167,9 @@ export class CalendarRepository {
         deletedAt: null,
         isActive: true,
         ...(args.type != null ? { type: args.type } : {}),
-        ...(args.specialistId != null ? { specialistId: args.specialistId } : {}),
+        ...(args.specialistId != null
+          ? { specialistId: args.specialistId }
+          : {}),
       },
       select: calendarResourceSelect,
       orderBy: [{ type: 'asc' }, { name: 'asc' }, { id: 'asc' }],
@@ -179,7 +188,9 @@ export class CalendarRepository {
     if (args.resourceIds.length === 0) {
       return new Map();
     }
-    const rows = await tx.$queryRaw<Array<{ resourceId: string; count: bigint }>>(
+    const rows = await tx.$queryRaw<
+      Array<{ resourceId: string; count: bigint }>
+    >(
       Prisma.sql`
         SELECT er."resourceId" AS "resourceId", COUNT(DISTINCT ce."id") AS "count"
         FROM "CalendarEventResource" er
@@ -190,9 +201,9 @@ export class CalendarRepository {
           AND ce."startsAt" < ${args.endsAt}
           AND ce."endsAt" > ${args.startsAt}
           ${
-            args.excludeEventId != null ?
-              Prisma.sql`AND ce."id" <> ${args.excludeEventId}`
-            : Prisma.empty
+            args.excludeEventId != null
+              ? Prisma.sql`AND ce."id" <> ${args.excludeEventId}`
+              : Prisma.empty
           }
         GROUP BY er."resourceId"
       `,
@@ -372,6 +383,12 @@ export class CalendarRepository {
     type: CalendarEventType;
     status: CalendarEventStatus;
     version: number;
+    createdByUserId: string | null;
+    resources: Array<{
+      resource: {
+        specialistId: string | null;
+      };
+    }>;
   } | null> {
     return tx.calendarEvent.findFirst({
       where: { id: eventId, deletedAt: null },
@@ -381,6 +398,14 @@ export class CalendarRepository {
         type: true,
         status: true,
         version: true,
+        createdByUserId: true,
+        resources: {
+          select: {
+            resource: {
+              select: { specialistId: true },
+            },
+          },
+        },
       },
     });
   }

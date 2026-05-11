@@ -99,12 +99,12 @@ function BookingDetailContent({
   const startHHMM = utcIsoToLocalHHMM(event.startsAt);
   const endHHMM = utcIsoToLocalHHMM(event.endsAt);
   const dur = Math.round(
-    (parseISO(event.endsAt).getTime() - parseISO(event.startsAt).getTime()) / 60_000,
+    (parseISO(event.endsAt).getTime() - parseISO(event.startsAt).getTime()) /
+      60_000,
   );
 
   /** Завершённые визиты в календаре имеют `event.status === "cancelled"` (не блокируют слот). */
-  const uiStatus =
-    b?.status === "done" ? "done" : (event.status ?? "pending");
+  const uiStatus = b?.status === "done" ? "done" : (event.status ?? "pending");
 
   const statusDot: Record<string, string> = {
     pending: "bg-sky-400",
@@ -130,7 +130,9 @@ function BookingDetailContent({
       <div className="grid gap-3 py-1">
         {b?.categoryShortName && (
           <div className="rounded-lg bg-muted/40 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">{t("detail.service")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("detail.service")}
+            </p>
             <p className="mt-0.5 text-sm font-medium">{b.categoryShortName}</p>
           </div>
         )}
@@ -151,7 +153,9 @@ function BookingDetailContent({
         </div>
         {b?.specialistName && (
           <div className="rounded-lg bg-muted/40 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">{t("detail.specialist")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("detail.specialist")}
+            </p>
             <p className="mt-0.5 text-sm font-medium">{b.specialistName}</p>
           </div>
         )}
@@ -207,9 +211,7 @@ function BlockFormContent({
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const dayKey = state.type === "edit"
-    ? state.dayKey
-    : state.dayKey;
+  const dayKey = state.type === "edit" ? state.dayKey : state.dayKey;
 
   function toggleResource(id: string) {
     setSelectedIds((prev) =>
@@ -302,6 +304,15 @@ function BlockFormContent({
       <DialogHeader>
         <DialogTitle>
           {isEdit ? t("dialog.editTitle") : t("dialog.createTitle")}
+          {isEdit &&
+          state.event.createdByDisplayName != null &&
+          state.event.createdByDisplayName.trim().length > 0 ? (
+            <span className="font-normal text-muted-foreground">
+              {t("dialog.titleAuthorSuffix", {
+                name: state.event.createdByDisplayName,
+              })}
+            </span>
+          ) : null}
         </DialogTitle>
       </DialogHeader>
 
@@ -456,12 +467,7 @@ function BlockFormContent({
           </div>
         )}
 
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={busy}
-          onClick={onClose}
-        >
+        <Button type="button" variant="ghost" disabled={busy} onClick={onClose}>
           {t("dialog.cancel")}
         </Button>
         <Button

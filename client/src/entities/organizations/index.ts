@@ -10,6 +10,17 @@ export {
   type SpecialistMyOrganizationRow,
 } from "./lib/specialist-my-organizations";
 export {
+  OrganizationBookingActions,
+  OrganizationCalendarActions,
+  OrganizationCapabilities,
+  canOrganization,
+  type OrganizationBookingAction,
+  type OrganizationCalendarAction,
+  type OrganizationCapability,
+  type OrganizationPermissionSource,
+  type OrganizationScopedPermissions,
+} from "./model/organization-permissions";
+export {
   BusinessActiveOrganizationContextCard,
   type BusinessActiveOrganizationContextCardProps,
 } from "./ui/business-active-organization-context-card";
@@ -23,7 +34,10 @@ export {
   OrganizationCard,
   type OrganizationCardProps,
 } from "./ui/organization-card";
-export { OrgContactFields, type OrgContactFieldsProps } from "./ui/org-contact-fields";
+export {
+  OrgContactFields,
+  type OrgContactFieldsProps,
+} from "./ui/org-contact-fields";
 export {
   OrganizationSalonCabinetForm,
   type OrganizationSalonCabinetFormInitialValues,

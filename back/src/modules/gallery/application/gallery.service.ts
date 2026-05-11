@@ -1,16 +1,13 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  GalleryMediaKind,
-  GalleryOwnerKind,
-  OrganizationMembershipRole,
-} from '@prisma/client';
+import { GalleryMediaKind, GalleryOwnerKind } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { OrganizationAccessPolicyService } from '../../organizations/application/organization-access-policy.service';
+import { OrganizationCapabilities } from '../../organizations/domain/policy';
 
 export type GallerySeedItem = {
   url: string;
@@ -20,57 +17,21 @@ export type GallerySeedItem = {
 
 @Injectable()
 export class GalleryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
+  ) {}
 
   private async assertUserCanManageOrganizationVitrineGallery(
     userId: string,
     organizationId: string,
   ): Promise<void> {
-    const org = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { id: true, ownerUserId: true },
-    });
-    if (!org) {
-      throw new NotFoundException({
-        code: 'ORGANIZATION_NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    if (org.ownerUserId === userId) {
-      return;
-    }
-    const specialist = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!specialist) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage galleries for this organization',
-      });
-    }
-    const emp = await this.prisma.specialistOrganizationEmployment.findFirst({
-      where: {
-        specialistId: specialist.id,
-        organizationId,
-        isActive: true,
-        role: {
-          in: [
-            OrganizationMembershipRole.owner,
-            OrganizationMembershipRole.admin,
-          ],
-        },
-      },
-      select: { id: true },
-    });
-    if (!emp) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage galleries for this organization',
-      });
-    }
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.PROFILE_MANAGE,
+      { type: 'Organization', organizationId },
+    );
   }
 
   private async assertUserCanManageGallery(

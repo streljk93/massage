@@ -44,7 +44,14 @@ import { PushNotificationsService } from '../../notifications/application/push-n
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
+import { OrganizationAccessPolicyService } from './organization-access-policy.service';
+import {
+  OrganizationCapabilities,
+  assertCanOrganization,
+} from '../domain/policy';
+import type { OrganizationScopedPermissions } from '../domain/organization-permissions';
 import type { CreateOrganizationBody } from '../dto/create-organization-body.schema';
+import type { OrganizationTeamRoleBody } from '../dto/organization-team-role.schema';
 import { mergeOrganizationMajorIdsAndSlugsFromDb } from '../lib/merge-organization-major-categories';
 import { syncOrganizationServiceCategoriesFromPublishedOfferings } from '../infrastructure/organization-service-category-sync';
 import type { WorkplaceOrganizationSearchResponseDto } from '../dto/workplace-organization-search.dto';
@@ -133,6 +140,7 @@ export class OrganizationCabinetService {
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
     private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
   /** Все активные брони организации (все мастера) — append массовой отмены при удалении салона. */
@@ -255,22 +263,12 @@ export class OrganizationCabinetService {
     userId: string,
     organizationId: string,
   ): Promise<void> {
-    const org = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { id: true, ownerUserId: true },
-    });
-    if (!org) {
-      throw new NotFoundException({
-        code: 'ORGANIZATION_NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    if (org.ownerUserId !== userId) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_OWNER',
-        message: 'Only the organization owner can delete the salon',
-      });
-    }
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.DELETE,
+      { type: 'Organization', organizationId },
+    );
   }
 
   async previewDeleteOrganizationBookings(
@@ -404,51 +402,12 @@ export class OrganizationCabinetService {
     userId: string,
     organizationId: string,
   ): Promise<void> {
-    const org = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { id: true, ownerUserId: true },
-    });
-    if (!org) {
-      throw new NotFoundException({
-        code: 'ORGANIZATION_NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    if (org.ownerUserId === userId) {
-      return;
-    }
-    const specialist = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!specialist) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage workplace join requests',
-      });
-    }
-    const emp = await this.prisma.specialistOrganizationEmployment.findFirst({
-      where: {
-        specialistId: specialist.id,
-        organizationId,
-        isActive: true,
-        role: {
-          in: [
-            OrganizationMembershipRole.owner,
-            OrganizationMembershipRole.admin,
-          ],
-        },
-      },
-      select: { id: true },
-    });
-    if (!emp) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MANAGER',
-        message:
-          'Only the organization owner or an active admin can manage workplace join requests',
-      });
-    }
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.JOIN_REQUESTS_REVIEW,
+      { type: 'Organization', organizationId },
+    );
   }
 
   /** Владелец записи `Organization` или активное employment в точке. */
@@ -456,43 +415,12 @@ export class OrganizationCabinetService {
     userId: string,
     organizationId: string,
   ): Promise<void> {
-    const org = await this.prisma.organization.findFirst({
-      where: { id: organizationId, deletedAt: null },
-      select: { id: true, ownerUserId: true },
-    });
-    if (!org) {
-      throw new NotFoundException({
-        code: 'ORGANIZATION_NOT_FOUND',
-        message: 'Organization not found',
-      });
-    }
-    if (org.ownerUserId === userId) {
-      return;
-    }
-    const specialist = await this.prisma.specialist.findFirst({
-      where: { userId, deletedAt: null },
-      select: { id: true },
-    });
-    if (!specialist) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MEMBER',
-        message: 'You are not a member of this organization',
-      });
-    }
-    const emp = await this.prisma.specialistOrganizationEmployment.findFirst({
-      where: {
-        specialistId: specialist.id,
-        organizationId,
-        isActive: true,
-      },
-      select: { id: true },
-    });
-    if (!emp) {
-      throw new ForbiddenException({
-        code: 'NOT_ORGANIZATION_MEMBER',
-        message: 'You are not a member of this organization',
-      });
-    }
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.TEAM_VIEW,
+      { type: 'Organization', organizationId },
+    );
   }
 
   /**
@@ -503,22 +431,36 @@ export class OrganizationCabinetService {
     userId: string,
     organizationId: string,
   ): Promise<{
+    permissions: OrganizationScopedPermissions;
     members: Array<{
+      employmentId: string;
       specialistId: string;
       displayName: string | null;
       role: OrganizationMembershipRole;
+      permissions: { manageRole: boolean; remove: boolean };
     }>;
   }> {
-    await this.assertUserEmployedAtOrganization(userId, organizationId);
+    const ctx = await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.TEAM_VIEW,
+      { type: 'Organization', organizationId },
+    );
+    const permissions = this.organizationAccess.buildPermissionsForContext(ctx);
+    const org = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { ownerUserId: true },
+    });
     const rows = await this.prisma.specialistOrganizationEmployment.findMany({
       where: { organizationId, isActive: true },
       select: {
+        id: true,
         specialistId: true,
         role: true,
         specialist: {
           select: {
             listingName: true,
-            user: { select: { name: true } },
+            user: { select: { id: true, name: true } },
           },
         },
       },
@@ -534,12 +476,21 @@ export class OrganizationCabinetService {
     };
     const members = rows
       .map((r) => ({
+        employmentId: r.id,
         specialistId: r.specialistId,
         role: r.role,
         displayName:
           r.specialist.listingName?.trim() ||
           r.specialist.user?.name?.trim() ||
           null,
+        permissions: {
+          manageRole:
+            permissions.team.manageRoles &&
+            r.specialist.user?.id !== org?.ownerUserId,
+          remove:
+            permissions.team.removeMembers &&
+            r.specialist.user?.id !== org?.ownerUserId,
+        },
       }))
       .sort((a, b) => {
         const rd = roleRank(a.role) - roleRank(b.role);
@@ -550,7 +501,113 @@ export class OrganizationCabinetService {
         const bn = (b.displayName ?? b.specialistId).toLowerCase();
         return an.localeCompare(bn);
       });
-    return { members };
+    return { permissions, members };
+  }
+
+  async patchCabinetOrganizationTeamMemberRole(
+    userId: string,
+    organizationId: string,
+    employmentId: string,
+    body: OrganizationTeamRoleBody,
+  ): Promise<{ ok: true }> {
+    await this.prisma.$transaction(async (tx) => {
+      const ctx = await this.organizationAccess.resolveContextTx(
+        tx,
+        userId,
+        organizationId,
+      );
+      assertCanOrganization(ctx, OrganizationCapabilities.TEAM_MANAGE_ROLES, {
+        type: 'Organization',
+        organizationId,
+      });
+
+      const target = await tx.specialistOrganizationEmployment.findFirst({
+        where: { id: employmentId, organizationId, isActive: true },
+        select: {
+          id: true,
+          role: true,
+          specialist: { select: { userId: true } },
+          organization: { select: { ownerUserId: true } },
+        },
+      });
+      if (target == null) {
+        throw new NotFoundException({
+          code: 'ORGANIZATION_TEAM_MEMBER_NOT_FOUND',
+          message: 'Organization team member not found',
+        });
+      }
+      if (target.specialist.userId === target.organization.ownerUserId) {
+        throw new ForbiddenException({
+          code: 'ORGANIZATION_OWNER_ROLE_IMMUTABLE',
+          message:
+            'Organization owner role cannot be changed from team management',
+        });
+      }
+
+      await tx.specialistOrganizationEmployment.update({
+        where: { id: target.id },
+        data: {
+          role:
+            body.role === 'admin'
+              ? OrganizationMembershipRole.admin
+              : OrganizationMembershipRole.specialist,
+        },
+      });
+    });
+    return { ok: true };
+  }
+
+  async deleteCabinetOrganizationTeamMember(
+    userId: string,
+    organizationId: string,
+    employmentId: string,
+  ): Promise<{ ok: true }> {
+    await this.prisma.$transaction(async (tx) => {
+      const ctx = await this.organizationAccess.resolveContextTx(
+        tx,
+        userId,
+        organizationId,
+      );
+      assertCanOrganization(ctx, OrganizationCapabilities.TEAM_MANAGE_ROLES, {
+        type: 'Organization',
+        organizationId,
+      });
+
+      const target = await tx.specialistOrganizationEmployment.findFirst({
+        where: { id: employmentId, organizationId, isActive: true },
+        select: {
+          id: true,
+          specialistId: true,
+          specialist: { select: { userId: true, activeOrganizationId: true } },
+          organization: { select: { ownerUserId: true } },
+        },
+      });
+      if (target == null) {
+        throw new NotFoundException({
+          code: 'ORGANIZATION_TEAM_MEMBER_NOT_FOUND',
+          message: 'Organization team member not found',
+        });
+      }
+      if (target.specialist.userId === target.organization.ownerUserId) {
+        throw new ForbiddenException({
+          code: 'ORGANIZATION_OWNER_MEMBERSHIP_IMMUTABLE',
+          message: 'Organization owner cannot be removed from team management',
+        });
+      }
+
+      await tx.specialistOrganizationEmployment.update({
+        where: { id: target.id },
+        data: { isActive: false, endDate: new Date() },
+      });
+      if (target.specialist.activeOrganizationId === organizationId) {
+        await tx.specialist.update({
+          where: { id: target.specialistId },
+          data: { activeOrganizationId: null },
+        });
+        await this.syncSpecialistListedInDirectory(tx, target.specialistId);
+      }
+    });
+    return { ok: true };
   }
 
   /**

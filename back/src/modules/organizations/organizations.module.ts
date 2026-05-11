@@ -12,6 +12,7 @@ import { OrganizationCabinetService } from './application/organization-cabinet.s
 import { OrganizationsCabinetController } from './presentation/organizations-cabinet.controller';
 import { OrganizationOfferingsCabinetController } from './presentation/organization-offerings-cabinet.controller';
 import { OrganizationOfferingsCabinetService } from './application/organization-offerings-cabinet.service';
+import { OrganizationAccessPolicyModule } from './organization-access-policy.module';
 
 @Module({
   imports: [
@@ -24,12 +25,13 @@ import { OrganizationOfferingsCabinetService } from './application/organization-
     forwardRef(() => DirectoryModule),
     BookingsModule,
     NotificationsModule,
+    OrganizationAccessPolicyModule,
   ],
   controllers: [
     OrganizationsCabinetController,
     OrganizationOfferingsCabinetController,
   ],
   providers: [OrganizationCabinetService, OrganizationOfferingsCabinetService],
-  exports: [OrganizationCabinetService],
+  exports: [OrganizationCabinetService, OrganizationAccessPolicyModule],
 })
 export class OrganizationsModule {}

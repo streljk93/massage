@@ -14,6 +14,7 @@
         "nextPeriod": "Next",
         "booking": "Booking",
         "block": "Block",
+        "author": "Author: {name}",
         "durationMin": "{value} min",
         "blockReason": {
           "break": "Break",
@@ -47,6 +48,7 @@
         "nextPeriod": "Sau",
         "booking": "Lịch hẹn",
         "block": "Chặn lịch",
+        "author": "Tác giả: {name}",
         "durationMin": "{value} phút",
         "blockReason": {
           "break": "Nghỉ",
@@ -80,6 +82,7 @@
         "nextPeriod": "Вперёд",
         "booking": "Запись",
         "block": "Блокировка",
+        "author": "Автор: {name}",
         "durationMin": "{value} мин",
         "blockReason": {
           "break": "Перерыв",

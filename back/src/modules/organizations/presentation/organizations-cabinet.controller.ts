@@ -51,11 +51,17 @@ import {
   organizationCabinetDeleteOrganizationResponseSchema,
   organizationCabinetEditProfileResponseSchema,
   organizationCabinetTeamMembersResponseSchema,
+  organizationTeamMutationResponseSchema,
+  organizationTeamRoleRequestSchema,
   workplaceJoinApplicantCabinetProfileResponseSchema,
   workplaceJoinRequestListResponseSchema,
   workplaceJoinRequestReviewRequestSchema,
   workplaceJoinRequestReviewResponseSchema,
 } from './organizations-cabinet.openapi-schemas';
+import {
+  organizationTeamRoleBodySchema,
+  type OrganizationTeamRoleBody,
+} from '../dto/organization-team-role.schema';
 import { specialistOnboardingResponseSchema } from '../../specialists/presentation/specialists.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
@@ -155,6 +161,70 @@ export class OrganizationsCabinetController {
     return this.organizationCabinet.listCabinetOrganizationTeamMembers(
       req.user.id,
       organizationId,
+    );
+  }
+
+  @Patch(':organizationId/cabinet-team/:employmentId/role')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Сменить роль участника команды организации.',
+    description:
+      'Доступно только владельцу организации. Роль owner через этот endpoint не выдается.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'employmentId', format: 'uuid' })
+  @ApiBody({ schema: organizationTeamRoleRequestSchema })
+  @ApiOkResponse({ schema: organizationTeamMutationResponseSchema })
+  @ApiForbiddenResponse({
+    description: 'Нет прав менять роли или попытка изменить владельца',
+  })
+  @ApiNotFoundResponse({ description: 'Участник команды не найден' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async patchCabinetOrganizationTeamMemberRole(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Param('employmentId', new ParseUUIDPipe({ version: '4' }))
+    employmentId: string,
+    @Body(new ZodValidationPipe(organizationTeamRoleBodySchema))
+    body: OrganizationTeamRoleBody,
+  ) {
+    return this.organizationCabinet.patchCabinetOrganizationTeamMemberRole(
+      req.user.id,
+      organizationId,
+      employmentId,
+      body,
+    );
+  }
+
+  @Delete(':organizationId/cabinet-team/:employmentId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Деактивировать участника команды организации.',
+    description:
+      'Доступно только владельцу организации. Владельца нельзя удалить через team API.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'employmentId', format: 'uuid' })
+  @ApiOkResponse({ schema: organizationTeamMutationResponseSchema })
+  @ApiForbiddenResponse({
+    description: 'Нет прав удалить участника или попытка удалить владельца',
+  })
+  @ApiNotFoundResponse({ description: 'Участник команды не найден' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async deleteCabinetOrganizationTeamMember(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Param('employmentId', new ParseUUIDPipe({ version: '4' }))
+    employmentId: string,
+  ) {
+    return this.organizationCabinet.deleteCabinetOrganizationTeamMember(
+      req.user.id,
+      organizationId,
+      employmentId,
     );
   }
 

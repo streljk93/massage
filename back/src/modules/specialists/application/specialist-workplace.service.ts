@@ -28,6 +28,11 @@ import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-special
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { CalendarService } from '../../calendar/application/calendar.service';
+import { OrganizationAccessPolicyService } from '../../organizations/application/organization-access-policy.service';
+import {
+  emptyOrganizationPermissions,
+  type OrganizationScopedPermissions,
+} from '../../organizations/domain/organization-permissions';
 
 @Injectable()
 export class SpecialistWorkplaceService {
@@ -39,6 +44,7 @@ export class SpecialistWorkplaceService {
     private readonly pushNotifications: PushNotificationsService,
     private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
     private readonly calendarService: CalendarService,
+    private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
   /**
@@ -101,6 +107,7 @@ export class SpecialistWorkplaceService {
       membershipStatus: 'employed' | 'pending_join';
       workplaceJoinRequestId: string | null;
       role: string | null;
+      permissions: OrganizationScopedPermissions;
       isActiveWorkplace: boolean;
       publicationModerationStatus: PublicationModerationStatus;
       salonCabinetPreview: {
@@ -243,36 +250,46 @@ export class SpecialistWorkplaceService {
       }
     }
 
+    const accessCache = this.organizationAccess.createContextCache();
+    const employedRows = await Promise.all(
+      employments.map(async (e) => {
+        const pending = latestPendingByOrgId.get(e.organization.id);
+        const salonCabinetPreview =
+          pending != null
+            ? {
+                revisionId: pending.revisionId,
+                name: pending.name,
+                coverImageUrl:
+                  coverUrlByRevisionId.get(pending.revisionId) ?? null,
+              }
+            : null;
+        const ctx = await accessCache.resolve(
+          userId,
+          e.organization.id,
+        );
+        return {
+          id: e.organization.id,
+          name: e.organization.name,
+          membershipStatus: 'employed' as const,
+          workplaceJoinRequestId: null,
+          role: e.role,
+          permissions: this.organizationAccess.buildPermissionsForContext(ctx),
+          isActiveWorkplace:
+            specialist.activeOrganizationId === e.organization.id,
+          publicationModerationStatus:
+            pending != null
+              ? PublicationModerationStatus.pending_review
+              : e.organization.publicationModerationStatus,
+          salonCabinetPreview,
+          publishedCoverImageUrl:
+            publishedCoverUrlByOrgId.get(e.organization.id) ?? null,
+        };
+      }),
+    );
+
     return {
       organizations: [
-        ...employments.map((e) => {
-          const pending = latestPendingByOrgId.get(e.organization.id);
-          const salonCabinetPreview =
-            pending != null
-              ? {
-                  revisionId: pending.revisionId,
-                  name: pending.name,
-                  coverImageUrl:
-                    coverUrlByRevisionId.get(pending.revisionId) ?? null,
-                }
-              : null;
-          return {
-            id: e.organization.id,
-            name: e.organization.name,
-            membershipStatus: 'employed' as const,
-            workplaceJoinRequestId: null,
-            role: e.role,
-            isActiveWorkplace:
-              specialist.activeOrganizationId === e.organization.id,
-            publicationModerationStatus:
-              pending != null
-                ? PublicationModerationStatus.pending_review
-                : e.organization.publicationModerationStatus,
-            salonCabinetPreview,
-            publishedCoverImageUrl:
-              publishedCoverUrlByOrgId.get(e.organization.id) ?? null,
-          };
-        }),
+        ...employedRows,
         ...pendingJoinRows.map((row) => {
           const org = row.organization;
           const pendingRev = latestPendingByOrgId.get(org.id);
@@ -291,6 +308,7 @@ export class SpecialistWorkplaceService {
             membershipStatus: 'pending_join' as const,
             workplaceJoinRequestId: row.id,
             role: null,
+            permissions: emptyOrganizationPermissions(),
             isActiveWorkplace: false,
             publicationModerationStatus:
               pendingRev != null
