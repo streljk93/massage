@@ -15,14 +15,14 @@ import {
 } from "@/shared/api";
 import { Button, SearchAutocomplete } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
-
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 const ONB_QK = ["specialistOnboarding"] as const;
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
 
 export function BusinessOrganizationJoinPage() {
   const tOnb = useTranslations("specialistOnboarding");
   const tPage = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(tPage("organizationJoinTitle"));
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -43,11 +43,6 @@ export function BusinessOrganizationJoinPage() {
   const [orgPending, setOrgPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const backToOrgs = {
-    href: "/business/organizations",
-    ariaLabel: tPage("organizationJoinBackAria"),
-  } as const;
 
   useEffect(() => {
     const q = orgQ.trim();
@@ -115,15 +110,7 @@ export function BusinessOrganizationJoinPage() {
 
   if (sessionStatus === "loading") {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationJoinTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationJoinTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div className="h-40 animate-pulse rounded-2xl bg-muted/50" aria-busy />
       </main>
     );
@@ -131,15 +118,7 @@ export function BusinessOrganizationJoinPage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationJoinTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationJoinTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("orgsSignInTitle")}
@@ -150,16 +129,7 @@ export function BusinessOrganizationJoinPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={tPage("organizationJoinTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={tPage("organizationJoinTitle")}
-        avatarFallback="B"
-        cabinetBack={backToOrgs}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
       <p className="text-pretty text-[0.9375rem] leading-relaxed text-foreground/85">
         {tPage("organizationJoinIntro")}
       </p>

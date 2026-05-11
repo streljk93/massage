@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/app/i18n/navigation";
@@ -14,9 +14,12 @@ import { cn } from "@/shared/lib";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
   BusinessCabinetHeaderProvider,
+  BusinessScreenTitleSetContext,
   type CabinetHeaderLeadRole,
 } from "./business-cabinet-nav-context";
-import { BusinessCabinetActiveOrgDock } from "./business-cabinet-active-org-dock";
+import { BusinessAppBottomNav } from "./business-app-bottom-nav";
+import { BusinessCabinetSidebar } from "./business-cabinet-nav-drawer";
+import { BusinessScreenHeader } from "./business-screen-header";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
@@ -111,44 +114,94 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
     return `/business/setup/${step}` as const;
   }, [onboard?.onboardingStep]);
 
-  const [activeOrgDockVisible, setActiveOrgDockVisible] = useState(false);
+  const [pageTitle, setPageTitle] = useState("");
 
-  const onActiveOrgDockVisibleChange = useCallback((visible: boolean) => {
-    setActiveOrgDockVisible((prev) => (prev === visible ? prev : visible));
-  }, []);
+  const showBusinessBottomNav =
+    ready &&
+    status === "authenticated" &&
+    setupComplete &&
+    !isSetupPath(pathname);
+
+  const showSidebar =
+    ready && status === "authenticated" && setupComplete && !isSetupPath(pathname);
 
   return (
     <BusinessCabinetHeaderProvider lead={headerLead}>
-      <div className="flex min-h-screen flex-col bg-surface-light">
-        {showIncompleteStrip ? (
-          <div
-            className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center"
-            role="status"
-          >
-            <p className="text-pretty text-sm text-foreground/90">
-              {t("incompleteBanner")}
-            </p>
-            <Link
-              href={continueSetupHref}
-              className="mt-1 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
+      <BusinessScreenTitleSetContext.Provider value={setPageTitle}>
+        {/*
+         * Mobile:  flex-col — шапка + контент + нижняя панель
+         * Desktop: flex-row — постоянный сайдбар слева (в потоке), контент справа
+         */}
+        <div className="flex min-h-screen flex-col bg-background md:flex-row">
+
+          {/* Сайдбар — только десктоп, только после авторизации + онбординг */}
+          {showSidebar ? (
+            <div className="hidden md:block">
+              <BusinessCabinetSidebar />
+            </div>
+          ) : null}
+
+          {/* Основная колонка */}
+          <div className="flex min-w-0 flex-1 flex-col">
+
+            {/* Полоса «онбординг не завершён» */}
+            {showIncompleteStrip ? (
+              <div
+                className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-center"
+                role="status"
+              >
+                <p className="text-pretty text-sm text-foreground/90">
+                  {t("incompleteBanner")}
+                </p>
+                <Link
+                  href={continueSetupHref}
+                  className="mt-1 inline-block text-sm font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  {t("reminderCta")}
+                </Link>
+              </div>
+            ) : null}
+
+            {/* Шапка + страница: общая max-width на широких экранах, по центру колонки */}
+            <div
+              className={cn(
+                "mx-auto flex min-h-0 w-full min-w-0 max-w-5xl flex-1 flex-col",
+                isSetupPath(pathname) && "max-w-none",
+              )}
             >
-              {t("reminderCta")}
-            </Link>
+              {!isSetupPath(pathname) ? (
+                <div className="px-4 pt-2 pb-1">
+                  <BusinessScreenHeader
+                    title={pageTitle}
+                    titleVariant="section"
+                    avatarFallback="B"
+                  />
+                </div>
+              ) : null}
+
+              <div
+                className={cn(
+                  "flex min-h-0 min-w-0 flex-1 flex-col",
+                  isSetupPath(pathname) ? "pb-0"
+                  : showBusinessBottomNav ?
+                    "pb-[calc(3.875rem+1rem+env(safe-area-inset-bottom))] md:pb-4"
+                  : "pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4",
+                )}
+              >
+                {children}
+              </div>
+            </div>
+
+            {/* Нижняя панель «место приёма» — только мобайл */}
+            {showBusinessBottomNav ? (
+              <div className="md:hidden">
+                <BusinessAppBottomNav />
+              </div>
+            ) : null}
+
           </div>
-        ) : null}
-        <div
-          className={cn(
-            "flex min-h-0 min-w-0 flex-1 flex-col",
-            isSetupPath(pathname) ? "pb-0"
-            : activeOrgDockVisible ?
-              "pb-[calc(4.25rem+env(safe-area-inset-bottom))]"
-            : "pb-[max(1rem,env(safe-area-inset-bottom))]",
-          )}
-        >
-          {children}
         </div>
-        <BusinessCabinetActiveOrgDock onVisibleChange={onActiveOrgDockVisibleChange} />
-      </div>
+      </BusinessScreenTitleSetContext.Provider>
     </BusinessCabinetHeaderProvider>
   );
 }

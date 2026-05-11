@@ -25,8 +25,8 @@ import {
 } from "@/shared/api";
 import { cn, motion } from "@/shared/lib";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { parseVnLocalForInput } from "@/views/business/setup/lib/specialist-onboarding-utils";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 function roleAllowsSalonCabinetEditing(role: string): boolean {
@@ -93,6 +93,7 @@ function cabinetProfileToFormInitialValues(
 export function BusinessOrganizationEditPage() {
   const t = useTranslations("specialistOnboarding");
   const tPage = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(tPage("organizationEditTitle"));
   const locale = useLocale() as AppLocale;
   const params = useParams<{ organizationId: string }>();
   const organizationId = params.organizationId;
@@ -107,11 +108,6 @@ export function BusinessOrganizationEditPage() {
   );
 
   const authed = sessionStatus === "authenticated" && accessToken.length > 0;
-
-  const backToOrgs = {
-    href: "/business/organizations",
-    ariaLabel: tPage("organizationEditBackAria"),
-  } as const;
 
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -214,15 +210,7 @@ export function BusinessOrganizationEditPage() {
     (canManage && cabinetProfileQuery.isPending)
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationEditTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationEditTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div className="h-40 animate-pulse rounded-2xl bg-muted/50" aria-busy />
       </main>
     );
@@ -230,15 +218,7 @@ export function BusinessOrganizationEditPage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationEditTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationEditTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("orgsSignInTitle")}
@@ -255,15 +235,7 @@ export function BusinessOrganizationEditPage() {
     organizationId === ""
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationEditTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationEditTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("organizationEditNotFoundTitle")}
@@ -275,15 +247,7 @@ export function BusinessOrganizationEditPage() {
 
   if (!canManage) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationEditTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationEditTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={membership.name}
@@ -295,15 +259,7 @@ export function BusinessOrganizationEditPage() {
 
   if (cabinetProfileQuery.isError) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationEditTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationEditTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("organizationEditLoadErrorTitle")}
@@ -326,20 +282,7 @@ export function BusinessOrganizationEditPage() {
   const membershipDraft = membership.salonCabinetPreview;
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={
-          membershipDraft != null && membershipDraft.name.trim().length > 0 ?
-            membershipDraft.name
-          : membership.name
-        }
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={tPage("organizationEditTitle")}
-        avatarFallback="B"
-        cabinetBack={backToOrgs}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
       <OrganizationSalonCabinetForm
         t={t}
         client={sdk}

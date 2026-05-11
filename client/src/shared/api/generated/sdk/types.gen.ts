@@ -2831,7 +2831,7 @@ export type SpecialistsCabinetGetSpecialistSalonBookingsData = {
     path?: never;
     query: {
         /**
-         * managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма.
+         * managed — записи по всем организациям, где мастер owner/admin. active_workplace — текущее место приёма: owner/admin видят все визиты этой организации, specialist — только свои брони в ней.
          */
         scope: 'managed' | 'active_workplace';
         /**
@@ -3243,7 +3243,7 @@ export type BookingsListData = {
     body?: never;
     headers?: {
         /**
-         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)
          */
         'Idempotency-Key'?: string;
     };
@@ -3358,7 +3358,7 @@ export type BookingsCreateData = {
     };
     headers?: {
         /**
-         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)
          */
         'Idempotency-Key'?: string;
     };
@@ -3405,6 +3405,10 @@ export type BookingsCreateResponses = {
          */
         pendingExpiresAt?: string | null;
     };
+    /**
+     * Запрос принят в очередь (`BOOKING_QUEUED`) при перегрузке lock; повторите POST с тем же Idempotency-Key через несколько секунд. Включено при `BOOKING_COMMAND_QUEUE_ENABLED=true` и Redis.
+     */
+    202: unknown;
 };
 
 export type BookingsCreateResponse = BookingsCreateResponses[keyof BookingsCreateResponses];
@@ -3424,7 +3428,7 @@ export type BookingsSubmitVisitReviewsData = {
     };
     headers?: {
         /**
-         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)
          */
         'Idempotency-Key'?: string;
     };
@@ -3475,7 +3479,7 @@ export type BookingsCancelData = {
     };
     headers?: {
         /**
-         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 с кодом BOOKING_BUSY_RETRY
+         * Идемпотентность создания брони и обязательный повтор той же строки при ответе 503 `BOOKING_BUSY_RETRY` или после 202 `BOOKING_QUEUED` (очередь команд при `BOOKING_COMMAND_QUEUE_ENABLED=true`)
          */
         'Idempotency-Key'?: string;
     };
@@ -3683,6 +3687,10 @@ export type SpecialistBookingsRescheduleConfirmedErrors = {
      * Бронь не найдена
      */
     404: unknown;
+    /**
+     * Перегрузка блокировки слота (`BOOKING_BUSY_RETRY`)
+     */
+    503: unknown;
 };
 
 export type SpecialistBookingsRescheduleConfirmedResponses = {
@@ -3695,6 +3703,10 @@ export type SpecialistBookingsRescheduleConfirmedResponses = {
         startsAt: string;
         endsAt: string;
     };
+    /**
+     * Перенос принят в очередь (`BOOKING_QUEUED`, `BOOKING_COMMAND_QUEUE_ENABLED=true`).
+     */
+    202: unknown;
 };
 
 export type SpecialistBookingsRescheduleConfirmedResponse = SpecialistBookingsRescheduleConfirmedResponses[keyof SpecialistBookingsRescheduleConfirmedResponses];
@@ -3740,6 +3752,269 @@ export type SpecialistBookingsStartVisitResponses = {
 };
 
 export type SpecialistBookingsStartVisitResponse = SpecialistBookingsStartVisitResponses[keyof SpecialistBookingsStartVisitResponses];
+
+export type CalendarListResourcesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/calendar/resources';
+};
+
+export type CalendarListResourcesErrors = {
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет доступа к активной организации
+     */
+    403: unknown;
+};
+
+export type CalendarListResourcesResponses = {
+    200: {
+        organizationId: string;
+        resources: Array<{
+            id: string;
+            type: 'specialist' | 'room' | 'equipment';
+            specialistId: string | null;
+            name: string;
+            capacity: number;
+            isActive: boolean;
+        }>;
+    };
+};
+
+export type CalendarListResourcesResponse = CalendarListResourcesResponses[keyof CalendarListResourcesResponses];
+
+export type CalendarListEventsData = {
+    body?: never;
+    path?: never;
+    query: {
+        cursor?: string;
+        limit?: number;
+        resourceIds?: Array<string>;
+        to: string;
+        from: string;
+    };
+    url: '/calendar/events';
+};
+
+export type CalendarListEventsErrors = {
+    /**
+     * Невалидный query
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет доступа к ресурсу
+     */
+    403: unknown;
+};
+
+export type CalendarListEventsResponses = {
+    200: {
+        organizationId: string;
+        events: Array<{
+            id: string;
+            organizationId: string;
+            bookingId: string | null;
+            startsAt: string;
+            endsAt: string;
+            type: 'booking' | 'block';
+            status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
+            blockReason: 'break' | 'vacation' | 'manual';
+            notes: string | null;
+            version: number;
+            resources: Array<{
+                id: string;
+                type: 'specialist' | 'room' | 'equipment';
+                name: string;
+                specialistId: string | null;
+                role: string | null;
+            }>;
+            booking: {
+                id: string;
+                status: string;
+                clientDisplayName: string;
+                specialistName: string | null;
+                categoryShortName: string;
+                amount: number | null;
+                currency: string;
+            } | null;
+        }>;
+        nextCursor: string | null;
+    };
+};
+
+export type CalendarListEventsResponse = CalendarListEventsResponses[keyof CalendarListEventsResponses];
+
+export type CalendarCreateBlockData = {
+    body: {
+        startsAt: string;
+        endsAt: string;
+        resourceIds: Array<string>;
+        blockReason: 'break' | 'vacation' | 'manual';
+        notes?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/calendar/events';
+};
+
+export type CalendarCreateBlockErrors = {
+    /**
+     * Конфликт или невалидный интервал
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет доступа к ресурсу
+     */
+    403: unknown;
+};
+
+export type CalendarCreateBlockResponses = {
+    200: {
+        event: {
+            id: string;
+            organizationId: string;
+            bookingId: string | null;
+            startsAt: string;
+            endsAt: string;
+            type: 'booking' | 'block';
+            status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
+            blockReason: 'break' | 'vacation' | 'manual';
+            notes: string | null;
+            version: number;
+            resources: Array<{
+                id: string;
+                type: 'specialist' | 'room' | 'equipment';
+                name: string;
+                specialistId: string | null;
+                role: string | null;
+            }>;
+            booking: {
+                id: string;
+                status: string;
+                clientDisplayName: string;
+                specialistName: string | null;
+                categoryShortName: string;
+                amount: number | null;
+                currency: string;
+            } | null;
+        };
+    };
+};
+
+export type CalendarCreateBlockResponse = CalendarCreateBlockResponses[keyof CalendarCreateBlockResponses];
+
+export type CalendarDeleteBlockData = {
+    body?: never;
+    path: {
+        id: unknown;
+    };
+    query: {
+        version: number;
+    };
+    url: '/calendar/events/{id}';
+};
+
+export type CalendarDeleteBlockErrors = {
+    /**
+     * Попытка удалить booking-event
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет доступа к событию
+     */
+    403: unknown;
+};
+
+export type CalendarDeleteBlockResponses = {
+    200: {
+        id: string;
+        deleted: true;
+    };
+};
+
+export type CalendarDeleteBlockResponse = CalendarDeleteBlockResponses[keyof CalendarDeleteBlockResponses];
+
+export type CalendarUpdateBlockData = {
+    body: {
+        startsAt: string;
+        endsAt: string;
+        resourceIds: Array<string>;
+        blockReason?: 'break' | 'vacation' | 'manual';
+        notes?: string | null;
+        version: number;
+    };
+    path: {
+        id: unknown;
+    };
+    query?: never;
+    url: '/calendar/events/{id}';
+};
+
+export type CalendarUpdateBlockErrors = {
+    /**
+     * Конфликт, booking-event или неверный интервал
+     */
+    400: unknown;
+    /**
+     * Нет access token
+     */
+    401: unknown;
+    /**
+     * Нет доступа к ресурсу
+     */
+    403: unknown;
+};
+
+export type CalendarUpdateBlockResponses = {
+    200: {
+        event: {
+            id: string;
+            organizationId: string;
+            bookingId: string | null;
+            startsAt: string;
+            endsAt: string;
+            type: 'booking' | 'block';
+            status: 'pending' | 'confirmed' | 'in_progress' | 'cancelled';
+            blockReason: 'break' | 'vacation' | 'manual';
+            notes: string | null;
+            version: number;
+            resources: Array<{
+                id: string;
+                type: 'specialist' | 'room' | 'equipment';
+                name: string;
+                specialistId: string | null;
+                role: string | null;
+            }>;
+            booking: {
+                id: string;
+                status: string;
+                clientDisplayName: string;
+                specialistName: string | null;
+                categoryShortName: string;
+                amount: number | null;
+                currency: string;
+            } | null;
+        };
+    };
+};
+
+export type CalendarUpdateBlockResponse = CalendarUpdateBlockResponses[keyof CalendarUpdateBlockResponses];
 
 export type PushTokensRevokeData = {
     body: {
@@ -4314,6 +4589,37 @@ export type DevBookingsSetStatusResponses = {
 };
 
 export type DevBookingsSetStatusResponse = DevBookingsSetStatusResponses[keyof DevBookingsSetStatusResponses];
+
+export type DevBookingsRebuildProjectionData = {
+    body?: never;
+    path: {
+        bookingId: unknown;
+    };
+    query?: never;
+    url: '/dev/bookings/{bookingId}/rebuild-projection';
+};
+
+export type DevBookingsRebuildProjectionErrors = {
+    /**
+     * Ручка выключена или бронь не найдена
+     */
+    404: unknown;
+    /**
+     * Пустой журнал / нет хвоста / гонка версии при записи (коды BOOKING_RECONCILE_*)
+     */
+    409: unknown;
+};
+
+export type DevBookingsRebuildProjectionResponses = {
+    /**
+     * Проекция обновлена
+     */
+    200: {
+        ok?: boolean;
+    };
+};
+
+export type DevBookingsRebuildProjectionResponse = DevBookingsRebuildProjectionResponses[keyof DevBookingsRebuildProjectionResponses];
 
 export type DevFcmTestTestFcmData = {
     body: {

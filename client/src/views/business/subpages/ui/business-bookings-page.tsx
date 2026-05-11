@@ -1,276 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CalendarDays, ChevronDown, Loader2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
-import { parseISO } from "date-fns";
 import type { AppLocale } from "@/app/i18n/routing";
-import {
-  BookingDoneVisitReviewSummary,
-  BookingShowcaseCard,
-  BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
-  bookingHistoryDateTagsMuted,
-  bookingHistorySystemNote,
-  formatBookingServiceLineClient,
-  usePendingBookingCountdown,
-} from "@/entities/booking";
 import { BusinessEmptyState } from "@/entities/business";
-import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   bookingIsNewTab,
   compareBookingsNewTabPriority,
-} from "@/views/bookings/lib/booking-api-to-ui";
-import {
-  vnCalendarYmdString,
-  vnTomorrowFromNow,
-} from "@/views/specialist-profile/lib/booking-starts-at";
+  enrichSalonBookingRow,
+  SalonBookingRowCard,
+} from "@/entities/booking";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
+import { specialistMyOrganizationsQueryKey } from "@/entities/organizations";
 import {
   createBrowserSdkClient,
-  specialistBookingsCancelConfirmed,
-  specialistBookingsConfirmPending,
-  specialistBookingsRejectPending,
-  specialistBookingsStartVisit,
   specialistsCabinetGetSpecialistMyOrganizations,
   specialistsCabinetGetSpecialistSalonBookings,
 } from "@/shared/api";
-import type {
-  SpecialistsCabinetGetSpecialistSalonBookingsResponse,
-  SpecialistBookingsCancelConfirmedData,
-} from "@/shared/api/generated/sdk/types.gen";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/shared/ui/shadcn/collapsible";
-import { Button } from "@/shared/ui/button";
 import { bookingSlotStartTimeReachedClient, useBookingStartWindowPulseWhenWaiting } from "@/shared/lib/booking-slot-start-client";
-import { cn, motion, resolveApiResourceUrl } from "@/shared/lib";
-import { confirmAction, notify } from "@/shared/lib/notifications";
+import { cn, motion } from "@/shared/lib";
+import { notify } from "@/shared/lib/notifications";
 import { SalonConfirmedCancelDialog } from "./salon-confirmed-cancel-dialog";
-
-type SalonBookingRow = SpecialistsCabinetGetSpecialistSalonBookingsResponse["bookings"][number];
-
-const SALON_BOOKINGS_QK = ["specialistSalonBookings"] as const;
-
-function isOrgManagerRole(role: string): boolean {
-  return role === "owner" || role === "admin";
-}
-
-type BookingsTab = "managed" | "active_workplace";
-
-type EnrichedSalonBookingRow = SalonBookingRow & {
-  dateLabel: string;
-  timeRange: string;
-  serviceLine: string;
-  /** Пояснение к статусу (причина отмены / истечения); только для вкладки «история» и смежных случаев. */
-  cancelNote?: string | undefined;
-};
-
-function SalonBookingRowCard({
-  row,
-  scope,
-  onPendingExpired,
-  onPendingAccept,
-  onPendingReject,
-  onConfirmedStartVisit,
-  onConfirmedOpenCancel,
-  salonActionsBusy,
-}: {
-  row: EnrichedSalonBookingRow;
-  scope: "managed" | "active_workplace";
-  onPendingExpired?: () => void;
-  onPendingAccept?: () => void;
-  onPendingReject?: () => void;
-  onConfirmedStartVisit?: () => void;
-  onConfirmedOpenCancel?: () => void;
-  salonActionsBusy?: boolean;
-}) {
-  const t = useTranslations("businessAppSubpages");
-  const tList = useTranslations("bookingList");
-
-  const countdown = usePendingBookingCountdown(
-    row.pendingExpiresAt,
-    row.status === "pending",
-    onPendingExpired,
-  );
-
-  const visitWindowReady =
-    row.status === "confirmed" ?
-      bookingSlotStartTimeReachedClient(row.startsAt)
-    : false;
-
-  const guestParts: string[] = [t("bookingsClientCaption", { name: row.clientDisplayName })];
-  if (scope === "managed" && row.organizationName != null && row.organizationName !== "") {
-    guestParts.push(t("bookingsSalonCaption", { name: row.organizationName }));
-  }
-  const guestCaption = guestParts.join(" · ");
-
-  const resolvedStatusLabel =
-    row.statusLabel.trim() !== "" ? row.statusLabel.trim() : "\u2014";
-
-  const secondaryNoteRaw = row.cancelNote?.trim();
-  const secondaryNote =
-    secondaryNoteRaw != null && secondaryNoteRaw !== "" ?
-      secondaryNoteRaw
-    : undefined;
-
-  const statusFooter =
-    row.status === "pending" && countdown != null ?
-      <div className="flex w-full min-w-0 items-baseline justify-between gap-3">
-        <p className="min-w-0 flex-1 font-medium leading-snug text-foreground">
-          {resolvedStatusLabel}
-        </p>
-        <p
-          className="shrink-0 tabular-nums text-muted-foreground"
-          aria-label={tList("statusPendingTimer", {
-            minutes: countdown.minutes,
-            seconds: countdown.seconds,
-          })}
-        >
-          {tList("statusPendingTimeCompact", {
-            minutes: countdown.minutes,
-            seconds: countdown.seconds,
-          })}
-        </p>
-      </div>
-    : secondaryNote != null ?
-      <div className="space-y-1.5">
-        <p className="font-medium text-foreground">{resolvedStatusLabel}</p>
-        <p
-          role="note"
-          className="text-pretty whitespace-pre-wrap text-xs leading-snug text-muted-foreground break-words"
-        >
-          {secondaryNote}
-        </p>
-      </div>
-    : (
-      <p className="font-medium text-foreground">{resolvedStatusLabel}</p>
-      );
-
-  const pendingActions =
-    row.status === "pending" && onPendingAccept != null && onPendingReject != null ?
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(BOOKING_ACTION_OUTLINE_BUTTON_CLASS, "text-primary hover:text-primary")}
-          onClick={onPendingAccept}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-        >
-          {t("incomingAccept")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
-            "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
-          )}
-          onClick={onPendingReject}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-        >
-          {t("incomingReject")}
-        </Button>
-      </div>
-    : null;
-
-  const confirmedActions =
-    row.status === "confirmed" &&
-    onConfirmedStartVisit != null &&
-    onConfirmedOpenCancel != null ?
-      <div className="grid grid-cols-2 gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(BOOKING_ACTION_OUTLINE_BUTTON_CLASS, "text-primary hover:text-primary")}
-          onClick={() => {
-            if (!visitWindowReady) {
-              notify.info(
-                t("bookingsStartVisitTooEarlyToast"),
-                t("bookingsStartVisitTooEarlyToastDescription"),
-              );
-              return;
-            }
-            onConfirmedStartVisit();
-          }}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-          aria-label={t("bookingsConfirmedStartVisit")}
-        >
-          {t("bookingsConfirmedStartVisit")}
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className={cn(
-            BOOKING_ACTION_OUTLINE_BUTTON_CLASS,
-            "border-destructive/35 text-destructive hover:bg-destructive/10 hover:text-destructive",
-          )}
-          onClick={onConfirmedOpenCancel}
-          disabled={salonActionsBusy}
-          aria-busy={salonActionsBusy}
-          aria-label={t("bookingsConfirmedCancel")}
-        >
-          {t("bookingsConfirmedCancel")}
-        </Button>
-      </div>
-    : null;
-
-  const doneVisitReviewFooter =
-    row.status === "done" &&
-    (row.visitReviewOrganizationRating != null ||
-      row.visitReviewSpecialistRating != null ||
-      (row.visitReviewOrganizationExcerpt != null &&
-        row.visitReviewOrganizationExcerpt.trim() !== "") ||
-      (row.visitReviewSpecialistExcerpt != null &&
-        row.visitReviewSpecialistExcerpt.trim() !== "")) ?
-      <BookingDoneVisitReviewSummary
-        organizationRating={row.visitReviewOrganizationRating}
-        specialistRating={row.visitReviewSpecialistRating}
-        organizationExcerpt={row.visitReviewOrganizationExcerpt}
-        specialistExcerpt={row.visitReviewSpecialistExcerpt}
-      />
-    : undefined;
-
-  return (
-    <BookingShowcaseCard
-      variant="light"
-      specialistName={row.specialistName}
-      serviceLine={row.serviceLine}
-      dateLabel={row.dateLabel}
-      timeRange={row.timeRange}
-      avatarSrc={specialistAvatarSrc(row.specialistImageUrl)}
-      specialistProfileHref={`/specialists/${row.specialistId}`}
-      specialistLinkAriaLabel={tList("openSpecialistProfile", {
-        name: row.specialistName,
-      })}
-      guestCaption={guestCaption}
-      statusFooter={statusFooter}
-      statusFooterSuccess={row.status === "confirmed" || row.status === "done"}
-      statusFooterInProgress={row.status === "in_progress"}
-      dateTagsMuted={bookingHistoryDateTagsMuted(row.status)}
-      actions={pendingActions ?? confirmedActions}
-      footerExtra={doneVisitReviewFooter}
-    />
-  );
-}
-
-function specialistAvatarSrc(url: string | null | undefined): string | undefined {
-  if (url == null || url === "") {
-    return undefined;
-  }
-  return url.startsWith("http://") || url.startsWith("https://")
-    ? url
-    : resolveApiResourceUrl(url);
-}
+import {
+  SALON_BOOKINGS_QUERY_KEY_PREFIX,
+  SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE,
+  salonBookingsActiveWorkplaceQueryKey,
+} from "../lib/salon-bookings-query";
+import { useSalonBookingMutations } from "../lib/use-salon-booking-mutations";
 
 export function BusinessBookingsPage() {
   const t = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(t("bookingsTitle"));
   const tBookingsUi = useTranslations("bookings");
   const tBooking = useTranslations("booking");
   const tRoot = useTranslations();
@@ -307,41 +75,13 @@ export function BusinessBookingsPage() {
     },
   });
 
-  const canSeeManagedTab = useMemo(
-    () =>
-      (orgsQuery.data?.organizations ?? []).some(
-        (o) =>
-          o.membershipStatus === "employed" &&
-          isOrgManagerRole(o.role as string),
-      ),
-    [orgsQuery.data?.organizations],
-  );
-
-  const [tab, setTab] = useState<BookingsTab>("active_workplace");
-  const adminDefaultTabApplied = useRef(false);
-
-  useEffect(() => {
-    adminDefaultTabApplied.current = false;
-    setTab("active_workplace");
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (!canSeeManagedTab || adminDefaultTabApplied.current) {
-      return;
-    }
-    adminDefaultTabApplied.current = true;
-    setTab("managed");
-  }, [canSeeManagedTab]);
-
-  const effectiveScope: "managed" | "active_workplace" = canSeeManagedTab ? tab : "active_workplace";
-
   const bookingsQuery = useQuery({
-    queryKey: [...SALON_BOOKINGS_QK, effectiveScope, accessToken, locale],
+    queryKey: salonBookingsActiveWorkplaceQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
       const { data: res, error: err } = await specialistsCabinetGetSpecialistSalonBookings({
         client: sdk,
-        query: { scope: effectiveScope, locale },
+        query: { scope: SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE, locale },
       });
       if (err || !res) {
         throw err ?? new Error("salon-bookings");
@@ -351,136 +91,22 @@ export function BusinessBookingsPage() {
   });
 
   const onSalonBookingPendingExpired = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QK] });
+    void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QUERY_KEY_PREFIX] });
   }, [queryClient]);
 
-  const salonBookingDecisionMutation = useMutation({
-    meta: { skipGlobalErrorNotification: true },
-    mutationFn: async (vars: { id: string; kind: "confirm" | "reject" }) => {
-      if (vars.kind === "confirm") {
-        const { data, error } = await specialistBookingsConfirmPending({
-          client: sdk,
-          path: { id: vars.id },
-        });
-        if (error != null) {
-          throw error;
-        }
-        return data;
-      }
-      const { data, error } = await specialistBookingsRejectPending({
-        client: sdk,
-        path: { id: vars.id },
-      });
-      if (error != null) {
-        throw error;
-      }
-      return data;
-    },
-    onSuccess: (_data, vars) => {
-      void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QK] });
-      notify.success(
-        vars.kind === "confirm"
-          ? t("bookingsPendingAcceptSuccess")
-          : t("bookingsPendingRejectSuccess"),
-      );
-    },
-    onError: () => {
-      notify.error(t("bookingsPendingActionError"));
-    },
-  });
-
-  const confirmSalonPendingBooking = useCallback(
-    (id: string) => {
-      salonBookingDecisionMutation.mutate({ id, kind: "confirm" });
-    },
-    [salonBookingDecisionMutation],
-  );
-
-  const rejectSalonPendingBookingAfterConfirm = useCallback(
-    async (id: string) => {
-      const ok = await confirmAction({
-        title: t("bookingsPendingRejectConfirmTitle"),
-        description: t("bookingsPendingRejectConfirmDescription"),
-        confirmLabel: t("incomingReject"),
-        cancelLabel: t("bookingsPendingRejectCancel"),
-        destructive: true,
-      });
-      if (!ok) {
-        return;
-      }
-      salonBookingDecisionMutation.mutate({ id, kind: "reject" });
-    },
-    [salonBookingDecisionMutation, t],
-  );
-
-  const salonBookingDecisionBusy = salonBookingDecisionMutation.isPending;
-
-  const salonStartVisitMutation = useMutation({
-    meta: { skipGlobalErrorNotification: true },
-    mutationFn: async (bookingId: string) => {
-      const { data, error } = await specialistBookingsStartVisit({
-        client: sdk,
-        path: { id: bookingId },
-      });
-      if (error != null) {
-        throw error;
-      }
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QK] });
-      notify.success(t("bookingsStartVisitSuccess"));
-    },
-    onError: () => {
-      notify.error(t("bookingsStartVisitError"));
-    },
-  });
-
-  type SpecialistCancelConfirmedBody =
-    SpecialistBookingsCancelConfirmedData["body"];
-
-  const salonCancelConfirmedMutation = useMutation({
-    meta: { skipGlobalErrorNotification: true },
-    mutationFn: async (vars: {
-      id: string;
-      body: SpecialistCancelConfirmedBody;
-    }) => {
-      const { data, error } = await specialistBookingsCancelConfirmed({
-        client: sdk,
-        path: { id: vars.id },
-        body: vars.body,
-      });
-      if (error != null) {
-        throw error;
-      }
-      return data;
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: [...SALON_BOOKINGS_QK] });
-      notify.success(t("bookingsCancelConfirmedSuccess"));
-    },
-    onError: () => {
-      notify.error(t("bookingsCancelConfirmedError"));
-    },
-  });
+  const {
+    confirmSalonPendingBooking,
+    rejectSalonPendingBookingAfterConfirm,
+    startSalonVisit,
+    salonCancelConfirmedMutation,
+    salonRowActionsBusy,
+  } = useSalonBookingMutations({ sdk });
 
   const [salonCancelTargetId, setSalonCancelTargetId] = useState<string | null>(null);
-
-  const startSalonVisit = useCallback(
-    (bookingId: string) => {
-      salonStartVisitMutation.mutate(bookingId);
-    },
-    [salonStartVisitMutation],
-  );
 
   const openSalonCancelConfirmedDialog = useCallback((bookingId: string) => {
     setSalonCancelTargetId(bookingId);
   }, []);
-
-  const salonRowActionsBusy =
-    salonBookingDecisionBusy ||
-    salonStartVisitMutation.isPending ||
-    salonCancelConfirmedMutation.isPending;
 
   const hasActiveWorkplace = useMemo(() => {
     const orgs = orgsQuery.data?.organizations ?? [];
@@ -489,62 +115,16 @@ export function BusinessBookingsPage() {
 
   const cards = useMemo(() => {
     const rows = bookingsQuery.data?.bookings ?? [];
-    const now = new Date();
-    const todayYmd = vnCalendarYmdString(now);
-    const tomorrowYmd = vnCalendarYmdString(vnTomorrowFromNow(now));
-
-    return rows.map((row): EnrichedSalonBookingRow => {
-      const start = parseISO(row.startsAt);
-      const end = parseISO(row.endsAt);
-      const startYmd = vnCalendarYmdString(start);
-      let dateLabel: string;
-      if (startYmd === todayYmd) {
-        dateLabel = tBooking("today");
-      } else if (startYmd === tomorrowYmd) {
-        dateLabel = tBooking("tomorrow");
-      } else {
-        dateLabel = format.dateTime(start, { dateStyle: "medium" });
-      }
-
-      const timeRange = `${format.dateTime(start, {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Ho_Chi_Minh",
-      })} – ${format.dateTime(end, {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Asia/Ho_Chi_Minh",
-      })}`;
-
-      const serviceLine =
-        row.amount != null
-          ? formatBookingServiceLineClient(tRoot, format, {
-              serviceLabel: row.categoryShortName,
-              amount: row.amount,
-              currency: row.currency,
-            })
-          : row.categoryShortName;
-
-      const cancelNote =
-        bookingIsNewTab(row.status) ? undefined : (
-          bookingHistorySystemNote(
-            row.status,
-            row.cancelReason,
-            row.cancellationComment,
-            (key) => tBookingHistory(key),
-            (code) => tSalonMasterReasonLabels(code),
-            (code) => tSalonSeenClientReasonLabels(code),
-          )
-        );
-
-      return {
-        ...row,
-        dateLabel,
-        timeRange,
-        serviceLine,
-        cancelNote,
-      };
-    });
+    return rows.map((row) =>
+      enrichSalonBookingRow(row, {
+        format,
+        tRoot,
+        tBooking,
+        tBookingHistory,
+        tSalonMasterReasonLabels,
+        tSalonSeenClientReasonLabels,
+      }),
+    );
   }, [
     bookingsQuery.data?.bookings,
     format,
@@ -577,25 +157,16 @@ export function BusinessBookingsPage() {
 
   const workplaceEmptyHintEligible =
     orgsQuery.isFetched &&
-    effectiveScope === "active_workplace" &&
     !hasActiveWorkplace &&
     !bookingsQuery.isPending &&
     !bookingsQuery.isError &&
     cards.length === 0;
 
-  const intro =
-    effectiveScope === "managed" ? t("bookingsIntroManaged") : t("bookingsIntroMine");
+  const bookingsIntroShort = t("bookingsIntroShort");
 
   if (sessionStatus === "loading") {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("bookingsTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("bookingsTitle")}
-          avatarFallback="B"
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div className="h-40 animate-pulse rounded-2xl bg-muted/50" aria-busy />
       </main>
     );
@@ -603,14 +174,7 @@ export function BusinessBookingsPage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("bookingsTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("bookingsTitle")}
-          avatarFallback="B"
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={CalendarDays}
           title={t("orgsSignInTitle")}
@@ -621,52 +185,13 @@ export function BusinessBookingsPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={t("bookingsTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("bookingsTitle")}
-        avatarFallback="B"
-      />
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        {bookingsIntroShort}
+      </p>
 
-      {canSeeManagedTab ? (
-        <div
-          className="flex rounded-full bg-muted p-1"
-          role="tablist"
-          aria-label={t("bookingsTablistAria")}
-        >
-          {(
-            [
-              { id: "managed" as const, labelKey: "bookingsTabAll" as const },
-              { id: "active_workplace" as const, labelKey: "bookingsTabMine" as const },
-            ] as const
-          ).map(({ id, labelKey }) => {
-            const selected = tab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                className={cn(
-                  motion.interactivePressStrong,
-                  "min-w-0 flex-1 rounded-full py-2.5 text-center text-sm font-medium transition-colors",
-                  selected ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => setTab(id)}
-              >
-                {t(labelKey)}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      <p className="text-pretty text-[0.9375rem] leading-relaxed text-foreground/85">{intro}</p>
-
-      <div role="tabpanel">
-        {(bookingsQuery.isPending || (effectiveScope === "active_workplace" && !orgsQuery.isFetched)) ? (
+      <div>
+        {(bookingsQuery.isPending || !orgsQuery.isFetched) ? (
           <div
             className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"
             aria-busy
@@ -700,11 +225,11 @@ export function BusinessBookingsPage() {
         ) : cards.length === 0 ? (
           <BusinessEmptyState
             icon={CalendarDays}
-            title={effectiveScope === "managed" ? t("emptyBookingsTitleAll") : t("emptyBookingsTitleMine")}
-            description={effectiveScope === "managed" ? t("emptyBookingsHintAll") : t("emptyBookingsHintMine")}
+            title={t("emptyBookingsTitleMine")}
+            description={t("emptyBookingsHintMine")}
           />
         ) : (
-          <div key={effectiveScope} className="space-y-4" aria-label={t("bookingsListAria")}>
+          <div className="space-y-4" aria-label={t("bookingsListAria")}>
             {newSectionCards.length > 0 ? (
               <Collapsible defaultOpen className="group w-full overflow-hidden p-0">
                 <CollapsibleTrigger
@@ -712,7 +237,7 @@ export function BusinessBookingsPage() {
                     motion.interactivePressStrong,
                     "flex w-full touch-manipulation items-center justify-between gap-2 px-0 py-1 text-left outline-none rounded-lg hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
                   )}
-                  id={`salon-bookings-${effectiveScope}-new-heading`}
+                  id={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-new-heading`}
                 >
                   <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">
                     {tBookingsUi("tabNew")}
@@ -726,16 +251,16 @@ export function BusinessBookingsPage() {
                   />
                 </CollapsibleTrigger>
                 <CollapsibleContent
-                  id={`salon-bookings-${effectiveScope}-new-panel`}
+                  id={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-new-panel`}
                   role="region"
-                  aria-labelledby={`salon-bookings-${effectiveScope}-new-heading`}
+                  aria-labelledby={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-new-heading`}
                 >
                   <ul className="flex flex-col gap-3 pt-2">
                     {newSectionCards.map((row) => (
                       <li key={row.id}>
                         <SalonBookingRowCard
                           row={row}
-                          scope={effectiveScope}
+                          scope={SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}
                           onPendingExpired={onSalonBookingPendingExpired}
                           onPendingAccept={
                             row.status === "pending"
@@ -773,7 +298,7 @@ export function BusinessBookingsPage() {
                     motion.interactivePressStrong,
                     "flex w-full touch-manipulation items-center justify-between gap-2 px-0 py-1 text-left outline-none rounded-lg hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/45",
                   )}
-                  id={`salon-bookings-${effectiveScope}-history-heading`}
+                  id={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-history-heading`}
                 >
                   <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">
                     {tBookingsUi("tabHistory")}
@@ -787,16 +312,16 @@ export function BusinessBookingsPage() {
                   />
                 </CollapsibleTrigger>
                 <CollapsibleContent
-                  id={`salon-bookings-${effectiveScope}-history-panel`}
+                  id={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-history-panel`}
                   role="region"
-                  aria-labelledby={`salon-bookings-${effectiveScope}-history-heading`}
+                  aria-labelledby={`salon-bookings-${SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}-history-heading`}
                 >
                   <ul className="flex flex-col gap-3 pt-2">
                     {historySectionCards.map((row) => (
                       <li key={row.id}>
                         <SalonBookingRowCard
                           row={row}
-                          scope={effectiveScope}
+                          scope={SALON_BOOKINGS_SCOPE_ACTIVE_WORKPLACE}
                           onPendingExpired={onSalonBookingPendingExpired}
                           onPendingAccept={
                             row.status === "pending"

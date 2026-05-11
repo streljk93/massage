@@ -4,21 +4,24 @@
       "businessScreenHeader": {
         "backToApp": "Back to the app",
         "backToAppAria": "Return to the main app as a client",
-        "openMenuAria": "Open business cabinet menu"
+        "openMenuAria": "Open business cabinet menu",
+        "notificationsAria": "Notifications"
       }
     },
     "vi": {
       "businessScreenHeader": {
         "backToApp": "Quay lại ứng dụng",
         "backToAppAria": "Về ứng dụng chính với tư cách khách",
-        "openMenuAria": "Mở menu khu vực doanh nghiệp"
+        "openMenuAria": "Mở menu khu vực doanh nghiệp",
+        "notificationsAria": "Thông báo"
       }
     },
     "ru": {
       "businessScreenHeader": {
         "backToApp": "Обратно в приложение",
         "backToAppAria": "Вернуться в основное приложение (режим клиента)",
-        "openMenuAria": "Открыть меню кабинета для бизнеса"
+        "openMenuAria": "Открыть меню кабинета для бизнеса",
+        "notificationsAria": "Уведомления"
       }
     }
   }

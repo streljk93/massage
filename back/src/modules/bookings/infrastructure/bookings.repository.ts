@@ -37,6 +37,7 @@ export type BookingListRow = Prisma.BookingGetPayload<{
   include: typeof bookingListInclude;
 }>;
 
+/** Активные статусы жизненного цикла booking для списков и массовых действий. */
 const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
   ['pending', 'confirmed', 'in_progress'];
 
@@ -86,46 +87,6 @@ export type SalonCabinetBookingRow = Prisma.BookingGetPayload<{
 @Injectable()
 export class BookingsRepository {
   constructor(private readonly prisma: PrismaService) {}
-
-  /**
-   * Есть ли активная бронь, пересекающаяся с [startsAt, endsAt).
-   */
-  findActiveOverlap(
-    specialistId: string,
-    startsAt: Date,
-    endsAt: Date,
-    excludeBookingId?: string | null,
-  ): Promise<{ id: string } | null> {
-    return this.findActiveOverlapTx(
-      this.prisma,
-      specialistId,
-      startsAt,
-      endsAt,
-      excludeBookingId,
-    );
-  }
-
-  findActiveOverlapTx(
-    db: Pick<Prisma.TransactionClient, 'booking'>,
-    specialistId: string,
-    startsAt: Date,
-    endsAt: Date,
-    excludeBookingId?: string | null,
-  ): Promise<{ id: string } | null> {
-    return db.booking.findFirst({
-      where: {
-        specialistId,
-        deletedAt: null,
-        status: { in: ACTIVE_BOOKING_STATUSES },
-        ...(excludeBookingId != null && excludeBookingId.length > 0 ?
-          { id: { not: excludeBookingId } }
-        : {}),
-        startsAt: { lt: endsAt },
-        endsAt: { gt: startsAt },
-      },
-      select: { id: true },
-    });
-  }
 
   /** `pending`, у которых истёк дедлайн подтверждения — для cron-события `expired`. */
   async findBookingIdsPendingExpiredDeadline(now: Date): Promise<string[]> {

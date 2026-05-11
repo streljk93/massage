@@ -27,6 +27,7 @@ import { PushNotificationsService } from '../../notifications/application/push-n
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
+import { CalendarService } from '../../calendar/application/calendar.service';
 
 @Injectable()
 export class SpecialistWorkplaceService {
@@ -37,6 +38,7 @@ export class SpecialistWorkplaceService {
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
     private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
+    private readonly calendarService: CalendarService,
   ) {}
 
   /**
@@ -535,6 +537,12 @@ export class SpecialistWorkplaceService {
 
     const previousOrgId = specialist.activeOrganizationId;
     if (previousOrgId === body.organizationId) {
+      await this.prisma.$transaction((tx) =>
+        this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
+          organizationId: body.organizationId!,
+          specialistId: specialist.id,
+        }),
+      );
       return {
         activeOrganizationId: body.organizationId,
         cancelledBookingsCount: 0,
@@ -561,6 +569,10 @@ export class SpecialistWorkplaceService {
           },
         });
       }
+      await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
+        organizationId: body.organizationId!,
+        specialistId: specialist.id,
+      });
       if (!previousOrgId) {
         return [];
       }

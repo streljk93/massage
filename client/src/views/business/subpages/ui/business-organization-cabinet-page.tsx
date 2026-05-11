@@ -8,7 +8,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
+  cabinetOrganizationCoverSrc,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import {
@@ -18,7 +20,6 @@ import {
   specialistsCabinetGetSpecialistMyOrganizations,
 } from "@/shared/api";
 import { cn, motion } from "@/shared/lib";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { useQuery } from "@tanstack/react-query";
 import { OrganizationOfferingDraftCreateSection } from "./organization-offering-draft-create-section";
 
@@ -43,6 +44,7 @@ function orgRoleLabelKey(
 
 export function BusinessOrganizationCabinetPage() {
   const t = useTranslations("businessOrganizationCabinetPage");
+  useSetBusinessPageTitle(t("pageTitle"));
   const tOfferings = useTranslations("businessOrganizationOfferingsPage");
   const tPage = useTranslations("businessAppSubpages");
   const locale = useLocale() as AppLocale;
@@ -127,11 +129,6 @@ export function BusinessOrganizationCabinetPage() {
     },
   });
 
-  const backToOrgs = {
-    href: "/business/organizations",
-    ariaLabel: t("backAria"),
-  } as const;
-
   const membershipDraftName = membership?.salonCabinetPreview?.name?.trim();
   const orgTitle =
     membershipDraftName != null && membershipDraftName.length > 0 ?
@@ -144,15 +141,7 @@ export function BusinessOrganizationCabinetPage() {
     (employed && teamQuery.isPending)
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div className="h-40 animate-pulse rounded-2xl bg-muted/50" aria-busy />
       </main>
     );
@@ -160,15 +149,7 @@ export function BusinessOrganizationCabinetPage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("orgsSignInTitle")}
@@ -185,15 +166,7 @@ export function BusinessOrganizationCabinetPage() {
     !employed
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("organizationEditNotFoundTitle")}
@@ -205,15 +178,7 @@ export function BusinessOrganizationCabinetPage() {
 
   if (teamQuery.isError) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={orgTitle !== "" ? orgTitle : t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("organizationEditLoadErrorTitle")}
@@ -235,15 +200,7 @@ export function BusinessOrganizationCabinetPage() {
 
   if (canManage && cabinetProfileQuery.isError) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={orgTitle !== "" ? orgTitle : t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("organizationEditLoadErrorTitle")}
@@ -265,16 +222,63 @@ export function BusinessOrganizationCabinetPage() {
 
   const members = teamQuery.data?.members ?? [];
 
+  const coverSrc =
+    membership != null ? cabinetOrganizationCoverSrc(membership) : null;
+  const addressLine =
+    canManage && cabinetProfileQuery.isSuccess && cabinetProfileQuery.data ?
+      [cabinetProfileQuery.data.addressLine, cabinetProfileQuery.data.city]
+        .filter((s) => s != null && String(s).trim().length > 0)
+        .join(", ")
+    : "";
+
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-8">
-      <BusinessScreenHeader
-        title={orgTitle !== "" ? orgTitle : t("pageTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("pageTitle")}
-        avatarFallback="B"
-        cabinetBack={backToOrgs}
-      />
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
+      <div className="flex flex-col gap-3">
+        <div
+          className={cn(
+            "relative -mx-1 h-40 w-[calc(100%+0.5rem)] overflow-hidden rounded-2xl sm:w-full",
+            coverSrc == null && "bg-muted/60",
+          )}
+        >
+          {coverSrc != null ?
+            // eslint-disable-next-line @next/next/no-img-element -- URL из аплоада
+            <img src={coverSrc} alt="" className="size-full object-cover" />
+          : (
+            <div className="flex size-full items-center justify-center text-muted-foreground">
+              <Building2 className="size-12 opacity-40" aria-hidden />
+            </div>
+          )}
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-background/15 to-transparent"
+            aria-hidden
+          />
+        </div>
+        <div
+          className={cn(
+            motion.interactive,
+            "-mt-8 relative z-[1] rounded-2xl border border-border/40 bg-card px-4 py-3 shadow-md ring-1 ring-border/30",
+          )}
+        >
+          <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+            {tPage(orgRoleLabelKey(membership.role as string))}
+          </p>
+          {addressLine.length > 0 ?
+            <p className="mt-1.5 text-pretty text-sm leading-snug text-muted-foreground">
+              {addressLine}
+            </p>
+          : canManage && cabinetProfileQuery.isPending ?
+            <div className="mt-2 h-4 w-3/4 max-w-xs animate-pulse rounded-md bg-muted/70" aria-busy />
+          : !canManage ?
+            <p className="mt-1.5 text-pretty text-sm leading-snug text-muted-foreground">
+              {t("heroSpecialistAddressHint")}
+            </p>
+          : (
+            <p className="mt-1.5 text-pretty text-sm leading-snug text-muted-foreground">
+              {t("heroNoAddressHint")}
+            </p>
+          )}
+        </div>
+      </div>
 
       <Link
         href={`/organizations/${organizationId}`}

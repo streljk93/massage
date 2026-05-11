@@ -7120,7 +7120,7 @@
                 "active_workplace"
               ]
             },
-            "description": "managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма."
+            "description": "managed — записи по всем организациям, где мастер owner/admin. active_workplace — текущее место приёма: owner/admin видят все визиты этой организации, specialist — только свои брони в ней."
           },
           {
             "name": "locale",
@@ -7316,7 +7316,7 @@
             "access-token": []
           }
         ],
-        "summary": "Список броней для бизнес-экрана: по управляемым салонам или только «мои» на текущем месте.",
+        "summary": "Список броней для бизнес-экрана: либо все управляемые точки (managed), либо контекст текущего места приёма (active_workplace).",
         "tags": [
           "cabinet-specialists"
         ]
@@ -8978,6 +8978,897 @@
         "summary": "Начать приём (in_progress)",
         "tags": [
           "bookings"
+        ]
+      }
+    },
+    "/calendar/resources": {
+      "get": {
+        "description": "Возвращает ресурсы текущего контекста организации. В MVP — специалисты.",
+        "operationId": "Calendar_listResources",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizationId",
+                    "resources"
+                  ],
+                  "properties": {
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resources": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "type",
+                          "specialistId",
+                          "name",
+                          "capacity",
+                          "isActive"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "specialist",
+                              "room",
+                              "equipment"
+                            ]
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "capacity": {
+                            "type": "integer"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет доступа к активной организации"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Ресурсы календаря активной организации",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/events": {
+      "get": {
+        "description": "Window query: `startsAt < to AND endsAt > from`, с cursor pagination по `startsAt,id`.",
+        "operationId": "Calendar_listEvents",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "resourceIds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "organizationId",
+                    "events",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "events": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "bookingId",
+                          "startsAt",
+                          "endsAt",
+                          "type",
+                          "status",
+                          "blockReason",
+                          "notes",
+                          "version",
+                          "resources",
+                          "booking"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "bookingId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "booking",
+                              "block"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "confirmed",
+                              "in_progress",
+                              "cancelled"
+                            ]
+                          },
+                          "blockReason": {
+                            "type": "string",
+                            "enum": [
+                              "break",
+                              "vacation",
+                              "manual"
+                            ],
+                            "nullable": true
+                          },
+                          "notes": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "version": {
+                            "type": "integer"
+                          },
+                          "resources": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": [
+                                "id",
+                                "type",
+                                "name",
+                                "specialistId",
+                                "role"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "enum": [
+                                    "specialist",
+                                    "room",
+                                    "equipment"
+                                  ]
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "nullable": true
+                                },
+                                "role": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            }
+                          },
+                          "booking": {
+                            "type": "object",
+                            "nullable": true,
+                            "required": [
+                              "id",
+                              "status",
+                              "clientDisplayName",
+                              "specialistName",
+                              "categoryShortName",
+                              "amount",
+                              "currency"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "clientDisplayName": {
+                                "type": "string"
+                              },
+                              "specialistName": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "categoryShortName": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "integer",
+                                "nullable": true
+                              },
+                              "currency": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет доступа к ресурсу"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Окно событий календаря активной организации",
+        "tags": [
+          "calendar"
+        ]
+      },
+      "post": {
+        "description": "Создаёт только `type=block`. Booking-события создаются исключительно через bookings use case.",
+        "operationId": "Calendar_createBlock",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "startsAt",
+                  "endsAt",
+                  "resourceIds",
+                  "blockReason"
+                ],
+                "properties": {
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "resourceIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "blockReason": {
+                    "type": "string",
+                    "enum": [
+                      "break",
+                      "vacation",
+                      "manual"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "event"
+                  ],
+                  "properties": {
+                    "event": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "bookingId",
+                        "startsAt",
+                        "endsAt",
+                        "type",
+                        "status",
+                        "blockReason",
+                        "notes",
+                        "version",
+                        "resources",
+                        "booking"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "bookingId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "startsAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "endsAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "booking",
+                            "block"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "confirmed",
+                            "in_progress",
+                            "cancelled"
+                          ]
+                        },
+                        "blockReason": {
+                          "type": "string",
+                          "enum": [
+                            "break",
+                            "vacation",
+                            "manual"
+                          ],
+                          "nullable": true
+                        },
+                        "notes": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "version": {
+                          "type": "integer"
+                        },
+                        "resources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "type",
+                              "name",
+                              "specialistId",
+                              "role"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "specialist",
+                                  "room",
+                                  "equipment"
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "specialistId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "role": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "booking": {
+                          "type": "object",
+                          "nullable": true,
+                          "required": [
+                            "id",
+                            "status",
+                            "clientDisplayName",
+                            "specialistName",
+                            "categoryShortName",
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "clientDisplayName": {
+                              "type": "string"
+                            },
+                            "specialistName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "categoryShortName": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "currency": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Конфликт или невалидный интервал"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет доступа к ресурсу"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать служебный блок календаря",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/events/{id}": {
+      "patch": {
+        "description": "Работает только с `type=block`. Booking-события меняются через bookings API.",
+        "operationId": "Calendar_updateBlock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "startsAt",
+                  "endsAt",
+                  "resourceIds",
+                  "version"
+                ],
+                "properties": {
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "resourceIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "blockReason": {
+                    "type": "string",
+                    "enum": [
+                      "break",
+                      "vacation",
+                      "manual"
+                    ]
+                  },
+                  "notes": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 1000
+                  },
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "event"
+                  ],
+                  "properties": {
+                    "event": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "bookingId",
+                        "startsAt",
+                        "endsAt",
+                        "type",
+                        "status",
+                        "blockReason",
+                        "notes",
+                        "version",
+                        "resources",
+                        "booking"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "bookingId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "startsAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "endsAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "booking",
+                            "block"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "confirmed",
+                            "in_progress",
+                            "cancelled"
+                          ]
+                        },
+                        "blockReason": {
+                          "type": "string",
+                          "enum": [
+                            "break",
+                            "vacation",
+                            "manual"
+                          ],
+                          "nullable": true
+                        },
+                        "notes": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "version": {
+                          "type": "integer"
+                        },
+                        "resources": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "required": [
+                              "id",
+                              "type",
+                              "name",
+                              "specialistId",
+                              "role"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "specialist",
+                                  "room",
+                                  "equipment"
+                                ]
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "specialistId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "nullable": true
+                              },
+                              "role": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "booking": {
+                          "type": "object",
+                          "nullable": true,
+                          "required": [
+                            "id",
+                            "status",
+                            "clientDisplayName",
+                            "specialistName",
+                            "categoryShortName",
+                            "amount",
+                            "currency"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "clientDisplayName": {
+                              "type": "string"
+                            },
+                            "specialistName": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "categoryShortName": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "integer",
+                              "nullable": true
+                            },
+                            "currency": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Конфликт, booking-event или неверный интервал"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет доступа к ресурсу"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Изменить служебный блок календаря",
+        "tags": [
+          "calendar"
+        ]
+      },
+      "delete": {
+        "description": "DELETE разрешён только для `type=block`; booking отменяется через bookings API.",
+        "operationId": "Calendar_deleteBlock",
+        "parameters": [
+          {
+            "name": "version",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "deleted"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deleted": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Попытка удалить booking-event"
+          },
+          "401": {
+            "description": "Нет access token"
+          },
+          "403": {
+            "description": "Нет доступа к событию"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить служебный блок календаря",
+        "tags": [
+          "calendar"
         ]
       }
     },

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   BookingStatus,
+  CalendarResourceType,
   GalleryMediaKind,
   GalleryOwnerKind,
   OfferingPriceOptionStatus,
@@ -11,6 +12,7 @@ import {
 } from '@prisma/client';
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { CALENDAR_BLOCKING_EVENT_STATUSES } from '../../calendar/domain/calendar-event-status';
 import {
   directoryListedSpecialistListingNameWhereInput,
   specialistProfileListingWhereInput,
@@ -451,10 +453,6 @@ function organizationListCursorWhere(
     ],
   };
 }
-
-/** Активные записи: интервал брони занимает слоты до отмены / завершения. */
-const ACTIVE_BOOKING_STATUSES: Array<'pending' | 'confirmed' | 'in_progress'> =
-  ['pending', 'confirmed', 'in_progress'];
 
 const SPECIALIST_LIST_CAP = 8000;
 
@@ -993,9 +991,10 @@ export class DirectoryRepository {
   }
 
   /**
-   * Брони, пересекающиеся с окном витрины слотов (горизонт как у вычисляемых слотов).
+   * Календарные события, пересекающиеся с окном витрины слотов.
+   * Booking/block занятость читается только через CalendarEvent — это source of truth.
    */
-  findActiveBookingsForListingOccupancy(
+  findBlockingCalendarEventsForListingOccupancy(
     specialistIds: string[],
     now: Date,
     previewWindowMs: number,
@@ -1005,16 +1004,41 @@ export class DirectoryRepository {
     }
     const windowStart = subHours(now, 1);
     const windowEnd = addMilliseconds(now, previewWindowMs);
-    return this.prisma.booking.findMany({
-      where: {
-        specialistId: { in: specialistIds },
-        deletedAt: null,
-        status: { in: ACTIVE_BOOKING_STATUSES },
-        startsAt: { lt: windowEnd },
-        endsAt: { gt: windowStart },
-      },
-      select: { specialistId: true, startsAt: true, endsAt: true },
-    });
+    return this.prisma.calendarEventResource
+      .findMany({
+        where: {
+          resource: {
+            specialistId: { in: specialistIds },
+            type: CalendarResourceType.specialist,
+            deletedAt: null,
+          },
+          event: {
+            deletedAt: null,
+            status: { in: [...CALENDAR_BLOCKING_EVENT_STATUSES] },
+            startsAt: { lt: windowEnd },
+            endsAt: { gt: windowStart },
+          },
+        },
+        select: {
+          resource: { select: { specialistId: true } },
+          event: { select: { startsAt: true, endsAt: true } },
+        },
+      })
+      .then((rows) =>
+        rows.flatMap((row) => {
+          const specialistId = row.resource.specialistId;
+          if (specialistId == null) {
+            return [];
+          }
+          return [
+            {
+              specialistId,
+              startsAt: row.event.startsAt,
+              endsAt: row.event.endsAt,
+            },
+          ];
+        }),
+      );
   }
 
   async findSpecialistsPage(args: {

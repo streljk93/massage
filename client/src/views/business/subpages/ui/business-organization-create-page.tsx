@@ -18,13 +18,13 @@ import {
   organizationsCabinetPostCreateOrganization,
 } from "@/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
-
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 const ONB_QK = ["specialistOnboarding"] as const;
 
 export function BusinessOrganizationCreatePage() {
   const t = useTranslations("specialistOnboarding");
   const tPage = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(tPage("organizationCreateTitle"));
   const locale = useLocale() as AppLocale;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -38,11 +38,6 @@ export function BusinessOrganizationCreatePage() {
 
   const [formError, setFormError] = useState<string | null>(null);
   const [createOrgSubmitting, setCreateOrgSubmitting] = useState(false);
-
-  const backToOrgs = {
-    href: "/business/organizations",
-    ariaLabel: tPage("organizationCreateBackAria"),
-  } as const;
 
   const submitCreate = async (body: OrganizationSalonCabinetSubmitBody) => {
     setCreateOrgSubmitting(true);
@@ -71,15 +66,7 @@ export function BusinessOrganizationCreatePage() {
 
   if (sessionStatus === "loading") {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationCreateTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationCreateTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div className="h-40 animate-pulse rounded-2xl bg-muted/50" aria-busy />
       </main>
     );
@@ -87,15 +74,7 @@ export function BusinessOrganizationCreatePage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={tPage("organizationCreateTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={tPage("organizationCreateTitle")}
-          avatarFallback="B"
-          cabinetBack={backToOrgs}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Building2}
           title={tPage("orgsSignInTitle")}
@@ -106,16 +85,7 @@ export function BusinessOrganizationCreatePage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={tPage("organizationCreateTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={tPage("organizationCreateTitle")}
-        avatarFallback="B"
-        cabinetBack={backToOrgs}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
       <OrganizationSalonCabinetForm
         t={t}
         client={sdk}

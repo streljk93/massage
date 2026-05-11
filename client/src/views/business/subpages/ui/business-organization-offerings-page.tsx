@@ -33,8 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/ui";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import { OrganizationOfferingDraftCreateSection } from "./organization-offering-draft-create-section";
 
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
@@ -407,6 +407,7 @@ function OrganizationOfferingCabinetCard({
 
 export function BusinessOrganizationOfferingsPage() {
   const t = useTranslations("businessOrganizationOfferingsPage");
+  useSetBusinessPageTitle(t("pageTitle"));
   const tPage = useTranslations("businessAppSubpages");
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
@@ -540,11 +541,6 @@ export function BusinessOrganizationOfferingsPage() {
     },
   });
 
-  const backToOrgCabinet = {
-    href: `/business/organizations/${organizationId}`,
-    ariaLabel: t("backAria"),
-  } as const;
-
   const membershipDraftName = membership?.salonCabinetPreview?.name?.trim();
   const orgTitle =
     membershipDraftName != null && membershipDraftName.length > 0 ?
@@ -557,22 +553,7 @@ export function BusinessOrganizationOfferingsPage() {
     (canManage && cabinetProfileQuery.isPending)
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={
-            organizationId ?
-              backToOrgCabinet
-            : {
-                href: "/business/organizations",
-                ariaLabel: tPage("organizationEditBackAria"),
-              }
-          }
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <div
           className="h-40 animate-pulse rounded-2xl bg-muted/50"
           aria-busy
@@ -584,22 +565,7 @@ export function BusinessOrganizationOfferingsPage() {
 
   if (sessionStatus === "unauthenticated" || !accessToken) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={
-            organizationId ?
-              backToOrgCabinet
-            : {
-                href: "/business/organizations",
-                ariaLabel: tPage("organizationEditBackAria"),
-              }
-          }
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Package}
           title={t("signInTitle")}
@@ -615,18 +581,7 @@ export function BusinessOrganizationOfferingsPage() {
     organizationId === ""
   ) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={{
-            href: "/business/organizations",
-            ariaLabel: tPage("organizationEditBackAria"),
-          }}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Package}
           title={tPage("organizationEditNotFoundTitle")}
@@ -638,15 +593,7 @@ export function BusinessOrganizationOfferingsPage() {
 
   if (!canManage) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={backToOrgCabinet}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Package}
           title={orgTitle}
@@ -658,15 +605,7 @@ export function BusinessOrganizationOfferingsPage() {
 
   if (cabinetProfileQuery.isError) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={backToOrgCabinet}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Package}
           title={tPage("organizationEditLoadErrorTitle")}
@@ -686,15 +625,7 @@ export function BusinessOrganizationOfferingsPage() {
 
   if (offeringsQuery.isError) {
     return (
-      <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-        <BusinessScreenHeader
-          title={orgTitle !== "" ? orgTitle : t("pageTitle")}
-          titleVariant="section"
-          showHeadline={false}
-          avatarAlt={t("pageTitle")}
-          avatarFallback="P"
-          cabinetBack={backToOrgCabinet}
-        />
+      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
           icon={Package}
           title={t("loadErrorTitle")}
@@ -716,16 +647,7 @@ export function BusinessOrganizationOfferingsPage() {
   const assignable = assignableQuery.data?.specialists ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-8">
-      <BusinessScreenHeader
-        title={orgTitle !== "" ? orgTitle : t("pageTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("pageTitle")}
-        avatarFallback="P"
-        cabinetBack={backToOrgCabinet}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
       {cabinetProfileQuery.data ?
         <OrganizationOfferingDraftCreateSection
           organizationId={organizationId}

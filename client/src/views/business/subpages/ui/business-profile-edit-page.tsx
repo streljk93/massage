@@ -27,13 +27,14 @@ import {
 } from "@/views/business/setup/lib/specialist-onboarding-utils";
 import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 
 const ONB_QK = ["specialistOnboarding"] as const;
 
 export function BusinessProfileEditPage() {
   const t = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(t("profileEditTitle"));
   const tOnb = useTranslations("specialistOnboarding");
   const locale = useLocale() as AppLocale;
   const router = useRouter();
@@ -143,12 +144,6 @@ export function BusinessProfileEditPage() {
       ? tOnb("currentSpecialistPhoto")
       : null;
 
-  const avatarFallback = (
-    (specialist?.listingName != null && String(specialist.listingName).trim().length > 0 ?
-      String(specialist.listingName).trim().slice(0, 2)
-    : String(specialist?.userName ?? "").trim().slice(0, 2)) || "B"
-  ).toUpperCase();
-
   const onSubmit = async () => {
     if (!pName.trim() || !pBio.trim() || pExp == null || pGender == null) {
       setFormError(tOnb("vErrName"));
@@ -202,19 +197,7 @@ export function BusinessProfileEditPage() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pt-2 pb-6">
-      <BusinessScreenHeader
-        title={t("profileEditTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("profileEditTitle")}
-        avatarFallback={avatarFallback}
-        cabinetBack={{
-          href: "/business/profile",
-          ariaLabel: t("profileEditBackAria"),
-        }}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-4 px-4 pt-2">
       {sessionStatus === "loading" || (sessionStatus === "authenticated" && accessToken.length === 0) ?
         <div
           className="flex justify-center py-12 text-muted-foreground"

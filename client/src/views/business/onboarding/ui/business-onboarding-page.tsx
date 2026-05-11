@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarDays, Loader2, Wallet } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { parseISO } from "date-fns";
+import { Link } from "@/app/i18n/navigation";
 import { BusinessEmptyState } from "@/entities/business";
 import {
   createBrowserSdkClient,
@@ -13,12 +14,13 @@ import type {
   SpecialistsCabinetGetSpecialistSalonBookingsResponse,
   SpecialistsCabinetGetSpecialistSalonBookingsResponses,
 } from "@/shared/api/generated/sdk/types.gen";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import type { AppLocale } from "@/app/i18n/routing";
-import { cn } from "@/shared/lib";
+import { cn, motion } from "@/shared/lib";
 import { bookingSlotStartTimeReachedClient } from "@/shared/lib/booking-slot-start-client";
 import { vnCalendarYmdString } from "@/shared/lib/datetime/vn-listing-datetime";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 
 type SalonBookingRow = SpecialistsCabinetGetSpecialistSalonBookingsResponse["bookings"][number];
 type BookingStatus = SalonBookingRow["status"];
@@ -53,6 +55,26 @@ const LOST_STATUSES: BookingStatus[] = [
   "no_show_by_master",
   "expired",
 ];
+
+function slotDurationMinutes(startsAt: string, endsAt: string): number {
+  const a = parseISO(startsAt).getTime();
+  const b = parseISO(endsAt).getTime();
+  return Math.max(0, Math.round((b - a) / 60000));
+}
+
+function selectUpcomingSalonBookings(
+  rows: SalonBookingRow[],
+  now: Date,
+  limit: number,
+): SalonBookingRow[] {
+  const open = new Set<BookingStatus>(["pending", "confirmed", "in_progress"]);
+  return rows
+    .filter((r) => open.has(r.status) && parseISO(r.startsAt).getTime() >= now.getTime())
+    .sort(
+      (a, b) => parseISO(a.startsAt).getTime() - parseISO(b.startsAt).getTime(),
+    )
+    .slice(0, limit);
+}
 
 function endOfDayFromYmd(ymd: string): Date {
   return new Date(`${ymd}T23:59:59.999+07:00`);
@@ -292,7 +314,7 @@ function MetricCard({
   hint: string;
 }) {
   return (
-    <article className="rounded-2xl border border-border/50 bg-card px-4 py-3">
+    <article className="rounded-2xl border border-border/40 bg-card px-4 py-3 shadow-sm ring-1 ring-border/35">
       <p className="text-xs text-muted-foreground">{title}</p>
       <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
@@ -302,6 +324,7 @@ function MetricCard({
 
 export function BusinessOnboardingPage() {
   const t = useTranslations("businessOnboarding");
+  useSetBusinessPageTitle(t("title"));
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
@@ -327,20 +350,13 @@ export function BusinessOnboardingPage() {
   const rows = bookingsQuery.data?.bookings ?? [];
   const computed = dashboardData(rows, format);
   const now = new Date();
+  const upcomingRows = useMemo(
+    () => selectUpcomingSalonBookings(rows, new Date(), 5),
+    [rows],
+  );
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={t("title")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("title")}
-        avatarFallback="B"
-      />
-
-      <p className="text-pretty text-[0.9375rem] leading-relaxed text-foreground/85">
-        {t("dashboardLead")}
-      </p>
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2 pb-2">
 
       {sessionStatus === "loading" ? (
         <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground" aria-busy>
@@ -396,7 +412,82 @@ export function BusinessOnboardingPage() {
           </section>
 
           <section
-            className="rounded-2xl border border-border/50 bg-card px-4 py-4"
+            className="rounded-2xl border border-border/40 bg-card px-4 py-4 shadow-sm ring-1 ring-border/35"
+            aria-labelledby="business-upcoming-heading"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2
+                  id="business-upcoming-heading"
+                  className="font-heading text-sm font-semibold tracking-tight text-foreground"
+                >
+                  {t("upcoming.title")}
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">{t("upcoming.hint")}</p>
+              </div>
+              <Link
+                href="/business/bookings"
+                className={cn(
+                  motion.interactive,
+                  "shrink-0 text-xs font-semibold text-primary underline-offset-2 hover:underline",
+                )}
+              >
+                {t("upcoming.viewAll")}
+              </Link>
+            </div>
+            {upcomingRows.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">{t("upcoming.empty")}</p>
+            ) : (
+              <ul
+                className="mt-3 flex flex-col gap-2"
+                role="list"
+                aria-label={t("upcoming.listAria")}
+              >
+                {upcomingRows.map((row) => {
+                  const start = parseISO(row.startsAt);
+                  const dur = slotDurationMinutes(row.startsAt, row.endsAt);
+                  return (
+                    <li
+                      key={row.id}
+                      className="flex gap-3 rounded-xl border border-border/35 bg-muted/15 px-3 py-2.5"
+                    >
+                      <div className="w-14 shrink-0 text-center">
+                        <p className="text-xs font-semibold text-primary tabular-nums">
+                          {format.dateTime(start, {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Asia/Ho_Chi_Minh",
+                          })}
+                        </p>
+                        <p className="mt-0.5 text-[0.65rem] text-muted-foreground tabular-nums">
+                          {format.dateTime(start, {
+                            day: "numeric",
+                            month: "short",
+                            timeZone: "Asia/Ho_Chi_Minh",
+                          })}
+                        </p>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {row.clientDisplayName}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {row.categoryShortName} ·{" "}
+                          {t("upcoming.durationMinutes", { value: dur })}
+                        </p>
+                        <p className="mt-1 inline-flex rounded-full bg-primary/12 px-2 py-0.5 text-[0.65rem] font-medium text-primary">
+                          {row.statusLabel}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <section
+            className="rounded-2xl border border-border/40 bg-card px-4 py-4 shadow-sm ring-1 ring-border/35"
             aria-labelledby="business-funnel-heading"
           >
             <h2
@@ -431,7 +522,7 @@ export function BusinessOnboardingPage() {
           </section>
 
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <article className="rounded-2xl border border-border/50 bg-card px-4 py-4">
+            <article className="rounded-2xl border border-border/40 bg-card px-4 py-4 shadow-sm ring-1 ring-border/35">
               <div className="flex items-center gap-2">
                 <Wallet className="size-4 text-primary/80" aria-hidden />
                 <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">
@@ -455,7 +546,7 @@ export function BusinessOnboardingPage() {
               </dl>
             </article>
 
-            <article className="rounded-2xl border border-border/50 bg-card px-4 py-4">
+            <article className="rounded-2xl border border-border/40 bg-card px-4 py-4 shadow-sm ring-1 ring-border/35">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="size-4 text-primary/80" aria-hidden />
                 <h2 className="font-heading text-sm font-semibold tracking-tight text-foreground">

@@ -51,7 +51,7 @@ import {
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
 import { buildListingSlotGroupsFromOccupiedKeys } from '../domain/build-occupied-listing-slot-groups';
-import { mergeBookingsToOccupiedKeysPerSpecialist } from '../domain/workday-free-slots';
+import { mergeCalendarEventsToOccupiedKeysPerSpecialist } from '../domain/workday-free-slots';
 import type { CatalogFilterOptionsResponseDto } from '../dto/catalog-filter-options-response.dto';
 import type { DirectoryBodyZoneTagDto } from '../dto/directory-body-zone-tag.dto';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
@@ -712,13 +712,13 @@ export class DirectoryService {
     calendarDays: number,
   ): Promise<Map<string, Set<string>>> {
     const previewWindowMs = listingCardPreviewWindowMs(calendarDays);
-    const bookingRows =
-      await this.directoryRepository.findActiveBookingsForListingOccupancy(
+    const calendarEventRows =
+      await this.directoryRepository.findBlockingCalendarEventsForListingOccupancy(
         specialistIds,
         now,
         previewWindowMs,
       );
-    return mergeBookingsToOccupiedKeysPerSpecialist(bookingRows);
+    return mergeCalendarEventsToOccupiedKeysPerSpecialist(calendarEventRows);
   }
 
   async listSpecialists(

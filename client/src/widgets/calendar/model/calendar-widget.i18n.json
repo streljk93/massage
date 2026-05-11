@@ -1,0 +1,103 @@
+{
+  "messages": {
+    "en": {
+      "calendarWidget": {
+        "today": "Today",
+        "addBlock": "Add block",
+        "viewDay": "Day",
+        "viewWeek": "Week",
+        "viewMonth": "Month",
+        "viewList": "List",
+        "allResources": "All",
+        "weekRange": "{from} – {to}",
+        "previousPeriod": "Previous",
+        "nextPeriod": "Next",
+        "booking": "Booking",
+        "block": "Block",
+        "durationMin": "{value} min",
+        "blockReason": {
+          "break": "Break",
+          "vacation": "Vacation",
+          "manual": "Block"
+        },
+        "status": {
+          "pending": "Pending",
+          "confirmed": "Confirmed",
+          "in_progress": "In progress",
+          "done": "Done",
+          "cancelled": "Cancelled"
+        },
+        "thisWeek": "This week",
+        "thisMonth": "This month",
+        "emptyTitle": "Nothing scheduled",
+        "emptyHint": "No visits or blocks are scheduled for this period."
+      }
+    },
+    "vi": {
+      "calendarWidget": {
+        "today": "Hôm nay",
+        "addBlock": "Thêm chặn lịch",
+        "viewDay": "Ngày",
+        "viewWeek": "Tuần",
+        "viewMonth": "Tháng",
+        "viewList": "Danh sách",
+        "allResources": "Tất cả",
+        "weekRange": "{from} – {to}",
+        "previousPeriod": "Trước",
+        "nextPeriod": "Sau",
+        "booking": "Lịch hẹn",
+        "block": "Chặn lịch",
+        "durationMin": "{value} phút",
+        "blockReason": {
+          "break": "Nghỉ",
+          "vacation": "Nghỉ phép",
+          "manual": "Chặn lịch"
+        },
+        "status": {
+          "pending": "Chờ xác nhận",
+          "confirmed": "Đã xác nhận",
+          "in_progress": "Đang thực hiện",
+          "done": "Hoàn thành",
+          "cancelled": "Đã huỷ"
+        },
+        "thisWeek": "Tuần này",
+        "thisMonth": "Tháng này",
+        "emptyTitle": "Chưa có lịch",
+        "emptyHint": "Không có lượt hẹn hoặc chặn lịch trong giai đoạn này."
+      }
+    },
+    "ru": {
+      "calendarWidget": {
+        "today": "Сегодня",
+        "addBlock": "Добавить блок",
+        "viewDay": "День",
+        "viewWeek": "Неделя",
+        "viewMonth": "Месяц",
+        "viewList": "Список",
+        "allResources": "Все",
+        "weekRange": "{from} – {to}",
+        "previousPeriod": "Назад",
+        "nextPeriod": "Вперёд",
+        "booking": "Запись",
+        "block": "Блокировка",
+        "durationMin": "{value} мин",
+        "blockReason": {
+          "break": "Перерыв",
+          "vacation": "Отпуск",
+          "manual": "Блокировка"
+        },
+        "status": {
+          "pending": "Ожидает",
+          "confirmed": "Подтверждено",
+          "in_progress": "В процессе",
+          "done": "Завершено",
+          "cancelled": "Отменено"
+        },
+        "thisWeek": "Эта неделя",
+        "thisMonth": "Этот месяц",
+        "emptyTitle": "Нет записей",
+        "emptyHint": "На этот период нет визитов или блокировок."
+      }
+    }
+  }
+}

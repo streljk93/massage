@@ -65,7 +65,7 @@ export function expandIntervalToOccupiedSlotKeys(
   return keys;
 }
 
-export function mergeBookingsToOccupiedKeysPerSpecialist(
+export function mergeCalendarEventsToOccupiedKeysPerSpecialist(
   rows: { specialistId: string; startsAt: Date; endsAt: Date }[],
 ): Map<string, Set<string>> {
   const m = new Map<string, Set<string>>();

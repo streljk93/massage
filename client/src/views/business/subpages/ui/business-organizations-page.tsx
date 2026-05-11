@@ -15,6 +15,7 @@ import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   displayNameForCabinetOrganization,
   specialistMyOrganizationsQueryKey,
@@ -34,7 +35,6 @@ import {
 } from "@/shared/api";
 import { confirmAction, notify } from "@/shared/lib/notifications";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import {
   Button,
   Collapsible,
@@ -195,6 +195,7 @@ function OrgDeleteOrganizationBookingsConfirmBody({
 
 export function BusinessOrganizationsPage() {
   const t = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(t("organizationsTitle"));
   const format = useFormatter();
   const locale = useLocale() as AppLocale;
   const queryClient = useQueryClient();
@@ -428,35 +429,26 @@ export function BusinessOrganizationsPage() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-5 px-4 pt-2 pb-2">
-      <BusinessScreenHeader
-        title={t("organizationsTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("organizationsTitle")}
-        avatarFallback="B"
-        actions={
-          sessionStatus === "authenticated" && accessToken.length > 0 ?
-            <div className="flex w-full min-w-0 flex-row flex-wrap items-stretch gap-2">
-              <Button
-                variant="secondary"
-                tone="light"
-                className="h-11 min-w-0 flex-1 rounded-xl border border-border px-3 text-[0.9375rem] font-medium sm:px-5"
-                asChild
-              >
-                <Link href="/business/organizations/join">{t("findJoinOrganization")}</Link>
-              </Button>
-              <Button
-                variant="primary"
-                className="h-11 min-w-0 flex-1 rounded-xl px-3 text-[0.9375rem] font-medium sm:px-5"
-                asChild
-              >
-                <Link href="/business/organizations/new">{t("createOrganization")}</Link>
-              </Button>
-            </div>
-          : undefined
-        }
-      />
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
+      {sessionStatus === "authenticated" && accessToken.length > 0 ?
+        <div className="flex w-full min-w-0 flex-row flex-wrap items-stretch gap-2">
+          <Button
+            variant="secondary"
+            tone="light"
+            className="h-11 min-w-0 flex-1 rounded-xl border border-border px-3 text-[0.9375rem] font-medium sm:px-5"
+            asChild
+          >
+            <Link href="/business/organizations/join">{t("findJoinOrganization")}</Link>
+          </Button>
+          <Button
+            variant="primary"
+            className="h-11 min-w-0 flex-1 rounded-xl px-3 text-[0.9375rem] font-medium sm:px-5"
+            asChild
+          >
+            <Link href="/business/organizations/new">{t("createOrganization")}</Link>
+          </Button>
+        </div>
+      : null}
 
       {sessionStatus === "loading" ? (
         <div className="space-y-3" aria-busy aria-label={t("orgsLoadingAria")}>
@@ -554,7 +546,7 @@ export function BusinessOrganizationsPage() {
               >
                 <article
                   className={cn(
-                    "overflow-hidden rounded-2xl border bg-card",
+                    "overflow-hidden rounded-2xl border bg-card shadow-sm ring-1 ring-border/30",
                     org.isActiveWorkplace ?
                       "border-primary"
                     : "border-border/60",

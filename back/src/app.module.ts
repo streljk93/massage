@@ -16,6 +16,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { DevBookingsModule } from './modules/dev-bookings/dev-bookings.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { DirectoryModule } from './modules/directory/directory.module';
 import { PersonalizationModule } from './modules/personalization/personalization.module';
 import { FilesModule } from './modules/files/files.module';
@@ -88,6 +89,7 @@ const bullRootImports = isBullMqRootEnabled()
     SpecialistsModule,
     OrganizationsModule,
     CatalogModule,
+    CalendarModule,
     DirectoryModule,
     PersonalizationModule,
     AdvertisingModule,

@@ -47,6 +47,46 @@ enum BookingActorKind {
   system
 }
 
+/// Тип ресурса календаря организации: сейчас мастер, позже кабинеты и оборудование.
+enum CalendarResourceType {
+  specialist
+  room
+  equipment
+}
+
+/// Core-тип календарного события. Поведение живёт в отдельных use case, не в enum-ветках сущности.
+enum CalendarEventType {
+  booking
+  block
+}
+
+/// Причина служебного блока календаря.
+enum CalendarBlockReason {
+  break
+  vacation
+  manual
+}
+
+/// Статус календарного события для занятости ресурса.
+enum CalendarEventStatus {
+  pending
+  confirmed
+  in_progress
+  cancelled
+}
+
+/// Недельные правила доступности: рабочее окно или регулярный перерыв.
+enum AvailabilityRuleType {
+  working
+  break
+}
+
+/// Разовое переопределение доступности на дату.
+enum AvailabilityOverrideType {
+  off
+  extra
+}
+
 /// Локализованные подписи статусов бронирования для API (веб, мобильные клиенты).
 model BookingStatusLocale {
   status BookingStatus
@@ -222,17 +262,19 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  specialistProfile  Specialist?
-  clientBookings     Booking[]              @relation("ClientBookings")
-  bookingEventsActor BookingEvent[]           @relation("BookingEventActorUser")
-  orgReviews         OrganizationReview[]
-  specialistReviews  SpecialistReview[]
-  ownedOrganizations Organization[]         @relation("OrganizationOwner")
-  fcmTokens          UserFcmToken[]
-  favorites          UserFavorite[]
-  behaviorEvents     UserBehaviorEvent[]
-  preferenceProfile  UserPreferenceProfile?
-  oAuthAccounts      UserOAuthAccount[]
+  specialistProfile     Specialist?
+  clientBookings        Booking[]              @relation("ClientBookings")
+  bookingEventsActor    BookingEvent[]         @relation("BookingEventActorUser")
+  orgReviews            OrganizationReview[]
+  specialistReviews     SpecialistReview[]
+  ownedOrganizations    Organization[]         @relation("OrganizationOwner")
+  fcmTokens             UserFcmToken[]
+  favorites             UserFavorite[]
+  behaviorEvents        UserBehaviorEvent[]
+  preferenceProfile     UserPreferenceProfile?
+  oAuthAccounts         UserOAuthAccount[]
+  calendarEventsCreated CalendarEvent[]        @relation("CalendarEventCreatedBy")
+  calendarEventAudits   CalendarEventAudit[]   @relation("CalendarEventAuditActor")
 
   /// Отображаемое имя: после смены проходит предмодерацию; до `approved` скрыто во витрине (мастер).
   nameModerationStatus PublicationModerationStatus @default(approved)
@@ -389,7 +431,7 @@ model ServiceCategory {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  locales    ServiceCategoryLocale[]
+  locales ServiceCategoryLocale[]
 
   specialistSkills      SpecialistSkill[]
   organizationTags      OrganizationServiceCategory[]
@@ -431,7 +473,7 @@ model BodyZone {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  locales  BodyZoneLocale[]
+  locales BodyZoneLocale[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -495,9 +537,11 @@ model Organization {
   yearsInBusiness Int?
 
   /// Минуты с полуночи (Asia/Ho_Chi_Minh) — начало приёма; сетка 30 мин (например 480=8:00, 540=9:00, 600=10:00).
-  listingWorkdayStartMinute Int @default(480)
+  listingWorkdayStartMinute Int    @default(480)
   /// Окончание приёма (например 1260=21:00, 1320=22:00, 1380=23:00; последний старт = end − 30 мин).
-  listingWorkdayEndMinute   Int @default(1320)
+  listingWorkdayEndMinute   Int    @default(1320)
+  /// IANA timezone, в которой задаются правила доступности и отображается календарь организации.
+  timeZone                  String @default("Asia/Ho_Chi_Minh")
 
   /// Денормализованные агрегаты (обновляются при отзывах / фоново).
   ratingAverage Float @default(0)
@@ -531,6 +575,8 @@ model Organization {
   workplaceJoinRequests      SpecialistWorkplaceJoinRequest[]
   profileRevisions           OrganizationProfileRevision[]      @relation("OrganizationProfileRevisions")
   offerings                  OrganizationOffering[]
+  calendarResources          CalendarResource[]
+  calendarEvents             CalendarEvent[]
 
   @@index([ownerUserId])
   @@index([addressId])
@@ -772,6 +818,7 @@ model Specialist {
   onboardingMajorPicks  SpecialistOnboardingMajorServiceCategory[]
   offeringsExecution    SpecialistOffering[]
   timeOffs              SpecialistTimeOff[]
+  calendarResources     CalendarResource[]
 
   @@index([activeOrganizationId])
 }
@@ -858,6 +905,139 @@ model SpecialistOrganizationEmployment {
   @@index([role])
 }
 
+/// Ресурс календаря организации. В MVP ресурсом является специалист; позже — кабинеты и оборудование.
+model CalendarResource {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  type         CalendarResourceType
+  specialistId String?
+  specialist   Specialist?          @relation(fields: [specialistId], references: [id], onDelete: SetNull)
+
+  name     String
+  capacity Int     @default(1)
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  eventResources        CalendarEventResource[]
+  availabilityRules     AvailabilityRule[]
+  availabilityOverrides AvailabilityOverride[]
+
+  @@index([organizationId, type, isActive, deletedAt])
+  @@index([specialistId])
+}
+
+/// Календарное событие — единственный source of truth для занятости ресурсов.
+model CalendarEvent {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Денормализация для read model; основной FK живёт на Booking.calendarEventId.
+  bookingId String?
+
+  startsAt DateTime
+  endsAt   DateTime
+
+  type        CalendarEventType
+  status      CalendarEventStatus
+  blockReason CalendarBlockReason?
+
+  createdByUserId String?
+  createdByUser   User?   @relation("CalendarEventCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  notes   String?
+  version Int     @default(1)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  resources CalendarEventResource[]
+  audits    CalendarEventAudit[]
+  booking   Booking?
+
+  @@index([organizationId, startsAt, endsAt])
+  @@index([startsAt, endsAt, status, deletedAt])
+  @@index([bookingId])
+}
+
+/// Связь события с ресурсами, которые оно занимает.
+model CalendarEventResource {
+  id         String           @id @default(uuid())
+  eventId    String
+  event      CalendarEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   CalendarResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  role String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, resourceId])
+  @@index([resourceId])
+  @@index([resourceId, eventId])
+}
+
+/// Недельное правило доступности ресурса в timezone организации.
+model AvailabilityRule {
+  id         String           @id @default(uuid())
+  resourceId String
+  resource   CalendarResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+  type        AvailabilityRuleType
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([resourceId, weekday, type, deletedAt])
+}
+
+/// Разовое переопределение доступности ресурса на дату в timezone организации.
+model AvailabilityOverride {
+  id         String           @id @default(uuid())
+  resourceId String
+  resource   CalendarResource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  /// Календарная дата организации в формате yyyy-MM-dd.
+  date     String
+  startsAt DateTime?
+  endsAt   DateTime?
+  type     AvailabilityOverrideType
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([resourceId, date, type, deletedAt])
+}
+
+/// Аудит служебных block-событий календаря. Для booking lifecycle используется BookingEvent.
+model CalendarEventAudit {
+  id      String        @id @default(uuid())
+  eventId String
+  event   CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  actorUserId String?
+  actor       User?   @relation("CalendarEventAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  action    String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([eventId, createdAt])
+  @@index([actorUserId])
+}
+
 /// Заявка специалиста на приём в организацию (без автоматического членства).
 model SpecialistWorkplaceJoinRequest {
   id             String                               @id @default(uuid())
@@ -920,9 +1100,9 @@ model ContentModerationCase {
 
   /// Очередь ручной проверки: назначенный модератор (до resolve).
   assignedToUserId String?
-  assignee         User?   @relation("ContentModerationCaseAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
-  priority         Int     @default(0)
-  attemptCount     Int     @default(0)
+  assignee         User?     @relation("ContentModerationCaseAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  priority         Int       @default(0)
+  attemptCount     Int       @default(0)
   lastProcessedAt  DateTime?
 
   /// Безопасная выдача воркеру (lease): кто держит блокировку и до какого момента.
@@ -1114,6 +1294,9 @@ model TransactionalOutboxEntry {
 model Booking {
   id String @id @default(uuid())
 
+  calendarEventId String        @unique
+  calendarEvent   CalendarEvent @relation(fields: [calendarEventId], references: [id], onDelete: Restrict)
+
   clientUserId String
   client       User   @relation("ClientBookings", fields: [clientUserId], references: [id], onDelete: Cascade)
 
@@ -1167,8 +1350,8 @@ model Booking {
   deletedAt DateTime?
 
   events             BookingEvent[]
-  organizationReview OrganizationReview?    @relation("OrganizationReviewBooking")
-  specialistReview   SpecialistReview?      @relation("SpecialistReviewBooking")
+  organizationReview OrganizationReview?             @relation("OrganizationReviewBooking")
+  specialistReview   SpecialistReview?               @relation("SpecialistReviewBooking")
   snapshot           BookingSnapshot?
   createIdempotency  ClientBookingCreateIdempotency?
 
@@ -1184,10 +1367,10 @@ model Booking {
 
 /// Идемпотентность `POST /bookings`: повтор с тем же ключом возвращает ту же бронь (в т.ч. после BOOKING_BUSY_RETRY или фоновой обработки BOOKING_QUEUED).
 model ClientBookingCreateIdempotency {
-  clientUserId     String
-  idempotencyKey   String
-  bookingId        String  @unique
-  booking          Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  clientUserId   String
+  idempotencyKey String
+  bookingId      String  @unique
+  booking        Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 

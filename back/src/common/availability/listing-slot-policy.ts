@@ -41,6 +41,22 @@ export function isStartAlignedToListingGrid(startsAt: Date): boolean {
   );
 }
 
+function localDayOrdinal(zoned: Date): number {
+  return Math.floor(
+    Date.UTC(zoned.getFullYear(), zoned.getMonth(), zoned.getDate()) /
+      86_400_000,
+  );
+}
+
+function isLocalMidnight(zoned: Date): boolean {
+  return (
+    zoned.getHours() === 0 &&
+    zoned.getMinutes() === 0 &&
+    zoned.getSeconds() === 0 &&
+    zoned.getMilliseconds() === 0
+  );
+}
+
 /** Минуты с полуночи в `LISTING_DISPLAY_TZ` — как у витрины (`listingWorkday*` организации). */
 export type ListingBookabilityWorkdayMinutes = {
   startMinute: number;
@@ -65,15 +81,15 @@ export function checkListingBookability(
   }
   const zS = toZonedTime(startsAt, LISTING_DISPLAY_TZ);
   const zE = toZonedTime(endsAt, LISTING_DISPLAY_TZ);
-  if (
-    zS.getFullYear() !== zE.getFullYear() ||
-    zS.getMonth() !== zE.getMonth() ||
-    zS.getDate() !== zE.getDate()
-  ) {
+  const startDay = localDayOrdinal(zS);
+  const endDay = localDayOrdinal(zE);
+  const endsAtNextLocalMidnight = endDay === startDay + 1 && isLocalMidnight(zE);
+  if (endDay !== startDay && !endsAtNextLocalMidnight) {
     return { ok: false, code: 'OUTSIDE_WORKDAY' };
   }
   const startMin = zS.getHours() * 60 + zS.getMinutes();
-  const endMin = zE.getHours() * 60 + zE.getMinutes();
+  const endMin =
+    endsAtNextLocalMidnight ? 24 * 60 : zE.getHours() * 60 + zE.getMinutes();
   const minAllowed =
     workday?.startMinute ??
     DEFAULT_WORKDAY.startHour * 60 + DEFAULT_WORKDAY.startMinute;

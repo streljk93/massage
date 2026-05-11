@@ -29,6 +29,7 @@ import {
 } from '../domain/booking-projection';
 import type { BookingCoarseState } from '../domain/booking-state.types';
 import { assertStrictGranularTransitionForAppend } from '../domain/booking-strict-append';
+import { calendarStatusFromBookingStatus } from '../../calendar/domain/calendar-event-status';
 
 function parseCanceledParty(
   parsedPayload: unknown,
@@ -93,6 +94,7 @@ const bookingAppendRowSelect = {
   cancellationComment: true,
   clientUserId: true,
   version: true,
+  calendarEventId: true,
   lastAppliedSequence: true,
   projectionHash: true,
   specialist: { select: { userId: true } },
@@ -371,6 +373,17 @@ export class BookingAppendService {
         message: 'Concurrent booking update; retry append',
       });
     }
+
+    await tx.calendarEvent.update({
+      where: { id: booking.calendarEventId },
+      data: {
+        startsAt: projection.startsAt,
+        endsAt: projection.endsAt,
+        status: calendarStatusFromBookingStatus(projection.status),
+        version: { increment: 1 },
+      },
+      select: { id: true },
+    });
 
     this.#logger.debug(
       `append ok booking=${input.bookingId} seq=${createdEv.localSequence} version+=1`,

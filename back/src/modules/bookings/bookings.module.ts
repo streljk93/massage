@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { ModerationModule } from '../moderation/moderation.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TransactionalOutboxModule } from '../../infrastructure/transactional-outbox/transactional-outbox.module';
+import { CalendarModule } from '../calendar/calendar.module';
 import { BookingsSchedulerService } from './application/bookings-scheduler.service';
 import { BookingsService } from './application/bookings.service';
 import { ClientBookingRemindersService } from './application/client-booking-reminders.service';
@@ -30,6 +31,7 @@ const bookingCommandProviders = useBookingCommandQueue
 @Module({
   imports: [
     AuthModule,
+    CalendarModule,
     ModerationModule,
     NotificationsModule,
     forwardRef(() => TransactionalOutboxModule),

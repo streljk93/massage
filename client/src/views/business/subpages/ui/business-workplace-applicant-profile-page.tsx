@@ -15,8 +15,8 @@ import {
   organizationsCabinetGetWorkplaceJoinApplicantCabinetProfile,
 } from "@/shared/api";
 import { useQuery } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 
 const APPLICANT_QK = ["workplaceJoinApplicantCabinetProfile"] as const;
 
@@ -30,6 +30,7 @@ export function BusinessWorkplaceApplicantProfilePage({
   specialistId,
 }: BusinessWorkplaceApplicantProfilePageProps) {
   const t = useTranslations("businessAppSubpages");
+  useSetBusinessPageTitle(t("profileTitle"));
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
@@ -68,22 +69,8 @@ export function BusinessWorkplaceApplicantProfilePage({
 
   const specialist = applicantQuery.data?.specialist as CabinetSpecialistBlob | undefined;
 
-  const avatarFallback = (
-    (specialist?.listingName != null && String(specialist.listingName).trim().length > 0 ?
-      String(specialist.listingName).trim().slice(0, 2)
-    : String(specialist?.userName ?? "").trim().slice(0, 2)) || "B"
-  ).toUpperCase();
-
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pt-2 pb-6">
-      <BusinessScreenHeader
-        title={t("profileTitle")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("profileTitle")}
-        avatarFallback={avatarFallback}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-4 px-4 pt-2">
       {sessionStatus === "loading" || (sessionStatus === "authenticated" && accessToken.length === 0) ?
         <div
           className="flex justify-center py-12 text-muted-foreground"

@@ -37,6 +37,18 @@ export const BOOKING_HISTORY_MUTED_DATE_TAGS_STATUSES = new Set<BookingStatus>([
   "no_show_by_master",
 ]);
 
+/**
+ * Календарь кабинета: не рисовать события-записи с этими доменными статусами (шум в слоте).
+ * `CalendarEvent.status === "cancelled"` на бэке также ставится для `done` и no-show — фильтр только по `booking.status`.
+ */
+export const BOOKING_CALENDAR_HIDDEN_STATUSES = new Set<BookingStatus>([
+  "expired",
+  "reject_by_master",
+  "reject_by_client",
+  "canceled_by_master",
+  "canceled_by_client",
+]);
+
 export function bookingHistoryDateTagsMuted(status: string): boolean {
   return isBookingStatus(status)
     ? BOOKING_HISTORY_MUTED_DATE_TAGS_STATUSES.has(status)

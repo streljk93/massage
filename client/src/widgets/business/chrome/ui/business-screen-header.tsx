@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Bell } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/app/i18n/navigation";
@@ -35,15 +35,20 @@ function CabinetMenuLeadSkeleton() {
 }
 
 export type BusinessScreenHeaderProps = {
-  title: string;
+  title?: string;
   titleVariant?: "greeting" | "section";
   /** Сохраняется для совместимости; заголовок страницы всегда в строке рядом с меню */
   showHeadline?: boolean;
-  avatarAlt: string;
-  avatarFallback: string;
+  avatarAlt?: string;
+  avatarFallback?: string;
   className?: string;
   /** Строка под тулбаром: кнопки и действия страницы */
   actions?: ReactNode;
+  /**
+   * Контролы под шапкой: вкладки переключения вида, фильтры и т.п.
+   * Рендерятся без разделителя, вровень с содержимым страницы.
+   */
+  controls?: ReactNode;
   /**
    * Слева вместо меню кабинета / скелета — компактная кнопка «назад» (только иконка, размер как у аватара `lg`).
    */
@@ -58,13 +63,14 @@ export type BusinessScreenHeaderProps = {
  * рядом — заголовок страницы. «Назад» для авторизованных только внутри дровера.
  */
 export function BusinessScreenHeader({
-  title,
+  title = "",
   titleVariant = "section",
   showHeadline = true,
-  avatarAlt,
-  avatarFallback,
+  avatarAlt = "",
+  avatarFallback = "B",
   className,
   actions,
+  controls,
   cabinetBack,
 }: BusinessScreenHeaderProps) {
   const tBiz = useTranslations("businessScreenHeader");
@@ -113,12 +119,17 @@ export function BusinessScreenHeader({
     "cabinetBack" as const
   : leadRole;
 
+  const showCabinetNotificationsLead =
+    !cabinetBack &&
+    isAuthed &&
+    (lead === "menu" || lead === "menuPending");
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex min-h-[44px] items-center justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {lead !== "none" ? (
-            <div className="flex shrink-0 items-center">
+            <div className={cn("flex shrink-0 items-center", (lead === "menu" || lead === "menuPending") && "md:hidden")}>
               {lead === "cabinetBack" && cabinetBack ? (
                 <Button
                   variant="secondary"
@@ -185,31 +196,67 @@ export function BusinessScreenHeader({
             </h1>
           ) : null}
         </div>
-        <div className="relative shrink-0">
-          <span
-            className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
-            role="img"
-            aria-label={tLocale(`language.${locale}`)}
-          >
-            {localeFlagEmoji[locale]}
-          </span>
-          <Link
-            href={profileHref}
-            aria-label={avatarAria}
-            className={cn(
-              motion.interactivePressStrong,
-              "relative z-0 block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-            )}
-          >
-            <UserAvatar
-              src={displaySrc}
-              alt={displayAlt}
-              fallback={displayFallback}
-              size="lg"
-            />
-          </Link>
+        <div
+          className={cn(
+            "relative z-[1] flex shrink-0 items-center gap-1.5",
+            showCabinetNotificationsLead ? "ml-auto" : "",
+          )}
+        >
+          {showCabinetNotificationsLead ?
+            <Button
+              variant="secondary"
+              tone="light"
+              asChild
+              className={cn(
+                motion.interactivePress,
+                "relative h-[40px] w-[40px] min-h-[40px] min-w-[40px] shrink-0 rounded-full border border-border/40 bg-card/95 p-0 shadow-none",
+              )}
+            >
+              <Link
+                href="/profile/notifications"
+                className="inline-flex size-full items-center justify-center"
+                aria-label={tBiz("notificationsAria")}
+              >
+                <Bell className="size-[1.15rem] text-muted-foreground" strokeWidth={2} aria-hidden />
+                <span
+                  className="absolute top-2 right-2.5 size-2 rounded-full bg-primary"
+                  aria-hidden
+                />
+              </Link>
+            </Button>
+          : (
+            <>
+              <span
+                className="pointer-events-none absolute -top-2 -right-2 z-10 text-lg leading-none select-none"
+                role="img"
+                aria-label={tLocale(`language.${locale}`)}
+              >
+                {localeFlagEmoji[locale]}
+              </span>
+              <Link
+                href={profileHref}
+                aria-label={avatarAria}
+                className={cn(
+                  motion.interactivePressStrong,
+                  "relative z-0 block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
+                )}
+              >
+                <UserAvatar
+                  src={displaySrc}
+                  alt={displayAlt}
+                  fallback={displayFallback}
+                  size="lg"
+                />
+              </Link>
+            </>
+          )}
         </div>
       </header>
+      {controls ? (
+        <div className="no-scrollbar flex gap-1 overflow-x-auto">
+          {controls}
+        </div>
+      ) : null}
       {actions ?
         <div className="flex w-full min-w-0 flex-col items-end gap-2 border-t border-border/15 pt-3">
           {actions}

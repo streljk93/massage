@@ -17,6 +17,7 @@ import {
   PublicationModerationStatus,
   SpecialistOfferingStatus,
   BookingEventType,
+  CalendarEventStatus,
   type BookingStatus,
   type Prisma,
 } from '@prisma/client';
@@ -71,6 +72,9 @@ import {
   bookingExcludeRetryJitterMs,
 } from '../domain/booking-slot-exclude-retry.policy';
 import { BookingCommandEnqueueService } from '../queue/booking-command-enqueue.service';
+import { CalendarService } from '../../calendar/application/calendar.service';
+import { CalendarAvailabilityService } from '../../calendar/application/calendar-availability.service';
+import { CalendarRepository } from '../../calendar/infrastructure/calendar.repository';
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
@@ -110,6 +114,9 @@ export class BookingsService {
     private readonly outbox: TransactionalOutboxService,
     private readonly offeringPricingResolver: OfferingPricingResolver,
     private readonly bookingAppend: BookingAppendService,
+    private readonly calendarService: CalendarService,
+    private readonly calendarAvailability: CalendarAvailabilityService,
+    private readonly calendarRepository: CalendarRepository,
     @Optional()
     private readonly bookingCommandEnqueue?: BookingCommandEnqueueService,
   ) {}
@@ -501,21 +508,6 @@ export class BookingsService {
       });
     }
 
-    const timeOff = await this.prisma.specialistTimeOff.findFirst({
-      where: {
-        specialistId: body.specialistId,
-        deletedAt: null,
-        startsAt: { lt: endsAt },
-        endsAt: { gt: startsAt },
-      },
-    });
-    if (timeOff != null) {
-      throw new BadRequestException({
-        code: 'SPECIALIST_TIME_OFF_BLOCKS_SLOT',
-        message: 'Specialist is not available during this window',
-      });
-    }
-
     const categoryPresentation = pickLocalizedServiceCategoryFields(
       off.category as CategoryLocaleShape,
       locale,
@@ -582,27 +574,41 @@ export class BookingsService {
             }
           }
 
-          await BookingTxLocks.acquireSpecialistActiveSlotExclusion(
-            tx,
-            body.specialistId,
-          );
-
-          const overlap = await this.bookingsRepository.findActiveOverlapTx(
-            tx,
-            body.specialistId,
-            startsAt,
-            endsAt,
-            null,
-          );
-          if (overlap != null) {
+          if (organizationId == null) {
             throw new BadRequestException({
-              code: 'SLOT_ALREADY_TAKEN',
-              message: 'This time overlaps an existing active booking',
+              code: 'BOOKING_ORGANIZATION_REQUIRED',
+              message: 'Organization context is required for calendar booking',
             });
           }
+          const resource =
+            await this.calendarService.ensureSpecialistResourceForOrganizationTx(
+              tx,
+              {
+                organizationId,
+                specialistId: body.specialistId,
+              },
+            );
+          await this.calendarAvailability.assertSlotAvailableForResourcesTx(tx, {
+            organizationId,
+            resourceIds: [resource.id],
+            startsAt,
+            endsAt,
+            requireWorkingAvailability: true,
+          });
+          const calendarEvent =
+            await this.calendarRepository.createBookingCalendarEventTx(tx, {
+              organizationId,
+              bookingId: null,
+              startsAt,
+              endsAt,
+              status: CalendarEventStatus.pending,
+              createdByUserId: clientUserId,
+              resourceIds: [resource.id],
+            });
 
           const b = await tx.booking.create({
             data: {
+              calendarEventId: calendarEvent.id,
               clientUserId,
               specialistId: body.specialistId,
               organizationId,
@@ -616,6 +622,10 @@ export class BookingsService {
               endsAt,
               pendingExpiresAt: null,
             },
+          });
+          await this.calendarRepository.updateCalendarEventBookingIdTx(tx, {
+            eventId: calendarEvent.id,
+            bookingId: b.id,
           });
           await tx.bookingSnapshot.create({
             data: buildBookingSnapshotCreateData({
@@ -762,40 +772,6 @@ export class BookingsService {
           if (attempt < BOOKING_EXCLUDE_MAX_RETRIES) {
             await this.#sleepMs(bookingExcludeRetryJitterMs());
             continue;
-          }
-          const overlap2 = await this.bookingsRepository.findActiveOverlap(
-            body.specialistId,
-            startsAt,
-            endsAt,
-            null,
-          );
-          if (overlap2 == null) {
-            try {
-              const booking = await runCreateTx();
-              void collectListingSlotInvalidationSurface({
-                intervals: [{ startsAt, endsAt }],
-              });
-              if (booking.shouldNotifySpecialist) {
-                void this.pushNotifications.notifySpecialistNewBooking(
-                  booking.id,
-                );
-              }
-              return {
-                id: booking.id,
-                status: booking.status,
-                startsAt: booking.startsAt,
-                endsAt: booking.endsAt,
-                pendingExpiresAt: booking.pendingExpiresAt,
-              };
-            } catch (e2: unknown) {
-              if (isExclusionConstraintViolation(e2)) {
-                throw new BadRequestException({
-                  code: 'SLOT_ALREADY_TAKEN',
-                  message: 'This time slot is no longer available',
-                });
-              }
-              throw e2;
-            }
           }
           throw new BadRequestException({
             code: 'SLOT_ALREADY_TAKEN',
@@ -1076,7 +1052,7 @@ export class BookingsService {
 
   /**
    * Принимающий мастер брони или owner/admin салона (если в брони зафиксирована организация),
-   * как в `GET /specialists/me/salon-bookings` (вкладки «все» / «мои»).
+   * как в `GET /specialists/me/salon-bookings` (контекст «текущее место» / managed).
    */
   private async assertSalonSideMayActOnBooking(
     actingUserId: string,
@@ -1166,6 +1142,7 @@ export class BookingsService {
         clientUserId: true,
         specialistId: true,
         organizationId: true,
+        calendarEventId: true,
         status: true,
         startsAt: true,
         endsAt: true,
@@ -1224,6 +1201,7 @@ export class BookingsService {
         clientUserId: true,
         specialistId: true,
         organizationId: true,
+        calendarEventId: true,
         status: true,
       },
     });
@@ -1410,6 +1388,7 @@ export class BookingsService {
       select: {
         specialistId: true,
         organizationId: true,
+        calendarEventId: true,
         status: true,
         startsAt: true,
         endsAt: true,
@@ -1481,21 +1460,6 @@ export class BookingsService {
       });
     }
 
-    const timeOff = await this.prisma.specialistTimeOff.findFirst({
-      where: {
-        specialistId: booking.specialistId,
-        deletedAt: null,
-        startsAt: { lt: newEndsAt },
-        endsAt: { gt: newStartsAt },
-      },
-    });
-    if (timeOff != null) {
-      throw new BadRequestException({
-        code: 'SPECIALIST_TIME_OFF_BLOCKS_SLOT',
-        message: 'Specialist is not available during this window',
-      });
-    }
-
     const lockCfg = this.config.getOrThrow<{
       specialistAdvisoryLockTimeoutMs: number;
     }>('bookingConcurrency');
@@ -1507,23 +1471,28 @@ export class BookingsService {
             tx,
             lockCfg.specialistAdvisoryLockTimeoutMs,
           );
-          await BookingTxLocks.acquireSpecialistActiveSlotExclusion(
-            tx,
-            booking.specialistId,
-          );
-          const overlapTx = await this.bookingsRepository.findActiveOverlapTx(
-            tx,
-            booking.specialistId,
-            newStartsAt,
-            newEndsAt,
-            bookingId,
-          );
-          if (overlapTx != null) {
+          if (booking.organizationId == null) {
             throw new BadRequestException({
-              code: 'SLOT_ALREADY_TAKEN',
-              message: 'This time overlaps an existing active booking',
+              code: 'BOOKING_ORGANIZATION_REQUIRED',
+              message: 'Organization context is required for calendar booking',
             });
           }
+          const resource =
+            await this.calendarService.ensureSpecialistResourceForOrganizationTx(
+              tx,
+              {
+                organizationId: booking.organizationId,
+                specialistId: booking.specialistId,
+              },
+            );
+          await this.calendarAvailability.assertSlotAvailableForResourcesTx(tx, {
+            organizationId: booking.organizationId,
+            resourceIds: [resource.id],
+            startsAt: newStartsAt,
+            endsAt: newEndsAt,
+            requireWorkingAvailability: true,
+            excludeEventId: booking.calendarEventId,
+          });
           await this.bookingAppend.appendBookingEvent(tx, {
             bookingId,
             type: BookingEventType.rescheduled,
@@ -1584,26 +1553,6 @@ export class BookingsService {
           if (attempt < BOOKING_EXCLUDE_MAX_RETRIES) {
             await this.#sleepMs(bookingExcludeRetryJitterMs());
             continue;
-          }
-          const overlap2 = await this.bookingsRepository.findActiveOverlap(
-            booking.specialistId,
-            newStartsAt,
-            newEndsAt,
-            bookingId,
-          );
-          if (overlap2 == null) {
-            try {
-              await runRescheduleTx();
-            } catch (e2: unknown) {
-              if (isExclusionConstraintViolation(e2)) {
-                throw new BadRequestException({
-                  code: 'SLOT_ALREADY_TAKEN',
-                  message: 'This time slot is no longer available',
-                });
-              }
-              throw e2;
-            }
-            break;
           }
           throw new BadRequestException({
             code: 'SLOT_ALREADY_TAKEN',
@@ -1719,8 +1668,10 @@ export class BookingsService {
   }
 
   /**
-   * Бизнес-экран «Записи»: все брони по салонам, где мастер owner/admin, или только его брони
-   * в организации — текущем месте приёма.
+   * Бизнес-экран «Записи»:
+   * - `managed` — все брони по всем организациям, где мастер owner/admin (legacy / расширенный обзор).
+   * - `active_workplace` — контекст текущего места приёма: owner/admin видят все визиты этой организации;
+   *   обычный specialist — только свои брони в этой организации.
    */
   async listSalonCabinetBusiness(
     userId: string,
@@ -1801,6 +1752,25 @@ export class BookingsService {
   }): Promise<SalonCabinetBookingRow[]> {
     if (specialist.activeOrganizationId == null) {
       return [];
+    }
+    const employment =
+      await this.prisma.specialistOrganizationEmployment.findFirst({
+        where: {
+          specialistId: specialist.id,
+          organizationId: specialist.activeOrganizationId,
+          isActive: true,
+        },
+        select: { role: true },
+      });
+    if (employment == null) {
+      return [];
+    }
+    const isManager =
+      employment.role === 'owner' || employment.role === 'admin';
+    if (isManager) {
+      return this.bookingsRepository.findManyForSalonCabinetManaged([
+        specialist.activeOrganizationId,
+      ]);
     }
     return this.bookingsRepository.findManyForSalonCabinetActiveWorkplace(
       specialist.id,

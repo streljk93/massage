@@ -13,8 +13,8 @@ import {
   specialistsCabinetPatchSpecialistCabinetSkills,
 } from "@/shared/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import { useBusinessPersonalServiceCatalogCategories } from "../lib/use-business-personal-catalog-categories";
 
 const ONB_QK = ["specialistOnboarding"] as const;
@@ -25,6 +25,7 @@ function sortedIdsJson(ids: readonly string[]): string {
 
 export function BusinessSkillsPage() {
   const t = useTranslations("businessSkillsPage");
+  useSetBusinessPageTitle(t("title"));
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
@@ -116,34 +117,8 @@ export function BusinessSkillsPage() {
 
   const workplaceMajorsEmpty = catalogBundle.workplaceMajorsEmpty;
 
-  const avatarFallback = useMemo(() => {
-    const blob = specialist as {
-      listingName?: string | null;
-      userName?: string | null;
-    } | null;
-    const fromSpecialist =
-      blob?.listingName != null && String(blob.listingName).trim().length > 0 ?
-        String(blob.listingName).trim().slice(0, 2)
-      : blob?.userName != null && String(blob.userName).trim().length > 0 ?
-        String(blob.userName).trim().slice(0, 2)
-      : "";
-    const fromSession =
-      session?.user?.name != null && String(session.user.name).trim().length > 0 ?
-        String(session.user.name).trim().slice(0, 2)
-      : "";
-    return (fromSpecialist || fromSession || "B").toUpperCase();
-  }, [specialist, session?.user?.name]);
-
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 pt-2 pb-6">
-      <BusinessScreenHeader
-        title={t("title")}
-        titleVariant="section"
-        showHeadline={false}
-        avatarAlt={t("title")}
-        avatarFallback={avatarFallback}
-      />
-
+    <main className="flex w-full min-h-0 flex-1 flex-col gap-4 px-4 pt-2">
       {sessionStatus === "loading" || (sessionStatus === "authenticated" && accessToken.length === 0) ?
         <div
           className="flex justify-center py-12 text-muted-foreground"

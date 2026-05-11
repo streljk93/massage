@@ -12,7 +12,9 @@
         "editProfileTitle": "Public listing",
         "editProfileHint": "Name, address, gallery, and spheres shown to guests.",
         "editProfileAria": "Edit organization public listing",
-        "specialistCabinetHint": "Only owners and admins can manage offerings and the public listing."
+        "specialistCabinetHint": "Only owners and admins can manage offerings and the public listing.",
+        "heroNoAddressHint": "Add the address in listing settings so guests know how to find you.",
+        "heroSpecialistAddressHint": "Owners and admins manage the address in listing settings."
       }
     },
     "vi": {
@@ -27,7 +29,9 @@
         "editProfileTitle": "Trang công khai",
         "editProfileHint": "Tên, địa chỉ, gallery và lĩnh vực hiển thị cho khách.",
         "editProfileAria": "Chỉnh sửa hồ sơ công khai của tổ chức",
-        "specialistCabinetHint": "Chỉ chủ sở hữu hoặc quản trị viên mới quản lý offering và trang công khai."
+        "specialistCabinetHint": "Chỉ chủ sở hữu hoặc quản trị viên mới quản lý offering và trang công khai.",
+        "heroNoAddressHint": "Thêm địa chỉ trong cài đặt hồ sơ công khai để khách biết cách tìm bạn.",
+        "heroSpecialistAddressHint": "Chủ và quản trị viên quản lý địa chỉ trong cài đặt hồ sơ công khai."
       }
     },
     "ru": {
@@ -42,7 +46,9 @@
         "editProfileTitle": "Публичная витрина",
         "editProfileHint": "Название, адрес, галерея и сферы, которые видят гости.",
         "editProfileAria": "Редактировать публичную карточку организации",
-        "specialistCabinetHint": "Офферы и витрину могут вести только владелец или администратор."
+        "specialistCabinetHint": "Офферы и витрину могут вести только владелец или администратор.",
+        "heroNoAddressHint": "Добавьте адрес в настройках витрины, чтобы гости знали, как вас найти.",
+        "heroSpecialistAddressHint": "Адрес в настройках витрины меняют владелец или администратор."
       }
     }
   }

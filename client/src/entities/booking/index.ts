@@ -4,6 +4,7 @@ export { default as bookingHistoryCardI18n } from "./model/booking-history-card.
 export { default as bookingListCardI18n } from "./model/booking-list-card.i18n.json";
 export {
   BOOKING_STATUSES,
+  BOOKING_CALENDAR_HIDDEN_STATUSES,
   type BookingStatus,
   bookingHistoryDateTagsMuted,
   isBookingStatus,
@@ -65,3 +66,13 @@ export {
   usePendingBookingCountdown,
   type PendingCountdownParts,
 } from "./lib/use-pending-booking-countdown";
+export { bookingIsNewTab, compareBookingsNewTabPriority } from "./lib/booking-tab-group";
+export {
+  enrichSalonBookingRow,
+  type EnrichedSalonBookingRow,
+  type SalonBookingRow,
+} from "./lib/enrich-salon-booking-row";
+export {
+  SalonBookingRowCard,
+  specialistSalonBookingAvatarSrc,
+} from "./ui/salon-booking-row-card";

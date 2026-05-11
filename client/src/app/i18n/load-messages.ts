@@ -28,6 +28,7 @@ import {
 } from "@/views/bookings";
 import {
   businessAppSubpagesI18n,
+  businessCalendarPageI18n,
   businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
@@ -68,6 +69,7 @@ import {
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
 } from "@/widgets/business/chrome";
+import { calendarWidgetI18n } from "@/widgets/calendar";
 import {
   homeBottomNavI18n,
   homeScreenHeaderI18n,
@@ -87,6 +89,7 @@ const bundles: ColocatedI18nBundle[] = [
   homeScreenHeaderI18n,
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
+  calendarWidgetI18n,
   homePageI18n,
   homeForYouSectionI18n,
   businessOnboardingPageI18n,
@@ -96,6 +99,7 @@ const bundles: ColocatedI18nBundle[] = [
   businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
+  businessCalendarPageI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,

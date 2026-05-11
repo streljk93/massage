@@ -151,11 +151,11 @@ export class SpecialistsCabinetController {
       enum: ['managed', 'active_workplace'],
     },
     description:
-      'managed — записи по всем организациям, где мастер owner/admin; active_workplace — только записи этого мастера в организации текущего места приёма.',
+      'managed — записи по всем организациям, где мастер owner/admin. active_workplace — текущее место приёма: owner/admin видят все визиты этой организации, specialist — только свои брони в ней.',
   })
   @ApiOperation({
     summary:
-      'Список броней для бизнес-экрана: по управляемым салонам или только «мои» на текущем месте.',
+      'Список броней для бизнес-экрана: либо все управляемые точки (managed), либо контекст текущего места приёма (active_workplace).',
   })
   @ApiOkResponse({ schema: specialistSalonBookingsListResponseSchema })
   @ApiBadRequestResponse({ description: 'Невалидный query' })

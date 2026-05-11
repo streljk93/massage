@@ -4,7 +4,6 @@
       "businessOnboarding": {
         "title": "Business home",
         "welcomeLead": "You’re in the right place. When you’re set up, this screen becomes your home base — bookings, team, and how clients find you in search.",
-        "dashboardLead": "Your dashboard shows workload, booking flow, and today’s priorities in one place.",
         "loading": "Loading dashboard...",
         "authTitle": "Sign in to open your dashboard",
         "authHint": "Authorize with your specialist account to see bookings and weekly metrics.",
@@ -62,14 +61,21 @@
         "reminderService": "Add your services to appear correctly in search.",
         "reminderOrg": "Link or create a workplace so clients know where to find you.",
         "reminderCta": "Continue setup",
-        "incompleteBanner": "Specialist onboarding isn’t finished yet. You can continue later from here."
+        "incompleteBanner": "Specialist onboarding isn’t finished yet. You can continue later from here.",
+        "upcoming": {
+          "title": "Upcoming visits",
+          "hint": "Next on your schedule",
+          "empty": "No upcoming visits right now.",
+          "viewAll": "All bookings",
+          "listAria": "Upcoming visits",
+          "durationMinutes": "{value} min"
+        }
       }
     },
     "vi": {
       "businessOnboarding": {
         "title": "Trang chủ doanh nghiệp",
         "welcomeLead": "Bạn đang ở đúng chỗ. Khi thiết lập xong, màn hình này là nơi gom lịch hẹn, nhóm và cách khách tìm thấy bạn trên ứng dụng.",
-        "dashboardLead": "Bảng điều khiển cho thấy khối lượng lịch hẹn, luồng trạng thái và ưu tiên hôm nay trong một màn hình.",
         "loading": "Đang tải bảng điều khiển...",
         "authTitle": "Đăng nhập để mở bảng điều khiển",
         "authHint": "Đăng nhập bằng tài khoản chuyên viên để xem lịch hẹn và chỉ số theo tuần.",
@@ -127,14 +133,21 @@
         "reminderService": "Thêm dịch vụ để hiển thị đúng trên tìm kiếm.",
         "reminderOrg": "Gắn hoặc tạo nơi làm việc để khách biết tìm bạn ở đâu.",
         "reminderCta": "Tiếp tục thiết lập",
-        "incompleteBanner": "Thiết lập chuyên viên chưa xong. Bạn có thể tiếp tục sau từ đây."
+        "incompleteBanner": "Thiết lập chuyên viên chưa xong. Bạn có thể tiếp tục sau từ đây.",
+        "upcoming": {
+          "title": "Lượt hẹn sắp tới",
+          "hint": "Tiếp theo trên lịch của bạn",
+          "empty": "Hiện chưa có lượt hẹn sắp tới.",
+          "viewAll": "Tất cả lịch hẹn",
+          "listAria": "Lượt hẹn sắp tới",
+          "durationMinutes": "{value} phút"
+        }
       }
     },
     "ru": {
       "businessOnboarding": {
         "title": "Кабинет бизнеса",
         "welcomeLead": "Вы в нужном разделе. Когда всё настроите, эта страница станет «домом»: записи, команда и то, как вас видят в поиске.",
-        "dashboardLead": "Дашборд показывает загрузку, воронку записей и приоритеты на сегодня в одном месте.",
         "loading": "Загружаем дашборд...",
         "authTitle": "Войдите, чтобы открыть дашборд",
         "authHint": "Авторизуйтесь как специалист, чтобы увидеть записи и недельные метрики.",
@@ -192,7 +205,15 @@
         "reminderService": "Добавьте услуги, чтобы вас корректно видели в поиске.",
         "reminderOrg": "Укажите или создайте место работы, чтобы клиенты понимали, куда вас искать.",
         "reminderCta": "Продолжить настройку",
-        "incompleteBanner": "Настройка профиля мастера ещё не завершена. Можно продолжить позже отсюда."
+        "incompleteBanner": "Настройка профиля мастера ещё не завершена. Можно продолжить позже отсюда.",
+        "upcoming": {
+          "title": "Предстоящие визиты",
+          "hint": "Следующие в вашем расписании",
+          "empty": "Пока нет предстоящих визитов.",
+          "viewAll": "Все записи",
+          "listAria": "Предстоящие визиты",
+          "durationMinutes": "{value} мин"
+        }
       }
     }
   }
