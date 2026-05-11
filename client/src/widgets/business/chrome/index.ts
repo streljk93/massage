@@ -8,7 +8,7 @@ export {
   BusinessScreenHeader,
   type BusinessScreenHeaderProps,
 } from "./ui/business-screen-header";
-export { BusinessCabinetSidebar } from "./ui/business-cabinet-nav-drawer";
+export { BusinessCabinetSidebar, BusinessCabinetSidebarShell } from "./ui/business-cabinet-nav-drawer";
 export {
   useSetBusinessPageTitle,
   useBusinessSidebarOpen,

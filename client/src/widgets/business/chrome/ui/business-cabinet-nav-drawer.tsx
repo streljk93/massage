@@ -39,6 +39,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/shared/ui/shadcn/drawer";
+import { Skeleton } from "@/shared/ui/shadcn/skeleton";
 import {
   Button,
   Collapsible,
@@ -392,6 +393,44 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
     </>
   );
 }
+
+/** Плейсхолдер той же ширины, что и сайдбар (десктоп), пока грузятся сессия или онбординг — контент не расширяется на весь экран. */
+export function BusinessCabinetSidebarShell() {
+  const t = useTranslations("businessScreenHeader");
+  return (
+    <aside
+      className="sticky top-0 flex h-screen w-[min(calc(100vw-0.5rem),16rem)] shrink-0 flex-col overflow-hidden border-r border-border/30 bg-card md:w-64 lg:w-80"
+      aria-busy="true"
+      aria-label={t("sidebarShellAria")}
+    >
+      <div className="border-b border-border/15 px-4 pt-4 pb-3">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2 py-0.5">
+            <Skeleton className="h-4 w-28 rounded-md" />
+            <Skeleton className="h-3 w-36 rounded-md" />
+          </div>
+        </div>
+      </div>
+      <nav className="flex flex-1 flex-col gap-2 px-3 py-3" aria-hidden>
+        {NAV_SHELL_SKELETON_IDS.map((id) => (
+          <Skeleton key={id} className="h-9 w-full shrink-0 rounded-lg" />
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+const NAV_SHELL_SKELETON_IDS = [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+] as const;
 
 /** Постоянный сайдбар кабинета (десктоп). */
 export function BusinessCabinetSidebar() {

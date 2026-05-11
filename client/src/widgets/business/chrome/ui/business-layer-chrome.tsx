@@ -18,7 +18,7 @@ import {
   type CabinetHeaderLeadRole,
 } from "./business-cabinet-nav-context";
 import { BusinessAppBottomNav } from "./business-app-bottom-nav";
-import { BusinessCabinetSidebar } from "./business-cabinet-nav-drawer";
+import { BusinessCabinetSidebar, BusinessCabinetSidebarShell } from "./business-cabinet-nav-drawer";
 import { BusinessScreenHeader } from "./business-screen-header";
 
 const ONB_QK = ["specialistOnboarding"] as const;
@@ -125,6 +125,13 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
   const showSidebar =
     ready && status === "authenticated" && setupComplete && !isSetupPath(pathname);
 
+  /** Десктоп: резервируем колонку под сайдбар до готовности сессии/онбординга, чтобы контент не прыгал на всю ширину. */
+  const showSidebarPendingShell =
+    !isSetupPath(pathname) &&
+    (status === "loading" ||
+      (status === "authenticated" &&
+        accessToken.length > 0 &&
+        !isFetched));
   return (
     <BusinessCabinetHeaderProvider lead={headerLead}>
       <BusinessScreenTitleSetContext.Provider value={setPageTitle}>
@@ -138,6 +145,10 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
           {showSidebar ? (
             <div className="hidden md:block">
               <BusinessCabinetSidebar />
+            </div>
+          ) : showSidebarPendingShell ? (
+            <div className="hidden md:block">
+              <BusinessCabinetSidebarShell />
             </div>
           ) : null}
 

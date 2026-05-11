@@ -5,7 +5,8 @@
         "backToApp": "Back to the app",
         "backToAppAria": "Return to the main app as a client",
         "openMenuAria": "Open business cabinet menu",
-        "notificationsAria": "Notifications"
+        "notificationsAria": "Notifications",
+        "sidebarShellAria": "Loading business cabinet navigation"
       }
     },
     "vi": {
@@ -13,7 +14,8 @@
         "backToApp": "Quay lại ứng dụng",
         "backToAppAria": "Về ứng dụng chính với tư cách khách",
         "openMenuAria": "Mở menu khu vực doanh nghiệp",
-        "notificationsAria": "Thông báo"
+        "notificationsAria": "Thông báo",
+        "sidebarShellAria": "Đang tải menu khu vực doanh nghiệp"
       }
     },
     "ru": {
@@ -21,7 +23,8 @@
         "backToApp": "Обратно в приложение",
         "backToAppAria": "Вернуться в основное приложение (режим клиента)",
         "openMenuAria": "Открыть меню кабинета для бизнеса",
-        "notificationsAria": "Уведомления"
+        "notificationsAria": "Уведомления",
+        "sidebarShellAria": "Загрузка меню кабинета"
       }
     }
   }
