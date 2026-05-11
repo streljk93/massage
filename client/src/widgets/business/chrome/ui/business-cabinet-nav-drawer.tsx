@@ -57,6 +57,7 @@ type NavLinkItem = {
     | "/business"
     | "/business/bookings"
     | "/business/calendar"
+    | "/business/clients"
     | "/business/skills"
     | "/business/organizations";
   labelKey: string;
@@ -98,7 +99,13 @@ const MAIN_NAV: readonly (NavLinkItem | NavSoonItem)[] = [
     href: "/business/organizations",
     labelKey: "organizations",
   },
-  { kind: "soon", id: "clients", icon: Users, labelKey: "clients" },
+  {
+    kind: "link",
+    id: "clients",
+    icon: Users,
+    href: "/business/clients",
+    labelKey: "clients",
+  },
   { kind: "soon", id: "specialists", icon: UserRound, labelKey: "specialists" },
   {
     kind: "link",
@@ -129,6 +136,9 @@ function resolveActiveNavId(pathname: string): string | null {
   }
   if (pathname.startsWith("/business/calendar")) {
     return "calendar";
+  }
+  if (pathname.startsWith("/business/clients")) {
+    return "clients";
   }
   if (pathname.startsWith("/business/organizations")) {
     return "organizations";
@@ -233,7 +243,6 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
   const { data: session, status } = useSession();
   const accessToken = session?.accessToken ?? "";
   const authed = status === "authenticated" && accessToken.length > 0;
-  const user = session?.user;
 
   const orgsQuery = useSpecialistMyOrganizationsQuery({ enabled: authed });
   const activeOrg = useMemo(
@@ -255,36 +264,6 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
 
   const [otherOrgsOpen, setOtherOrgsOpen] = useState(false);
 
-  const displayName =
-    user?.name?.trim() || user?.email?.split("@")[0] || tNav("drawerGuestName");
-  const displaySrc = user?.image ?? undefined;
-  const displayFallback = user ? initialsFromUser(user) : "?";
-
-  // Карточка / ссылка места приёма — одинакова в обоих режимах
-  const OrgLink = mode === "drawer"
-    ? ({ children }: { children: React.ReactNode }) => (
-        <DrawerClose asChild>
-          <Link
-            href="/business/organizations"
-            title={tNav("configureWorkplaceLinkAria")}
-            aria-label={tNav("configureWorkplaceLinkAria")}
-            className={cn(motion.interactivePressStrong, "flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl bg-primary/6 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50")}
-          >
-            {children}
-          </Link>
-        </DrawerClose>
-      )
-    : ({ children }: { children: React.ReactNode }) => (
-        <Link
-          href="/business/organizations"
-          title={tNav("configureWorkplaceLinkAria")}
-          aria-label={tNav("configureWorkplaceLinkAria")}
-          className={cn(motion.interactivePressStrong, "flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl bg-primary/6 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50")}
-        >
-          {children}
-        </Link>
-      );
-
   return (
     <>
       {/* Карточка места приёма */}
@@ -304,8 +283,34 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
                 className="rounded-xl bg-primary/6"
               />
             )
+          ) : mode === "drawer" ? (
+            <DrawerClose asChild>
+              <Link
+                href="/business/organizations"
+                title={tNav("configureWorkplaceLinkAria")}
+                aria-label={tNav("configureWorkplaceLinkAria")}
+                className={cn(motion.interactivePressStrong, "flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl bg-primary/6 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50")}
+              >
+                <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted/40" aria-hidden>
+                  <div className="flex size-full items-center justify-center text-muted-foreground">
+                    <Plus className="size-5" strokeWidth={2} aria-hidden />
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-[0.65rem] leading-none font-medium text-muted-foreground">{tCard("label")}</p>
+                  <p className="mt-0.5 truncate text-xs font-semibold leading-tight tracking-tight text-foreground">
+                    {tNav("configureWorkplaceCta")}
+                  </p>
+                </div>
+              </Link>
+            </DrawerClose>
           ) : (
-            <OrgLink>
+            <Link
+              href="/business/organizations"
+              title={tNav("configureWorkplaceLinkAria")}
+              aria-label={tNav("configureWorkplaceLinkAria")}
+              className={cn(motion.interactivePressStrong, "flex min-h-11 w-full min-w-0 max-w-full items-center gap-2 rounded-xl bg-primary/6 px-3 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/50")}
+            >
               <div className="relative size-10 shrink-0 overflow-hidden rounded-lg bg-muted/40" aria-hidden>
                 <div className="flex size-full items-center justify-center text-muted-foreground">
                   <Plus className="size-5" strokeWidth={2} aria-hidden />
@@ -317,7 +322,7 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
                   {tNav("configureWorkplaceCta")}
                 </p>
               </div>
-            </OrgLink>
+            </Link>
           )}
         </div>
       ) : null}

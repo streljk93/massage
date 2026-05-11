@@ -139,6 +139,22 @@ describe('organization policy', () => {
     });
   });
 
+  it('keeps client-list booking scope aligned for organization managers and specialists', () => {
+    const owner = { ...baseCtx, isOwner: true };
+    const admin = { ...baseCtx, role: 'admin' as const, specialistId: 'sp-1' };
+    const specialist = {
+      ...baseCtx,
+      role: 'specialist' as const,
+      specialistId: 'sp-2',
+    };
+
+    expect(buildOrganizationScope(owner).bookings).toEqual({});
+    expect(buildOrganizationScope(admin).bookings).toEqual({});
+    expect(buildOrganizationScope(specialist).bookings).toEqual({
+      specialistId: 'sp-2',
+    });
+  });
+
   it('exposes delete permission only for the organization owner', () => {
     expect(
       buildOrganizationPermissions({ ...baseCtx, isOwner: true }).profile,

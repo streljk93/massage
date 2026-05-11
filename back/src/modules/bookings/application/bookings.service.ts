@@ -52,6 +52,7 @@ import { BookingStatusLocaleRepository } from '../infrastructure/booking-status-
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import {
   BookingsRepository,
+  type BusinessClientSourceBookingRow,
   type SalonCabinetBookingRow,
 } from '../infrastructure/bookings.repository';
 import { isBookingSlotStartTimeReached } from '../domain/booking-in-progress-start-policy';
@@ -86,6 +87,35 @@ import { buildOrganizationScope } from '../../organizations/domain/organization-
 
 /** Если у специалиста нет активной организации — дефолтное окно подтверждения (мин). */
 const DEFAULT_BOOKING_CONFIRMATION_GRACE_MINUTES = 15;
+
+type BusinessClientsSort = 'lastBookingDesc' | 'nameAsc' | 'visitsDesc';
+
+type BusinessClientListItem = {
+  clientUserId: string;
+  clientDisplayName: string;
+  clientAvatarUrl: string | null;
+  totalBookingsCount: number;
+  doneBookingsCount: number;
+  upcomingBookingsCount: number;
+  lastBookingAt: string | null;
+  lastVisitAt: string | null;
+  nextBookingAt: string | null;
+  averageVisitRating: number | null;
+};
+
+type BusinessClientAccumulator = {
+  clientUserId: string;
+  clientDisplayName: string;
+  clientAvatarUrl: string | null;
+  totalBookingsCount: number;
+  doneBookingsCount: number;
+  upcomingBookingsCount: number;
+  lastBookingAt: Date | null;
+  lastVisitAt: Date | null;
+  nextBookingAt: Date | null;
+  ratingSum: number;
+  ratingCount: number;
+};
 
 /** Автор в списке бронирований видит черновик отзыва пока он на модерации; опубликованный текст — иначе. */
 function bookingReviewMergedExcerpt(
@@ -1754,6 +1784,169 @@ export class BookingsService {
         this.mapSalonCabinetBookingRow(row, locale, labelMap),
       ),
     };
+  }
+
+  async listSpecialistCabinetClients(
+    userId: string,
+    query: {
+      q?: string;
+      sort: BusinessClientsSort;
+      limit: number;
+      cursor?: string;
+      locale?: ApiLocale;
+    },
+  ): Promise<{
+    activeOrganizationId: string | null;
+    clients: BusinessClientListItem[];
+    nextCursor: string | null;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true, activeOrganizationId: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found',
+      });
+    }
+
+    if (specialist.activeOrganizationId == null) {
+      return { activeOrganizationId: null, clients: [], nextCursor: null };
+    }
+
+    const ctx = await this.organizationAccess.resolveContext(
+      userId,
+      specialist.activeOrganizationId,
+    );
+    const rows =
+      await this.bookingsRepository.findManyBusinessClientSourceBookingsScoped({
+        organizationId: specialist.activeOrganizationId,
+        bookingScope: buildOrganizationScope(ctx).bookings,
+        q: query.q,
+      });
+
+    const sorted = this.sortBusinessClientListItems(
+      this.aggregateBusinessClientRows(rows),
+      query.sort,
+    );
+    const offset =
+      query.cursor != null && query.cursor.length > 0
+        ? Number.parseInt(query.cursor, 10)
+        : 0;
+    const safeOffset = Number.isFinite(offset) && offset > 0 ? offset : 0;
+    const clients = sorted.slice(safeOffset, safeOffset + query.limit);
+    const nextOffset = safeOffset + clients.length;
+
+    return {
+      activeOrganizationId: specialist.activeOrganizationId,
+      clients,
+      nextCursor: nextOffset < sorted.length ? String(nextOffset) : null,
+    };
+  }
+
+  private aggregateBusinessClientRows(
+    rows: BusinessClientSourceBookingRow[],
+  ): BusinessClientListItem[] {
+    const now = new Date();
+    const activeStatuses = new Set<BookingStatus>([
+      'pending',
+      'confirmed',
+      'in_progress',
+    ]);
+    const byClient = new Map<string, BusinessClientAccumulator>();
+
+    for (const row of rows) {
+      const name = row.client.name?.trim() || '—';
+      const existing = byClient.get(row.clientUserId);
+      const acc = existing ?? {
+        clientUserId: row.clientUserId,
+        clientDisplayName: name,
+        clientAvatarUrl: row.client.avatarUrl ?? null,
+        totalBookingsCount: 0,
+        doneBookingsCount: 0,
+        upcomingBookingsCount: 0,
+        lastBookingAt: null,
+        lastVisitAt: null,
+        nextBookingAt: null,
+        ratingSum: 0,
+        ratingCount: 0,
+      };
+
+      acc.totalBookingsCount += 1;
+      if (acc.lastBookingAt == null || row.startsAt > acc.lastBookingAt) {
+        acc.lastBookingAt = row.startsAt;
+      }
+      if (row.status === 'done') {
+        acc.doneBookingsCount += 1;
+        if (acc.lastVisitAt == null || row.startsAt > acc.lastVisitAt) {
+          acc.lastVisitAt = row.startsAt;
+        }
+      }
+      if (activeStatuses.has(row.status) && row.startsAt >= now) {
+        acc.upcomingBookingsCount += 1;
+        if (acc.nextBookingAt == null || row.startsAt < acc.nextBookingAt) {
+          acc.nextBookingAt = row.startsAt;
+        }
+      }
+
+      const ratings = [
+        row.organizationReview?.rating,
+        row.specialistReview?.rating,
+      ].filter((rating): rating is number => typeof rating === 'number');
+      for (const rating of ratings) {
+        acc.ratingSum += rating;
+        acc.ratingCount += 1;
+      }
+
+      byClient.set(row.clientUserId, acc);
+    }
+
+    return [...byClient.values()].map((acc) => ({
+      clientUserId: acc.clientUserId,
+      clientDisplayName: acc.clientDisplayName,
+      clientAvatarUrl: acc.clientAvatarUrl,
+      totalBookingsCount: acc.totalBookingsCount,
+      doneBookingsCount: acc.doneBookingsCount,
+      upcomingBookingsCount: acc.upcomingBookingsCount,
+      lastBookingAt: acc.lastBookingAt?.toISOString() ?? null,
+      lastVisitAt: acc.lastVisitAt?.toISOString() ?? null,
+      nextBookingAt: acc.nextBookingAt?.toISOString() ?? null,
+      averageVisitRating:
+        acc.ratingCount > 0
+          ? Math.round((acc.ratingSum / acc.ratingCount) * 10) / 10
+          : null,
+    }));
+  }
+
+  private sortBusinessClientListItems(
+    clients: BusinessClientListItem[],
+    sort: BusinessClientsSort,
+  ): BusinessClientListItem[] {
+    return [...clients].sort((a, b) => {
+      if (sort === 'nameAsc') {
+        return (
+          a.clientDisplayName.localeCompare(b.clientDisplayName, undefined, {
+            sensitivity: 'base',
+          }) || a.clientUserId.localeCompare(b.clientUserId)
+        );
+      }
+      if (sort === 'visitsDesc') {
+        return (
+          b.doneBookingsCount - a.doneBookingsCount ||
+          b.totalBookingsCount - a.totalBookingsCount ||
+          (b.lastBookingAt ?? '').localeCompare(a.lastBookingAt ?? '') ||
+          a.clientUserId.localeCompare(b.clientUserId)
+        );
+      }
+      return (
+        (b.lastBookingAt ?? '').localeCompare(a.lastBookingAt ?? '') ||
+        a.clientDisplayName.localeCompare(b.clientDisplayName, undefined, {
+          sensitivity: 'base',
+        }) ||
+        a.clientUserId.localeCompare(b.clientUserId)
+      );
+    });
   }
 
   private async loadManagedSalonCabinetBookings(

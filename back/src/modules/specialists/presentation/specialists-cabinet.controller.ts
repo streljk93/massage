@@ -37,11 +37,19 @@ import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-special
 import { patchSpecialistActiveOrganizationBodySchema } from '../dto/patch-specialist-active-organization-body.schema';
 import type { SalonCabinetBookingsListQuery } from '../dto/salon-cabinet-bookings-list-query.schema';
 import { salonCabinetBookingsListQuerySchema } from '../dto/salon-cabinet-bookings-list-query.schema';
+import type { SpecialistCabinetClientsListQuery } from '../dto/specialist-cabinet-clients-list-query.schema';
+import {
+  SPECIALIST_CABINET_CLIENTS_SORT_VALUES,
+  specialistCabinetClientsListQuerySchema,
+} from '../dto/specialist-cabinet-clients-list-query.schema';
 import type { PatchSpecialistOnboardingPreferencesBody } from '../dto/patch-specialist-onboarding-preferences.schema';
 import { patchSpecialistOnboardingPreferencesBodySchema } from '../dto/patch-specialist-onboarding-preferences.schema';
 import type { PatchSpecialistSkillsBody } from '../dto/patch-specialist-skills-body.schema';
 import { patchSpecialistSkillsBodySchema } from '../dto/patch-specialist-skills-body.schema';
-import { patchSpecialistProfileBodySchema, type PatchSpecialistProfileBody } from '../dto/specialist-body.schema';
+import {
+  patchSpecialistProfileBodySchema,
+  type PatchSpecialistProfileBody,
+} from '../dto/specialist-body.schema';
 import {
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
@@ -49,6 +57,7 @@ import {
   patchSpecialistProfileRequestSchema,
   patchSpecialistSkillsRequestSchema,
   specialistActiveOrganizationBookingsPreviewResponseSchema,
+  specialistCabinetClientsListResponseSchema,
   specialistMyOrganizationsResponseSchema,
   specialistMyWorkplaceJoinRequestsResponseSchema,
   specialistOnboardingResponseSchema,
@@ -170,6 +179,55 @@ export class SpecialistsCabinetController {
       req.user.id,
       query.scope,
       query.locale,
+    );
+  }
+
+  @Get('me/clients')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiLocaleQueryDocs()
+  @ApiQuery({
+    name: 'q',
+    required: false,
+    schema: { type: 'string', minLength: 1, maxLength: 120 },
+    description: 'Поиск по отображаемому имени клиента.',
+  })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    schema: {
+      type: 'string',
+      enum: [...SPECIALIST_CABINET_CLIENTS_SORT_VALUES],
+      default: 'lastBookingDesc',
+    },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 100, default: 50 },
+  })
+  @ApiQuery({
+    name: 'cursor',
+    required: false,
+    schema: { type: 'string', pattern: '^\\d+$' },
+    description: 'Курсор следующей страницы из `nextCursor`.',
+  })
+  @ApiOperation({
+    summary:
+      'Клиенты текущего места приёма: owner/admin видят всю организацию, specialist — только своих клиентов.',
+  })
+  @ApiOkResponse({ schema: specialistCabinetClientsListResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидный query' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async getSpecialistCabinetClients(
+    @Req() req: AuthedRequest,
+    @Query(new ZodValidationPipe(specialistCabinetClientsListQuerySchema))
+    query: SpecialistCabinetClientsListQuery,
+  ) {
+    return this.bookingsService.listSpecialistCabinetClients(
+      req.user.id,
+      query,
     );
   }
 
@@ -301,8 +359,7 @@ export class SpecialistsCabinetController {
   })
   @ApiOkResponse({ schema: specialistOnboardingResponseSchema })
   @ApiConflictResponse({
-    description:
-      'Профиль, навыки или организация не готовы',
+    description: 'Профиль, навыки или организация не готовы',
   })
   @ApiNotFoundResponse({ description: 'Профиля специалиста нет' })
   @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })

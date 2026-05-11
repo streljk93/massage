@@ -7765,6 +7765,191 @@
         ]
       }
     },
+    "/specialists/me/clients": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistCabinetClients",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "description": "Курсор следующей страницы из `nextCursor`."
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "lastBookingDesc",
+                "nameAsc",
+                "visitsDesc"
+              ],
+              "default": "lastBookingDesc"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "description": "Поиск по отображаемому имени клиента."
+          },
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "activeOrganizationId",
+                    "clients",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "activeOrganizationId": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Текущее место приёма мастера, по которому строится список клиентов."
+                    },
+                    "clients": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "clientUserId",
+                          "clientDisplayName",
+                          "clientAvatarUrl",
+                          "totalBookingsCount",
+                          "doneBookingsCount",
+                          "upcomingBookingsCount",
+                          "lastBookingAt",
+                          "lastVisitAt",
+                          "nextBookingAt",
+                          "averageVisitRating"
+                        ],
+                        "properties": {
+                          "clientUserId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Стабильный идентификатор пользователя-клиента внутри кабинета."
+                          },
+                          "clientDisplayName": {
+                            "type": "string"
+                          },
+                          "clientAvatarUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "totalBookingsCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "doneBookingsCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "upcomingBookingsCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "lastBookingAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "lastVisitAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "nextBookingAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "averageVisitRating": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Средняя оценка из отзывов клиента по завершённым визитам, если отзывы есть."
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Передайте как `cursor` для следующей страницы."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Клиенты текущего места приёма: owner/admin видят всю организацию, specialist — только своих клиентов.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
     "/specialists/me/active-organization": {
       "patch": {
         "operationId": "SpecialistsCabinet_patchSpecialistActiveOrganization",

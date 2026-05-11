@@ -29,6 +29,7 @@ import {
 import {
   businessAppSubpagesI18n,
   businessCalendarPageI18n,
+  businessClientsPageI18n,
   businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
@@ -100,6 +101,7 @@ const bundles: ColocatedI18nBundle[] = [
   businessOrganizationOfferingsPageI18n,
   businessSkillsPageI18n,
   businessCalendarPageI18n,
+  businessClientsPageI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,

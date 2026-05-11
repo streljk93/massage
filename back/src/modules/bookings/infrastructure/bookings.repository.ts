@@ -84,6 +84,34 @@ export type SalonCabinetBookingRow = Prisma.BookingGetPayload<{
   select: typeof salonCabinetBookingSelect;
 }>;
 
+const businessClientSourceBookingSelect = {
+  id: true,
+  clientUserId: true,
+  status: true,
+  startsAt: true,
+  endsAt: true,
+  organizationId: true,
+  specialistId: true,
+  client: {
+    select: {
+      name: true,
+      avatarUrl: true,
+    },
+  },
+  organizationReview: {
+    where: { deletedAt: null },
+    select: { rating: true },
+  },
+  specialistReview: {
+    where: { deletedAt: null },
+    select: { rating: true },
+  },
+} satisfies Prisma.BookingSelect;
+
+export type BusinessClientSourceBookingRow = Prisma.BookingGetPayload<{
+  select: typeof businessClientSourceBookingSelect;
+}>;
+
 @Injectable()
 export class BookingsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -369,6 +397,35 @@ export class BookingsRepository {
           : {}),
       },
       select: salonCabinetBookingSelect,
+      orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
+  /**
+   * Источник для CRM-списка клиентов кабинета: строки уже ограничены org-scope,
+   * агрегация по клиенту выполняется в application-слое.
+   */
+  findManyBusinessClientSourceBookingsScoped(args: {
+    organizationId: string;
+    bookingScope: Prisma.BookingWhereInput;
+    q?: string;
+  }): Promise<BusinessClientSourceBookingRow[]> {
+    const q = args.q?.trim();
+    return this.prisma.booking.findMany({
+      where: {
+        deletedAt: null,
+        organizationId: args.organizationId,
+        ...args.bookingScope,
+        ...(q != null && q.length > 0
+          ? {
+              client: {
+                name: { contains: q, mode: 'insensitive' },
+                deletedAt: null,
+              },
+            }
+          : { client: { deletedAt: null } }),
+      },
+      select: businessClientSourceBookingSelect,
       orderBy: [{ startsAt: 'desc' }, { id: 'desc' }],
     });
   }

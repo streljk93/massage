@@ -3057,6 +3057,76 @@ export type SpecialistsCabinetGetSpecialistSalonBookingsResponses = {
 
 export type SpecialistsCabinetGetSpecialistSalonBookingsResponse = SpecialistsCabinetGetSpecialistSalonBookingsResponses[keyof SpecialistsCabinetGetSpecialistSalonBookingsResponses];
 
+export type SpecialistsCabinetGetSpecialistCabinetClientsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Курсор следующей страницы из `nextCursor`.
+         */
+        cursor?: string;
+        limit?: number;
+        sort?: 'lastBookingDesc' | 'nameAsc' | 'visitsDesc';
+        /**
+         * Поиск по отображаемому имени клиента.
+         */
+        q?: string;
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/clients';
+};
+
+export type SpecialistsCabinetGetSpecialistCabinetClientsErrors = {
+    /**
+     * Невалидный query
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistCabinetClientsResponses = {
+    200: {
+        /**
+         * Текущее место приёма мастера, по которому строится список клиентов.
+         */
+        activeOrganizationId: string | unknown;
+        clients: Array<{
+            /**
+             * Стабильный идентификатор пользователя-клиента внутри кабинета.
+             */
+            clientUserId: string;
+            clientDisplayName: string;
+            clientAvatarUrl: string | null;
+            totalBookingsCount: number;
+            doneBookingsCount: number;
+            upcomingBookingsCount: number;
+            lastBookingAt: string | null;
+            lastVisitAt: string | null;
+            nextBookingAt: string | null;
+            /**
+             * Средняя оценка из отзывов клиента по завершённым визитам, если отзывы есть.
+             */
+            averageVisitRating: number | null;
+        }>;
+        /**
+         * Передайте как `cursor` для следующей страницы.
+         */
+        nextCursor: string | null;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistCabinetClientsResponse = SpecialistsCabinetGetSpecialistCabinetClientsResponses[keyof SpecialistsCabinetGetSpecialistCabinetClientsResponses];
+
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
         /**

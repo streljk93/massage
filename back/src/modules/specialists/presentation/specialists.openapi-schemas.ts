@@ -69,8 +69,7 @@ export const patchSpecialistActiveOrganizationResponseSchema = {
   properties: {
     activeOrganizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
-      description:
-        'Текущее место приёма после операции; null если снято.',
+      description: 'Текущее место приёма после операции; null если снято.',
     },
     cancelledBookingsCount: {
       type: 'integer',
@@ -430,6 +429,65 @@ export const specialistSalonBookingsListResponseSchema = {
     bookings: {
       type: 'array',
       items: specialistSalonCabinetBookingItemSchema,
+    },
+  },
+};
+
+export const specialistCabinetClientItemSchema = {
+  type: 'object',
+  required: [
+    'clientUserId',
+    'clientDisplayName',
+    'clientAvatarUrl',
+    'totalBookingsCount',
+    'doneBookingsCount',
+    'upcomingBookingsCount',
+    'lastBookingAt',
+    'lastVisitAt',
+    'nextBookingAt',
+    'averageVisitRating',
+  ],
+  properties: {
+    clientUserId: {
+      type: 'string',
+      format: 'uuid',
+      description:
+        'Стабильный идентификатор пользователя-клиента внутри кабинета.',
+    },
+    clientDisplayName: { type: 'string' },
+    clientAvatarUrl: { type: 'string', nullable: true },
+    totalBookingsCount: { type: 'integer', minimum: 0 },
+    doneBookingsCount: { type: 'integer', minimum: 0 },
+    upcomingBookingsCount: { type: 'integer', minimum: 0 },
+    lastBookingAt: { type: 'string', format: 'date-time', nullable: true },
+    lastVisitAt: { type: 'string', format: 'date-time', nullable: true },
+    nextBookingAt: { type: 'string', format: 'date-time', nullable: true },
+    averageVisitRating: {
+      type: 'number',
+      nullable: true,
+      description:
+        'Средняя оценка из отзывов клиента по завершённым визитам, если отзывы есть.',
+    },
+  },
+};
+
+export const specialistCabinetClientsListResponseSchema = {
+  type: 'object',
+  required: ['activeOrganizationId', 'clients', 'nextCursor'],
+  properties: {
+    activeOrganizationId: {
+      oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
+      description:
+        'Текущее место приёма мастера, по которому строится список клиентов.',
+    },
+    clients: {
+      type: 'array',
+      items: specialistCabinetClientItemSchema,
+    },
+    nextCursor: {
+      type: 'string',
+      nullable: true,
+      description: 'Передайте как `cursor` для следующей страницы.',
     },
   },
 };
