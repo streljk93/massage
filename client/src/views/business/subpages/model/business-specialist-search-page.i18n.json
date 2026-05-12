@@ -1,0 +1,55 @@
+{
+  "messages": {
+    "en": {
+      "businessSpecialistSearchPage": {
+        "title": "Find specialists",
+        "eyebrow": "Hiring",
+        "heroTitle": "Find specialists for your team",
+        "heroHint": "Search public resumes through a selected vacancy.",
+        "searchPlaceholder": "Search by name, skills or resume",
+        "jobPostingPlaceholder": "Select vacancy",
+        "candidateNoHeadline": "No resume headline yet",
+        "noResultsTitle": "No candidates found",
+        "noResultsHint": "Try changing the search or vacancy filters.",
+        "noJobPostingsTitle": "Create a vacancy first",
+        "noJobPostingsHint": "Candidate search in Hiring works only through vacancies and public resumes.",
+        "emptyTitle": "Hiring is unavailable",
+        "emptyHint": "You need an active organization and hiring permissions."
+      }
+    },
+    "vi": {
+      "businessSpecialistSearchPage": {
+        "title": "Tìm chuyên viên",
+        "eyebrow": "Tuyển dụng",
+        "heroTitle": "Tìm chuyên viên cho đội ngũ",
+        "heroHint": "Tìm hồ sơ công khai theo vị trí đã chọn.",
+        "searchPlaceholder": "Tìm theo tên, kỹ năng hoặc hồ sơ",
+        "jobPostingPlaceholder": "Chọn vị trí",
+        "candidateNoHeadline": "Chưa có tiêu đề hồ sơ",
+        "noResultsTitle": "Không tìm thấy ứng viên",
+        "noResultsHint": "Thử đổi tìm kiếm hoặc bộ lọc vị trí.",
+        "noJobPostingsTitle": "Hãy tạo vị trí trước",
+        "noJobPostingsHint": "Tìm ứng viên trong Tuyển dụng chỉ hoạt động qua vị trí và hồ sơ công khai.",
+        "emptyTitle": "Chưa thể tuyển dụng",
+        "emptyHint": "Bạn cần tổ chức hiện tại và quyền tuyển dụng."
+      }
+    },
+    "ru": {
+      "businessSpecialistSearchPage": {
+        "title": "Поиск специалистов",
+        "eyebrow": "Найм",
+        "heroTitle": "Найдите специалистов в команду",
+        "heroHint": "Ищите публичные резюме по выбранной вакансии.",
+        "searchPlaceholder": "Поиск по имени, навыкам или резюме",
+        "jobPostingPlaceholder": "Выберите вакансию",
+        "candidateNoHeadline": "У резюме пока нет заголовка",
+        "noResultsTitle": "Кандидаты не найдены",
+        "noResultsHint": "Попробуйте изменить поиск или фильтры вакансии.",
+        "noJobPostingsTitle": "Сначала создайте вакансию",
+        "noJobPostingsHint": "Поиск кандидатов в разделе «Найм» работает только через вакансии и публичные резюме.",
+        "emptyTitle": "Найм недоступен",
+        "emptyHint": "Нужна активная организация и права на найм."
+      }
+    }
+  }
+}

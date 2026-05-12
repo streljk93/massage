@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BriefcaseBusiness,
   Building2,
   Calendar,
   ChevronDown,
@@ -59,6 +60,8 @@ type NavLinkItem = {
     | "/business/bookings"
     | "/business/calendar"
     | "/business/clients"
+    | "/business/hiring"
+    | "/business/specialists"
     | "/business/skills"
     | "/business/organizations";
   labelKey: string;
@@ -107,7 +110,20 @@ const MAIN_NAV: readonly (NavLinkItem | NavSoonItem)[] = [
     href: "/business/clients",
     labelKey: "clients",
   },
-  { kind: "soon", id: "specialists", icon: UserRound, labelKey: "specialists" },
+  {
+    kind: "link",
+    id: "specialists",
+    icon: UserRound,
+    href: "/business/specialists",
+    labelKey: "specialists",
+  },
+  {
+    kind: "link",
+    id: "hiring",
+    icon: BriefcaseBusiness,
+    href: "/business/hiring",
+    labelKey: "hiring",
+  },
   {
     kind: "link",
     id: "services",
@@ -140,6 +156,12 @@ function resolveActiveNavId(pathname: string): string | null {
   }
   if (pathname.startsWith("/business/clients")) {
     return "clients";
+  }
+  if (pathname.startsWith("/business/specialists")) {
+    return "specialists";
+  }
+  if (pathname.startsWith("/business/hiring")) {
+    return "hiring";
   }
   if (pathname.startsWith("/business/organizations")) {
     return "organizations";

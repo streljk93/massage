@@ -1,6 +1,7 @@
 import { throwPolicyForbidden } from '../../../../common/authz';
 import { bookingPolicy } from './booking.policy';
 import { calendarPolicy } from './calendar.policy';
+import { hiringPolicy } from './hiring.policy';
 import { offeringsPolicy } from './offerings.policy';
 import { profilePolicy } from './profile.policy';
 import { teamPolicy } from './team.policy';
@@ -29,6 +30,7 @@ export const organizationPolicyMap: Record<
   ...profilePolicy,
   ...teamPolicy,
   ...offeringsPolicy,
+  ...hiringPolicy,
   ...calendarPolicy,
   ...bookingPolicy,
 } as Record<OrganizationCapability, PolicyHandler>;
@@ -43,8 +45,13 @@ const platformOrganizationPolicy: Partial<
   [OrganizationCapabilities.PROFILE_MANAGE]: true,
   [OrganizationCapabilities.TEAM_VIEW]: true,
   [OrganizationCapabilities.TEAM_MANAGE_ROLES]: false,
+  [OrganizationCapabilities.TEAM_REMOVE_MEMBERS]: false,
   [OrganizationCapabilities.JOIN_REQUESTS_REVIEW]: true,
   [OrganizationCapabilities.OFFERINGS_MANAGE]: false,
+  [OrganizationCapabilities.HIRING_VIEW]: false,
+  [OrganizationCapabilities.HIRING_MANAGE]: false,
+  [OrganizationCapabilities.HIRING_REVIEW_APPLICATIONS]: false,
+  [OrganizationCapabilities.HIRING_ACCEPT]: false,
   [OrganizationCapabilities.CALENDAR]: false,
   [OrganizationCapabilities.DELETE]: false,
   [OrganizationCapabilities.BOOKINGS]: (subject) => {

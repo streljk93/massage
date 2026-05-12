@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -51,6 +50,11 @@ import {
   organizationCabinetDeleteOrganizationResponseSchema,
   organizationCabinetEditProfileResponseSchema,
   organizationCabinetTeamMembersResponseSchema,
+  organizationTeamInviteCandidatesResponseSchema,
+  organizationTeamInvitationListResponseSchema,
+  organizationTeamInvitationMutationResponseSchema,
+  organizationTeamInviteRequestSchema,
+  organizationTeamInviteRespondRequestSchema,
   organizationTeamMutationResponseSchema,
   organizationTeamRoleRequestSchema,
   workplaceJoinApplicantCabinetProfileResponseSchema,
@@ -62,6 +66,14 @@ import {
   organizationTeamRoleBodySchema,
   type OrganizationTeamRoleBody,
 } from '../dto/organization-team-role.schema';
+import {
+  organizationTeamInviteBodySchema,
+  organizationTeamInviteCandidatesQuerySchema,
+  organizationTeamInviteRespondBodySchema,
+  type OrganizationTeamInviteBody,
+  type OrganizationTeamInviteCandidatesQuery,
+  type OrganizationTeamInviteRespondBody,
+} from '../dto/organization-team-invite.schema';
 import { specialistOnboardingResponseSchema } from '../../specialists/presentation/specialists.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
@@ -161,6 +173,83 @@ export class OrganizationsCabinetController {
     return this.organizationCabinet.listCabinetOrganizationTeamMembers(
       req.user.id,
       organizationId,
+    );
+  }
+
+  @Get(':organizationId/cabinet-team/invite-candidates')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Поиск специалистов для прямого приглашения в команду организации.',
+    description:
+      'Кабинетный поиск по профилям специалистов, без требований публичной витрины, резюме или вакансии.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiQuery({
+    name: 'q',
+    required: true,
+    description:
+      'Поиск по имени пользователя, email или витринному имени мастера.',
+    schema: { type: 'string', minLength: 2, maxLength: 80 },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 },
+  })
+  @ApiOkResponse({ schema: organizationTeamInviteCandidatesResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидный query (q/limit)' })
+  @ApiForbiddenResponse({
+    description: 'Нет прав приглашать специалистов в команду',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getCabinetOrganizationTeamInviteCandidates(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Query(new ZodValidationPipe(organizationTeamInviteCandidatesQuerySchema))
+    query: OrganizationTeamInviteCandidatesQuery,
+  ) {
+    return this.organizationCabinet.listCabinetTeamInviteCandidates(
+      req.user.id,
+      organizationId,
+      query,
+    );
+  }
+
+  @Post(':organizationId/cabinet-team/invitations')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Пригласить специалиста в команду организации.',
+    description:
+      'Отдельный от найма поток членства: приглашение не связано с вакансией или резюме.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiBody({ schema: organizationTeamInviteRequestSchema })
+  @ApiOkResponse({ schema: organizationTeamInvitationMutationResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидное тело приглашения' })
+  @ApiConflictResponse({
+    description: 'Специалист уже состоит в организации',
+  })
+  @ApiForbiddenResponse({
+    description: 'Нет прав приглашать специалистов в команду',
+  })
+  @ApiNotFoundResponse({ description: 'Специалист или организация не найдены' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async postCabinetOrganizationTeamInvitation(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Body(new ZodValidationPipe(organizationTeamInviteBodySchema))
+    body: OrganizationTeamInviteBody,
+  ) {
+    return this.organizationCabinet.createCabinetTeamInvitation(
+      req.user.id,
+      organizationId,
+      body,
     );
   }
 
@@ -464,6 +553,66 @@ export class OrganizationsCabinetController {
       req.user.id,
       organizationId,
       requestId,
+      body,
+    );
+  }
+}
+
+@ApiTags('cabinet-specialists-organizations')
+@Controller('specialists/me/organization-invitations')
+export class SpecialistOrganizationInvitationsController {
+  constructor(
+    private readonly organizationCabinet: OrganizationCabinetService,
+  ) {}
+
+  @Get()
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Приглашения текущего специалиста в команды организаций.',
+  })
+  @ApiOkResponse({ schema: organizationTeamInvitationListResponseSchema })
+  @ApiForbiddenResponse({
+    description: 'У пользователя нет профиля специалиста',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async listMyOrganizationInvitations(@Req() req: AuthedRequest) {
+    return this.organizationCabinet.listMyOrganizationTeamInvitations(
+      req.user.id,
+    );
+  }
+
+  @Post(':invitationId/respond')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Ответить на приглашение организации: принять или отклонить.',
+  })
+  @ApiParam({
+    name: 'invitationId',
+    required: true,
+    description: 'Идентификатор `OrganizationSpecialistInvitation`.',
+    schema: { type: 'string', format: 'uuid' },
+  })
+  @ApiBody({ schema: organizationTeamInviteRespondRequestSchema })
+  @ApiOkResponse({ schema: organizationTeamInvitationMutationResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидное тело ответа' })
+  @ApiConflictResponse({ description: 'Приглашение истекло' })
+  @ApiForbiddenResponse({
+    description: 'У пользователя нет профиля специалиста',
+  })
+  @ApiNotFoundResponse({ description: 'Приглашение не найдено' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async respondMyOrganizationInvitation(
+    @Req() req: AuthedRequest,
+    @Param('invitationId', new ParseUUIDPipe({ version: '4' }))
+    invitationId: string,
+    @Body(new ZodValidationPipe(organizationTeamInviteRespondBodySchema))
+    body: OrganizationTeamInviteRespondBody,
+  ) {
+    return this.organizationCabinet.respondMyOrganizationTeamInvitation(
+      req.user.id,
+      invitationId,
       body,
     );
   }

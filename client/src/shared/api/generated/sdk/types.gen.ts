@@ -1734,11 +1734,18 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
             offerings: {
                 manage: boolean;
             };
+            hiring: {
+                view: boolean;
+                manage: boolean;
+                reviewApplications: boolean;
+                accept: boolean;
+            };
             calendar: {
                 view: boolean;
                 viewAll: boolean;
                 manage: boolean;
                 manageAll: boolean;
+                manageWorkingHours: boolean;
             };
             bookings: {
                 view: boolean;
@@ -1767,6 +1774,109 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
 };
 
 export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponse = OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses[keyof OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses];
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query: {
+        limit?: number;
+        /**
+         * Поиск по имени пользователя, email или витринному имени мастера.
+         */
+        q: string;
+    };
+    url: '/organizations/{organizationId}/cabinet-team/invite-candidates';
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesErrors = {
+    /**
+     * Невалидный query (q/limit)
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав приглашать специалистов в команду
+     */
+    403: unknown;
+    /**
+     * Организация не найдена
+     */
+    404: unknown;
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponses = {
+    200: {
+        specialists: Array<{
+            specialistId: string;
+            displayName: string | null;
+            headline?: string | null;
+            alreadyMember: boolean;
+        }>;
+    };
+};
+
+export type OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponse = OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponses[keyof OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponses];
+
+export type OrganizationsCabinetPostCabinetOrganizationTeamInvitationData = {
+    body: {
+        specialistId: string;
+        targetRole?: 'admin' | 'specialist';
+        message?: string | null;
+        expiresAt?: string | null;
+    };
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/cabinet-team/invitations';
+};
+
+export type OrganizationsCabinetPostCabinetOrganizationTeamInvitationErrors = {
+    /**
+     * Невалидное тело приглашения
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет прав приглашать специалистов в команду
+     */
+    403: unknown;
+    /**
+     * Специалист или организация не найдены
+     */
+    404: unknown;
+    /**
+     * Специалист уже состоит в организации
+     */
+    409: unknown;
+};
+
+export type OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponses = {
+    200: {
+        invitation: {
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            targetRole: 'admin' | 'specialist';
+            status: 'pending' | 'accepted' | 'rejected' | 'canceled';
+            message: string | null;
+            expiresAt: string | null;
+            createdAt: string;
+            updatedAt: string;
+            organizationName: string | null;
+        };
+    };
+};
+
+export type OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponse = OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponses[keyof OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponses];
 
 export type OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleData = {
     body: {
@@ -2209,6 +2319,99 @@ export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses = {
 };
 
 export type OrganizationsCabinetPostReviewWorkplaceJoinRequestResponse = OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses[keyof OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses];
+
+export type SpecialistOrganizationInvitationsListMyOrganizationInvitationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/specialists/me/organization-invitations';
+};
+
+export type SpecialistOrganizationInvitationsListMyOrganizationInvitationsErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * У пользователя нет профиля специалиста
+     */
+    403: unknown;
+};
+
+export type SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponses = {
+    200: {
+        invitations: Array<{
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            targetRole: 'admin' | 'specialist';
+            status: 'pending' | 'accepted' | 'rejected' | 'canceled';
+            message: string | null;
+            expiresAt: string | null;
+            createdAt: string;
+            updatedAt: string;
+            organizationName: string | null;
+        }>;
+    };
+};
+
+export type SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponse = SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponses[keyof SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponses];
+
+export type SpecialistOrganizationInvitationsRespondMyOrganizationInvitationData = {
+    body: {
+        decision: 'accept' | 'reject';
+    };
+    path: {
+        /**
+         * Идентификатор `OrganizationSpecialistInvitation`.
+         */
+        invitationId: string;
+    };
+    query?: never;
+    url: '/specialists/me/organization-invitations/{invitationId}/respond';
+};
+
+export type SpecialistOrganizationInvitationsRespondMyOrganizationInvitationErrors = {
+    /**
+     * Невалидное тело ответа
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * У пользователя нет профиля специалиста
+     */
+    403: unknown;
+    /**
+     * Приглашение не найдено
+     */
+    404: unknown;
+    /**
+     * Приглашение истекло
+     */
+    409: unknown;
+};
+
+export type SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponses = {
+    200: {
+        invitation: {
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            targetRole: 'admin' | 'specialist';
+            status: 'pending' | 'accepted' | 'rejected' | 'canceled';
+            message: string | null;
+            expiresAt: string | null;
+            createdAt: string;
+            updatedAt: string;
+            organizationName: string | null;
+        };
+    };
+};
+
+export type SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponse = SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponses[keyof SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponses];
 
 export type OrganizationOfferingsCabinetListMineData = {
     body?: never;
@@ -2823,11 +3026,18 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
                 offerings: {
                     manage: boolean;
                 };
+                hiring: {
+                    view: boolean;
+                    manage: boolean;
+                    reviewApplications: boolean;
+                    accept: boolean;
+                };
                 calendar: {
                     view: boolean;
                     viewAll: boolean;
                     manage: boolean;
                     manageAll: boolean;
+                    manageWorkingHours: boolean;
                 };
                 bookings: {
                     view: boolean;
@@ -3994,6 +4204,212 @@ export type CalendarListResourcesResponses = {
 
 export type CalendarListResourcesResponse = CalendarListResourcesResponses[keyof CalendarListResourcesResponses];
 
+export type CalendarGetResourceAvailabilityData = {
+    body?: never;
+    path: {
+        resourceId: unknown;
+    };
+    query?: never;
+    url: '/calendar/resources/{resourceId}/availability';
+};
+
+export type CalendarGetResourceAvailabilityResponses = {
+    200: {
+        resource: {
+            id: string;
+            organizationId: string;
+            specialistId: string | null;
+            name: string;
+        };
+        rules: Array<{
+            id: string;
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+        overrides: Array<{
+            id: string;
+            date: string;
+            startsAt: string | null;
+            endsAt: string | null;
+            type: 'off' | 'extra';
+        }>;
+    };
+};
+
+export type CalendarGetResourceAvailabilityResponse = CalendarGetResourceAvailabilityResponses[keyof CalendarGetResourceAvailabilityResponses];
+
+export type CalendarPutResourceAvailabilityRulesData = {
+    body: {
+        rules: Array<{
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+    };
+    path: {
+        resourceId: unknown;
+    };
+    query?: never;
+    url: '/calendar/resources/{resourceId}/availability/rules';
+};
+
+export type CalendarPutResourceAvailabilityRulesResponses = {
+    200: {
+        resource: {
+            id: string;
+            organizationId: string;
+            specialistId: string | null;
+            name: string;
+        };
+        rules: Array<{
+            id: string;
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+        overrides: Array<{
+            id: string;
+            date: string;
+            startsAt: string | null;
+            endsAt: string | null;
+            type: 'off' | 'extra';
+        }>;
+    };
+};
+
+export type CalendarPutResourceAvailabilityRulesResponse = CalendarPutResourceAvailabilityRulesResponses[keyof CalendarPutResourceAvailabilityRulesResponses];
+
+export type CalendarPutResourceAvailabilityRulesBulkData = {
+    body: {
+        resourceIds: Array<string>;
+        rules: Array<{
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/calendar/availability/rules/bulk';
+};
+
+export type CalendarPutResourceAvailabilityRulesBulkResponses = {
+    200: {
+        organizationId: string;
+        resourceIds: Array<string>;
+        updatedCount: number;
+    };
+};
+
+export type CalendarPutResourceAvailabilityRulesBulkResponse = CalendarPutResourceAvailabilityRulesBulkResponses[keyof CalendarPutResourceAvailabilityRulesBulkResponses];
+
+export type CalendarCreateResourceAvailabilityOverrideData = {
+    body: {
+        date: string;
+        startsAt?: string | null;
+        endsAt?: string | null;
+        type: 'off' | 'extra';
+    };
+    path: {
+        resourceId: unknown;
+    };
+    query?: never;
+    url: '/calendar/resources/{resourceId}/availability/overrides';
+};
+
+export type CalendarCreateResourceAvailabilityOverrideResponses = {
+    200: {
+        resource: {
+            id: string;
+            organizationId: string;
+            specialistId: string | null;
+            name: string;
+        };
+        rules: Array<{
+            id: string;
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+        overrides: Array<{
+            id: string;
+            date: string;
+            startsAt: string | null;
+            endsAt: string | null;
+            type: 'off' | 'extra';
+        }>;
+    };
+};
+
+export type CalendarCreateResourceAvailabilityOverrideResponse = CalendarCreateResourceAvailabilityOverrideResponses[keyof CalendarCreateResourceAvailabilityOverrideResponses];
+
+export type CalendarDeleteResourceAvailabilityOverrideData = {
+    body?: never;
+    path: {
+        overrideId: unknown;
+        resourceId: unknown;
+    };
+    query?: never;
+    url: '/calendar/resources/{resourceId}/availability/overrides/{overrideId}';
+};
+
+export type CalendarDeleteResourceAvailabilityOverrideResponses = {
+    200: {
+        id: string;
+        deleted: true;
+    };
+};
+
+export type CalendarDeleteResourceAvailabilityOverrideResponse = CalendarDeleteResourceAvailabilityOverrideResponses[keyof CalendarDeleteResourceAvailabilityOverrideResponses];
+
+export type CalendarPatchResourceAvailabilityOverrideData = {
+    body: {
+        date: string;
+        startsAt?: string | null;
+        endsAt?: string | null;
+        type: 'off' | 'extra';
+    };
+    path: {
+        overrideId: unknown;
+        resourceId: unknown;
+    };
+    query?: never;
+    url: '/calendar/resources/{resourceId}/availability/overrides/{overrideId}';
+};
+
+export type CalendarPatchResourceAvailabilityOverrideResponses = {
+    200: {
+        resource: {
+            id: string;
+            organizationId: string;
+            specialistId: string | null;
+            name: string;
+        };
+        rules: Array<{
+            id: string;
+            weekday: number;
+            startMinute: number;
+            endMinute: number;
+            type: 'working' | 'break';
+        }>;
+        overrides: Array<{
+            id: string;
+            date: string;
+            startsAt: string | null;
+            endsAt: string | null;
+            type: 'off' | 'extra';
+        }>;
+    };
+};
+
+export type CalendarPatchResourceAvailabilityOverrideResponse = CalendarPatchResourceAvailabilityOverrideResponses[keyof CalendarPatchResourceAvailabilityOverrideResponses];
+
 export type CalendarListEventsData = {
     body?: never;
     path?: never;
@@ -4303,6 +4719,320 @@ export type HealthGetHealthResponses = {
 };
 
 export type HealthGetHealthResponse = HealthGetHealthResponses[keyof HealthGetHealthResponses];
+
+export type HiringListCandidatesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        experienceMaxYears?: unknown;
+        experienceMinYears?: unknown;
+        skillCategoryIds?: unknown;
+        q?: unknown;
+        limit?: unknown;
+        cursor?: unknown;
+    };
+    url: '/hiring/candidates';
+};
+
+export type HiringListCandidatesErrors = {
+    401: unknown;
+};
+
+export type HiringListCandidatesResponses = {
+    200: {
+        candidates: Array<{
+            specialistId: string;
+            displayName: string | null;
+            imageUrl?: string | null;
+            headline: string | null;
+            summary?: string | null;
+            experienceYears: number | null;
+            skillsCategoryIds: Array<string>;
+        }>;
+        nextCursor: string | null;
+    };
+};
+
+export type HiringListCandidatesResponse = HiringListCandidatesResponses[keyof HiringListCandidatesResponses];
+
+export type HiringListJobPostingCandidatesData = {
+    body?: never;
+    path: {
+        jobPostingId: unknown;
+    };
+    query?: never;
+    url: '/hiring/job-postings/{jobPostingId}/candidates';
+};
+
+export type HiringListJobPostingCandidatesResponses = {
+    200: {
+        candidates: Array<{
+            specialistId: string;
+            displayName: string | null;
+            imageUrl?: string | null;
+            headline: string | null;
+            summary?: string | null;
+            experienceYears: number | null;
+            skillsCategoryIds: Array<string>;
+        }>;
+        nextCursor: string | null;
+    };
+};
+
+export type HiringListJobPostingCandidatesResponse = HiringListJobPostingCandidatesResponses[keyof HiringListJobPostingCandidatesResponses];
+
+export type HiringListPublicJobPostingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/hiring/job-postings';
+};
+
+export type HiringListPublicJobPostingsResponses = {
+    200: {
+        jobPostings: Array<{
+            id: string;
+            organizationId: string;
+            title: string;
+            description?: string | null;
+            requirements?: string | null;
+            organizationOfferingId?: string | null;
+            serviceCategoryId?: string | null;
+            experienceMinYears?: number | null;
+            role: 'admin' | 'specialist';
+            status: 'draft' | 'open' | 'closed';
+            applicationsCount: number;
+        }>;
+    };
+};
+
+export type HiringListPublicJobPostingsResponse = HiringListPublicJobPostingsResponses[keyof HiringListPublicJobPostingsResponses];
+
+export type HiringApplyToJobPostingData = {
+    body: {
+        message?: string | null;
+    };
+    path: {
+        jobPostingId: unknown;
+    };
+    query?: never;
+    url: '/hiring/job-postings/{jobPostingId}/apply';
+};
+
+export type HiringApplyToJobPostingResponses = {
+    200: {
+        contact: {
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            jobPostingId?: string | null;
+            source: 'application';
+            status: 'pending' | 'accepted' | 'rejected' | 'closed';
+            isActive: boolean;
+            displayLabelKey?: 'youApplied';
+        };
+    };
+};
+
+export type HiringApplyToJobPostingResponse = HiringApplyToJobPostingResponses[keyof HiringApplyToJobPostingResponses];
+
+export type OrganizationHiringListJobPostingsData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/hiring/job-postings';
+};
+
+export type OrganizationHiringListJobPostingsResponses = {
+    200: {
+        jobPostings: Array<{
+            id: string;
+            organizationId: string;
+            title: string;
+            description?: string | null;
+            requirements?: string | null;
+            organizationOfferingId?: string | null;
+            serviceCategoryId?: string | null;
+            experienceMinYears?: number | null;
+            role: 'admin' | 'specialist';
+            status: 'draft' | 'open' | 'closed';
+            applicationsCount: number;
+        }>;
+    };
+};
+
+export type OrganizationHiringListJobPostingsResponse = OrganizationHiringListJobPostingsResponses[keyof OrganizationHiringListJobPostingsResponses];
+
+export type OrganizationHiringCreateJobPostingData = {
+    body: {
+        title?: string;
+        description?: string | null;
+        requirements?: string | null;
+        organizationOfferingId?: string | null;
+        serviceCategoryId?: string | null;
+        experienceMinYears?: number | null;
+        role?: 'admin' | 'specialist';
+        status?: 'draft' | 'open' | 'closed';
+    };
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/hiring/job-postings';
+};
+
+export type OrganizationHiringCreateJobPostingResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        title: string;
+        description?: string | null;
+        requirements?: string | null;
+        organizationOfferingId?: string | null;
+        serviceCategoryId?: string | null;
+        experienceMinYears?: number | null;
+        role: 'admin' | 'specialist';
+        status: 'draft' | 'open' | 'closed';
+        applicationsCount: number;
+    };
+};
+
+export type OrganizationHiringCreateJobPostingResponse = OrganizationHiringCreateJobPostingResponses[keyof OrganizationHiringCreateJobPostingResponses];
+
+export type OrganizationHiringPatchJobPostingData = {
+    body: {
+        title?: string;
+        description?: string | null;
+        requirements?: string | null;
+        organizationOfferingId?: string | null;
+        serviceCategoryId?: string | null;
+        experienceMinYears?: number | null;
+        role?: 'admin' | 'specialist';
+        status?: 'draft' | 'open' | 'closed';
+    };
+    path: {
+        jobPostingId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/hiring/job-postings/{jobPostingId}';
+};
+
+export type OrganizationHiringPatchJobPostingResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        title: string;
+        description?: string | null;
+        requirements?: string | null;
+        organizationOfferingId?: string | null;
+        serviceCategoryId?: string | null;
+        experienceMinYears?: number | null;
+        role: 'admin' | 'specialist';
+        status: 'draft' | 'open' | 'closed';
+        applicationsCount: number;
+    };
+};
+
+export type OrganizationHiringPatchJobPostingResponse = OrganizationHiringPatchJobPostingResponses[keyof OrganizationHiringPatchJobPostingResponses];
+
+export type OrganizationHiringListApplicationsData = {
+    body?: never;
+    path: {
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/hiring/applications';
+};
+
+export type OrganizationHiringListApplicationsResponses = {
+    200: {
+        contacts: Array<{
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            jobPostingId?: string | null;
+            source: 'application';
+            status: 'pending' | 'accepted' | 'rejected' | 'closed';
+            isActive: boolean;
+            displayLabelKey?: 'youApplied';
+        }>;
+    };
+};
+
+export type OrganizationHiringListApplicationsResponse = OrganizationHiringListApplicationsResponses[keyof OrganizationHiringListApplicationsResponses];
+
+export type OrganizationHiringReviewApplicationData = {
+    body: {
+        decision: 'accepted' | 'rejected';
+    };
+    path: {
+        contactId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/hiring/applications/{contactId}';
+};
+
+export type OrganizationHiringReviewApplicationResponses = {
+    200: {
+        contact: {
+            id: string;
+            organizationId: string;
+            specialistId: string;
+            jobPostingId?: string | null;
+            source: 'application';
+            status: 'pending' | 'accepted' | 'rejected' | 'closed';
+            isActive: boolean;
+            displayLabelKey?: 'youApplied';
+        };
+    };
+};
+
+export type OrganizationHiringReviewApplicationResponse = OrganizationHiringReviewApplicationResponses[keyof OrganizationHiringReviewApplicationResponses];
+
+export type SpecialistHiringGetResumeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/specialists/me/resume';
+};
+
+export type SpecialistHiringGetResumeResponses = {
+    200: {
+        headline?: string | null;
+        summary?: string | null;
+        experienceYears?: number | null;
+        visibility: 'public' | 'private';
+    };
+};
+
+export type SpecialistHiringGetResumeResponse = SpecialistHiringGetResumeResponses[keyof SpecialistHiringGetResumeResponses];
+
+export type SpecialistHiringPatchResumeData = {
+    body: {
+        headline?: string | null;
+        summary?: string | null;
+        experienceYears?: number | null;
+        visibility?: 'public' | 'private';
+    };
+    path?: never;
+    query?: never;
+    url: '/specialists/me/resume';
+};
+
+export type SpecialistHiringPatchResumeResponses = {
+    200: {
+        headline?: string | null;
+        summary?: string | null;
+        experienceYears?: number | null;
+        visibility: 'public' | 'private';
+    };
+};
+
+export type SpecialistHiringPatchResumeResponse = SpecialistHiringPatchResumeResponses[keyof SpecialistHiringPatchResumeResponses];
 
 export type FilesUploadPublicData = {
     body: {

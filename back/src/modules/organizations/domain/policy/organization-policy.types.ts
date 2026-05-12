@@ -5,8 +5,13 @@ export const OrganizationCapabilities = {
   DELETE: 'organization.delete',
   TEAM_VIEW: 'organization.team.view',
   TEAM_MANAGE_ROLES: 'organization.team.manage_roles',
+  TEAM_REMOVE_MEMBERS: 'organization.team.remove_members',
   JOIN_REQUESTS_REVIEW: 'organization.join_requests.review',
   OFFERINGS_MANAGE: 'organization.offerings.manage',
+  HIRING_VIEW: 'organization.hiring.view',
+  HIRING_MANAGE: 'organization.hiring.manage',
+  HIRING_REVIEW_APPLICATIONS: 'organization.hiring.review_applications',
+  HIRING_ACCEPT: 'organization.hiring.accept',
   CALENDAR: 'organization.calendar',
   BOOKINGS: 'organization.bookings',
 } as const;
@@ -22,6 +27,7 @@ export const OrganizationBookingActions = {
 export const OrganizationCalendarActions = {
   VIEW: 'view',
   MANAGE: 'manage',
+  MANAGE_WORKING_HOURS: 'manage_working_hours',
 } as const;
 
 export type OrganizationCapability =

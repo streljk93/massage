@@ -112,6 +112,108 @@ export class CalendarRepository {
     });
   }
 
+  findSpecialistResourcesTx(
+    tx: Prisma.TransactionClient,
+    args: { organizationId: string; specialistId: string },
+  ): Promise<CalendarResourceRow[]> {
+    return tx.calendarResource.findMany({
+      where: {
+        organizationId: args.organizationId,
+        specialistId: args.specialistId,
+        type: CalendarResourceType.specialist,
+      },
+      select: calendarResourceSelect,
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async restoreSpecialistResourceTx(
+    tx: Prisma.TransactionClient,
+    args: { resourceId: string; name: string },
+  ): Promise<CalendarResourceRow> {
+    const now = new Date();
+    const activeRulesCount = await tx.availabilityRule.count({
+      where: { resourceId: args.resourceId, deletedAt: null },
+    });
+    if (activeRulesCount === 0) {
+      const latestDeletedRule = await tx.availabilityRule.findFirst({
+        where: { resourceId: args.resourceId, deletedAt: { not: null } },
+        select: { deletedAt: true },
+        orderBy: { deletedAt: 'desc' },
+      });
+      if (latestDeletedRule?.deletedAt != null) {
+        await tx.availabilityRule.updateMany({
+          where: {
+            resourceId: args.resourceId,
+            deletedAt: latestDeletedRule.deletedAt,
+          },
+          data: { deletedAt: null },
+        });
+      }
+    }
+    const activeRules = await tx.availabilityRule.findMany({
+      where: { resourceId: args.resourceId, deletedAt: null },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    const latestActiveRuleCreatedAt = activeRules[0]?.createdAt;
+    if (latestActiveRuleCreatedAt != null) {
+      await tx.availabilityRule.updateMany({
+        where: {
+          resourceId: args.resourceId,
+          deletedAt: null,
+          createdAt: { lt: latestActiveRuleCreatedAt },
+        },
+        data: { deletedAt: now },
+      });
+    }
+    const activeOverridesCount = await tx.availabilityOverride.count({
+      where: { resourceId: args.resourceId, deletedAt: null },
+    });
+    if (activeOverridesCount === 0) {
+      const latestDeletedOverride = await tx.availabilityOverride.findFirst({
+        where: { resourceId: args.resourceId, deletedAt: { not: null } },
+        select: { deletedAt: true },
+        orderBy: { deletedAt: 'desc' },
+      });
+      if (latestDeletedOverride?.deletedAt != null) {
+        await tx.availabilityOverride.updateMany({
+          where: {
+            resourceId: args.resourceId,
+            deletedAt: latestDeletedOverride.deletedAt,
+          },
+          data: { deletedAt: null },
+        });
+      }
+    }
+    return tx.calendarResource.update({
+      where: { id: args.resourceId },
+      data: {
+        name: args.name,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: calendarResourceSelect,
+    });
+  }
+
+  async deactivateSpecialistResourceDuplicatesTx(
+    tx: Prisma.TransactionClient,
+    args: { resourceIds: string[] },
+  ): Promise<void> {
+    if (args.resourceIds.length === 0) {
+      return;
+    }
+    await tx.calendarResource.updateMany({
+      where: { id: { in: args.resourceIds } },
+      data: {
+        isActive: false,
+        specialistId: null,
+        deletedAt: new Date(),
+      },
+    });
+  }
+
   async createSpecialistResourceTx(
     tx: Prisma.TransactionClient,
     args: {

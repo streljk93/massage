@@ -4120,6 +4120,7 @@
                         "team",
                         "joinRequests",
                         "offerings",
+                        "hiring",
                         "calendar",
                         "bookings"
                       ],
@@ -4184,6 +4185,30 @@
                             }
                           }
                         },
+                        "hiring": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view",
+                            "manage",
+                            "reviewApplications",
+                            "accept"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
+                            "manage": {
+                              "type": "boolean"
+                            },
+                            "reviewApplications": {
+                              "type": "boolean"
+                            },
+                            "accept": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
                         "calendar": {
                           "type": "object",
                           "additionalProperties": false,
@@ -4191,7 +4216,8 @@
                             "view",
                             "viewAll",
                             "manage",
-                            "manageAll"
+                            "manageAll",
+                            "manageWorkingHours"
                           ],
                           "properties": {
                             "view": {
@@ -4204,6 +4230,9 @@
                               "type": "boolean"
                             },
                             "manageAll": {
+                              "type": "boolean"
+                            },
+                            "manageWorkingHours": {
                               "type": "boolean"
                             }
                           }
@@ -4320,6 +4349,275 @@
           }
         ],
         "summary": "Участники точки в кабинете (активное employment: специалист, имя, роль).",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/cabinet-team/invite-candidates": {
+      "get": {
+        "description": "Кабинетный поиск по профилям специалистов, без требований публичной витрины, резюме или вакансии.",
+        "operationId": "OrganizationsCabinet_getCabinetOrganizationTeamInviteCandidates",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Поиск по имени пользователя, email или витринному имени мастера.",
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 80
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "specialists"
+                  ],
+                  "properties": {
+                    "specialists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "specialistId",
+                          "displayName",
+                          "alreadyMember"
+                        ],
+                        "properties": {
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "headline": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "alreadyMember": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидный query (q/limit)"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав приглашать специалистов в команду"
+          },
+          "404": {
+            "description": "Организация не найдена"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Поиск специалистов для прямого приглашения в команду организации.",
+        "tags": [
+          "cabinet-organizations"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/cabinet-team/invitations": {
+      "post": {
+        "description": "Отдельный от найма поток членства: приглашение не связано с вакансией или резюме.",
+        "operationId": "OrganizationsCabinet_postCabinetOrganizationTeamInvitation",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "specialistId"
+                ],
+                "properties": {
+                  "specialistId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "targetRole": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "specialist"
+                    ],
+                    "default": "specialist"
+                  },
+                  "message": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 2000
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "invitation"
+                  ],
+                  "properties": {
+                    "invitation": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "targetRole",
+                        "status",
+                        "message",
+                        "expiresAt",
+                        "createdAt",
+                        "updatedAt",
+                        "organizationName"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "targetRole": {
+                          "type": "string",
+                          "enum": [
+                            "admin",
+                            "specialist"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "canceled"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "organizationName": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело приглашения"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "Нет прав приглашать специалистов в команду"
+          },
+          "404": {
+            "description": "Специалист или организация не найдены"
+          },
+          "409": {
+            "description": "Специалист уже состоит в организации"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Пригласить специалиста в команду организации.",
         "tags": [
           "cabinet-organizations"
         ]
@@ -5308,6 +5606,264 @@
         "summary": "Решение по заявке: принять, отклонить или заблокировать повторные заявки от мастера.",
         "tags": [
           "cabinet-organizations"
+        ]
+      }
+    },
+    "/specialists/me/organization-invitations": {
+      "get": {
+        "operationId": "SpecialistOrganizationInvitations_listMyOrganizationInvitations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "invitations"
+                  ],
+                  "properties": {
+                    "invitations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "specialistId",
+                          "targetRole",
+                          "status",
+                          "message",
+                          "expiresAt",
+                          "createdAt",
+                          "updatedAt",
+                          "organizationName"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "targetRole": {
+                            "type": "string",
+                            "enum": [
+                              "admin",
+                              "specialist"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "rejected",
+                              "canceled"
+                            ]
+                          },
+                          "message": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "expiresAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "organizationName": {
+                            "type": "string",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "У пользователя нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Приглашения текущего специалиста в команды организаций.",
+        "tags": [
+          "cabinet-specialists-organizations"
+        ]
+      }
+    },
+    "/specialists/me/organization-invitations/{invitationId}/respond": {
+      "post": {
+        "operationId": "SpecialistOrganizationInvitations_respondMyOrganizationInvitation",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "required": true,
+            "in": "path",
+            "description": "Идентификатор `OrganizationSpecialistInvitation`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "accept",
+                      "reject"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "invitation"
+                  ],
+                  "properties": {
+                    "invitation": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "targetRole",
+                        "status",
+                        "message",
+                        "expiresAt",
+                        "createdAt",
+                        "updatedAt",
+                        "organizationName"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "targetRole": {
+                          "type": "string",
+                          "enum": [
+                            "admin",
+                            "specialist"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "canceled"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "organizationName": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Невалидное тело ответа"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "403": {
+            "description": "У пользователя нет профиля специалиста"
+          },
+          "404": {
+            "description": "Приглашение не найдено"
+          },
+          "409": {
+            "description": "Приглашение истекло"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Ответить на приглашение организации: принять или отклонить.",
+        "tags": [
+          "cabinet-specialists-organizations"
         ]
       }
     },
@@ -7120,6 +7676,7 @@
                               "team",
                               "joinRequests",
                               "offerings",
+                              "hiring",
                               "calendar",
                               "bookings"
                             ],
@@ -7184,6 +7741,30 @@
                                   }
                                 }
                               },
+                              "hiring": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view",
+                                  "manage",
+                                  "reviewApplications",
+                                  "accept"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
+                                  "manage": {
+                                    "type": "boolean"
+                                  },
+                                  "reviewApplications": {
+                                    "type": "boolean"
+                                  },
+                                  "accept": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              },
                               "calendar": {
                                 "type": "object",
                                 "additionalProperties": false,
@@ -7191,7 +7772,8 @@
                                   "view",
                                   "viewAll",
                                   "manage",
-                                  "manageAll"
+                                  "manageAll",
+                                  "manageWorkingHours"
                                 ],
                                 "properties": {
                                   "view": {
@@ -7204,6 +7786,9 @@
                                     "type": "boolean"
                                   },
                                   "manageAll": {
+                                    "type": "boolean"
+                                  },
+                                  "manageWorkingHours": {
                                     "type": "boolean"
                                   }
                                 }
@@ -9695,6 +10280,932 @@
         ]
       }
     },
+    "/calendar/resources/{resourceId}/availability": {
+      "get": {
+        "operationId": "Calendar_getResourceAvailability",
+        "parameters": [
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "resource",
+                    "rules",
+                    "overrides"
+                  ],
+                  "properties": {
+                    "resource": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "weekday",
+                          "startMinute",
+                          "endMinute",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          },
+                          "startMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "endMinute": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "working",
+                              "break"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "overrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "date",
+                          "startsAt",
+                          "endsAt",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "off",
+                              "extra"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Правила и исключения рабочего времени ресурса.",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/resources/{resourceId}/availability/rules": {
+      "put": {
+        "operationId": "Calendar_putResourceAvailabilityRules",
+        "parameters": [
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "rules"
+                ],
+                "properties": {
+                  "rules": {
+                    "type": "array",
+                    "maxItems": 28,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "weekday",
+                        "startMinute",
+                        "endMinute",
+                        "type"
+                      ],
+                      "properties": {
+                        "weekday": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        },
+                        "startMinute": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1440
+                        },
+                        "endMinute": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "working",
+                            "break"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "resource",
+                    "rules",
+                    "overrides"
+                  ],
+                  "properties": {
+                    "resource": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "weekday",
+                          "startMinute",
+                          "endMinute",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          },
+                          "startMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "endMinute": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "working",
+                              "break"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "overrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "date",
+                          "startsAt",
+                          "endsAt",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "off",
+                              "extra"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Заменить недельные правила рабочего времени.",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/availability/rules/bulk": {
+      "put": {
+        "description": "Атомарно применяет один набор недельных правил к нескольким ресурсам календаря активной организации.",
+        "operationId": "Calendar_putResourceAvailabilityRulesBulk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "resourceIds",
+                  "rules"
+                ],
+                "properties": {
+                  "resourceIds": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "rules": {
+                    "type": "array",
+                    "maxItems": 28,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "weekday",
+                        "startMinute",
+                        "endMinute",
+                        "type"
+                      ],
+                      "properties": {
+                        "weekday": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 6
+                        },
+                        "startMinute": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1440
+                        },
+                        "endMinute": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 1440
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "working",
+                            "break"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "organizationId",
+                    "resourceIds",
+                    "updatedCount"
+                  ],
+                  "properties": {
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "resourceIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "updatedCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Заменить недельные правила рабочего времени для ресурсов.",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/resources/{resourceId}/availability/overrides": {
+      "post": {
+        "operationId": "Calendar_createResourceAvailabilityOverride",
+        "parameters": [
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "date",
+                  "type"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "extra"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "resource",
+                    "rules",
+                    "overrides"
+                  ],
+                  "properties": {
+                    "resource": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "weekday",
+                          "startMinute",
+                          "endMinute",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          },
+                          "startMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "endMinute": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "working",
+                              "break"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "overrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "date",
+                          "startsAt",
+                          "endsAt",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "off",
+                              "extra"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Создать разовое исключение рабочего времени.",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
+    "/calendar/resources/{resourceId}/availability/overrides/{overrideId}": {
+      "patch": {
+        "operationId": "Calendar_patchResourceAvailabilityOverride",
+        "parameters": [
+          {
+            "name": "overrideId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "date",
+                  "type"
+                ],
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "off",
+                      "extra"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "resource",
+                    "rules",
+                    "overrides"
+                  ],
+                  "properties": {
+                    "resource": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "name"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "weekday",
+                          "startMinute",
+                          "endMinute",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6
+                          },
+                          "startMinute": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1440
+                          },
+                          "endMinute": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1440
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "working",
+                              "break"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "overrides": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "date",
+                          "startsAt",
+                          "endsAt",
+                          "type"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string"
+                          },
+                          "startsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "endsAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "nullable": true
+                          },
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "off",
+                              "extra"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Изменить разовое исключение рабочего времени.",
+        "tags": [
+          "calendar"
+        ]
+      },
+      "delete": {
+        "operationId": "Calendar_deleteResourceAvailabilityOverride",
+        "parameters": [
+          {
+            "name": "overrideId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "resourceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "deleted"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "deleted": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить разовое исключение рабочего времени.",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
     "/calendar/events": {
       "get": {
         "description": "Window query: `startsAt < to AND endsAt > from`, с cursor pagination по `startsAt,id`.",
@@ -10692,6 +12203,1229 @@
         "summary": "Проверка доступности сервиса",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/hiring/candidates": {
+      "get": {
+        "operationId": "Hiring_listCandidates",
+        "parameters": [
+          {
+            "name": "experienceMaxYears",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "experienceMinYears",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "skillCategoryIds",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "candidates",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "specialistId",
+                          "displayName",
+                          "headline",
+                          "experienceYears",
+                          "skillsCategoryIds"
+                        ],
+                        "properties": {
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "headline": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "summary": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "experienceYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "skillsCategoryIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Глобальный поиск кандидатов по публичным резюме.",
+        "tags": [
+          "hiring"
+        ]
+      }
+    },
+    "/hiring/job-postings/{jobPostingId}/candidates": {
+      "get": {
+        "operationId": "Hiring_listJobPostingCandidates",
+        "parameters": [
+          {
+            "name": "jobPostingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "candidates",
+                    "nextCursor"
+                  ],
+                  "properties": {
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "specialistId",
+                          "displayName",
+                          "headline",
+                          "experienceYears",
+                          "skillsCategoryIds"
+                        ],
+                        "properties": {
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "imageUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "headline": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "summary": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "experienceYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "skillsCategoryIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "nextCursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Подбор кандидатов под вакансию.",
+        "tags": [
+          "hiring"
+        ]
+      }
+    },
+    "/hiring/job-postings": {
+      "get": {
+        "operationId": "Hiring_listPublicJobPostings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "jobPostings"
+                  ],
+                  "properties": {
+                    "jobPostings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "title",
+                          "status",
+                          "role",
+                          "applicationsCount"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "requirements": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "organizationOfferingId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "serviceCategoryId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "experienceMinYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "admin",
+                              "specialist"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "draft",
+                              "open",
+                              "closed"
+                            ]
+                          },
+                          "applicationsCount": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Публичный список открытых вакансий (MVP stub).",
+        "tags": [
+          "hiring"
+        ]
+      }
+    },
+    "/hiring/job-postings/{jobPostingId}/apply": {
+      "post": {
+        "operationId": "Hiring_applyToJobPosting",
+        "parameters": [
+          {
+            "name": "jobPostingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "message": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "contact"
+                  ],
+                  "properties": {
+                    "contact": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "source",
+                        "status",
+                        "isActive"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "jobPostingId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "application"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "closed"
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "displayLabelKey": {
+                          "type": "string",
+                          "enum": [
+                            "youApplied"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "hiring"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/hiring/job-postings": {
+      "get": {
+        "operationId": "OrganizationHiring_listJobPostings",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "jobPostings"
+                  ],
+                  "properties": {
+                    "jobPostings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "title",
+                          "status",
+                          "role",
+                          "applicationsCount"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "requirements": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "organizationOfferingId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "serviceCategoryId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "experienceMinYears": {
+                            "type": "integer",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "admin",
+                              "specialist"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "draft",
+                              "open",
+                              "closed"
+                            ]
+                          },
+                          "applicationsCount": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-organizations-hiring"
+        ]
+      },
+      "post": {
+        "operationId": "OrganizationHiring_createJobPosting",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 140
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 4000
+                  },
+                  "requirements": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 4000
+                  },
+                  "organizationOfferingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "serviceCategoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "experienceMinYears": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "specialist"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "open",
+                      "closed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "title",
+                    "status",
+                    "role",
+                    "applicationsCount"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "requirements": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "organizationOfferingId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "serviceCategoryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "experienceMinYears": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "admin",
+                        "specialist"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "open",
+                        "closed"
+                      ]
+                    },
+                    "applicationsCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-organizations-hiring"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/hiring/job-postings/{jobPostingId}": {
+      "patch": {
+        "operationId": "OrganizationHiring_patchJobPosting",
+        "parameters": [
+          {
+            "name": "jobPostingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 140
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 4000
+                  },
+                  "requirements": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 4000
+                  },
+                  "organizationOfferingId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "serviceCategoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "experienceMinYears": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "specialist"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "draft",
+                      "open",
+                      "closed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "title",
+                    "status",
+                    "role",
+                    "applicationsCount"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "requirements": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "organizationOfferingId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "serviceCategoryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "nullable": true
+                    },
+                    "experienceMinYears": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "admin",
+                        "specialist"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "draft",
+                        "open",
+                        "closed"
+                      ]
+                    },
+                    "applicationsCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-organizations-hiring"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/hiring/applications": {
+      "get": {
+        "operationId": "OrganizationHiring_listApplications",
+        "parameters": [
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "contacts"
+                  ],
+                  "properties": {
+                    "contacts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "specialistId",
+                          "source",
+                          "status",
+                          "isActive"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "specialistId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "jobPostingId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "source": {
+                            "type": "string",
+                            "enum": [
+                              "application"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "pending",
+                              "accepted",
+                              "rejected",
+                              "closed"
+                            ]
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "displayLabelKey": {
+                            "type": "string",
+                            "enum": [
+                              "youApplied"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-organizations-hiring"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/hiring/applications/{contactId}": {
+      "patch": {
+        "operationId": "OrganizationHiring_reviewApplication",
+        "parameters": [
+          {
+            "name": "contactId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "accepted",
+                      "rejected"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "contact"
+                  ],
+                  "properties": {
+                    "contact": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "organizationId",
+                        "specialistId",
+                        "source",
+                        "status",
+                        "isActive"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "organizationId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "specialistId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "jobPostingId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "application"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "closed"
+                          ]
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "displayLabelKey": {
+                          "type": "string",
+                          "enum": [
+                            "youApplied"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-organizations-hiring"
+        ]
+      }
+    },
+    "/specialists/me/resume": {
+      "get": {
+        "operationId": "SpecialistHiring_getResume",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "visibility"
+                  ],
+                  "properties": {
+                    "headline": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experienceYears": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "public",
+                        "private"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-specialists-hiring"
+        ]
+      },
+      "patch": {
+        "operationId": "SpecialistHiring_patchResume",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "headline": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 140
+                  },
+                  "summary": {
+                    "type": "string",
+                    "nullable": true,
+                    "maxLength": 4000
+                  },
+                  "experienceYears": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 80,
+                    "nullable": true
+                  },
+                  "visibility": {
+                    "type": "string",
+                    "enum": [
+                      "public",
+                      "private"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "visibility"
+                  ],
+                  "properties": {
+                    "headline": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "summary": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "experienceYears": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "visibility": {
+                      "type": "string",
+                      "enum": [
+                        "public",
+                        "private"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "tags": [
+          "cabinet-specialists-hiring"
         ]
       }
     },

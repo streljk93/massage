@@ -3,8 +3,13 @@ export const OrganizationCapabilities = {
   DELETE: "organization.delete",
   TEAM_VIEW: "organization.team.view",
   TEAM_MANAGE_ROLES: "organization.team.manage_roles",
+  TEAM_REMOVE_MEMBERS: "organization.team.remove_members",
   JOIN_REQUESTS_REVIEW: "organization.join_requests.review",
   OFFERINGS_MANAGE: "organization.offerings.manage",
+  HIRING_VIEW: "organization.hiring.view",
+  HIRING_MANAGE: "organization.hiring.manage",
+  HIRING_REVIEW_APPLICATIONS: "organization.hiring.review_applications",
+  HIRING_ACCEPT: "organization.hiring.accept",
   CALENDAR: "organization.calendar",
   BOOKINGS: "organization.bookings",
 } as const;
@@ -20,6 +25,7 @@ export const OrganizationBookingActions = {
 export const OrganizationCalendarActions = {
   VIEW: "view",
   MANAGE: "manage",
+  MANAGE_WORKING_HOURS: "manage_working_hours",
 } as const;
 
 export type OrganizationCapability =
@@ -36,11 +42,18 @@ export type OrganizationScopedPermissions = {
   team: { view: boolean; manageRoles: boolean; removeMembers: boolean };
   joinRequests: { review: boolean };
   offerings: { manage: boolean };
+  hiring: {
+    view: boolean;
+    manage: boolean;
+    reviewApplications: boolean;
+    accept: boolean;
+  };
   calendar: {
     view: boolean;
     viewAll: boolean;
     manage: boolean;
     manageAll: boolean;
+    manageWorkingHours: boolean;
   };
   bookings: {
     view: boolean;
@@ -81,10 +94,20 @@ export function canOrganization(
       return permissions.team.view;
     case OrganizationCapabilities.TEAM_MANAGE_ROLES:
       return permissions.team.manageRoles;
+    case OrganizationCapabilities.TEAM_REMOVE_MEMBERS:
+      return permissions.team.removeMembers;
     case OrganizationCapabilities.JOIN_REQUESTS_REVIEW:
       return permissions.joinRequests.review;
     case OrganizationCapabilities.OFFERINGS_MANAGE:
       return permissions.offerings.manage;
+    case OrganizationCapabilities.HIRING_VIEW:
+      return permissions.hiring.view;
+    case OrganizationCapabilities.HIRING_MANAGE:
+      return permissions.hiring.manage;
+    case OrganizationCapabilities.HIRING_REVIEW_APPLICATIONS:
+      return permissions.hiring.reviewApplications;
+    case OrganizationCapabilities.HIRING_ACCEPT:
+      return permissions.hiring.accept;
     case OrganizationCapabilities.CALENDAR:
       return canCalendarAction(permissions, options?.calendarAction);
     case OrganizationCapabilities.BOOKINGS:
@@ -99,6 +122,8 @@ function canCalendarAction(
   switch (action) {
     case OrganizationCalendarActions.VIEW:
       return permissions.calendar.view;
+    case OrganizationCalendarActions.MANAGE_WORKING_HOURS:
+      return permissions.calendar.manageWorkingHours;
     case OrganizationCalendarActions.MANAGE:
     case undefined:
       return permissions.calendar.manage;

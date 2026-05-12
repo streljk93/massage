@@ -1,5 +1,6 @@
 import {
   OrganizationBookingActions,
+  OrganizationCalendarActions,
   OrganizationCapabilities,
   canOrganization,
   explainOrganizationPolicy,
@@ -137,6 +138,11 @@ describe('organization policy', () => {
       confirm: true,
       cancel: false,
     });
+    expect(buildOrganizationPermissions(specialist).calendar).toMatchObject({
+      manage: true,
+      manageAll: false,
+      manageWorkingHours: false,
+    });
   });
 
   it('keeps client-list booking scope aligned for organization managers and specialists', () => {
@@ -174,6 +180,68 @@ describe('organization policy', () => {
     });
   });
 
+  it('exposes hiring permissions only to organization managers', () => {
+    const owner = { ...baseCtx, isOwner: true };
+    const admin = { ...baseCtx, role: 'admin' as const, specialistId: 'sp-1' };
+    const specialist = {
+      ...baseCtx,
+      role: 'specialist' as const,
+      specialistId: 'sp-2',
+    };
+
+    for (const ctx of [owner, admin]) {
+      expect(canOrganization(ctx, OrganizationCapabilities.HIRING_VIEW)).toBe(
+        true,
+      );
+      expect(canOrganization(ctx, OrganizationCapabilities.HIRING_ACCEPT)).toBe(
+        true,
+      );
+      expect(buildOrganizationPermissions(ctx).hiring).toMatchObject({
+        view: true,
+        manage: true,
+        reviewApplications: true,
+        accept: true,
+      });
+    }
+
+    expect(
+      canOrganization(specialist, OrganizationCapabilities.HIRING_VIEW),
+    ).toBe(false);
+    expect(buildOrganizationPermissions(specialist).hiring).toMatchObject({
+      view: false,
+      manage: false,
+      reviewApplications: false,
+      accept: false,
+    });
+  });
+
+  it('keeps team role and removal permissions behind their own capabilities', () => {
+    const owner = { ...baseCtx, isOwner: true };
+    const admin = { ...baseCtx, role: 'admin' as const, specialistId: 'sp-1' };
+
+    expect(
+      canOrganization(owner, OrganizationCapabilities.TEAM_MANAGE_ROLES),
+    ).toBe(true);
+    expect(
+      canOrganization(owner, OrganizationCapabilities.TEAM_REMOVE_MEMBERS),
+    ).toBe(true);
+    expect(buildOrganizationPermissions(owner).team).toMatchObject({
+      manageRoles: true,
+      removeMembers: true,
+    });
+
+    expect(
+      canOrganization(admin, OrganizationCapabilities.TEAM_MANAGE_ROLES),
+    ).toBe(false);
+    expect(
+      canOrganization(admin, OrganizationCapabilities.TEAM_REMOVE_MEMBERS),
+    ).toBe(false);
+    expect(buildOrganizationPermissions(admin).team).toMatchObject({
+      manageRoles: false,
+      removeMembers: false,
+    });
+  });
+
   it('allows specialist to manage only self-created calendar blocks on own resource', () => {
     const specialist = {
       ...baseCtx,
@@ -207,6 +275,40 @@ describe('organization policy', () => {
     expect(decision.allowed).toBe(false);
     if (!decision.allowed) {
       expect(decision.reason).toBe('NOT_RESOURCE_EVENT_AUTHOR');
+    }
+  });
+
+  it('allows only organization managers to change working hours', () => {
+    const owner = { ...baseCtx, isOwner: true };
+    const specialist = {
+      ...baseCtx,
+      role: 'specialist' as const,
+      specialistId: 'sp-1',
+    };
+
+    expect(
+      canOrganization(owner, OrganizationCapabilities.CALENDAR, {
+        type: 'Resource',
+        action: OrganizationCalendarActions.MANAGE_WORKING_HOURS,
+        organizationId: 'org-1',
+        specialistId: 'sp-1',
+      }),
+    ).toBe(true);
+
+    const decision = explainOrganizationPolicy(
+      specialist,
+      OrganizationCapabilities.CALENDAR,
+      {
+        type: 'Resource',
+        action: OrganizationCalendarActions.MANAGE_WORKING_HOURS,
+        organizationId: 'org-1',
+        specialistId: 'sp-1',
+      },
+    );
+
+    expect(decision.allowed).toBe(false);
+    if (!decision.allowed) {
+      expect(decision.reason).toBe('NOT_MANAGER');
     }
   });
 });

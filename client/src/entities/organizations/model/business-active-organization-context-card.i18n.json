@@ -14,8 +14,8 @@
     },
     "ru": {
       "businessActiveOrganizationContextCard": {
-        "label": "Место приёма",
-        "linkAria": "Открыть список организаций: текущее место приёма — {name}"
+        "label": "Место работы",
+        "linkAria": "Открыть список организаций: текущее место работы — {name}"
       }
     }
   }

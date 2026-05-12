@@ -4,6 +4,7 @@ import {
   canAccessAllResources,
   canAccessOwnResources,
   canManageOrganizationProfile,
+  canRemoveOrganizationTeamMembers,
   canManageOrganizationTeamRoles,
   canViewOrganizationTeam,
   type OrganizationAccessContext,
@@ -14,11 +15,18 @@ export type OrganizationScopedPermissions = {
   team: { view: boolean; manageRoles: boolean; removeMembers: boolean };
   joinRequests: { review: boolean };
   offerings: { manage: boolean };
+  hiring: {
+    view: boolean;
+    manage: boolean;
+    reviewApplications: boolean;
+    accept: boolean;
+  };
   calendar: {
     view: boolean;
     viewAll: boolean;
     manage: boolean;
     manageAll: boolean;
+    manageWorkingHours: boolean;
   };
   bookings: {
     view: boolean;
@@ -36,6 +44,7 @@ export function buildOrganizationPermissions(
 ): OrganizationScopedPermissions {
   const canManageProfile = canManageOrganizationProfile(ctx);
   const canManageRoles = canManageOrganizationTeamRoles(ctx);
+  const canRemoveMembers = canRemoveOrganizationTeamMembers(ctx);
   const canViewTeam = canViewOrganizationTeam(ctx);
   const manageAllBookings = canAccessAllBookings(ctx);
   const manageOwnBookings = canAccessOwnBookings(ctx);
@@ -49,15 +58,22 @@ export function buildOrganizationPermissions(
     team: {
       view: canViewTeam,
       manageRoles: canManageRoles,
-      removeMembers: canManageRoles,
+      removeMembers: canRemoveMembers,
     },
     joinRequests: { review: canManageProfile },
     offerings: { manage: canManageProfile },
+    hiring: {
+      view: canManageProfile,
+      manage: canManageProfile,
+      reviewApplications: canManageProfile,
+      accept: canManageProfile,
+    },
     calendar: {
       view: canUseCalendar,
       viewAll: viewAllResources,
       manage: canUseCalendar,
       manageAll: viewAllResources,
+      manageWorkingHours: viewAllResources,
     },
     bookings: {
       view: canManageBookings,
@@ -77,7 +93,19 @@ export function emptyOrganizationPermissions(): OrganizationScopedPermissions {
     team: { view: false, manageRoles: false, removeMembers: false },
     joinRequests: { review: false },
     offerings: { manage: false },
-    calendar: { view: false, viewAll: false, manage: false, manageAll: false },
+    hiring: {
+      view: false,
+      manage: false,
+      reviewApplications: false,
+      accept: false,
+    },
+    calendar: {
+      view: false,
+      viewAll: false,
+      manage: false,
+      manageAll: false,
+      manageWorkingHours: false,
+    },
     bookings: {
       view: false,
       manage: false,

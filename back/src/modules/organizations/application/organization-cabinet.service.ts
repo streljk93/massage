@@ -13,7 +13,9 @@ import {
   GalleryOwnerKind,
   OrganizationMembershipRole,
   OrganizationProfileRevisionStatus,
+  OrganizationSpecialistInvitationStatus,
   OrganizationType,
+  CalendarResourceType,
   OfferingPublicationStatus,
   PublicationModerationStatus,
   SpecialistWorkPattern,
@@ -31,7 +33,10 @@ import {
 } from '../../../common/i18n';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { BookingAppendService } from '../../bookings/application/booking-append.service';
-import { BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN } from '../../bookings/domain/booking-cancel-reason';
+import {
+  BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
+  BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN,
+} from '../../bookings/domain/booking-cancel-reason';
 import { appendInputMassOrganizationCancelBooking } from '../../bookings/domain/booking-mass-organization-cancel';
 import { BookingStatusLocaleRepository } from '../../bookings/infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
@@ -43,6 +48,7 @@ import { ModerationEnqueueService } from '../../moderation/application/moderatio
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
+import { CalendarService } from '../../calendar/application/calendar.service';
 import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import { OrganizationAccessPolicyService } from './organization-access-policy.service';
 import {
@@ -59,6 +65,11 @@ import type {
   WorkplaceJoinRequestListQuery,
   WorkplaceJoinRequestReviewBody,
 } from '../dto/workplace-join-request.schema';
+import type {
+  OrganizationTeamInviteBody,
+  OrganizationTeamInviteCandidatesQuery,
+  OrganizationTeamInviteRespondBody,
+} from '../dto/organization-team-invite.schema';
 
 const CABINET_ALLOWED_PLACE_PROVIDERS = new Set<
   'locationiq' | 'geoapify' | 'opencage' | 'nominatim'
@@ -140,6 +151,7 @@ export class OrganizationCabinetService {
     private readonly bookingStatusLocaleRepository: BookingStatusLocaleRepository,
     private readonly pushNotifications: PushNotificationsService,
     private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
+    private readonly calendarService: CalendarService,
     private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
@@ -187,6 +199,81 @@ export class OrganizationCabinetService {
     return out;
   }
 
+  /** Активные брони мастера в организации — append массовой отмены при удалении из команды. */
+  private async massCancelBookingsAtSpecialistOrganizationTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      specialistId: string;
+      organizationId: string;
+      actorUserId: string;
+      cancelReason: string;
+      cancellationComment: string | null;
+    },
+  ): Promise<
+    Array<{ id: string; fromStatus: BookingStatus; toStatus: BookingStatus }>
+  > {
+    const rows =
+      await this.bookingsRepository.findActiveMinimalForSpecialistOrganization(
+        tx,
+        {
+          specialistId: args.specialistId,
+          organizationId: args.organizationId,
+        },
+      );
+    const out: Array<{
+      id: string;
+      fromStatus: BookingStatus;
+      toStatus: BookingStatus;
+    }> = [];
+    for (const r of rows) {
+      const appendInput = appendInputMassOrganizationCancelBooking({
+        bookingId: r.id,
+        granularStatus: r.status,
+        actorUserId: args.actorUserId,
+        texts: {
+          cancelReason: args.cancelReason,
+          cancellationComment: args.cancellationComment,
+        },
+        masterLeftWorkplace: true,
+      });
+      const { previousStatus, projection } =
+        await this.bookingAppend.appendBookingEvent(tx, appendInput);
+      out.push({
+        id: r.id,
+        fromStatus: previousStatus,
+        toStatus: projection.status,
+      });
+    }
+    return out;
+  }
+
+  /** Удаление из команды скрывает ресурс из календаря, но сохраняет настройки графика на случай повторного найма. */
+  private async deactivateSpecialistCalendarResourceAtOrganizationTx(
+    tx: Prisma.TransactionClient,
+    args: {
+      specialistId: string;
+      organizationId: string;
+    },
+  ): Promise<void> {
+    const resources = await tx.calendarResource.findMany({
+      where: {
+        organizationId: args.organizationId,
+        specialistId: args.specialistId,
+        type: CalendarResourceType.specialist,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    const resourceIds = resources.map((r) => r.id);
+    if (resourceIds.length === 0) {
+      return;
+    }
+    await tx.calendarResource.updateMany({
+      where: { id: { in: resourceIds } },
+      data: { isActive: false },
+    });
+  }
+
   private async syncSpecialistListedInDirectory(
     tx: Prisma.TransactionClient,
     specialistId: string,
@@ -212,6 +299,7 @@ export class OrganizationCabinetService {
     tx: Prisma.TransactionClient,
     specialistId: string,
     organizationId: string,
+    role: OrganizationMembershipRole = OrganizationMembershipRole.specialist,
   ): Promise<void> {
     const startDate = new Date();
     const existing = await tx.specialistOrganizationEmployment.findFirst({
@@ -224,7 +312,7 @@ export class OrganizationCabinetService {
           isActive: true,
           endDate: null,
           startDate,
-          role: OrganizationMembershipRole.specialist,
+          role,
         },
       });
     } else {
@@ -232,7 +320,7 @@ export class OrganizationCabinetService {
         data: {
           specialistId,
           organizationId,
-          role: OrganizationMembershipRole.specialist,
+          role,
           startDate,
           isActive: true,
         },
@@ -241,6 +329,10 @@ export class OrganizationCabinetService {
     await tx.specialist.update({
       where: { id: specialistId },
       data: { activeOrganizationId: organizationId },
+    });
+    await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
+      specialistId,
+      organizationId,
     });
     await this.syncSpecialistListedInDirectory(tx, specialistId);
   }
@@ -504,6 +596,243 @@ export class OrganizationCabinetService {
     return { permissions, members };
   }
 
+  async listCabinetTeamInviteCandidates(
+    userId: string,
+    organizationId: string,
+    query: OrganizationTeamInviteCandidatesQuery,
+  ): Promise<{
+    specialists: Array<{
+      specialistId: string;
+      displayName: string | null;
+      headline: string | null;
+      alreadyMember: boolean;
+    }>;
+  }> {
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.JOIN_REQUESTS_REVIEW,
+      { type: 'Organization', organizationId },
+    );
+
+    const q = query.q.trim();
+    const rows = await this.prisma.specialist.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { listingName: { contains: q, mode: 'insensitive' } },
+          { bio: { contains: q, mode: 'insensitive' } },
+          { user: { name: { contains: q, mode: 'insensitive' } } },
+          { user: { email: { contains: q, mode: 'insensitive' } } },
+        ],
+      },
+      take: query.limit,
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        listingName: true,
+        bio: true,
+        user: { select: { name: true } },
+        employments: {
+          where: { organizationId, isActive: true },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+
+    return {
+      specialists: rows.map((row) => ({
+        specialistId: row.id,
+        displayName: row.listingName?.trim() || row.user?.name?.trim() || null,
+        headline: row.bio?.trim() || null,
+        alreadyMember: row.employments.length > 0,
+      })),
+    };
+  }
+
+  async createCabinetTeamInvitation(
+    userId: string,
+    organizationId: string,
+    body: OrganizationTeamInviteBody,
+  ) {
+    await this.organizationAccess.assertCan(
+      userId,
+      organizationId,
+      OrganizationCapabilities.JOIN_REQUESTS_REVIEW,
+      { type: 'Organization', organizationId },
+    );
+
+    const expiresAt = body.expiresAt == null ? null : new Date(body.expiresAt);
+    if (expiresAt != null && Number.isNaN(expiresAt.getTime())) {
+      throw new BadRequestException({
+        code: 'INVALID_EXPIRES_AT',
+        message: 'Invalid invitation expiration date',
+      });
+    }
+
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { id: body.specialistId, deletedAt: null },
+      select: {
+        id: true,
+        employments: {
+          where: { organizationId, isActive: true },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+    if (specialist == null) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found',
+      });
+    }
+    if (specialist.employments.length > 0) {
+      throw new ConflictException({
+        code: 'ALREADY_ORGANIZATION_MEMBER',
+        message: 'Specialist is already an active member of this organization',
+      });
+    }
+
+    const existing =
+      await this.prisma.organizationSpecialistInvitation.findFirst({
+        where: {
+          organizationId,
+          specialistId: specialist.id,
+          status: OrganizationSpecialistInvitationStatus.pending,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+    const invitation =
+      existing == null
+        ? await this.prisma.organizationSpecialistInvitation.create({
+            data: {
+              organizationId,
+              specialistId: specialist.id,
+              createdByUserId: userId,
+              targetRole: toOrganizationMembershipRole(body.targetRole),
+              status: OrganizationSpecialistInvitationStatus.pending,
+              message: body.message ?? null,
+              expiresAt,
+            },
+            include: { organization: { select: { name: true } } },
+          })
+        : await this.prisma.organizationSpecialistInvitation.update({
+            where: { id: existing.id },
+            data: {
+              createdByUserId: userId,
+              targetRole: toOrganizationMembershipRole(body.targetRole),
+              message: body.message ?? null,
+              expiresAt,
+            },
+            include: { organization: { select: { name: true } } },
+          });
+    return { invitation: mapOrganizationTeamInvitation(invitation) };
+  }
+
+  async listMyOrganizationTeamInvitations(userId: string) {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (specialist == null) {
+      throw new ForbiddenException({
+        code: 'SPECIALIST_PROFILE_REQUIRED',
+        message: 'Specialist profile is required',
+      });
+    }
+
+    const rows = await this.prisma.organizationSpecialistInvitation.findMany({
+      where: { specialistId: specialist.id, deletedAt: null },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: { organization: { select: { name: true } } },
+    });
+    return { invitations: rows.map(mapOrganizationTeamInvitation) };
+  }
+
+  async respondMyOrganizationTeamInvitation(
+    userId: string,
+    invitationId: string,
+    body: OrganizationTeamInviteRespondBody,
+  ) {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (specialist == null) {
+      throw new ForbiddenException({
+        code: 'SPECIALIST_PROFILE_REQUIRED',
+        message: 'Specialist profile is required',
+      });
+    }
+
+    const invitation =
+      await this.prisma.organizationSpecialistInvitation.findFirst({
+        where: {
+          id: invitationId,
+          specialistId: specialist.id,
+          deletedAt: null,
+        },
+      });
+    if (invitation == null) {
+      throw new NotFoundException({
+        code: 'ORGANIZATION_TEAM_INVITATION_NOT_FOUND',
+        message: 'Organization team invitation not found',
+      });
+    }
+
+    if (body.decision === 'reject') {
+      const updated = await this.prisma.organizationSpecialistInvitation.update(
+        {
+          where: { id: invitation.id },
+          data: { status: OrganizationSpecialistInvitationStatus.rejected },
+          include: { organization: { select: { name: true } } },
+        },
+      );
+      return { invitation: mapOrganizationTeamInvitation(updated) };
+    }
+
+    if (!isActiveOrganizationTeamInvitation(invitation, new Date())) {
+      throw new ConflictException({
+        code: 'ORGANIZATION_TEAM_INVITATION_EXPIRED',
+        message: 'Organization team invitation expired',
+      });
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.organizationSpecialistInvitation.update({
+        where: { id: invitation.id },
+        data: { status: OrganizationSpecialistInvitationStatus.accepted },
+      });
+      await tx.specialistWorkplaceJoinRequest.updateMany({
+        where: {
+          specialistId: specialist.id,
+          status: SpecialistWorkplaceJoinRequestStatus.pending,
+        },
+        data: {
+          status: SpecialistWorkplaceJoinRequestStatus.withdrawn,
+          resolvedAt: new Date(),
+        },
+      });
+      await this.grantSpecialistMembershipAtOrganization(
+        tx,
+        specialist.id,
+        invitation.organizationId,
+        invitation.targetRole,
+      );
+      return tx.organizationSpecialistInvitation.findFirstOrThrow({
+        where: { id: invitation.id },
+        include: { organization: { select: { name: true } } },
+      });
+    });
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialist.id,
+    );
+    return { invitation: mapOrganizationTeamInvitation(updated) };
+  }
+
   async patchCabinetOrganizationTeamMemberRole(
     userId: string,
     organizationId: string,
@@ -562,51 +891,84 @@ export class OrganizationCabinetService {
     organizationId: string,
     employmentId: string,
   ): Promise<{ ok: true }> {
-    await this.prisma.$transaction(async (tx) => {
-      const ctx = await this.organizationAccess.resolveContextTx(
-        tx,
-        userId,
-        organizationId,
+    const { cancelled, specialistId } = await this.prisma.$transaction(
+      async (tx) => {
+        const ctx = await this.organizationAccess.resolveContextTx(
+          tx,
+          userId,
+          organizationId,
+        );
+        assertCanOrganization(
+          ctx,
+          OrganizationCapabilities.TEAM_REMOVE_MEMBERS,
+          {
+            type: 'Organization',
+            organizationId,
+          },
+        );
+
+        const target = await tx.specialistOrganizationEmployment.findFirst({
+          where: { id: employmentId, organizationId, isActive: true },
+          select: {
+            id: true,
+            specialistId: true,
+            specialist: {
+              select: { userId: true, activeOrganizationId: true },
+            },
+            organization: { select: { ownerUserId: true } },
+          },
+        });
+        if (target == null) {
+          throw new NotFoundException({
+            code: 'ORGANIZATION_TEAM_MEMBER_NOT_FOUND',
+            message: 'Organization team member not found',
+          });
+        }
+        if (target.specialist.userId === target.organization.ownerUserId) {
+          throw new ForbiddenException({
+            code: 'ORGANIZATION_OWNER_MEMBERSHIP_IMMUTABLE',
+            message:
+              'Organization owner cannot be removed from team management',
+          });
+        }
+
+        const now = new Date();
+        await tx.specialistOrganizationEmployment.update({
+          where: { id: target.id },
+          data: { isActive: false, endDate: now },
+        });
+        await this.deactivateSpecialistCalendarResourceAtOrganizationTx(tx, {
+          specialistId: target.specialistId,
+          organizationId,
+        });
+        if (target.specialist.activeOrganizationId === organizationId) {
+          await tx.specialist.update({
+            where: { id: target.specialistId },
+            data: { activeOrganizationId: null },
+          });
+          await this.syncSpecialistListedInDirectory(tx, target.specialistId);
+        }
+        const cancelled =
+          await this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
+            specialistId: target.specialistId,
+            organizationId,
+            actorUserId: userId,
+            cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
+            cancellationComment: null,
+          });
+        return { cancelled, specialistId: target.specialistId };
+      },
+    );
+    for (const row of cancelled) {
+      void this.pushNotifications.notifyClientBookingStatusChange(
+        row.id,
+        row.fromStatus,
+        row.toStatus,
       );
-      assertCanOrganization(ctx, OrganizationCapabilities.TEAM_MANAGE_ROLES, {
-        type: 'Organization',
-        organizationId,
-      });
-
-      const target = await tx.specialistOrganizationEmployment.findFirst({
-        where: { id: employmentId, organizationId, isActive: true },
-        select: {
-          id: true,
-          specialistId: true,
-          specialist: { select: { userId: true, activeOrganizationId: true } },
-          organization: { select: { ownerUserId: true } },
-        },
-      });
-      if (target == null) {
-        throw new NotFoundException({
-          code: 'ORGANIZATION_TEAM_MEMBER_NOT_FOUND',
-          message: 'Organization team member not found',
-        });
-      }
-      if (target.specialist.userId === target.organization.ownerUserId) {
-        throw new ForbiddenException({
-          code: 'ORGANIZATION_OWNER_MEMBERSHIP_IMMUTABLE',
-          message: 'Organization owner cannot be removed from team management',
-        });
-      }
-
-      await tx.specialistOrganizationEmployment.update({
-        where: { id: target.id },
-        data: { isActive: false, endDate: new Date() },
-      });
-      if (target.specialist.activeOrganizationId === organizationId) {
-        await tx.specialist.update({
-          where: { id: target.specialistId },
-          data: { activeOrganizationId: null },
-        });
-        await this.syncSpecialistListedInDirectory(tx, target.specialistId);
-      }
-    });
+    }
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialistId,
+    );
     return { ok: true };
   }
 
@@ -1704,4 +2066,51 @@ export class OrganizationCabinetService {
 
     return this.specialistOnboarding.getOnboarding(userId);
   }
+}
+
+function toOrganizationMembershipRole(role: 'admin' | 'specialist') {
+  return role === 'admin'
+    ? OrganizationMembershipRole.admin
+    : OrganizationMembershipRole.specialist;
+}
+
+function mapOrganizationTeamInvitation(invitation: {
+  id: string;
+  organizationId: string;
+  specialistId: string;
+  targetRole: OrganizationMembershipRole;
+  status: OrganizationSpecialistInvitationStatus;
+  message: string | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  organization?: { name: string } | null;
+}) {
+  return {
+    id: invitation.id,
+    organizationId: invitation.organizationId,
+    specialistId: invitation.specialistId,
+    targetRole: invitation.targetRole,
+    status: invitation.status,
+    message: invitation.message,
+    expiresAt: invitation.expiresAt,
+    createdAt: invitation.createdAt,
+    updatedAt: invitation.updatedAt,
+    organizationName: invitation.organization?.name?.trim() || null,
+  };
+}
+
+function isActiveOrganizationTeamInvitation(
+  invitation: {
+    status: OrganizationSpecialistInvitationStatus;
+    deletedAt: Date | null;
+    expiresAt: Date | null;
+  },
+  now: Date,
+) {
+  return (
+    invitation.status === OrganizationSpecialistInvitationStatus.pending &&
+    invitation.deletedAt == null &&
+    (invitation.expiresAt == null || invitation.expiresAt > now)
+  );
 }

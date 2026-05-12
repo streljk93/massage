@@ -132,6 +132,45 @@ enum SpecialistWorkplaceJoinRequestStatus {
   blocked
 }
 
+/// Публикация резюме специалиста в hiring-контуре.
+enum SpecialistResumeVisibility {
+  public
+  private
+}
+
+/// Статус вакансии организации в hiring-контуре.
+enum JobPostingStatus {
+  draft
+  open
+  closed
+}
+
+/// Сторона, которая инициировала контакт найма.
+enum HiringContactSource {
+  application
+}
+
+/// Жизненный цикл контакта найма; активность для уникальности задаёт `HiringContact.isActive`.
+enum HiringContactStatus {
+  pending
+  accepted
+  rejected
+  closed
+}
+
+enum JobApplicationStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum OrganizationSpecialistInvitationStatus {
+  pending
+  accepted
+  rejected
+  canceled
+}
+
 /// Тип организации: личная точка приёма или коммерческий салон / команда.
 enum OrganizationType {
   solo
@@ -262,19 +301,24 @@ model User {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  specialistProfile     Specialist?
-  clientBookings        Booking[]              @relation("ClientBookings")
-  bookingEventsActor    BookingEvent[]         @relation("BookingEventActorUser")
-  orgReviews            OrganizationReview[]
-  specialistReviews     SpecialistReview[]
-  ownedOrganizations    Organization[]         @relation("OrganizationOwner")
-  fcmTokens             UserFcmToken[]
-  favorites             UserFavorite[]
-  behaviorEvents        UserBehaviorEvent[]
-  preferenceProfile     UserPreferenceProfile?
-  oAuthAccounts         UserOAuthAccount[]
-  calendarEventsCreated CalendarEvent[]        @relation("CalendarEventCreatedBy")
-  calendarEventAudits   CalendarEventAudit[]   @relation("CalendarEventAuditActor")
+  specialistProfile            Specialist?
+  clientBookings               Booking[]                          @relation("ClientBookings")
+  bookingEventsActor           BookingEvent[]                     @relation("BookingEventActorUser")
+  orgReviews                   OrganizationReview[]
+  specialistReviews            SpecialistReview[]
+  ownedOrganizations           Organization[]                     @relation("OrganizationOwner")
+  fcmTokens                    UserFcmToken[]
+  favorites                    UserFavorite[]
+  behaviorEvents               UserBehaviorEvent[]
+  preferenceProfile            UserPreferenceProfile?
+  oAuthAccounts                UserOAuthAccount[]
+  calendarEventsCreated        CalendarEvent[]                    @relation("CalendarEventCreatedBy")
+  calendarEventAudits          CalendarEventAudit[]               @relation("CalendarEventAuditActor")
+  jobPostingsCreated           JobPosting[]                       @relation("JobPostingCreatedBy")
+  specialistResumesCreated     SpecialistResume[]                 @relation("SpecialistResumeCreatedBy")
+  hiringContactsCreated        HiringContact[]                    @relation("HiringContactCreatedBy")
+  jobApplicationsCreated       JobApplication[]                   @relation("JobApplicationCreatedBy")
+  specialistInvitationsCreated OrganizationSpecialistInvitation[] @relation("OrganizationSpecialistInvitationCreatedBy")
 
   /// Отображаемое имя: после смены проходит предмодерацию; до `approved` скрыто во витрине (мастер).
   nameModerationStatus PublicationModerationStatus @default(approved)
@@ -437,6 +481,7 @@ model ServiceCategory {
   organizationTags      OrganizationServiceCategory[]
   revisionTags          OrganizationProfileRevisionServiceCategory[]
   organizationOfferings OrganizationOffering[]
+  jobPostings           JobPosting[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -577,6 +622,9 @@ model Organization {
   offerings                  OrganizationOffering[]
   calendarResources          CalendarResource[]
   calendarEvents             CalendarEvent[]
+  jobPostings                JobPosting[]
+  hiringContacts             HiringContact[]
+  specialistInvitations      OrganizationSpecialistInvitation[]
 
   @@index([ownerUserId])
   @@index([addressId])
@@ -810,15 +858,20 @@ model Specialist {
 
   profileRevisions SpecialistProfileRevision[] @relation("SpecialistProfileRevisions")
 
-  employments           SpecialistOrganizationEmployment[]
-  workplaceJoinRequests SpecialistWorkplaceJoinRequest[]
-  bookings              Booking[]
-  reviews               SpecialistReview[]
-  skills                SpecialistSkill[]
-  onboardingMajorPicks  SpecialistOnboardingMajorServiceCategory[]
-  offeringsExecution    SpecialistOffering[]
-  timeOffs              SpecialistTimeOff[]
-  calendarResources     CalendarResource[]
+  employments             SpecialistOrganizationEmployment[]
+  workplaceJoinRequests   SpecialistWorkplaceJoinRequest[]
+  bookings                Booking[]
+  reviews                 SpecialistReview[]
+  skills                  SpecialistSkill[]
+  onboardingMajorPicks    SpecialistOnboardingMajorServiceCategory[]
+  offeringsExecution      SpecialistOffering[]
+  timeOffs                SpecialistTimeOff[]
+  calendarResources       CalendarResource[]
+  resume                  SpecialistResume?
+  hiringContacts          HiringContact[]
+  jobApplications         JobApplication[]
+  organizationInvitations OrganizationSpecialistInvitation[]
+  hiringSearchProjection  SpecialistSearchProjection?
 
   @@index([activeOrganizationId])
 }
@@ -879,6 +932,43 @@ model SpecialistSkill {
 
   @@id([specialistId, serviceCategoryId])
   @@index([serviceCategoryId])
+}
+
+/// Резюме мастера для hiring-контактов; не заменяет витринный профиль специалиста.
+model SpecialistResume {
+  id           String     @id @default(uuid())
+  specialistId String     @unique
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  /// Автор создания/последней первичной подачи; только audit, не owner для доступа.
+  createdByUserId String?
+  createdByUser   User?   @relation("SpecialistResumeCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  headline        String?
+  summary         String?                    @db.Text
+  experienceYears Int?
+  visibility      SpecialistResumeVisibility @default(private)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([visibility, deletedAt])
+  @@index([experienceYears])
+}
+
+/// Disposable read projection для поиска кандидатов; source of truth — Specialist, Resume и SpecialistSkill.
+model SpecialistSearchProjection {
+  specialistId String     @id
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  skillsCategoryIds String[]
+  experienceYears   Int?
+  textSearch        String?  @db.Text
+
+  updatedAt DateTime @updatedAt
+
+  @@index([experienceYears])
 }
 
 /// Период работы специалиста в организации (история смены салонов).
@@ -1057,6 +1147,127 @@ model SpecialistWorkplaceJoinRequest {
   @@index([organizationId, status])
 }
 
+/// Вакансия организации: может быть связана с offering, но не является прайсом услуги.
+model JobPosting {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("JobPostingCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  organizationOfferingId String?
+  organizationOffering   OrganizationOffering? @relation(fields: [organizationOfferingId], references: [id], onDelete: SetNull)
+
+  serviceCategoryId String?
+  serviceCategory   ServiceCategory? @relation(fields: [serviceCategoryId], references: [id], onDelete: SetNull)
+
+  title              String
+  description        String?                    @db.Text
+  requirements       String?                    @db.Text
+  experienceMinYears Int?
+  role               OrganizationMembershipRole @default(specialist)
+  status             JobPostingStatus           @default(draft)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  contacts     HiringContact[]
+  applications JobApplication[]
+
+  @@index([organizationId, status, deletedAt])
+  @@index([organizationOfferingId])
+  @@index([serviceCategoryId])
+  @@index([createdByUserId])
+}
+
+/// Единый hiring-контакт между организацией и специалистом.
+model HiringContact {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  jobPostingId String?
+  jobPosting   JobPosting? @relation(fields: [jobPostingId], references: [id], onDelete: SetNull)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("HiringContactCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  source   HiringContactSource
+  status   HiringContactStatus @default(pending)
+  isActive Boolean             @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  application JobApplication?
+
+  @@index([organizationId, status, isActive, deletedAt])
+  @@index([specialistId, status, isActive, deletedAt])
+  @@index([jobPostingId])
+  @@index([createdByUserId])
+}
+
+/// Отклик специалиста на вакансию; состояние контакта живёт в HiringContact.
+model JobApplication {
+  id        String        @id @default(uuid())
+  contactId String        @unique
+  contact   HiringContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  jobPostingId String
+  jobPosting   JobPosting @relation(fields: [jobPostingId], references: [id], onDelete: Restrict)
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("JobApplicationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  status             JobApplicationStatus @default(pending)
+  message            String?              @db.Text
+  jobPostingSnapshot Json
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([jobPostingId, status, deletedAt])
+  @@index([specialistId, status, deletedAt])
+  @@index([createdByUserId])
+}
+
+/// Приглашение специалиста организацией в команду.
+model OrganizationSpecialistInvitation {
+  id String @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  createdByUser   User?   @relation("OrganizationSpecialistInvitationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  targetRole OrganizationMembershipRole             @default(specialist)
+  status     OrganizationSpecialistInvitationStatus @default(pending)
+  message    String?                                @db.Text
+  expiresAt  DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([organizationId, status, expiresAt, deletedAt])
+  @@index([specialistId, status, expiresAt, deletedAt])
+  @@index([createdByUserId])
+}
+
 /// Отзыв о специалисте.
 model SpecialistReview {
   id           String     @id @default(uuid())
@@ -1185,6 +1396,7 @@ model OrganizationOffering {
   priceOptions          OfferingPriceOption[]
   specialistAssignments SpecialistOffering[]
   bookings              Booking[]
+  jobPostings           JobPosting[]
 
   @@index([organizationId])
   @@index([organizationId, slug])

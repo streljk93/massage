@@ -6,6 +6,7 @@ export const organizationScopedPermissionsSchema = {
     'team',
     'joinRequests',
     'offerings',
+    'hiring',
     'calendar',
     'bookings',
   ],
@@ -41,15 +42,33 @@ export const organizationScopedPermissionsSchema = {
       required: ['manage'],
       properties: { manage: { type: 'boolean' } },
     },
+    hiring: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['view', 'manage', 'reviewApplications', 'accept'],
+      properties: {
+        view: { type: 'boolean' },
+        manage: { type: 'boolean' },
+        reviewApplications: { type: 'boolean' },
+        accept: { type: 'boolean' },
+      },
+    },
     calendar: {
       type: 'object',
       additionalProperties: false,
-      required: ['view', 'viewAll', 'manage', 'manageAll'],
+      required: [
+        'view',
+        'viewAll',
+        'manage',
+        'manageAll',
+        'manageWorkingHours',
+      ],
       properties: {
         view: { type: 'boolean' },
         viewAll: { type: 'boolean' },
         manage: { type: 'boolean' },
         manageAll: { type: 'boolean' },
+        manageWorkingHours: { type: 'boolean' },
       },
     },
     bookings: {
@@ -119,6 +138,108 @@ export const organizationCabinetTeamMembersResponseSchema = {
       type: 'array',
       items: organizationCabinetTeamMemberSchema,
     },
+  },
+};
+
+export const organizationTeamInviteCandidateSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialistId', 'displayName', 'alreadyMember'],
+  properties: {
+    specialistId: { type: 'string', format: 'uuid' },
+    displayName: { type: 'string', nullable: true },
+    headline: { type: 'string', nullable: true },
+    alreadyMember: { type: 'boolean' },
+  },
+};
+
+export const organizationTeamInviteCandidatesResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialists'],
+  properties: {
+    specialists: {
+      type: 'array',
+      items: organizationTeamInviteCandidateSchema,
+    },
+  },
+};
+
+export const organizationTeamInviteRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialistId'],
+  properties: {
+    specialistId: { type: 'string', format: 'uuid' },
+    targetRole: {
+      type: 'string',
+      enum: ['admin', 'specialist'],
+      default: 'specialist',
+    },
+    message: { type: 'string', nullable: true, maxLength: 2000 },
+    expiresAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+export const organizationTeamInvitationSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: [
+    'id',
+    'organizationId',
+    'specialistId',
+    'targetRole',
+    'status',
+    'message',
+    'expiresAt',
+    'createdAt',
+    'updatedAt',
+    'organizationName',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    organizationId: { type: 'string', format: 'uuid' },
+    specialistId: { type: 'string', format: 'uuid' },
+    targetRole: { type: 'string', enum: ['admin', 'specialist'] },
+    status: {
+      type: 'string',
+      enum: ['pending', 'accepted', 'rejected', 'canceled'],
+    },
+    message: { type: 'string', nullable: true },
+    expiresAt: { type: 'string', format: 'date-time', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+    organizationName: { type: 'string', nullable: true },
+  },
+};
+
+export const organizationTeamInvitationMutationResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['invitation'],
+  properties: {
+    invitation: organizationTeamInvitationSchema,
+  },
+};
+
+export const organizationTeamInvitationListResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['invitations'],
+  properties: {
+    invitations: {
+      type: 'array',
+      items: organizationTeamInvitationSchema,
+    },
+  },
+};
+
+export const organizationTeamInviteRespondRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['decision'],
+  properties: {
+    decision: { type: 'string', enum: ['accept', 'reject'] },
   },
 };
 

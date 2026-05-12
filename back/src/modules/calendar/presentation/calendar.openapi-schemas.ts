@@ -165,3 +165,120 @@ export const updateCalendarBlockRequestSchema = {
     version: { type: 'integer', minimum: 1 },
   },
 };
+
+const availabilityRuleSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'weekday', 'startMinute', 'endMinute', 'type'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    weekday: { type: 'integer', minimum: 0, maximum: 6 },
+    startMinute: { type: 'integer', minimum: 0, maximum: 1440 },
+    endMinute: { type: 'integer', minimum: 1, maximum: 1440 },
+    type: { type: 'string', enum: ['working', 'break'] },
+  },
+};
+
+const availabilityOverrideSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'date', 'startsAt', 'endsAt', 'type'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    date: { type: 'string' },
+    startsAt: { type: 'string', format: 'date-time', nullable: true },
+    endsAt: { type: 'string', format: 'date-time', nullable: true },
+    type: { type: 'string', enum: ['off', 'extra'] },
+  },
+};
+
+export const availabilityRuleRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['weekday', 'startMinute', 'endMinute', 'type'],
+  properties: {
+    weekday: { type: 'integer', minimum: 0, maximum: 6 },
+    startMinute: { type: 'integer', minimum: 0, maximum: 1440 },
+    endMinute: { type: 'integer', minimum: 1, maximum: 1440 },
+    type: { type: 'string', enum: ['working', 'break'] },
+  },
+};
+
+export const putAvailabilityRulesRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['rules'],
+  properties: {
+    rules: {
+      type: 'array',
+      maxItems: 28,
+      items: availabilityRuleRequestSchema,
+    },
+  },
+};
+
+export const putAvailabilityRulesBulkRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['resourceIds', 'rules'],
+  properties: {
+    resourceIds: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 100,
+      items: { type: 'string', format: 'uuid' },
+    },
+    rules: {
+      type: 'array',
+      maxItems: 28,
+      items: availabilityRuleRequestSchema,
+    },
+  },
+};
+
+export const putAvailabilityRulesBulkResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['organizationId', 'resourceIds', 'updatedCount'],
+  properties: {
+    organizationId: { type: 'string', format: 'uuid' },
+    resourceIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+    },
+    updatedCount: { type: 'integer' },
+  },
+};
+
+export const availabilityOverrideRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['date', 'type'],
+  properties: {
+    date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+    startsAt: { type: 'string', format: 'date-time', nullable: true },
+    endsAt: { type: 'string', format: 'date-time', nullable: true },
+    type: { type: 'string', enum: ['off', 'extra'] },
+  },
+};
+
+export const calendarAvailabilityResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['resource', 'rules', 'overrides'],
+  properties: {
+    resource: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['id', 'organizationId', 'specialistId', 'name'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        organizationId: { type: 'string', format: 'uuid' },
+        specialistId: { type: 'string', format: 'uuid', nullable: true },
+        name: { type: 'string' },
+      },
+    },
+    rules: { type: 'array', items: availabilityRuleSchema },
+    overrides: { type: 'array', items: availabilityOverrideSchema },
+  },
+};

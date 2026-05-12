@@ -30,8 +30,12 @@ import {
   businessAppSubpagesI18n,
   businessCalendarPageI18n,
   businessClientsPageI18n,
+  businessHiringPageI18n,
   businessOrganizationCabinetPageI18n,
   businessOrganizationOfferingsPageI18n,
+  businessSpecialistJobPostingPageI18n,
+  businessSpecialistSearchPageI18n,
+  businessSpecialistsPageI18n,
   businessSkillsPageI18n,
 } from "@/views/business/subpages";
 import { businessOnboardingPageI18n } from "@/views/business/onboarding";
@@ -102,6 +106,10 @@ const bundles: ColocatedI18nBundle[] = [
   businessSkillsPageI18n,
   businessCalendarPageI18n,
   businessClientsPageI18n,
+  businessSpecialistsPageI18n,
+  businessHiringPageI18n,
+  businessSpecialistSearchPageI18n,
+  businessSpecialistJobPostingPageI18n,
   becomeSpecialistPageI18n,
   authLoginPageI18n,
   authRegisterPageI18n,

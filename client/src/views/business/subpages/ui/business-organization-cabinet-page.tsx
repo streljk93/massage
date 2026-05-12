@@ -375,7 +375,7 @@ export function BusinessOrganizationCabinetPage() {
                 {m.displayName ?? m.specialistId}
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                {m.permissions.manageRole && m.role !== "owner" ? (
+                {m.permissions.manageRole ? (
                   <Select
                     value={m.role}
                     disabled={roleMutation.isPending}

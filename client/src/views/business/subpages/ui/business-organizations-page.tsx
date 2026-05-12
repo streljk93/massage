@@ -7,6 +7,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
+  UserPlus,
 } from "lucide-react";
 import { parseISO } from "date-fns";
 import { useMemo, useState } from "react";
@@ -29,6 +30,8 @@ import {
   organizationsCabinetGetDeleteOrganizationBookingsPreview,
   organizationsCabinetGetWorkplaceJoinRequestsForOrganization,
   organizationsCabinetPostReviewWorkplaceJoinRequest,
+  specialistOrganizationInvitationsListMyOrganizationInvitations,
+  specialistOrganizationInvitationsRespondMyOrganizationInvitation,
   specialistsCabinetGetSpecialistActiveOrganizationBookingsPreview,
   specialistsCabinetGetSpecialistMyOrganizations,
   specialistsCabinetPatchSpecialistActiveOrganization,
@@ -55,6 +58,7 @@ import { cn, motion, previewSrcForPersistedGalleryUrl } from "@/shared/lib";
 const ONB_QK = ["specialistOnboarding"] as const;
 const ORG_INCOMING_QK = ["orgIncomingWorkplaceJoinRequests"] as const;
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
+const ORG_INVITES_QK = ["specialistOrganizationInvitations"] as const;
 
 function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRoleSpecialist" {
   if (role === "owner") {
@@ -320,6 +324,53 @@ export function BusinessOrganizationsPage() {
 
   const authed = sessionStatus === "authenticated" && accessToken.length > 0;
 
+  const organizationInvitesQuery = useQuery({
+    queryKey: [...ORG_INVITES_QK, accessToken, locale] as const,
+    enabled: authed,
+    queryFn: async () => {
+      const { data, error } =
+        await specialistOrganizationInvitationsListMyOrganizationInvitations({ client: sdk });
+      if (error || !data) {
+        return { invitations: [] };
+      }
+      return data;
+    },
+  });
+
+  const pendingOrganizationInvites = useMemo(() => {
+    const invitations = organizationInvitesQuery.data?.invitations ?? [];
+    return invitations.filter((inv) => inv.status === "pending");
+  }, [organizationInvitesQuery.data]);
+
+  const respondOrganizationInviteMutation = useMutation({
+    mutationFn: async (args: { invitationId: string; decision: "accept" | "reject" }) => {
+      const { data, error } =
+        await specialistOrganizationInvitationsRespondMyOrganizationInvitation({
+          client: sdk,
+          path: { invitationId: args.invitationId },
+          body: { decision: args.decision },
+        });
+      if (error || !data) {
+        throw error ?? new Error("respond-invite");
+      }
+      return { ...args };
+    },
+    onSuccess: async (_res, vars) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
+        queryClient.invalidateQueries({ queryKey: [...ORG_INVITES_QK] }),
+      ]);
+      notify.success(
+        vars.decision === "accept" ?
+          t("orgTeamInviteAccepted")
+        : t("orgTeamInviteRejected"),
+      );
+    },
+    onError: () => {
+      notify.error(t("orgTeamInviteRespondError"));
+    },
+  });
+
   const incomingPerOrgQueries = useQueries({
     queries: managedOrgs.map((org) => ({
       queryKey: [...ORG_INCOMING_QK, org.id, accessToken, locale, "pending"] as const,
@@ -446,6 +497,92 @@ export function BusinessOrganizationsPage() {
             <Link href="/business/organizations/new">{t("createOrganization")}</Link>
           </Button>
         </div>
+      : null}
+
+      {authed && pendingOrganizationInvites.length > 0 ?
+        <section
+          className="flex flex-col gap-3"
+          aria-label={t("orgTeamInviteSectionAria")}
+        >
+          <ul className="m-0 flex list-none flex-col gap-3 p-0" role="list">
+            {pendingOrganizationInvites.map((inv) => {
+              const name =
+                typeof inv.organizationName === "string" && inv.organizationName.trim().length > 0 ?
+                  inv.organizationName.trim()
+                : t("orgTeamInviteOrganizationFallback");
+              const rowBusy =
+                respondOrganizationInviteMutation.isPending &&
+                respondOrganizationInviteMutation.variables?.invitationId === inv.id;
+              return (
+                <li key={inv.id}>
+                  <article className="overflow-hidden rounded-2xl border border-primary/35 bg-card shadow-sm ring-1 ring-border/30">
+                    <div className="flex gap-3.5 p-4">
+                      <div
+                        className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-primary"
+                        aria-hidden
+                      >
+                        <UserPlus className="size-6 opacity-90" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-heading text-base font-semibold leading-snug tracking-tight text-foreground">
+                          {name}
+                        </h3>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                          {t("orgTeamInviteTitle")}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium"
+                            disabled={
+                              rowBusy ||
+                              deleteOrganizationMutation.isPending ||
+                              deleteOrganizationFlowBusyOrgId != null
+                            }
+                            onClick={() =>
+                              respondOrganizationInviteMutation.mutate({
+                                invitationId: inv.id,
+                                decision: "accept",
+                              })
+                            }
+                          >
+                            {rowBusy && respondOrganizationInviteMutation.variables?.decision === "accept" ?
+                              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                            : null}
+                            <span>{t("incomingAccept")}</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            tone="light"
+                            className="inline-flex min-h-9 items-center justify-center gap-2 rounded-xl border border-border px-4 text-sm font-medium"
+                            disabled={
+                              rowBusy ||
+                              deleteOrganizationMutation.isPending ||
+                              deleteOrganizationFlowBusyOrgId != null
+                            }
+                            onClick={() =>
+                              respondOrganizationInviteMutation.mutate({
+                                invitationId: inv.id,
+                                decision: "reject",
+                              })
+                            }
+                          >
+                            {rowBusy && respondOrganizationInviteMutation.variables?.decision === "reject" ?
+                              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                            : null}
+                            <span>{t("incomingReject")}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       : null}
 
       {sessionStatus === "loading" ? (

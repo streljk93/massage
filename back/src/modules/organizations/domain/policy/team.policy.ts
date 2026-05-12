@@ -1,5 +1,6 @@
 import {
   canManageOrganizationTeamRoles,
+  canRemoveOrganizationTeamMembers,
   canViewOrganizationTeam,
 } from './organization-access-matrix';
 import { Rules } from './organization-policy.rules';
@@ -20,6 +21,13 @@ export const teamPolicy: Partial<Record<OrganizationCapability, PolicyHandler>> 
       !Rules.isMember(ctx)
         ? deny('NOT_MEMBER')
         : canManageOrganizationTeamRoles(ctx)
+          ? allow()
+          : deny('NOT_OWNER'),
+
+    [OrganizationCapabilities.TEAM_REMOVE_MEMBERS]: (ctx) =>
+      !Rules.isMember(ctx)
+        ? deny('NOT_MEMBER')
+        : canRemoveOrganizationTeamMembers(ctx)
           ? allow()
           : deny('NOT_OWNER'),
 

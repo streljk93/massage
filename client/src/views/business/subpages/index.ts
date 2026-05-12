@@ -4,6 +4,10 @@ export { default as businessOrganizationOfferingsPageI18n } from "./model/busine
 export { default as businessSkillsPageI18n } from "./model/business-skills-page.i18n.json";
 export { default as businessCalendarPageI18n } from "./model/business-calendar-page.i18n.json";
 export { default as businessClientsPageI18n } from "./model/business-clients-page.i18n.json";
+export { default as businessSpecialistsPageI18n } from "./model/business-specialists-page.i18n.json";
+export { default as businessHiringPageI18n } from "./model/business-hiring-page.i18n.json";
+export { default as businessSpecialistSearchPageI18n } from "./model/business-specialist-search-page.i18n.json";
+export { default as businessSpecialistJobPostingPageI18n } from "./model/business-specialist-job-posting-page.i18n.json";
 export { BusinessBookingsPage } from "./ui/business-bookings-page";
 export { BusinessClientsPage } from "./ui/business-clients-page";
 export { BusinessOrganizationCreatePage } from "./ui/business-organization-create-page";
@@ -17,3 +21,7 @@ export { BusinessSkillsPage } from "./ui/business-skills-page";
 export { BusinessProfileEditPage } from "./ui/business-profile-edit-page";
 export { BusinessWorkplaceApplicantProfilePage } from "./ui/business-workplace-applicant-profile-page";
 export { BusinessCalendarPage } from "./ui/business-calendar-page";
+export { BusinessSpecialistsPage } from "./ui/business-specialists-page";
+export { BusinessHiringPage } from "./ui/business-hiring-page";
+export { BusinessSpecialistSearchPage } from "./ui/business-specialist-search-page";
+export { BusinessSpecialistJobPostingPage } from "./ui/business-specialist-job-posting-page";

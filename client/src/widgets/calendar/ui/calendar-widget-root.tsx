@@ -23,6 +23,7 @@ import { HOUR_HEIGHT_PX, HOURS } from "../model/constants";
 export function CalendarWidget({
   resources,
   events,
+  unavailableRanges = [],
   isLoading,
   isFetching,
   viewMode,
@@ -136,6 +137,9 @@ export function CalendarWidget({
         colEvents: events.filter((e) =>
           e.resources.some((er) => er.id === r.id),
         ),
+        colUnavailableRanges: unavailableRanges.filter(
+          (range) => range.resourceId === r.id && range.dayKey === dayKey,
+        ),
         label: r.name,
         sublabel: null,
       }));
@@ -148,6 +152,13 @@ export function CalendarWidget({
           return e.resources.some((er) => er.id === selectedResourceId);
         return true;
       });
+      const filteredUnavailable =
+        selectedResourceId === "all"
+          ? []
+          : unavailableRanges.filter(
+              (range) =>
+                range.resourceId === selectedResourceId && range.dayKey === dk,
+            );
       return {
         key: dk,
         resourceId:
@@ -157,6 +168,7 @@ export function CalendarWidget({
         colDayKey: dk,
         isToday: dk === todayKey,
         colEvents: filtered,
+        colUnavailableRanges: filteredUnavailable,
         label: format.dateTime(vnNoonUtcForCalendarYmd(dk), {
           weekday: "short",
           timeZone: LISTING_DISPLAY_TZ,
@@ -171,6 +183,7 @@ export function CalendarWidget({
     viewMode,
     resources,
     events,
+    unavailableRanges,
     selectedResourceId,
     dayKey,
     weekDays,

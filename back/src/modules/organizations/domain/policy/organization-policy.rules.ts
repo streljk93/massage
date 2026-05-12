@@ -102,6 +102,12 @@ export const Rules = {
     if (resource.subject.action === OrganizationCalendarActions.VIEW) {
       return allow();
     }
+    if (
+      resource.subject.action ===
+      OrganizationCalendarActions.MANAGE_WORKING_HOURS
+    ) {
+      return Rules.isManager(ctx) ? allow() : deny('NOT_MANAGER');
+    }
     if (Rules.isManager(ctx)) {
       return allow();
     }

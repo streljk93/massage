@@ -13,7 +13,12 @@ import {
   TIME_COL_W,
   TOTAL_GRID_H,
 } from "../model/constants";
-import type { CalendarEvent, CalendarResource, ViewMode } from "../model/types";
+import type {
+  CalendarEvent,
+  CalendarResource,
+  CalendarUnavailableRange,
+  ViewMode,
+} from "../model/types";
 import {
   buildBlockTimes,
   minToHHMM,
@@ -32,6 +37,7 @@ export type CalendarGridColumn = {
   colDayKey: string;
   isToday: boolean;
   colEvents: CalendarEvent[];
+  colUnavailableRanges: CalendarUnavailableRange[];
   label: string;
   sublabel: string | null;
 };
@@ -311,6 +317,46 @@ export function CalendarTimeGrid({
                         style={{ top: i * HOUR_HEIGHT_PX + HOUR_HEIGHT_PX / 2 }}
                       />
                     ))}
+
+                    {col.colUnavailableRanges.map((range) => {
+                      const startMin = minutesFromDayStart(
+                        parseISO(range.startsAt),
+                      );
+                      const dur = Math.round(
+                        (parseISO(range.endsAt).getTime() -
+                          parseISO(range.startsAt).getTime()) /
+                          60_000,
+                      );
+                      const topPx = Math.max(
+                        0,
+                        (startMin / 60) * HOUR_HEIGHT_PX,
+                      );
+                      const heightPx = Math.max(
+                        18,
+                        (dur / 60) * HOUR_HEIGHT_PX,
+                      );
+
+                      return (
+                        <div
+                          key={range.id}
+                          className="pointer-events-none absolute left-1 right-1 overflow-hidden rounded-md border border-dashed border-muted-foreground/20 bg-muted/35 text-muted-foreground/70"
+                          style={{
+                            top: topPx + 1,
+                            height: heightPx - 2,
+                            zIndex: 2,
+                          }}
+                          title={range.label}
+                        >
+                          {heightPx >= 34 ? (
+                            <div className="flex h-full items-center justify-center px-1 text-center text-[0.62rem] font-medium leading-tight">
+                              <span className="line-clamp-2">
+                                {range.label}
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
 
                     {clusters.flatMap((cluster) => {
                       const laneById = assignLaneLayout(cluster);

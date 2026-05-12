@@ -62,3 +62,9 @@ export function canManageOrganizationTeamRoles(
   return ctx.isOwner;
 }
 
+export function canRemoveOrganizationTeamMembers(
+  ctx: OrganizationAccessContext,
+): boolean {
+  return ctx.isOwner;
+}
+

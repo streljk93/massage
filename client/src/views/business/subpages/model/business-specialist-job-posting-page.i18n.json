@@ -1,0 +1,85 @@
+{
+  "messages": {
+    "en": {
+      "businessSpecialistJobPostingPage": {
+        "title": "Vacancy",
+        "eyebrow": "Vacancy",
+        "jobMeta": "{status} · {count, plural, one {# contact} other {# contacts}}",
+        "jobStatus": {
+          "draft": "Draft",
+          "open": "Open",
+          "closed": "Closed"
+        },
+        "contactSource": {
+          "application": "Specialist applied"
+        },
+        "contactStatus": {
+          "pending": "Pending",
+          "accepted": "Accepted",
+          "rejected": "Rejected",
+          "closed": "Closed"
+        },
+        "accept": "Accept",
+        "reject": "Reject",
+        "noContactsTitle": "No contacts yet",
+        "noContactsHint": "Applications to this vacancy will appear here.",
+        "emptyTitle": "Vacancy not found",
+        "emptyHint": "The vacancy is unavailable or you do not have access."
+      }
+    },
+    "vi": {
+      "businessSpecialistJobPostingPage": {
+        "title": "Vị trí",
+        "eyebrow": "Vị trí",
+        "jobMeta": "{status} · {count, plural, one {# liên hệ} other {# liên hệ}}",
+        "jobStatus": {
+          "draft": "Nháp",
+          "open": "Đang mở",
+          "closed": "Đã đóng"
+        },
+        "contactSource": {
+          "application": "Chuyên viên đã ứng tuyển"
+        },
+        "contactStatus": {
+          "pending": "Đang chờ",
+          "accepted": "Đã nhận",
+          "rejected": "Từ chối",
+          "closed": "Đã đóng"
+        },
+        "accept": "Nhận",
+        "reject": "Từ chối",
+        "noContactsTitle": "Chưa có liên hệ",
+        "noContactsHint": "Ứng tuyển cho vị trí này sẽ hiển thị ở đây.",
+        "emptyTitle": "Không tìm thấy vị trí",
+        "emptyHint": "Vị trí không khả dụng hoặc bạn không có quyền truy cập."
+      }
+    },
+    "ru": {
+      "businessSpecialistJobPostingPage": {
+        "title": "Вакансия",
+        "eyebrow": "Вакансия",
+        "jobMeta": "{status} · {count, plural, one {# контакт} few {# контакта} many {# контактов} other {# контакта}}",
+        "jobStatus": {
+          "draft": "Черновик",
+          "open": "Открыта",
+          "closed": "Закрыта"
+        },
+        "contactSource": {
+          "application": "Специалист откликнулся"
+        },
+        "contactStatus": {
+          "pending": "Ожидает",
+          "accepted": "Принят",
+          "rejected": "Отклонён",
+          "closed": "Закрыт"
+        },
+        "accept": "Принять",
+        "reject": "Отклонить",
+        "noContactsTitle": "Контактов пока нет",
+        "noContactsHint": "Отклики на эту вакансию появятся здесь.",
+        "emptyTitle": "Вакансия не найдена",
+        "emptyHint": "Вакансия недоступна или у вас нет прав."
+      }
+    }
+  }
+}

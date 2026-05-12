@@ -8,9 +8,19 @@ export type ViewMode = "day" | "week" | "month" | "list";
 export type CalendarResource = CalendarListResourcesResponse["resources"][number];
 export type CalendarEvent = CalendarListEventsResponse["events"][number];
 
+export type CalendarUnavailableRange = {
+  id: string;
+  resourceId: string;
+  dayKey: string;
+  startsAt: string;
+  endsAt: string;
+  label: string;
+};
+
 export interface CalendarWidgetProps {
   resources: CalendarResource[];
   events: CalendarEvent[];
+  unavailableRanges?: CalendarUnavailableRange[];
   isLoading?: boolean;
   isFetching?: boolean;
   viewMode: ViewMode;

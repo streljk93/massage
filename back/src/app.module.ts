@@ -22,6 +22,7 @@ import { PersonalizationModule } from './modules/personalization/personalization
 import { FilesModule } from './modules/files/files.module';
 import { AddressModule } from './modules/address/address.module';
 import { HealthModule } from './modules/health/health.module';
+import { HiringModule } from './modules/hiring/hiring.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { AdminMasterModule } from './modules/admin/admin-master.module';
@@ -80,6 +81,7 @@ const bullRootImports = isBullMqRootEnabled()
     AddressModule,
     StorageModule,
     HealthModule,
+    HiringModule,
     FilesModule,
     AuthModule,
     AdminMasterModule,

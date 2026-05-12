@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -46,10 +47,23 @@ import {
   type DeleteCalendarBlockQuery,
 } from '../dto/delete-calendar-block-query.schema';
 import {
+  availabilityOverrideBodySchema,
+  putAvailabilityRulesBulkBodySchema,
+  putAvailabilityRulesBodySchema,
+  type AvailabilityOverrideBody,
+  type PutAvailabilityRulesBulkBody,
+  type PutAvailabilityRulesBody,
+} from '../dto/calendar-availability.schema';
+import {
+  availabilityOverrideRequestSchema,
   calendarEventsResponseSchema,
+  calendarAvailabilityResponseSchema,
   calendarResourcesResponseSchema,
   createCalendarBlockRequestSchema,
   createCalendarBlockResponseSchema,
+  putAvailabilityRulesBulkRequestSchema,
+  putAvailabilityRulesBulkResponseSchema,
+  putAvailabilityRulesRequestSchema,
   updateCalendarBlockRequestSchema,
 } from './calendar.openapi-schemas';
 
@@ -73,6 +87,135 @@ export class CalendarController {
   @ApiForbiddenResponse({ description: 'Нет доступа к активной организации' })
   async listResources(@Req() req: AuthedRequest) {
     return this.calendarService.listResources(req.user.id);
+  }
+
+  @Get('resources/:resourceId/availability')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Правила и исключения рабочего времени ресурса.' })
+  @ApiParam({ name: 'resourceId', format: 'uuid' })
+  @ApiOkResponse({ schema: calendarAvailabilityResponseSchema })
+  async getResourceAvailability(
+    @Req() req: AuthedRequest,
+    @Param('resourceId', ParseUUIDPipe) resourceId: string,
+  ) {
+    return this.calendarService.getResourceAvailability(
+      req.user.id,
+      resourceId,
+    );
+  }
+
+  @Put('resources/:resourceId/availability/rules')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Заменить недельные правила рабочего времени.' })
+  @ApiParam({ name: 'resourceId', format: 'uuid' })
+  @ApiBody({ schema: putAvailabilityRulesRequestSchema })
+  @ApiOkResponse({ schema: calendarAvailabilityResponseSchema })
+  async putResourceAvailabilityRules(
+    @Req() req: AuthedRequest,
+    @Param('resourceId', ParseUUIDPipe) resourceId: string,
+    @Body(new ZodValidationPipe(putAvailabilityRulesBodySchema))
+    body: PutAvailabilityRulesBody,
+  ) {
+    return this.calendarService.replaceResourceAvailabilityRules(
+      req.user.id,
+      resourceId,
+      body.rules,
+    );
+  }
+
+  @Put('availability/rules/bulk')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Заменить недельные правила рабочего времени для ресурсов.',
+    description:
+      'Атомарно применяет один набор недельных правил к нескольким ресурсам календаря активной организации.',
+  })
+  @ApiBody({ schema: putAvailabilityRulesBulkRequestSchema })
+  @ApiOkResponse({ schema: putAvailabilityRulesBulkResponseSchema })
+  async putResourceAvailabilityRulesBulk(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(putAvailabilityRulesBulkBodySchema))
+    body: PutAvailabilityRulesBulkBody,
+  ) {
+    return this.calendarService.replaceManyResourceAvailabilityRules(
+      req.user.id,
+      body.resourceIds,
+      body.rules,
+    );
+  }
+
+  @Post('resources/:resourceId/availability/overrides')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Создать разовое исключение рабочего времени.' })
+  @ApiParam({ name: 'resourceId', format: 'uuid' })
+  @ApiBody({ schema: availabilityOverrideRequestSchema })
+  @ApiOkResponse({ schema: calendarAvailabilityResponseSchema })
+  async createResourceAvailabilityOverride(
+    @Req() req: AuthedRequest,
+    @Param('resourceId', ParseUUIDPipe) resourceId: string,
+    @Body(new ZodValidationPipe(availabilityOverrideBodySchema))
+    body: AvailabilityOverrideBody,
+  ) {
+    return this.calendarService.createResourceAvailabilityOverride(
+      req.user.id,
+      resourceId,
+      body,
+    );
+  }
+
+  @Patch('resources/:resourceId/availability/overrides/:overrideId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Изменить разовое исключение рабочего времени.' })
+  @ApiParam({ name: 'resourceId', format: 'uuid' })
+  @ApiParam({ name: 'overrideId', format: 'uuid' })
+  @ApiBody({ schema: availabilityOverrideRequestSchema })
+  @ApiOkResponse({ schema: calendarAvailabilityResponseSchema })
+  async patchResourceAvailabilityOverride(
+    @Req() req: AuthedRequest,
+    @Param('resourceId', ParseUUIDPipe) resourceId: string,
+    @Param('overrideId', ParseUUIDPipe) overrideId: string,
+    @Body(new ZodValidationPipe(availabilityOverrideBodySchema))
+    body: AvailabilityOverrideBody,
+  ) {
+    return this.calendarService.patchResourceAvailabilityOverride(
+      req.user.id,
+      resourceId,
+      overrideId,
+      body,
+    );
+  }
+
+  @Delete('resources/:resourceId/availability/overrides/:overrideId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Удалить разовое исключение рабочего времени.' })
+  @ApiParam({ name: 'resourceId', format: 'uuid' })
+  @ApiParam({ name: 'overrideId', format: 'uuid' })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      required: ['id', 'deleted'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        deleted: { type: 'boolean', enum: [true] },
+      },
+    },
+  })
+  async deleteResourceAvailabilityOverride(
+    @Req() req: AuthedRequest,
+    @Param('resourceId', ParseUUIDPipe) resourceId: string,
+    @Param('overrideId', ParseUUIDPipe) overrideId: string,
+  ) {
+    return this.calendarService.deleteResourceAvailabilityOverride(
+      req.user.id,
+      resourceId,
+      overrideId,
+    );
   }
 
   @Get('events')

@@ -21,12 +21,14 @@ import {
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
+  calendarGetResourceAvailability,
   calendarListEvents,
   calendarListResources,
   createBrowserSdkClient,
   specialistsCabinetGetSpecialistMyOrganizations,
 } from "@/shared/api";
 import type {
+  CalendarGetResourceAvailabilityResponse,
   CalendarListEventsResponse,
   CalendarListResourcesResponse,
 } from "@/shared/api/generated/sdk/types.gen";
@@ -36,8 +38,8 @@ import {
   vnNoonUtcForCalendarYmd,
   vnWallClockToUtcDate,
 } from "@/shared/lib/datetime/vn-listing-datetime";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ViewMode } from "@/widgets/calendar";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { CalendarUnavailableRange, ViewMode } from "@/widgets/calendar";
 import { CalendarWidget } from "@/widgets/calendar";
 import {
   BusinessCalendarBlockDialog,
@@ -50,6 +52,7 @@ import { BusinessCalendarBookingDetail } from "./business-calendar-booking-detai
 
 const RESOURCES_QK = ["businessCalendarResources"] as const;
 const EVENTS_QK = ["businessCalendarEvents"] as const;
+const AVAILABILITY_QK = ["businessCalendarAvailability"] as const;
 
 // ─── Date range helpers ───────────────────────────────────────────
 
@@ -121,6 +124,209 @@ function isHiddenCancelledBooking(ev: CalendarEvent): boolean {
     isBookingStatus(bs) &&
     BOOKING_CALENDAR_HIDDEN_STATUSES.has(bs)
   );
+}
+
+type MinuteInterval = { startMinute: number; endMinute: number };
+type AvailabilityRule =
+  CalendarGetResourceAvailabilityResponse["rules"][number];
+type AvailabilityOverride =
+  CalendarGetResourceAvailabilityResponse["overrides"][number];
+
+function weekdayIndex(dayKey: string): number {
+  const short = new Intl.DateTimeFormat("en-US", {
+    timeZone: LISTING_DISPLAY_TZ,
+    weekday: "short",
+  }).format(vnNoonUtcForCalendarYmd(dayKey));
+  const dow: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return dow[short] ?? 1;
+}
+
+function dayKeysForAvailability(viewMode: ViewMode, dayKey: string): string[] {
+  if (viewMode === "week") {
+    const monday = getMondayKey(dayKey);
+    return Array.from({ length: 7 }, (_, i) =>
+      formatListingCalendarYmd(addDays(vnNoonUtcForCalendarYmd(monday), i)),
+    );
+  }
+  if (viewMode === "day") {
+    return [dayKey];
+  }
+  return [];
+}
+
+function minuteToIso(dayKey: string, minute: number): string {
+  const normalizedMinute = Math.max(0, Math.min(1440, minute));
+  const targetDayKey =
+    normalizedMinute >= 1440
+      ? formatListingCalendarYmd(addDays(vnNoonUtcForCalendarYmd(dayKey), 1))
+      : dayKey;
+  const localMinute = normalizedMinute >= 1440 ? 0 : normalizedMinute;
+  const [year, month, day] = targetDayKey.split("-").map(Number);
+  return vnWallClockToUtcDate(
+    year!,
+    month!,
+    day!,
+    Math.floor(localMinute / 60),
+    localMinute % 60,
+  ).toISOString();
+}
+
+function instantMinuteOnDay(raw: string | null, dayKey: string, edge: "start" | "end") {
+  if (raw == null) {
+    return edge === "start" ? 0 : 1440;
+  }
+  const date = parseISO(raw);
+  const instantDayKey = formatListingCalendarYmd(date);
+  if (instantDayKey < dayKey) return 0;
+  if (instantDayKey > dayKey) return 1440;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: LISTING_DISPLAY_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(date)
+    .split(":")
+    .map(Number);
+  return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+}
+
+function mergeIntervals(intervals: MinuteInterval[]): MinuteInterval[] {
+  const sorted = intervals
+    .map((i) => ({
+      startMinute: Math.max(0, Math.min(1440, i.startMinute)),
+      endMinute: Math.max(0, Math.min(1440, i.endMinute)),
+    }))
+    .filter((i) => i.endMinute > i.startMinute)
+    .sort((a, b) => a.startMinute - b.startMinute || a.endMinute - b.endMinute);
+  const merged: MinuteInterval[] = [];
+  for (const interval of sorted) {
+    const last = merged[merged.length - 1];
+    if (last == null || interval.startMinute > last.endMinute) {
+      merged.push({ ...interval });
+    } else {
+      last.endMinute = Math.max(last.endMinute, interval.endMinute);
+    }
+  }
+  return merged;
+}
+
+function subtractInterval(
+  intervals: MinuteInterval[],
+  cut: MinuteInterval,
+): MinuteInterval[] {
+  if (cut.endMinute <= cut.startMinute) return intervals;
+  return intervals.flatMap((interval) => {
+    if (
+      cut.endMinute <= interval.startMinute ||
+      cut.startMinute >= interval.endMinute
+    ) {
+      return [interval];
+    }
+    const next: MinuteInterval[] = [];
+    if (cut.startMinute > interval.startMinute) {
+      next.push({
+        startMinute: interval.startMinute,
+        endMinute: Math.min(cut.startMinute, interval.endMinute),
+      });
+    }
+    if (cut.endMinute < interval.endMinute) {
+      next.push({
+        startMinute: Math.max(cut.endMinute, interval.startMinute),
+        endMinute: interval.endMinute,
+      });
+    }
+    return next;
+  });
+}
+
+function complementIntervals(working: MinuteInterval[]): MinuteInterval[] {
+  const merged = mergeIntervals(working);
+  const unavailable: MinuteInterval[] = [];
+  let cursor = 0;
+  for (const interval of merged) {
+    if (interval.startMinute > cursor) {
+      unavailable.push({ startMinute: cursor, endMinute: interval.startMinute });
+    }
+    cursor = Math.max(cursor, interval.endMinute);
+  }
+  if (cursor < 1440) {
+    unavailable.push({ startMinute: cursor, endMinute: 1440 });
+  }
+  return unavailable;
+}
+
+function overrideToInterval(
+  override: AvailabilityOverride,
+  dayKey: string,
+): MinuteInterval {
+  return {
+    startMinute: instantMinuteOnDay(override.startsAt, dayKey, "start"),
+    endMinute: instantMinuteOnDay(override.endsAt, dayKey, "end"),
+  };
+}
+
+function buildUnavailableRangesForResource(args: {
+  resourceId: string;
+  availability: CalendarGetResourceAvailabilityResponse;
+  dayKeys: string[];
+  label: string;
+}): CalendarUnavailableRange[] {
+  const ranges: CalendarUnavailableRange[] = [];
+  for (const dayKey of args.dayKeys) {
+    const weekday = weekdayIndex(dayKey);
+    const dayRules = args.availability.rules.filter(
+      (rule: AvailabilityRule) => rule.weekday === weekday,
+    );
+    const dayOverrides = args.availability.overrides.filter(
+      (override: AvailabilityOverride) => override.date === dayKey,
+    );
+    let working = mergeIntervals([
+      ...dayRules
+        .filter((rule) => rule.type === "working")
+        .map((rule) => ({
+          startMinute: rule.startMinute,
+          endMinute: rule.endMinute,
+        })),
+      ...dayOverrides
+        .filter((override) => override.type === "extra")
+        .map((override) => overrideToInterval(override, dayKey)),
+    ]);
+
+    for (const interval of [
+      ...dayRules
+        .filter((rule) => rule.type === "break")
+        .map((rule) => ({
+          startMinute: rule.startMinute,
+          endMinute: rule.endMinute,
+        })),
+      ...dayOverrides
+        .filter((override) => override.type === "off")
+        .map((override) => overrideToInterval(override, dayKey)),
+    ]) {
+      working = subtractInterval(working, interval);
+    }
+
+    complementIntervals(working).forEach((interval, idx) => {
+      ranges.push({
+        id: `${args.resourceId}:${dayKey}:${idx}:${interval.startMinute}-${interval.endMinute}`,
+        resourceId: args.resourceId,
+        dayKey,
+        startsAt: minuteToIso(dayKey, interval.startMinute),
+        endsAt: minuteToIso(dayKey, interval.endMinute),
+        label: args.label,
+      });
+    });
+  }
+  return ranges;
 }
 
 // ─── Page component ───────────────────────────────────────────────
@@ -254,22 +460,62 @@ export function BusinessCalendarPage() {
     () => resourcesQuery.data?.resources ?? [],
     [resourcesQuery.data],
   );
+  const availabilityDayKeys = useMemo(
+    () => dayKeysForAvailability(viewMode, dayKey),
+    [viewMode, dayKey],
+  );
+  const availabilityQueries = useQueries({
+    queries: resources.map((resource) => ({
+      queryKey: [...AVAILABILITY_QK, accessToken, locale, resource.id],
+      enabled: calendarApiEnabled && availabilityDayKeys.length > 0,
+      queryFn: async () => {
+        const { data, error } = await calendarGetResourceAvailability({
+          client: sdk,
+          path: { resourceId: resource.id },
+        });
+        if (error || !data) throw error ?? new Error("availability");
+        return data as CalendarGetResourceAvailabilityResponse;
+      },
+    })),
+  });
   const events = useMemo(() => {
     const raw = eventsQuery.data?.events ?? [];
     return raw.filter((e) => !isHiddenCancelledBooking(e));
   }, [eventsQuery.data]);
+  const unavailableRanges = useMemo(
+    () =>
+      availabilityQueries.flatMap((query, index) => {
+        const resource = resources[index];
+        if (resource == null || query.data == null) return [];
+        return buildUnavailableRangesForResource({
+          resourceId: resource.id,
+          availability: query.data,
+          dayKeys: availabilityDayKeys,
+          label: t("notWorking"),
+        });
+      }),
+    [availabilityQueries, availabilityDayKeys, resources, t],
+  );
 
   const orgsBlocking = authed && orgsQuery.isPending;
+  const availabilityPending =
+    availabilityDayKeys.length > 0 && availabilityQueries.some((q) => q.isPending);
   const calendarDataPending =
-    calendarApiEnabled && (resourcesQuery.isPending || eventsQuery.isPending);
+    calendarApiEnabled &&
+    (resourcesQuery.isPending || eventsQuery.isPending || availabilityPending);
   const isLoading =
     sessionStatus === "loading" || orgsBlocking || calendarDataPending;
   const calendarLoadError =
-    calendarApiEnabled && (resourcesQuery.isError || eventsQuery.isError);
+    calendarApiEnabled &&
+    (resourcesQuery.isError ||
+      eventsQuery.isError ||
+      availabilityQueries.some((q) => q.isError));
   const isFetching =
     calendarApiEnabled &&
     authed &&
-    (resourcesQuery.isFetching || eventsQuery.isFetching) &&
+    (resourcesQuery.isFetching ||
+      eventsQuery.isFetching ||
+      availabilityQueries.some((q) => q.isFetching)) &&
     !isLoading;
 
   // ── Коллбэки ─────────────────────────────────────────────────
@@ -432,6 +678,7 @@ export function BusinessCalendarPage() {
           <CalendarWidget
             resources={resources}
             events={events}
+            unavailableRanges={unavailableRanges}
             isLoading={calendarDataPending}
             isFetching={isFetching}
             viewMode={viewMode}

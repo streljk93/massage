@@ -1,0 +1,91 @@
+{
+  "messages": {
+    "en": {
+      "businessHiringPage": {
+        "title": "Hiring",
+        "eyebrow": "Hiring",
+        "heroTitle": "Vacancies and candidate contacts",
+        "heroHint": "Manage hiring separately from your current specialist team.",
+        "jobsTitle": "Vacancies",
+        "contactsTitle": "Candidate contacts",
+        "jobTitlePlaceholder": "Vacancy title",
+        "createJob": "Create",
+        "jobMeta": "{status} · {count, plural, one {# contact} other {# contacts}}",
+        "jobStatus": {
+          "draft": "Draft",
+          "open": "Open",
+          "closed": "Closed"
+        },
+        "contactSource": {
+          "application": "Specialist applied"
+        },
+        "contactStatus": {
+          "pending": "Pending",
+          "accepted": "Accepted",
+          "rejected": "Rejected",
+          "closed": "Closed"
+        },
+        "emptyTitle": "Hiring is unavailable",
+        "emptyHint": "You need an active organization and hiring permissions."
+      }
+    },
+    "vi": {
+      "businessHiringPage": {
+        "title": "Tuyển dụng",
+        "eyebrow": "Tuyển dụng",
+        "heroTitle": "Vị trí tuyển dụng và liên hệ ứng viên",
+        "heroHint": "Quản lý tuyển dụng tách biệt khỏi đội ngũ chuyên viên hiện tại.",
+        "jobsTitle": "Vị trí tuyển dụng",
+        "contactsTitle": "Liên hệ ứng viên",
+        "jobTitlePlaceholder": "Tên vị trí",
+        "createJob": "Tạo",
+        "jobMeta": "{status} · {count, plural, one {# liên hệ} other {# liên hệ}}",
+        "jobStatus": {
+          "draft": "Nháp",
+          "open": "Đang mở",
+          "closed": "Đã đóng"
+        },
+        "contactSource": {
+          "application": "Chuyên viên đã ứng tuyển"
+        },
+        "contactStatus": {
+          "pending": "Đang chờ",
+          "accepted": "Đã nhận",
+          "rejected": "Từ chối",
+          "closed": "Đã đóng"
+        },
+        "emptyTitle": "Chưa thể tuyển dụng",
+        "emptyHint": "Bạn cần tổ chức hiện tại và quyền tuyển dụng."
+      }
+    },
+    "ru": {
+      "businessHiringPage": {
+        "title": "Найм",
+        "eyebrow": "Найм",
+        "heroTitle": "Вакансии и контакты кандидатов",
+        "heroHint": "Управляйте наймом отдельно от текущей команды специалистов.",
+        "jobsTitle": "Вакансии",
+        "contactsTitle": "Контакты с кандидатами",
+        "jobTitlePlaceholder": "Название вакансии",
+        "createJob": "Создать",
+        "jobMeta": "{status} · {count, plural, one {# контакт} few {# контакта} many {# контактов} other {# контакта}}",
+        "jobStatus": {
+          "draft": "Черновик",
+          "open": "Открыта",
+          "closed": "Закрыта"
+        },
+        "contactSource": {
+          "application": "Специалист откликнулся"
+        },
+        "contactStatus": {
+          "pending": "Ожидает",
+          "accepted": "Принят",
+          "rejected": "Отклонён",
+          "closed": "Закрыт"
+        },
+        "emptyTitle": "Найм недоступен",
+        "emptyHint": "Нужна активная организация и права на найм."
+      }
+    }
+  }
+}

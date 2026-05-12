@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CalendarCreateBlockData, CalendarCreateBlockErrors, CalendarCreateBlockResponses, CalendarDeleteBlockData, CalendarDeleteBlockErrors, CalendarDeleteBlockResponses, CalendarListEventsData, CalendarListEventsErrors, CalendarListEventsResponses, CalendarListResourcesData, CalendarListResourcesErrors, CalendarListResourcesResponses, CalendarUpdateBlockData, CalendarUpdateBlockErrors, CalendarUpdateBlockResponses, CatalogGetBulkCategoriesByMajorSlugsData, CatalogGetBulkCategoriesByMajorSlugsErrors, CatalogGetBulkCategoriesByMajorSlugsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, ContentModerationApproveData, ContentModerationApproveErrors, ContentModerationListCasesData, ContentModerationListCasesErrors, ContentModerationListCasesResponses, ContentModerationRejectData, ContentModerationRejectErrors, DevBookingsRebuildProjectionData, DevBookingsRebuildProjectionErrors, DevBookingsRebuildProjectionResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevModerationGetQueueData, DevModerationGetQueueResponses, DevModerationImageEvalData, DevModerationImageEvalErrors, DevModerationImageEvalResponses, DevModerationOllamaEvalData, DevModerationOllamaEvalResponses, DevModerationResolveCaseData, DevModerationResolveCaseErrors, DevModerationResolveCaseResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevSearchIndexReindexListingEdgesData, DevSearchIndexReindexListingEdgesErrors, DevSearchIndexReindexListingEdgesResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, GalleryCabinetGetOrganizationVitrineGalleryData, GalleryCabinetGetOrganizationVitrineGalleryErrors, GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetPatchItemsOrderData, GalleryCabinetPatchItemsOrderErrors, GalleryCabinetPatchItemsOrderResponses, HealthGetHealthData, HealthGetHealthResponses, OrganizationOfferingsCabinetCreateDraftData, OrganizationOfferingsCabinetCreateDraftErrors, OrganizationOfferingsCabinetCreateDraftResponses, OrganizationOfferingsCabinetCreatePriceOptionData, OrganizationOfferingsCabinetCreatePriceOptionErrors, OrganizationOfferingsCabinetCreatePriceOptionResponses, OrganizationOfferingsCabinetCreatePriceOverrideData, OrganizationOfferingsCabinetCreatePriceOverrideErrors, OrganizationOfferingsCabinetCreatePriceOverrideResponses, OrganizationOfferingsCabinetCreateSpecialistAssignmentData, OrganizationOfferingsCabinetCreateSpecialistAssignmentErrors, OrganizationOfferingsCabinetCreateSpecialistAssignmentResponses, OrganizationOfferingsCabinetDeletePriceOverrideData, OrganizationOfferingsCabinetDeletePriceOverrideErrors, OrganizationOfferingsCabinetDeletePriceOverrideResponses, OrganizationOfferingsCabinetListAssignableSpecialistsData, OrganizationOfferingsCabinetListAssignableSpecialistsErrors, OrganizationOfferingsCabinetListAssignableSpecialistsResponses, OrganizationOfferingsCabinetListMineData, OrganizationOfferingsCabinetListMineErrors, OrganizationOfferingsCabinetListMineResponses, OrganizationOfferingsCabinetPatchOfferingData, OrganizationOfferingsCabinetPatchOfferingErrors, OrganizationOfferingsCabinetPatchOfferingResponses, OrganizationOfferingsCabinetPatchPriceOptionData, OrganizationOfferingsCabinetPatchPriceOptionErrors, OrganizationOfferingsCabinetPatchPriceOptionResponses, OrganizationOfferingsCabinetPatchPriceOverrideData, OrganizationOfferingsCabinetPatchPriceOverrideErrors, OrganizationOfferingsCabinetPatchPriceOverrideResponses, OrganizationOfferingsCabinetPatchSpecialistAssignmentData, OrganizationOfferingsCabinetPatchSpecialistAssignmentErrors, OrganizationOfferingsCabinetPatchSpecialistAssignmentResponses, OrganizationOfferingsCabinetPublishOfferingData, OrganizationOfferingsCabinetPublishOfferingErrors, OrganizationOfferingsCabinetPublishOfferingResponses, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberData, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberErrors, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponses, OrganizationsCabinetDeleteOrganizationAsOwnerData, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditData, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetCabinetOrganizationTeamMembersData, OrganizationsCabinetGetCabinetOrganizationTeamMembersErrors, OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleData, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleErrors, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponses, OrganizationsCabinetPatchOrganizationData, OrganizationsCabinetPatchOrganizationErrors, OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsGetWorkplaceOrganizationSearchData, OrganizationsGetWorkplaceOrganizationSearchErrors, OrganizationsGetWorkplaceOrganizationSearchResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsCancelConfirmedData, SpecialistBookingsCancelConfirmedErrors, SpecialistBookingsCancelConfirmedResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsRejectPendingData, SpecialistBookingsRejectPendingErrors, SpecialistBookingsRejectPendingResponses, SpecialistBookingsRescheduleConfirmedData, SpecialistBookingsRescheduleConfirmedErrors, SpecialistBookingsRescheduleConfirmedResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewErrors, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses, SpecialistsCabinetGetSpecialistCabinetClientsData, SpecialistsCabinetGetSpecialistCabinetClientsErrors, SpecialistsCabinetGetSpecialistCabinetClientsResponses, SpecialistsCabinetGetSpecialistMyOrganizationsData, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetGetSpecialistSalonBookingsData, SpecialistsCabinetGetSpecialistSalonBookingsErrors, SpecialistsCabinetGetSpecialistSalonBookingsResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistCabinetSkillsData, SpecialistsCabinetPatchSpecialistCabinetSkillsErrors, SpecialistsCabinetPatchSpecialistCabinetSkillsResponses, SpecialistsCabinetPatchSpecialistOnboardingPreferencesData, SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors, SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
+import type { AddressResolveData, AddressResolveErrors, AddressResolveResponses, AddressReverseData, AddressReverseErrors, AddressReverseResponses, AddressSuggestionsData, AddressSuggestionsErrors, AddressSuggestionsResponses, AdvertisingListByPlacementData, AdvertisingListByPlacementErrors, AdvertisingListByPlacementResponses, AuthLoginData, AuthLoginErrors, AuthLoginResponses, AuthLoginWithOauthData, AuthLoginWithOauthErrors, AuthLoginWithOauthResponses, AuthRefreshData, AuthRefreshErrors, AuthRefreshResponses, AuthRegisterData, AuthRegisterErrors, AuthRegisterResponses, AuthResendVerificationData, AuthResendVerificationErrors, AuthResendVerificationResponses, AuthVerifyEmailData, AuthVerifyEmailErrors, AuthVerifyEmailResponses, BookingsCancelData, BookingsCancelErrors, BookingsCancelResponses, BookingsCreateData, BookingsCreateErrors, BookingsCreateResponses, BookingsListData, BookingsListErrors, BookingsListResponses, BookingsSubmitVisitReviewsData, BookingsSubmitVisitReviewsErrors, BookingsSubmitVisitReviewsResponses, CalendarCreateBlockData, CalendarCreateBlockErrors, CalendarCreateBlockResponses, CalendarCreateResourceAvailabilityOverrideData, CalendarCreateResourceAvailabilityOverrideResponses, CalendarDeleteBlockData, CalendarDeleteBlockErrors, CalendarDeleteBlockResponses, CalendarDeleteResourceAvailabilityOverrideData, CalendarDeleteResourceAvailabilityOverrideResponses, CalendarGetResourceAvailabilityData, CalendarGetResourceAvailabilityResponses, CalendarListEventsData, CalendarListEventsErrors, CalendarListEventsResponses, CalendarListResourcesData, CalendarListResourcesErrors, CalendarListResourcesResponses, CalendarPatchResourceAvailabilityOverrideData, CalendarPatchResourceAvailabilityOverrideResponses, CalendarPutResourceAvailabilityRulesBulkData, CalendarPutResourceAvailabilityRulesBulkResponses, CalendarPutResourceAvailabilityRulesData, CalendarPutResourceAvailabilityRulesResponses, CalendarUpdateBlockData, CalendarUpdateBlockErrors, CalendarUpdateBlockResponses, CatalogGetBulkCategoriesByMajorSlugsData, CatalogGetBulkCategoriesByMajorSlugsErrors, CatalogGetBulkCategoriesByMajorSlugsResponses, CatalogGetCategoriesByMajorSlugData, CatalogGetCategoriesByMajorSlugErrors, CatalogGetCategoriesByMajorSlugResponses, CatalogGetCategoryByMajorAndSlugData, CatalogGetCategoryByMajorAndSlugErrors, CatalogGetCategoryByMajorAndSlugResponses, CatalogGetMajorCategoriesData, CatalogGetMajorCategoriesErrors, CatalogGetMajorCategoriesResponses, ContentModerationApproveData, ContentModerationApproveErrors, ContentModerationListCasesData, ContentModerationListCasesErrors, ContentModerationListCasesResponses, ContentModerationRejectData, ContentModerationRejectErrors, DevBookingsRebuildProjectionData, DevBookingsRebuildProjectionErrors, DevBookingsRebuildProjectionResponses, DevBookingsSetStatusData, DevBookingsSetStatusErrors, DevBookingsSetStatusResponses, DevFcmTestTestFcmData, DevFcmTestTestFcmErrors, DevFcmTestTestFcmResponses, DevModerationGetQueueData, DevModerationGetQueueResponses, DevModerationImageEvalData, DevModerationImageEvalErrors, DevModerationImageEvalResponses, DevModerationOllamaEvalData, DevModerationOllamaEvalResponses, DevModerationResolveCaseData, DevModerationResolveCaseErrors, DevModerationResolveCaseResponses, DevPersonalizationRecomputeProfileData, DevPersonalizationRecomputeProfileErrors, DevPersonalizationRecomputeProfileResponses, DevSearchIndexReindexListingEdgesData, DevSearchIndexReindexListingEdgesErrors, DevSearchIndexReindexListingEdgesResponses, DevWorkplaceJoinReviewPostReviewData, DevWorkplaceJoinReviewPostReviewResponses, DirectoryGetCatalogFilterOptionsData, DirectoryGetCatalogFilterOptionsErrors, DirectoryGetCatalogFilterOptionsResponses, FavoritesAddData, FavoritesAddErrors, FavoritesAddResponses, FavoritesListData, FavoritesListErrors, FavoritesListOrganizationsListingData, FavoritesListOrganizationsListingErrors, FavoritesListOrganizationsListingResponses, FavoritesListResponses, FavoritesListSpecialistsListingData, FavoritesListSpecialistsListingErrors, FavoritesListSpecialistsListingResponses, FavoritesMergeData, FavoritesMergeErrors, FavoritesMergeResponses, FavoritesRemoveData, FavoritesRemoveErrors, FavoritesRemoveResponses, FilesDownloadPrivateData, FilesDownloadPrivateErrors, FilesDownloadPrivateResponses, FilesDownloadPublicData, FilesDownloadPublicResponses, FilesUploadPrivateData, FilesUploadPrivateErrors, FilesUploadPrivateResponses, FilesUploadPublicData, FilesUploadPublicErrors, FilesUploadPublicResponses, GalleryCabinetGetOrganizationVitrineGalleryData, GalleryCabinetGetOrganizationVitrineGalleryErrors, GalleryCabinetGetOrganizationVitrineGalleryResponses, GalleryCabinetPatchItemsOrderData, GalleryCabinetPatchItemsOrderErrors, GalleryCabinetPatchItemsOrderResponses, HealthGetHealthData, HealthGetHealthResponses, HiringApplyToJobPostingData, HiringApplyToJobPostingResponses, HiringListCandidatesData, HiringListCandidatesErrors, HiringListCandidatesResponses, HiringListJobPostingCandidatesData, HiringListJobPostingCandidatesResponses, HiringListPublicJobPostingsData, HiringListPublicJobPostingsResponses, OrganizationHiringCreateJobPostingData, OrganizationHiringCreateJobPostingResponses, OrganizationHiringListApplicationsData, OrganizationHiringListApplicationsResponses, OrganizationHiringListJobPostingsData, OrganizationHiringListJobPostingsResponses, OrganizationHiringPatchJobPostingData, OrganizationHiringPatchJobPostingResponses, OrganizationHiringReviewApplicationData, OrganizationHiringReviewApplicationResponses, OrganizationOfferingsCabinetCreateDraftData, OrganizationOfferingsCabinetCreateDraftErrors, OrganizationOfferingsCabinetCreateDraftResponses, OrganizationOfferingsCabinetCreatePriceOptionData, OrganizationOfferingsCabinetCreatePriceOptionErrors, OrganizationOfferingsCabinetCreatePriceOptionResponses, OrganizationOfferingsCabinetCreatePriceOverrideData, OrganizationOfferingsCabinetCreatePriceOverrideErrors, OrganizationOfferingsCabinetCreatePriceOverrideResponses, OrganizationOfferingsCabinetCreateSpecialistAssignmentData, OrganizationOfferingsCabinetCreateSpecialistAssignmentErrors, OrganizationOfferingsCabinetCreateSpecialistAssignmentResponses, OrganizationOfferingsCabinetDeletePriceOverrideData, OrganizationOfferingsCabinetDeletePriceOverrideErrors, OrganizationOfferingsCabinetDeletePriceOverrideResponses, OrganizationOfferingsCabinetListAssignableSpecialistsData, OrganizationOfferingsCabinetListAssignableSpecialistsErrors, OrganizationOfferingsCabinetListAssignableSpecialistsResponses, OrganizationOfferingsCabinetListMineData, OrganizationOfferingsCabinetListMineErrors, OrganizationOfferingsCabinetListMineResponses, OrganizationOfferingsCabinetPatchOfferingData, OrganizationOfferingsCabinetPatchOfferingErrors, OrganizationOfferingsCabinetPatchOfferingResponses, OrganizationOfferingsCabinetPatchPriceOptionData, OrganizationOfferingsCabinetPatchPriceOptionErrors, OrganizationOfferingsCabinetPatchPriceOptionResponses, OrganizationOfferingsCabinetPatchPriceOverrideData, OrganizationOfferingsCabinetPatchPriceOverrideErrors, OrganizationOfferingsCabinetPatchPriceOverrideResponses, OrganizationOfferingsCabinetPatchSpecialistAssignmentData, OrganizationOfferingsCabinetPatchSpecialistAssignmentErrors, OrganizationOfferingsCabinetPatchSpecialistAssignmentResponses, OrganizationOfferingsCabinetPublishOfferingData, OrganizationOfferingsCabinetPublishOfferingErrors, OrganizationOfferingsCabinetPublishOfferingResponses, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberData, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberErrors, OrganizationsCabinetDeleteCabinetOrganizationTeamMemberResponses, OrganizationsCabinetDeleteOrganizationAsOwnerData, OrganizationsCabinetDeleteOrganizationAsOwnerErrors, OrganizationsCabinetDeleteOrganizationAsOwnerResponses, OrganizationsCabinetGetCabinetOrganizationProfileForEditData, OrganizationsCabinetGetCabinetOrganizationProfileForEditErrors, OrganizationsCabinetGetCabinetOrganizationProfileForEditResponses, OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesData, OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesErrors, OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponses, OrganizationsCabinetGetCabinetOrganizationTeamMembersData, OrganizationsCabinetGetCabinetOrganizationTeamMembersErrors, OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewData, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewErrors, OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponses, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileData, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors, OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationData, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationErrors, OrganizationsCabinetGetWorkplaceJoinRequestsForOrganizationResponses, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleData, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleErrors, OrganizationsCabinetPatchCabinetOrganizationTeamMemberRoleResponses, OrganizationsCabinetPatchOrganizationData, OrganizationsCabinetPatchOrganizationErrors, OrganizationsCabinetPatchOrganizationResponses, OrganizationsCabinetPostCabinetOrganizationTeamInvitationData, OrganizationsCabinetPostCabinetOrganizationTeamInvitationErrors, OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponses, OrganizationsCabinetPostCreateOrganizationData, OrganizationsCabinetPostCreateOrganizationErrors, OrganizationsCabinetPostCreateOrganizationResponses, OrganizationsCabinetPostRequestWorkplaceJoinData, OrganizationsCabinetPostRequestWorkplaceJoinErrors, OrganizationsCabinetPostRequestWorkplaceJoinResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestData, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsGetByIdData, OrganizationsGetByIdErrors, OrganizationsGetByIdResponses, OrganizationsGetWorkplaceOrganizationSearchData, OrganizationsGetWorkplaceOrganizationSearchErrors, OrganizationsGetWorkplaceOrganizationSearchResponses, OrganizationsListData, OrganizationsListErrors, OrganizationsListResponses, OrganizationsListReviewsData, OrganizationsListReviewsErrors, OrganizationsListReviewsResponses, PersonalizationGetRecommendationsData, PersonalizationGetRecommendationsResponses, PersonalizationIngestEventsData, PersonalizationIngestEventsErrors, PersonalizationIngestEventsResponses, PushTokensRegisterData, PushTokensRegisterErrors, PushTokensRegisterResponses, PushTokensRevokeData, PushTokensRevokeErrors, PushTokensRevokeResponses, SpecialistBookingsCancelConfirmedData, SpecialistBookingsCancelConfirmedErrors, SpecialistBookingsCancelConfirmedResponses, SpecialistBookingsConfirmPendingData, SpecialistBookingsConfirmPendingErrors, SpecialistBookingsConfirmPendingResponses, SpecialistBookingsRejectPendingData, SpecialistBookingsRejectPendingErrors, SpecialistBookingsRejectPendingResponses, SpecialistBookingsRescheduleConfirmedData, SpecialistBookingsRescheduleConfirmedErrors, SpecialistBookingsRescheduleConfirmedResponses, SpecialistBookingsStartVisitData, SpecialistBookingsStartVisitErrors, SpecialistBookingsStartVisitResponses, SpecialistHiringGetResumeData, SpecialistHiringGetResumeResponses, SpecialistHiringPatchResumeData, SpecialistHiringPatchResumeResponses, SpecialistOrganizationInvitationsListMyOrganizationInvitationsData, SpecialistOrganizationInvitationsListMyOrganizationInvitationsErrors, SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponses, SpecialistOrganizationInvitationsRespondMyOrganizationInvitationData, SpecialistOrganizationInvitationsRespondMyOrganizationInvitationErrors, SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponses, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewErrors, SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponses, SpecialistsCabinetGetSpecialistCabinetClientsData, SpecialistsCabinetGetSpecialistCabinetClientsErrors, SpecialistsCabinetGetSpecialistCabinetClientsResponses, SpecialistsCabinetGetSpecialistMyOrganizationsData, SpecialistsCabinetGetSpecialistMyOrganizationsErrors, SpecialistsCabinetGetSpecialistMyOrganizationsResponses, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsData, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsErrors, SpecialistsCabinetGetSpecialistMyWorkplaceJoinRequestsResponses, SpecialistsCabinetGetSpecialistOnboardingData, SpecialistsCabinetGetSpecialistOnboardingErrors, SpecialistsCabinetGetSpecialistOnboardingResponses, SpecialistsCabinetGetSpecialistSalonBookingsData, SpecialistsCabinetGetSpecialistSalonBookingsErrors, SpecialistsCabinetGetSpecialistSalonBookingsResponses, SpecialistsCabinetPatchSpecialistActiveOrganizationData, SpecialistsCabinetPatchSpecialistActiveOrganizationErrors, SpecialistsCabinetPatchSpecialistActiveOrganizationResponses, SpecialistsCabinetPatchSpecialistCabinetSkillsData, SpecialistsCabinetPatchSpecialistCabinetSkillsErrors, SpecialistsCabinetPatchSpecialistCabinetSkillsResponses, SpecialistsCabinetPatchSpecialistOnboardingPreferencesData, SpecialistsCabinetPatchSpecialistOnboardingPreferencesErrors, SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses, SpecialistsCabinetPatchSpecialistProfileData, SpecialistsCabinetPatchSpecialistProfileErrors, SpecialistsCabinetPatchSpecialistProfileResponses, SpecialistsCabinetPostEnsureSpecialistData, SpecialistsCabinetPostEnsureSpecialistErrors, SpecialistsCabinetPostEnsureSpecialistResponses, SpecialistsCabinetPostSpecialistOnboardingCompleteData, SpecialistsCabinetPostSpecialistOnboardingCompleteErrors, SpecialistsCabinetPostSpecialistOnboardingCompleteResponses, SpecialistsGetByIdData, SpecialistsGetByIdErrors, SpecialistsGetByIdResponses, SpecialistsListData, SpecialistsListErrors, SpecialistsListResponses, SpecialistsListReviewsData, SpecialistsListReviewsErrors, SpecialistsListReviewsResponses, UsersMeData, UsersMeErrors, UsersMeResponses, UsersPatchMeData, UsersPatchMeErrors, UsersPatchMeResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -277,6 +277,32 @@ export const organizationsCabinetGetCabinetOrganizationTeamMembers = <ThrowOnErr
 });
 
 /**
+ * Поиск специалистов для прямого приглашения в команду организации.
+ *
+ * Кабинетный поиск по профилям специалистов, без требований публичной витрины, резюме или вакансии.
+ */
+export const organizationsCabinetGetCabinetOrganizationTeamInviteCandidates = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesData, ThrowOnError>) => (options.client ?? client).get<OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesResponses, OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/cabinet-team/invite-candidates',
+    ...options
+});
+
+/**
+ * Пригласить специалиста в команду организации.
+ *
+ * Отдельный от найма поток членства: приглашение не связано с вакансией или резюме.
+ */
+export const organizationsCabinetPostCabinetOrganizationTeamInvitation = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostCabinetOrganizationTeamInvitationData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostCabinetOrganizationTeamInvitationResponses, OrganizationsCabinetPostCabinetOrganizationTeamInvitationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/cabinet-team/invitations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Сменить роль участника команды организации.
  *
  * Доступно только владельцу организации. Роль owner через этот endpoint не выдается.
@@ -376,6 +402,28 @@ export const organizationsCabinetGetWorkplaceJoinApplicantCabinetProfile = <Thro
 export const organizationsCabinetPostReviewWorkplaceJoinRequest = <ThrowOnError extends boolean = false>(options: Options<OrganizationsCabinetPostReviewWorkplaceJoinRequestData, ThrowOnError>) => (options.client ?? client).post<OrganizationsCabinetPostReviewWorkplaceJoinRequestResponses, OrganizationsCabinetPostReviewWorkplaceJoinRequestErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/organizations/{organizationId}/workplace-join-requests/{requestId}/review',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Приглашения текущего специалиста в команды организаций.
+ */
+export const specialistOrganizationInvitationsListMyOrganizationInvitations = <ThrowOnError extends boolean = false>(options?: Options<SpecialistOrganizationInvitationsListMyOrganizationInvitationsData, ThrowOnError>) => (options?.client ?? client).get<SpecialistOrganizationInvitationsListMyOrganizationInvitationsResponses, SpecialistOrganizationInvitationsListMyOrganizationInvitationsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/organization-invitations',
+    ...options
+});
+
+/**
+ * Ответить на приглашение организации: принять или отклонить.
+ */
+export const specialistOrganizationInvitationsRespondMyOrganizationInvitation = <ThrowOnError extends boolean = false>(options: Options<SpecialistOrganizationInvitationsRespondMyOrganizationInvitationData, ThrowOnError>) => (options.client ?? client).post<SpecialistOrganizationInvitationsRespondMyOrganizationInvitationResponses, SpecialistOrganizationInvitationsRespondMyOrganizationInvitationErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/organization-invitations/{invitationId}/respond',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -843,6 +891,78 @@ export const calendarListResources = <ThrowOnError extends boolean = false>(opti
 });
 
 /**
+ * Правила и исключения рабочего времени ресурса.
+ */
+export const calendarGetResourceAvailability = <ThrowOnError extends boolean = false>(options: Options<CalendarGetResourceAvailabilityData, ThrowOnError>) => (options.client ?? client).get<CalendarGetResourceAvailabilityResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/resources/{resourceId}/availability',
+    ...options
+});
+
+/**
+ * Заменить недельные правила рабочего времени.
+ */
+export const calendarPutResourceAvailabilityRules = <ThrowOnError extends boolean = false>(options: Options<CalendarPutResourceAvailabilityRulesData, ThrowOnError>) => (options.client ?? client).put<CalendarPutResourceAvailabilityRulesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/resources/{resourceId}/availability/rules',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Заменить недельные правила рабочего времени для ресурсов.
+ *
+ * Атомарно применяет один набор недельных правил к нескольким ресурсам календаря активной организации.
+ */
+export const calendarPutResourceAvailabilityRulesBulk = <ThrowOnError extends boolean = false>(options: Options<CalendarPutResourceAvailabilityRulesBulkData, ThrowOnError>) => (options.client ?? client).put<CalendarPutResourceAvailabilityRulesBulkResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/availability/rules/bulk',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Создать разовое исключение рабочего времени.
+ */
+export const calendarCreateResourceAvailabilityOverride = <ThrowOnError extends boolean = false>(options: Options<CalendarCreateResourceAvailabilityOverrideData, ThrowOnError>) => (options.client ?? client).post<CalendarCreateResourceAvailabilityOverrideResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/resources/{resourceId}/availability/overrides',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Удалить разовое исключение рабочего времени.
+ */
+export const calendarDeleteResourceAvailabilityOverride = <ThrowOnError extends boolean = false>(options: Options<CalendarDeleteResourceAvailabilityOverrideData, ThrowOnError>) => (options.client ?? client).delete<CalendarDeleteResourceAvailabilityOverrideResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/resources/{resourceId}/availability/overrides/{overrideId}',
+    ...options
+});
+
+/**
+ * Изменить разовое исключение рабочего времени.
+ */
+export const calendarPatchResourceAvailabilityOverride = <ThrowOnError extends boolean = false>(options: Options<CalendarPatchResourceAvailabilityOverrideData, ThrowOnError>) => (options.client ?? client).patch<CalendarPatchResourceAvailabilityOverrideResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/calendar/resources/{resourceId}/availability/overrides/{overrideId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Окно событий календаря активной организации
  *
  * Window query: `startsAt < to AND endsAt > from`, с cursor pagination по `startsAt,id`.
@@ -926,6 +1046,101 @@ export const pushTokensRegister = <ThrowOnError extends boolean = false>(options
  * Проверка доступности сервиса
  */
 export const healthGetHealth = <ThrowOnError extends boolean = false>(options?: Options<HealthGetHealthData, ThrowOnError>) => (options?.client ?? client).get<HealthGetHealthResponses, unknown, ThrowOnError>({ url: '/health', ...options });
+
+/**
+ * Глобальный поиск кандидатов по публичным резюме.
+ */
+export const hiringListCandidates = <ThrowOnError extends boolean = false>(options?: Options<HiringListCandidatesData, ThrowOnError>) => (options?.client ?? client).get<HiringListCandidatesResponses, HiringListCandidatesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/hiring/candidates',
+    ...options
+});
+
+/**
+ * Подбор кандидатов под вакансию.
+ */
+export const hiringListJobPostingCandidates = <ThrowOnError extends boolean = false>(options: Options<HiringListJobPostingCandidatesData, ThrowOnError>) => (options.client ?? client).get<HiringListJobPostingCandidatesResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/hiring/job-postings/{jobPostingId}/candidates',
+    ...options
+});
+
+/**
+ * Публичный список открытых вакансий (MVP stub).
+ */
+export const hiringListPublicJobPostings = <ThrowOnError extends boolean = false>(options?: Options<HiringListPublicJobPostingsData, ThrowOnError>) => (options?.client ?? client).get<HiringListPublicJobPostingsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/hiring/job-postings',
+    ...options
+});
+
+export const hiringApplyToJobPosting = <ThrowOnError extends boolean = false>(options: Options<HiringApplyToJobPostingData, ThrowOnError>) => (options.client ?? client).post<HiringApplyToJobPostingResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/hiring/job-postings/{jobPostingId}/apply',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const organizationHiringListJobPostings = <ThrowOnError extends boolean = false>(options: Options<OrganizationHiringListJobPostingsData, ThrowOnError>) => (options.client ?? client).get<OrganizationHiringListJobPostingsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/hiring/job-postings',
+    ...options
+});
+
+export const organizationHiringCreateJobPosting = <ThrowOnError extends boolean = false>(options: Options<OrganizationHiringCreateJobPostingData, ThrowOnError>) => (options.client ?? client).post<OrganizationHiringCreateJobPostingResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/hiring/job-postings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const organizationHiringPatchJobPosting = <ThrowOnError extends boolean = false>(options: Options<OrganizationHiringPatchJobPostingData, ThrowOnError>) => (options.client ?? client).patch<OrganizationHiringPatchJobPostingResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/hiring/job-postings/{jobPostingId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const organizationHiringListApplications = <ThrowOnError extends boolean = false>(options: Options<OrganizationHiringListApplicationsData, ThrowOnError>) => (options.client ?? client).get<OrganizationHiringListApplicationsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/hiring/applications',
+    ...options
+});
+
+export const organizationHiringReviewApplication = <ThrowOnError extends boolean = false>(options: Options<OrganizationHiringReviewApplicationData, ThrowOnError>) => (options.client ?? client).patch<OrganizationHiringReviewApplicationResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/organizations/{organizationId}/hiring/applications/{contactId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const specialistHiringGetResume = <ThrowOnError extends boolean = false>(options?: Options<SpecialistHiringGetResumeData, ThrowOnError>) => (options?.client ?? client).get<SpecialistHiringGetResumeResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/resume',
+    ...options
+});
+
+export const specialistHiringPatchResume = <ThrowOnError extends boolean = false>(options: Options<SpecialistHiringPatchResumeData, ThrowOnError>) => (options.client ?? client).patch<SpecialistHiringPatchResumeResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/specialists/me/resume',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Загрузить публичный файл

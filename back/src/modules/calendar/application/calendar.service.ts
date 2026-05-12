@@ -6,6 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  type AvailabilityOverrideType,
+  type AvailabilityRuleType,
   CalendarBlockReason,
   CalendarEventType,
   CalendarResourceType,
@@ -168,13 +170,6 @@ export class CalendarService {
     args: { organizationId: string; specialistId: string },
   ): Promise<CalendarResourceRow> {
     await CalendarTxLocks.acquireResourceIdentity(tx, args);
-    const existing = await this.calendarRepository.findSpecialistResourceTx(
-      tx,
-      args,
-    );
-    if (existing != null) {
-      return existing;
-    }
     const specialist = await tx.specialist.findFirst({
       where: { id: args.specialistId, deletedAt: null },
       select: {
@@ -196,13 +191,29 @@ export class CalendarService {
           'Specialist or organization was not found for calendar resource',
       });
     }
+    const resourceName =
+      specialist.listingName?.trim() ||
+      specialist.user.name?.trim() ||
+      'Specialist';
+    const existingResources =
+      await this.calendarRepository.findSpecialistResourcesTx(tx, args);
+    const existing = existingResources[0] ?? null;
+    if (existing != null) {
+      await this.calendarRepository.deactivateSpecialistResourceDuplicatesTx(
+        tx,
+        {
+          resourceIds: existingResources.slice(1).map((r) => r.id),
+        },
+      );
+      return this.calendarRepository.restoreSpecialistResourceTx(tx, {
+        resourceId: existing.id,
+        name: resourceName,
+      });
+    }
     return this.calendarRepository.createSpecialistResourceTx(tx, {
       organizationId: args.organizationId,
       specialistId: args.specialistId,
-      name:
-        specialist.listingName?.trim() ||
-        specialist.user.name?.trim() ||
-        'Specialist',
+      name: resourceName,
       workdayStartMinute: organization.listingWorkdayStartMinute,
       workdayEndMinute: organization.listingWorkdayEndMinute,
     });
@@ -448,6 +459,201 @@ export class CalendarService {
     return { id: eventId, deleted: true };
   }
 
+  async getResourceAvailability(userId: string, resourceId: string) {
+    const ctx = await this.resolveAccessContext(userId);
+    const resource = await this.loadResourceForAvailability(
+      ctx,
+      resourceId,
+      'view',
+    );
+    const [rules, overrides] = await Promise.all([
+      this.prisma.availabilityRule.findMany({
+        where: { resourceId, deletedAt: null },
+        orderBy: [{ weekday: 'asc' }, { startMinute: 'asc' }],
+      }),
+      this.prisma.availabilityOverride.findMany({
+        where: { resourceId, deletedAt: null },
+        orderBy: [{ date: 'asc' }, { startsAt: 'asc' }],
+      }),
+    ]);
+    return {
+      resource: {
+        id: resource.id,
+        organizationId: resource.organizationId,
+        specialistId: resource.specialistId,
+        name: resource.name,
+      },
+      rules: rules.map((rule) => ({
+        id: rule.id,
+        weekday: rule.weekday,
+        startMinute: rule.startMinute,
+        endMinute: rule.endMinute,
+        type: rule.type,
+      })),
+      overrides: overrides.map((override) => ({
+        id: override.id,
+        date: override.date,
+        startsAt: override.startsAt?.toISOString() ?? null,
+        endsAt: override.endsAt?.toISOString() ?? null,
+        type: override.type,
+      })),
+    };
+  }
+
+  async replaceResourceAvailabilityRules(
+    userId: string,
+    resourceId: string,
+    rules: Array<{
+      weekday: number;
+      startMinute: number;
+      endMinute: number;
+      type: AvailabilityRuleType;
+    }>,
+  ) {
+    const ctx = await this.resolveAccessContext(userId);
+    await this.loadResourceForAvailability(ctx, resourceId, 'manage');
+    await this.prisma.$transaction(async (tx) => {
+      await tx.availabilityRule.updateMany({
+        where: { resourceId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      if (rules.length > 0) {
+        await tx.availabilityRule.createMany({
+          data: rules.map((rule) => ({ ...rule, resourceId })),
+        });
+      }
+    });
+    return this.getResourceAvailability(userId, resourceId);
+  }
+
+  async replaceManyResourceAvailabilityRules(
+    userId: string,
+    resourceIds: string[],
+    rules: Array<{
+      weekday: number;
+      startMinute: number;
+      endMinute: number;
+      type: AvailabilityRuleType;
+    }>,
+  ) {
+    const ctx = await this.resolveAccessContext(userId);
+    const uniqueResourceIds = [...new Set(resourceIds)];
+    if (uniqueResourceIds.length === 0) {
+      throw new BadRequestException({
+        code: 'CALENDAR_RESOURCE_IDS_REQUIRED',
+        message: 'At least one calendar resource is required',
+      });
+    }
+    await this.assertAvailabilityResourcesAllowed(ctx, uniqueResourceIds);
+
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      await tx.availabilityRule.updateMany({
+        where: { resourceId: { in: uniqueResourceIds }, deletedAt: null },
+        data: { deletedAt: now },
+      });
+      if (rules.length > 0) {
+        await tx.availabilityRule.createMany({
+          data: uniqueResourceIds.flatMap((resourceId) =>
+            rules.map((rule) => ({ ...rule, resourceId })),
+          ),
+        });
+      }
+    });
+
+    return {
+      organizationId: ctx.organizationId,
+      resourceIds: uniqueResourceIds,
+      updatedCount: uniqueResourceIds.length,
+    };
+  }
+
+  async createResourceAvailabilityOverride(
+    userId: string,
+    resourceId: string,
+    body: {
+      date: string;
+      startsAt?: string | null;
+      endsAt?: string | null;
+      type: AvailabilityOverrideType;
+    },
+  ) {
+    const ctx = await this.resolveAccessContext(userId);
+    await this.loadResourceForAvailability(ctx, resourceId, 'manage');
+    const startsAt = body.startsAt
+      ? parseCalendarInstant(body.startsAt, 'startsAt')
+      : null;
+    const endsAt = body.endsAt
+      ? parseCalendarInstant(body.endsAt, 'endsAt')
+      : null;
+    if (startsAt != null && endsAt != null && endsAt <= startsAt) {
+      throw new BadRequestException({
+        code: 'CALENDAR_INVALID_RANGE',
+        message: 'endsAt must be after startsAt',
+      });
+    }
+    await this.prisma.availabilityOverride.create({
+      data: { resourceId, date: body.date, startsAt, endsAt, type: body.type },
+    });
+    return this.getResourceAvailability(userId, resourceId);
+  }
+
+  async patchResourceAvailabilityOverride(
+    userId: string,
+    resourceId: string,
+    overrideId: string,
+    body: {
+      date: string;
+      startsAt?: string | null;
+      endsAt?: string | null;
+      type: AvailabilityOverrideType;
+    },
+  ) {
+    const ctx = await this.resolveAccessContext(userId);
+    await this.loadResourceForAvailability(ctx, resourceId, 'manage');
+    const existing = await this.prisma.availabilityOverride.findFirst({
+      where: { id: overrideId, resourceId, deletedAt: null },
+      select: { id: true },
+    });
+    if (existing == null) {
+      throw new NotFoundException({
+        code: 'AVAILABILITY_OVERRIDE_NOT_FOUND',
+        message: 'Availability override not found',
+      });
+    }
+    const startsAt = body.startsAt
+      ? parseCalendarInstant(body.startsAt, 'startsAt')
+      : null;
+    const endsAt = body.endsAt
+      ? parseCalendarInstant(body.endsAt, 'endsAt')
+      : null;
+    if (startsAt != null && endsAt != null && endsAt <= startsAt) {
+      throw new BadRequestException({
+        code: 'CALENDAR_INVALID_RANGE',
+        message: 'endsAt must be after startsAt',
+      });
+    }
+    await this.prisma.availabilityOverride.update({
+      where: { id: overrideId },
+      data: { date: body.date, startsAt, endsAt, type: body.type },
+    });
+    return this.getResourceAvailability(userId, resourceId);
+  }
+
+  async deleteResourceAvailabilityOverride(
+    userId: string,
+    resourceId: string,
+    overrideId: string,
+  ) {
+    const ctx = await this.resolveAccessContext(userId);
+    await this.loadResourceForAvailability(ctx, resourceId, 'manage');
+    await this.prisma.availabilityOverride.updateMany({
+      where: { id: overrideId, resourceId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    return { id: overrideId, deleted: true };
+  }
+
   private async assertResourcesAllowed(
     ctx: CalendarAccessContext,
     resourceIds: string[],
@@ -462,6 +668,35 @@ export class CalendarService {
       throw new ForbiddenException({
         code: 'CALENDAR_RESOURCE_FORBIDDEN',
         message: 'You cannot modify one or more calendar resources',
+      });
+    }
+  }
+
+  private async assertAvailabilityResourcesAllowed(
+    ctx: CalendarAccessContext,
+    resourceIds: string[],
+  ): Promise<void> {
+    const resources =
+      await this.calendarRepository.listResourcesForOrganization({
+        organizationId: ctx.organizationId,
+        type: CalendarResourceType.specialist,
+      });
+    const resourceById = new Map(
+      resources.map((resource) => [resource.id, resource]),
+    );
+    for (const resourceId of resourceIds) {
+      const resource = resourceById.get(resourceId);
+      if (resource == null) {
+        throw new ForbiddenException({
+          code: 'CALENDAR_RESOURCE_FORBIDDEN',
+          message: 'You cannot modify one or more calendar resources',
+        });
+      }
+      assertCanOrganization(ctx.access, OrganizationCapabilities.CALENDAR, {
+        type: 'Resource',
+        action: OrganizationCalendarActions.MANAGE_WORKING_HOURS,
+        organizationId: ctx.organizationId,
+        specialistId: resource.specialistId,
       });
     }
   }
@@ -526,6 +761,45 @@ export class CalendarService {
       specialistId,
       createdByUserId: event.createdByUserId,
     });
+  }
+
+  private async loadResourceForAvailability(
+    ctx: CalendarAccessContext,
+    resourceId: string,
+    action: 'view' | 'manage',
+  ) {
+    const resource = await this.prisma.calendarResource.findFirst({
+      where: { id: resourceId, deletedAt: null },
+      select: {
+        id: true,
+        organizationId: true,
+        specialistId: true,
+        name: true,
+      },
+    });
+    if (resource == null) {
+      throw new NotFoundException({
+        code: 'CALENDAR_RESOURCE_NOT_FOUND',
+        message: 'Calendar resource not found',
+      });
+    }
+    if (resource.organizationId !== ctx.organizationId) {
+      throw new ForbiddenException({
+        code: 'CALENDAR_RESOURCE_FORBIDDEN',
+        message: 'Resource belongs to another organization',
+      });
+    }
+    assertCanOrganization(ctx.access, OrganizationCapabilities.CALENDAR, {
+      type: 'Resource',
+      action:
+        action === 'view'
+          ? OrganizationCalendarActions.VIEW
+          : OrganizationCalendarActions.MANAGE_WORKING_HOURS,
+      organizationId: ctx.organizationId,
+      specialistId: resource.specialistId,
+      createdByUserId: ctx.userId,
+    });
+    return resource;
   }
 
   private async resolveAccessContext(
