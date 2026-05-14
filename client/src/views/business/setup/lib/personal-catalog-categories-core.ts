@@ -21,6 +21,7 @@ export type SpecialistOnboardingCatalogCategoriesData = {
 
 /** Поля профиля кабинета, влияющие на набор больших категорий в каталоге услуги. */
 export type PersonalCatalogMajorSourceSpec = {
+  /** Legacy name in onboarding payload; contains active workplace organization id. */
   activeOrganizationId?: string | null;
   onboardingMajorCategorySlugs?: string[];
   activeWorkplaceMajorCategorySlugs?: string[];
@@ -78,13 +79,10 @@ export function resolvePersonalCatalogQueryFromSpec(
   bulkParam: string;
   cacheKeySuffix: string;
 } {
-  const activeOrgId = spec?.activeOrganizationId ?? null;
   const workplaceSlugs = spec?.activeWorkplaceMajorCategorySlugs;
   const onboardingMajorSlugs = spec?.onboardingMajorCategorySlugs;
 
   const workplaceMajorsEmpty =
-    activeOrgId != null &&
-    activeOrgId !== "" &&
     workplaceSlugs != null &&
     workplaceSlugs.length === 0;
 
@@ -92,9 +90,7 @@ export function resolvePersonalCatalogQueryFromSpec(
 
   const orgMajorSlugs =
     workplaceMajorsEmpty ? []
-    : activeOrgId != null &&
-        activeOrgId !== "" &&
-        workplaceSlugs != null &&
+    : workplaceSlugs != null &&
         workplaceSlugs.length > 0 ?
       normalizePersonalCatalogMajorSlugs(workplaceSlugs)
     : [];

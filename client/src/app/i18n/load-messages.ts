@@ -73,6 +73,7 @@ import { addressMapPickerDialogI18n } from "@/widgets/address-map-picker";
 import {
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
+  orgSwitcherI18n,
 } from "@/widgets/business/chrome";
 import { calendarWidgetI18n } from "@/widgets/calendar";
 import {
@@ -94,6 +95,7 @@ const bundles: ColocatedI18nBundle[] = [
   homeScreenHeaderI18n,
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
+  orgSwitcherI18n,
   calendarWidgetI18n,
   homePageI18n,
   homeForYouSectionI18n,

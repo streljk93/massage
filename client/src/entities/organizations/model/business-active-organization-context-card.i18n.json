@@ -2,20 +2,20 @@
   "messages": {
     "en": {
       "businessActiveOrganizationContextCard": {
-        "label": "Receiving at",
-        "linkAria": "Open organizations: current workplace is {name}"
+        "label": "Accepting orders here",
+        "linkAria": "Open organization list: accepting orders here — {name}"
       }
     },
     "vi": {
       "businessActiveOrganizationContextCard": {
-        "label": "Đang nhận khách tại",
-        "linkAria": "Mở danh sách tổ chức: nơi làm việc hiện tại là {name}"
+        "label": "Tiếp nhận lịch tại đây",
+        "linkAria": "Mở danh sách tổ chức: tiếp nhận lịch tại đây — {name}"
       }
     },
     "ru": {
       "businessActiveOrganizationContextCard": {
-        "label": "Место работы",
-        "linkAria": "Открыть список организаций: текущее место работы — {name}"
+        "label": "Принимаю заказы здесь",
+        "linkAria": "Открыть список организаций: принимаю заказы здесь — {name}"
       }
     }
   }

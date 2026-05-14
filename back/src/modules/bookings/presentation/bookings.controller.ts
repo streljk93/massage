@@ -164,7 +164,7 @@ export class BookingsController {
   @ApiOperation({
     summary: 'Оценить визит (салон + мастер)',
     description:
-      'Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. Контекст салона для отзыва берётся из `organizationId` брони; если оно отсутствует, может подставляться активная организация мастера.',
+      'Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. Контекст салона для отзыва берётся из `organizationId` брони.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiBody({ schema: submitBookingVisitReviewsRequestSchema })

@@ -15,15 +15,15 @@ import type {
 } from "@/views/business/setup/lib/personal-catalog-categories-core";
 import {
   createBrowserSdkClient,
-  specialistsCabinetGetSpecialistOnboarding,
+  specialistsCabinetGetSpecialistCabinetProfile,
 } from "@/shared/api";
 
-const ONBOARDING_PAYLOAD_QK_ROOT = ["specialistOnboarding"] as const;
+const CABINET_PROFILE_QK_ROOT = ["specialistCabinetProfile"] as const;
 
 /**
  * Тот же набор больших категорий и рубрик, что на шаге навыков онбординга,
  * но для экранов ЛК без провайдера визарда. Дублирует ключ запроса
- * {@link SpecialistOnboardingProvider} для кэша.
+ * `GET /specialists/me/cabinet-profile` для кэша.
  */
 export function useBusinessPersonalServiceCatalogCategories(enabled: boolean) {
   const locale = useLocale() as AppLocale;
@@ -35,23 +35,23 @@ export function useBusinessPersonalServiceCatalogCategories(enabled: boolean) {
     [accessToken, locale],
   );
 
-  const onboardQuery = useQuery({
-    queryKey: [...ONBOARDING_PAYLOAD_QK_ROOT, accessToken, locale] as const,
+  const cabinetProfileQuery = useQuery({
+    queryKey: [...CABINET_PROFILE_QK_ROOT, accessToken, locale] as const,
     enabled:
       enabled && status === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
-      const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
+      const { data, error } = await specialistsCabinetGetSpecialistCabinetProfile({
         client: sdk,
         query: { locale },
       });
       if (error || !data) {
-        throw new Error("specialist onboarding payload");
+        throw new Error("specialist cabinet profile payload");
       }
       return data;
     },
   });
 
-  const cabSpec = onboardQuery.data?.specialist as
+  const cabSpec = cabinetProfileQuery.data?.specialist as
     | PersonalCatalogMajorSourceSpec
     | null
     | undefined;
@@ -68,7 +68,7 @@ export function useBusinessPersonalServiceCatalogCategories(enabled: boolean) {
       enabled &&
       status === "authenticated" &&
       accessToken.length > 0 &&
-      onboardQuery.isSuccess,
+      cabinetProfileQuery.isSuccess,
     queryFn: async (): Promise<SpecialistOnboardingCatalogCategoriesData> => {
       return fetchPersonalCatalogCategoriesForCabinet(
         sdk,
@@ -78,27 +78,28 @@ export function useBusinessPersonalServiceCatalogCategories(enabled: boolean) {
     },
   });
 
-  const awaitingOnboardPayload =
+  const awaitingCabinetPayload =
     status === "authenticated" &&
     accessToken.length > 0 &&
-    (onboardQuery.isPending || onboardQuery.isFetching);
+    (cabinetProfileQuery.isPending || cabinetProfileQuery.isFetching);
 
   const awaitingCatalogSlice =
-    onboardQuery.isSuccess &&
+    cabinetProfileQuery.isSuccess &&
     (catalogQuery.isPending || catalogQuery.isFetching);
 
-  /** Пока нет ответа `/onboarding`, не показываем пустой каталог как ошибку конфигурации. */
+  /** Пока нет ответа `cabinet-profile`, не показываем пустой каталог как ошибку конфигурации. */
   const isLoading =
-    enabled && (awaitingOnboardPayload || awaitingCatalogSlice);
+    enabled && (awaitingCabinetPayload || awaitingCatalogSlice);
 
   return {
     data: catalogQuery.data,
     isLoading,
-    isError: onboardQuery.isError || catalogQuery.isError,
+    isError: cabinetProfileQuery.isError || catalogQuery.isError,
     refetch: () =>
-      Promise.all([onboardQuery.refetch(), catalogQuery.refetch()]).then(
-        () => undefined,
-      ),
+      Promise.all([
+        cabinetProfileQuery.refetch(),
+        catalogQuery.refetch(),
+      ]).then(() => undefined),
     workplaceMajorsEmpty: resolvedCatalog.workplaceMajorsEmpty,
     specialist: cabSpec ?? null,
   };

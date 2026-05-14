@@ -17,6 +17,7 @@ import {
   OrganizationCalendarActions,
   OrganizationCapabilities,
   canOrganization,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
@@ -370,12 +371,18 @@ export function BusinessCalendarPage() {
     },
   });
 
-  const activeWorkplace = useMemo(() => {
-    const orgs = orgsQuery.data?.organizations ?? [];
-    return orgs.find((o) => o.isActiveWorkplace === true) ?? null;
-  }, [orgsQuery.data?.organizations]);
+  const activeWorkplace = useMemo(
+    () => pickSelectedContextOrganization(orgsQuery.data),
+    [orgsQuery.data],
+  );
+  const activeOrganizationId = activeWorkplace?.id ?? "";
 
   const hasActiveWorkplace = activeWorkplace != null;
+  /** Без viewAll режим календаря опирается на активное место приёма; иначе запросы availability по своему ресурсу дают 403. */
+  const calendarNeedsActiveWorkplaceAccepting =
+    activeWorkplace != null &&
+    !activeWorkplace.permissions.calendar.viewAll &&
+    !activeWorkplace.isActiveWorkplace;
   const canViewActiveWorkplaceCalendar = canOrganization(
     activeWorkplace,
     OrganizationCapabilities.CALENDAR,
@@ -403,7 +410,10 @@ export function BusinessCalendarPage() {
   );
 
   const calendarApiEnabled =
-    authed && orgsQuery.isSuccess && canViewActiveWorkplaceCalendar;
+    authed &&
+    orgsQuery.isSuccess &&
+    canViewActiveWorkplaceCalendar &&
+    !calendarNeedsActiveWorkplaceAccepting;
 
   // ── Диапазон дат для запроса ─────────────────────────────────
   const mondayKey = useMemo(
@@ -423,18 +433,19 @@ export function BusinessCalendarPage() {
       ...EVENTS_QK,
       accessToken,
       locale,
+      activeOrganizationId,
       viewMode === "day"
         ? dayKey
         : viewMode === "week"
           ? mondayKey
           : `${viewMode}-${dayKey.slice(0, 7)}`,
     ],
-    [accessToken, locale, viewMode, dayKey, mondayKey],
+    [accessToken, locale, activeOrganizationId, viewMode, dayKey, mondayKey],
   );
 
   // ── Запросы ──────────────────────────────────────────────────
   const resourcesQuery = useQuery({
-    queryKey: [...RESOURCES_QK, accessToken, locale],
+    queryKey: [...RESOURCES_QK, accessToken, locale, activeOrganizationId],
     enabled: calendarApiEnabled,
     queryFn: async () => {
       const { data, error } = await calendarListResources({ client: sdk });
@@ -466,7 +477,13 @@ export function BusinessCalendarPage() {
   );
   const availabilityQueries = useQueries({
     queries: resources.map((resource) => ({
-      queryKey: [...AVAILABILITY_QK, accessToken, locale, resource.id],
+      queryKey: [
+        ...AVAILABILITY_QK,
+        accessToken,
+        locale,
+        activeOrganizationId,
+        resource.id,
+      ],
       enabled: calendarApiEnabled && availabilityDayKeys.length > 0,
       queryFn: async () => {
         const { data, error } = await calendarGetResourceAvailability({
@@ -482,6 +499,11 @@ export function BusinessCalendarPage() {
     const raw = eventsQuery.data?.events ?? [];
     return raw.filter((e) => !isHiddenCancelledBooking(e));
   }, [eventsQuery.data]);
+  const selectedResourceIdForWidget =
+    selectedResourceId === "all" ||
+    resources.some((resource) => resource.id === selectedResourceId)
+      ? selectedResourceId
+      : "all";
   const unavailableRanges = useMemo(
     () =>
       availabilityQueries.flatMap((query, index) => {
@@ -606,16 +628,16 @@ export function BusinessCalendarPage() {
         </div>
       )}
 
-      {/* Нет текущего места приёма — календарь не запрашиваем */}
+      {/* Нет контекста организации или выключено «принимаю здесь» (для роли без viewAll) — те же тексты, что и при отсутствии ресурсов */}
       {!orgsQuery.isPending &&
         authed &&
         orgsQuery.isSuccess &&
-        !hasActiveWorkplace && (
+        (!hasActiveWorkplace || calendarNeedsActiveWorkplaceAccepting) && (
           <div className="px-4 pt-3">
             <BusinessEmptyState
               icon={Calendar}
-              title={t("emptyActiveWorkplaceTitle")}
-              description={t("emptyActiveWorkplaceHint")}
+              title={t("emptyResourcesTitle")}
+              description={t("emptyResourcesHint")}
             />
           </div>
         )}
@@ -624,6 +646,7 @@ export function BusinessCalendarPage() {
         authed &&
         orgsQuery.isSuccess &&
         hasActiveWorkplace &&
+        !calendarNeedsActiveWorkplaceAccepting &&
         !canViewActiveWorkplaceCalendar && (
           <div className="px-4 pt-3">
             <BusinessEmptyState
@@ -685,7 +708,7 @@ export function BusinessCalendarPage() {
             onViewModeChange={setViewMode}
             dayKey={dayKey}
             onDayKeyChange={setDayKey}
-            selectedResourceId={selectedResourceId}
+            selectedResourceId={selectedResourceIdForWidget}
             onSelectedResourceIdChange={setSelectedResourceId}
             todayKey={todayKey}
             onEventClick={handleEventClick}

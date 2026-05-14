@@ -1,5 +1,6 @@
 export { default as businessAppBottomNavI18n } from "./model/business-app-bottom-nav.i18n.json";
 export { default as businessScreenHeaderI18n } from "./model/business-screen-header.i18n.json";
+export { default as orgSwitcherI18n } from "./model/org-switcher.i18n.json";
 export { BusinessLayerChrome } from "./ui/business-layer-chrome";
 export {
   BusinessAppBottomNav,

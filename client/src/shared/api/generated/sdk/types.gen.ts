@@ -259,7 +259,7 @@ export type SpecialistsListResponses = {
              */
             listingWorkdayEndMinute: number;
             /**
-             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             * Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.
              */
             activeWorkplace?: {
                 id: string;
@@ -478,7 +478,7 @@ export type SpecialistsGetByIdResponses = {
          */
         listingWorkdayEndMinute: number;
         /**
-         * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+         * Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.
          */
         activeWorkplace?: {
             id: string;
@@ -704,12 +704,6 @@ export type OrganizationsCabinetPostCreateOrganizationResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -1200,7 +1194,7 @@ export type PersonalizationGetRecommendationsResponses = {
              */
             listingWorkdayEndMinute: number;
             /**
-             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             * Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.
              */
             activeWorkplace?: {
                 id: string;
@@ -1740,6 +1734,18 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
                 reviewApplications: boolean;
                 accept: boolean;
             };
+            marketing: {
+                /**
+                 * Раздел «Маркетинг» в навигации кабинета (плейсхолдер; только менеджеры организации).
+                 */
+                view: boolean;
+            };
+            analytics: {
+                /**
+                 * Раздел «Аналитика» в навигации кабинета (плейсхолдер; только менеджеры организации).
+                 */
+                view: boolean;
+            };
             calendar: {
                 view: boolean;
                 viewAll: boolean;
@@ -1761,6 +1767,7 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
             employmentId: string;
             specialistId: string;
             displayName: string | null;
+            imageUrl?: string | null;
             /**
              * Роль в рамках данной организации (`SpecialistOrganizationEmployment.role`).
              */
@@ -1815,6 +1822,7 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamInviteCandidatesRespon
             specialistId: string;
             displayName: string | null;
             headline?: string | null;
+            imageUrl?: string | null;
             alreadyMember: boolean;
         }>;
     };
@@ -2123,12 +2131,6 @@ export type OrganizationsCabinetPatchOrganizationResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -2168,12 +2170,6 @@ export type OrganizationsCabinetPostRequestWorkplaceJoinResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -2267,7 +2263,7 @@ export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileErrors = 
 export type OrganizationsCabinetGetWorkplaceJoinApplicantCabinetProfileResponses = {
     200: {
         /**
-         * Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).
+         * Снимок профиля мастера из cabinet-profile, доступный организации для pending-заявки.
          */
         specialist: {
             [key: string]: unknown;
@@ -3032,6 +3028,18 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
                     reviewApplications: boolean;
                     accept: boolean;
                 };
+                marketing: {
+                    /**
+                     * Раздел «Маркетинг» в навигации кабинета (плейсхолдер; только менеджеры организации).
+                     */
+                    view: boolean;
+                };
+                analytics: {
+                    /**
+                     * Раздел «Аналитика» в навигации кабинета (плейсхолдер; только менеджеры организации).
+                     */
+                    view: boolean;
+                };
                 calendar: {
                     view: boolean;
                     viewAll: boolean;
@@ -3050,7 +3058,7 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
                 };
             };
             /**
-             * Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false.
+             * Есть активный `SpecialistWorkplace` в этой организации; для pending_join всегда false.
              */
             isActiveWorkplace: boolean;
             /**
@@ -3077,7 +3085,7 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
             publishedCoverImageUrl: string | null;
         }>;
         /**
-         * Текущая активная организация мастера; null — место приёма не выбрано (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).
+         * Выбранная организация в кабинете мастера. Только UI-контекст; место приёма управляется `SpecialistWorkplace.isActive`.
          */
         activeOrganizationId: string | unknown;
     };
@@ -3085,12 +3093,126 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
 
 export type SpecialistsCabinetGetSpecialistMyOrganizationsResponse = SpecialistsCabinetGetSpecialistMyOrganizationsResponses[keyof SpecialistsCabinetGetSpecialistMyOrganizationsResponses];
 
+export type SpecialistsCabinetGetSpecialistMyWorkplacesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/specialists/me/workplaces';
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplacesErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplacesResponses = {
+    200: {
+        profile: {
+            /**
+             * Работает ли пользователь сейчас как специалист.
+             */
+            isActive: boolean;
+        };
+        workplaces: Array<{
+            id: string;
+            organizationId: string;
+            organizationName: string;
+            /**
+             * Место приёма, через которое принимаются новые записи и строится витрина специалиста.
+             */
+            isActive: boolean;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+    };
+};
+
+export type SpecialistsCabinetGetSpecialistMyWorkplacesResponse = SpecialistsCabinetGetSpecialistMyWorkplacesResponses[keyof SpecialistsCabinetGetSpecialistMyWorkplacesResponses];
+
+export type SpecialistsCabinetCreateSpecialistWorkplaceData = {
+    body: {
+        /**
+         * Организация, где специалист принимает. Требует активное трудоустройство.
+         */
+        organizationId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/specialists/me/workplaces';
+};
+
+export type SpecialistsCabinetCreateSpecialistWorkplaceErrors = {
+    /**
+     * Нет активного трудоустройства
+     */
+    400: unknown;
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetCreateSpecialistWorkplaceResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        isActive: boolean;
+    };
+};
+
+export type SpecialistsCabinetCreateSpecialistWorkplaceResponse = SpecialistsCabinetCreateSpecialistWorkplaceResponses[keyof SpecialistsCabinetCreateSpecialistWorkplaceResponses];
+
+export type SpecialistsCabinetPatchSpecialistProfileStateData = {
+    body: {
+        /**
+         * Работает ли пользователь сейчас как специалист.
+         */
+        isActive: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/specialists/me/profile-state';
+};
+
+export type SpecialistsCabinetPatchSpecialistProfileStateErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Нет профиля специалиста
+     */
+    404: unknown;
+};
+
+export type SpecialistsCabinetPatchSpecialistProfileStateResponses = {
+    200: {
+        isActive: boolean;
+        /**
+         * Persisted projection видимости после пересчёта через profile/workplace/onboarding.
+         */
+        listedInDirectory: boolean;
+    };
+};
+
+export type SpecialistsCabinetPatchSpecialistProfileStateResponse = SpecialistsCabinetPatchSpecialistProfileStateResponses[keyof SpecialistsCabinetPatchSpecialistProfileStateResponses];
+
 export type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewData = {
     body?: never;
     path?: never;
     query: {
         /**
-         * Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`.
+         * Организация активного `SpecialistWorkplace`; должна совпадать с текущим местом приёма.
          */
         organizationId: string;
         /**
@@ -3307,7 +3429,7 @@ export type SpecialistsCabinetGetSpecialistCabinetClientsErrors = {
 export type SpecialistsCabinetGetSpecialistCabinetClientsResponses = {
     200: {
         /**
-         * Текущее место приёма мастера, по которому строится список клиентов.
+         * OrganizationId активного `SpecialistWorkplace`, по которому строится список клиентов. Имя поля legacy.
          */
         activeOrganizationId: string | unknown;
         clients: Array<{
@@ -3340,7 +3462,7 @@ export type SpecialistsCabinetGetSpecialistCabinetClientsResponse = SpecialistsC
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationData = {
     body: {
         /**
-         * UUID организации как место приёма или null — снять место приёма (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).
+         * UUID организации как выбранный контекст кабинета или null — очистить UI-контекст. Не управляет витриной и новыми записями.
          */
         organizationId: string | unknown;
     };
@@ -3367,11 +3489,11 @@ export type SpecialistsCabinetPatchSpecialistActiveOrganizationErrors = {
 export type SpecialistsCabinetPatchSpecialistActiveOrganizationResponses = {
     200: {
         /**
-         * Текущее место приёма после операции; null если снято.
+         * Выбранная организация кабинета после операции; null если контекст очищен.
          */
         activeOrganizationId: string | unknown;
         /**
-         * Сколько активных записей отменено на прежней организации (canceled_by_master).
+         * Legacy-поле совместимости. Переключение UI-контекста больше не отменяет записи.
          */
         cancelledBookingsCount: number;
     };
@@ -3404,8 +3526,34 @@ export type SpecialistsCabinetPostEnsureSpecialistResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
+    };
+};
+
+export type SpecialistsCabinetPostEnsureSpecialistResponse = SpecialistsCabinetPostEnsureSpecialistResponses[keyof SpecialistsCabinetPostEnsureSpecialistResponses];
+
+export type SpecialistsCabinetGetSpecialistCabinetProfileData = {
+    body?: never;
+    path?: never;
+    query?: {
         /**
-         * Профиль специалиста; null если ещё не создан.
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/specialists/me/cabinet-profile';
+};
+
+export type SpecialistsCabinetGetSpecialistCabinetProfileErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+};
+
+export type SpecialistsCabinetGetSpecialistCabinetProfileResponses = {
+    200: {
+        /**
+         * Снимок профиля мастера для кабинета; null если строки Specialist нет.
          */
         specialist: {
             [key: string]: unknown;
@@ -3413,7 +3561,7 @@ export type SpecialistsCabinetPostEnsureSpecialistResponses = {
     };
 };
 
-export type SpecialistsCabinetPostEnsureSpecialistResponse = SpecialistsCabinetPostEnsureSpecialistResponses[keyof SpecialistsCabinetPostEnsureSpecialistResponses];
+export type SpecialistsCabinetGetSpecialistCabinetProfileResponse = SpecialistsCabinetGetSpecialistCabinetProfileResponses[keyof SpecialistsCabinetGetSpecialistCabinetProfileResponses];
 
 export type SpecialistsCabinetGetSpecialistOnboardingData = {
     body?: never;
@@ -3440,12 +3588,6 @@ export type SpecialistsCabinetGetSpecialistOnboardingResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -3501,12 +3643,6 @@ export type SpecialistsCabinetPatchSpecialistOnboardingPreferencesResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -3557,12 +3693,6 @@ export type SpecialistsCabinetPatchSpecialistProfileResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -3596,12 +3726,6 @@ export type SpecialistsCabinetPostSpecialistOnboardingCompleteResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
@@ -3645,16 +3769,149 @@ export type SpecialistsCabinetPatchSpecialistCabinetSkillsResponses = {
          * 1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.
          */
         onboardingStep: 1 | 2 | 3 | 4 | 5 | 6 | 11 | 12 | 13;
-        /**
-         * Профиль специалиста; null если ещё не создан.
-         */
-        specialist: {
-            [key: string]: unknown;
-        } | null;
     };
 };
 
 export type SpecialistsCabinetPatchSpecialistCabinetSkillsResponse = SpecialistsCabinetPatchSpecialistCabinetSkillsResponses[keyof SpecialistsCabinetPatchSpecialistCabinetSkillsResponses];
+
+export type SpecialistWorkplacesDeleteSpecialistWorkplaceData = {
+    body?: never;
+    path: {
+        workplaceId: string;
+    };
+    query?: never;
+    url: '/workplaces/{workplaceId}';
+};
+
+export type SpecialistWorkplacesDeleteSpecialistWorkplaceErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Место приёма не найдено
+     */
+    404: unknown;
+    /**
+     * Нельзя удалить место с активными бронями или последнее активное место
+     */
+    409: unknown;
+};
+
+export type SpecialistWorkplacesDeleteSpecialistWorkplaceResponses = {
+    200: {
+        ok: true;
+    };
+};
+
+export type SpecialistWorkplacesDeleteSpecialistWorkplaceResponse = SpecialistWorkplacesDeleteSpecialistWorkplaceResponses[keyof SpecialistWorkplacesDeleteSpecialistWorkplaceResponses];
+
+export type SpecialistWorkplacesPatchSpecialistWorkplaceData = {
+    body: {
+        /**
+         * true — активировать это место, false — деактивировать.
+         */
+        isActive?: boolean;
+    };
+    path: {
+        workplaceId: string;
+    };
+    query?: never;
+    url: '/workplaces/{workplaceId}';
+};
+
+export type SpecialistWorkplacesPatchSpecialistWorkplaceErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Место приёма не найдено
+     */
+    404: unknown;
+    /**
+     * Нельзя деактивировать место с активными бронями
+     */
+    409: unknown;
+};
+
+export type SpecialistWorkplacesPatchSpecialistWorkplaceResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        isActive: boolean;
+    };
+};
+
+export type SpecialistWorkplacesPatchSpecialistWorkplaceResponse = SpecialistWorkplacesPatchSpecialistWorkplaceResponses[keyof SpecialistWorkplacesPatchSpecialistWorkplaceResponses];
+
+export type SpecialistWorkplacesActivateSpecialistWorkplaceData = {
+    body?: never;
+    path: {
+        workplaceId: string;
+    };
+    query?: never;
+    url: '/workplaces/{workplaceId}/activate';
+};
+
+export type SpecialistWorkplacesActivateSpecialistWorkplaceErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Место приёма не найдено
+     */
+    404: unknown;
+    /**
+     * Параллельная активация или инвариант БД
+     */
+    409: unknown;
+};
+
+export type SpecialistWorkplacesActivateSpecialistWorkplaceResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        isActive: boolean;
+    };
+};
+
+export type SpecialistWorkplacesActivateSpecialistWorkplaceResponse = SpecialistWorkplacesActivateSpecialistWorkplaceResponses[keyof SpecialistWorkplacesActivateSpecialistWorkplaceResponses];
+
+export type SpecialistWorkplacesDeactivateSpecialistWorkplaceData = {
+    body?: never;
+    path: {
+        workplaceId: string;
+    };
+    query?: never;
+    url: '/workplaces/{workplaceId}/deactivate';
+};
+
+export type SpecialistWorkplacesDeactivateSpecialistWorkplaceErrors = {
+    /**
+     * Нет или невалидный access token
+     */
+    401: unknown;
+    /**
+     * Место приёма не найдено
+     */
+    404: unknown;
+    /**
+     * Нельзя деактивировать место с активными бронями или последнее активное место
+     */
+    409: unknown;
+};
+
+export type SpecialistWorkplacesDeactivateSpecialistWorkplaceResponses = {
+    200: {
+        id: string;
+        organizationId: string;
+        isActive: boolean;
+    };
+};
+
+export type SpecialistWorkplacesDeactivateSpecialistWorkplaceResponse = SpecialistWorkplacesDeactivateSpecialistWorkplaceResponses[keyof SpecialistWorkplacesDeactivateSpecialistWorkplaceResponses];
 
 export type BookingsListData = {
     body?: never;
@@ -4704,22 +4961,6 @@ export type PushTokensRegisterResponses = {
 
 export type PushTokensRegisterResponse = PushTokensRegisterResponses[keyof PushTokensRegisterResponses];
 
-export type HealthGetHealthData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/health';
-};
-
-export type HealthGetHealthResponses = {
-    200: {
-        status: string;
-        service: string;
-    };
-};
-
-export type HealthGetHealthResponse = HealthGetHealthResponses[keyof HealthGetHealthResponses];
-
 export type HiringListCandidatesData = {
     body?: never;
     path?: never;
@@ -4727,9 +4968,11 @@ export type HiringListCandidatesData = {
         experienceMaxYears?: unknown;
         experienceMinYears?: unknown;
         skillCategoryIds?: unknown;
+        serviceCategoryId?: unknown;
         q?: unknown;
         limit?: unknown;
         cursor?: unknown;
+        jobPostingId?: unknown;
     };
     url: '/hiring/candidates';
 };
@@ -4748,6 +4991,9 @@ export type HiringListCandidatesResponses = {
             summary?: string | null;
             experienceYears: number | null;
             skillsCategoryIds: Array<string>;
+            matchScore: number;
+            matchReasons: Array<'category_match' | 'experience_match' | 'high_rating' | 'recent_activity'>;
+            matchedCategoryIds: Array<string>;
         }>;
         nextCursor: string | null;
     };
@@ -4774,6 +5020,9 @@ export type HiringListJobPostingCandidatesResponses = {
             summary?: string | null;
             experienceYears: number | null;
             skillsCategoryIds: Array<string>;
+            matchScore: number;
+            matchReasons: Array<'category_match' | 'experience_match' | 'high_rating' | 'recent_activity'>;
+            matchedCategoryIds: Array<string>;
         }>;
         nextCursor: string | null;
     };
@@ -4798,6 +5047,7 @@ export type HiringListPublicJobPostingsResponses = {
             requirements?: string | null;
             organizationOfferingId?: string | null;
             serviceCategoryId?: string | null;
+            serviceCategoryName?: string | null;
             experienceMinYears?: number | null;
             role: 'admin' | 'specialist';
             status: 'draft' | 'open' | 'closed';
@@ -4822,6 +5072,7 @@ export type HiringApplyToJobPostingData = {
 export type HiringApplyToJobPostingResponses = {
     200: {
         contact: {
+            type: 'manual' | 'application';
             id: string;
             organizationId: string;
             specialistId: string;
@@ -4830,6 +5081,16 @@ export type HiringApplyToJobPostingResponses = {
             status: 'pending' | 'accepted' | 'rejected' | 'closed';
             isActive: boolean;
             displayLabelKey?: 'youApplied';
+            application: {
+                id: string;
+                status: 'pending' | 'accepted' | 'rejected';
+                message: string | null;
+                jobPostingSnapshot: {
+                    [key: string]: unknown;
+                };
+                createdAt: string;
+                updatedAt: string;
+            } | null;
         };
     };
 };
@@ -4855,6 +5116,7 @@ export type OrganizationHiringListJobPostingsResponses = {
             requirements?: string | null;
             organizationOfferingId?: string | null;
             serviceCategoryId?: string | null;
+            serviceCategoryName?: string | null;
             experienceMinYears?: number | null;
             role: 'admin' | 'specialist';
             status: 'draft' | 'open' | 'closed';
@@ -4892,6 +5154,7 @@ export type OrganizationHiringCreateJobPostingResponses = {
         requirements?: string | null;
         organizationOfferingId?: string | null;
         serviceCategoryId?: string | null;
+        serviceCategoryName?: string | null;
         experienceMinYears?: number | null;
         role: 'admin' | 'specialist';
         status: 'draft' | 'open' | 'closed';
@@ -4929,6 +5192,7 @@ export type OrganizationHiringPatchJobPostingResponses = {
         requirements?: string | null;
         organizationOfferingId?: string | null;
         serviceCategoryId?: string | null;
+        serviceCategoryName?: string | null;
         experienceMinYears?: number | null;
         role: 'admin' | 'specialist';
         status: 'draft' | 'open' | 'closed';
@@ -4950,6 +5214,7 @@ export type OrganizationHiringListApplicationsData = {
 export type OrganizationHiringListApplicationsResponses = {
     200: {
         contacts: Array<{
+            type: 'manual' | 'application';
             id: string;
             organizationId: string;
             specialistId: string;
@@ -4958,6 +5223,16 @@ export type OrganizationHiringListApplicationsResponses = {
             status: 'pending' | 'accepted' | 'rejected' | 'closed';
             isActive: boolean;
             displayLabelKey?: 'youApplied';
+            application: {
+                id: string;
+                status: 'pending' | 'accepted' | 'rejected';
+                message: string | null;
+                jobPostingSnapshot: {
+                    [key: string]: unknown;
+                };
+                createdAt: string;
+                updatedAt: string;
+            } | null;
         }>;
     };
 };
@@ -4979,6 +5254,7 @@ export type OrganizationHiringReviewApplicationData = {
 export type OrganizationHiringReviewApplicationResponses = {
     200: {
         contact: {
+            type: 'manual' | 'application';
             id: string;
             organizationId: string;
             specialistId: string;
@@ -4987,6 +5263,16 @@ export type OrganizationHiringReviewApplicationResponses = {
             status: 'pending' | 'accepted' | 'rejected' | 'closed';
             isActive: boolean;
             displayLabelKey?: 'youApplied';
+            application: {
+                id: string;
+                status: 'pending' | 'accepted' | 'rejected';
+                message: string | null;
+                jobPostingSnapshot: {
+                    [key: string]: unknown;
+                };
+                createdAt: string;
+                updatedAt: string;
+            } | null;
         };
     };
 };
@@ -5033,6 +5319,22 @@ export type SpecialistHiringPatchResumeResponses = {
 };
 
 export type SpecialistHiringPatchResumeResponse = SpecialistHiringPatchResumeResponses[keyof SpecialistHiringPatchResumeResponses];
+
+export type HealthGetHealthData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/health';
+};
+
+export type HealthGetHealthResponses = {
+    200: {
+        status: string;
+        service: string;
+    };
+};
+
+export type HealthGetHealthResponse = HealthGetHealthResponses[keyof HealthGetHealthResponses];
 
 export type FilesUploadPublicData = {
     body: {
@@ -6096,7 +6398,7 @@ export type FavoritesListSpecialistsListingResponses = {
              */
             listingWorkdayEndMinute: number;
             /**
-             * Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.
+             * Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.
              */
             activeWorkplace?: {
                 id: string;

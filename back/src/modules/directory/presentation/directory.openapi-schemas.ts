@@ -99,7 +99,8 @@ const specialistBookableServiceSchema = {
     majorSortOrder: {
       type: 'integer',
       example: 0,
-      description: 'Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.',
+      description:
+        'Как у `MajorServiceCategory.sortOrder` — порядок сфер в UI.',
     },
     durationMinutes: {
       type: 'array',
@@ -220,7 +221,7 @@ export const specialistListItemSchema = {
       type: 'object',
       nullable: true,
       description:
-        'Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.',
+        'Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.',
       required: ['id', 'name'],
       properties: {
         id: { type: 'string', format: 'uuid' },
@@ -292,7 +293,8 @@ export const organizationListItemSchema = {
     majorCategorySlugs: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Сферы деятельности организации (большие категории каталога).',
+      description:
+        'Сферы деятельности организации (большие категории каталога).',
     },
     name: { type: 'string' },
     description: { type: 'string', nullable: true },

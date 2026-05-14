@@ -1,6 +1,6 @@
-import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared/api";
+import type { SpecialistsCabinetGetSpecialistCabinetProfileResponse } from "@/shared/api";
 
-/** Объект `specialist` из онбординга / applicant cabinet-profile (одинаковая форма на бэкенде). */
+/** Объект `specialist` из кабинетного профиля / applicant cabinet-profile (одинаковая форма на бэкенде). */
 export type CabinetSpecialistBlob = NonNullable<
-  SpecialistsCabinetGetSpecialistOnboardingResponse["specialist"]
+  SpecialistsCabinetGetSpecialistCabinetProfileResponse["specialist"]
 >;

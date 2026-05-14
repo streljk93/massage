@@ -1,6 +1,7 @@
 import { throwPolicyForbidden } from '../../../../common/authz';
 import { bookingPolicy } from './booking.policy';
 import { calendarPolicy } from './calendar.policy';
+import { cabinetSectionsPolicy } from './cabinet-sections.policy';
 import { hiringPolicy } from './hiring.policy';
 import { offeringsPolicy } from './offerings.policy';
 import { profilePolicy } from './profile.policy';
@@ -31,6 +32,7 @@ export const organizationPolicyMap: Record<
   ...teamPolicy,
   ...offeringsPolicy,
   ...hiringPolicy,
+  ...cabinetSectionsPolicy,
   ...calendarPolicy,
   ...bookingPolicy,
 } as Record<OrganizationCapability, PolicyHandler>;
@@ -52,6 +54,8 @@ const platformOrganizationPolicy: Partial<
   [OrganizationCapabilities.HIRING_MANAGE]: false,
   [OrganizationCapabilities.HIRING_REVIEW_APPLICATIONS]: false,
   [OrganizationCapabilities.HIRING_ACCEPT]: false,
+  [OrganizationCapabilities.MARKETING_VIEW]: false,
+  [OrganizationCapabilities.ANALYTICS_VIEW]: false,
   [OrganizationCapabilities.CALENDAR]: false,
   [OrganizationCapabilities.DELETE]: false,
   [OrganizationCapabilities.BOOKINGS]: (subject) => {

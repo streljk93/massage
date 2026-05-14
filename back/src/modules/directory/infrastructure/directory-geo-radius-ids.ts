@@ -39,7 +39,7 @@ export async function findOrganizationIdsWithinRadiusMeters(
 }
 
 /**
- * id специалистов, у кого `activeOrganization` в круге (гео с салона, как в API списка).
+ * id специалистов, у кого активное место приёма в круге (гео с организации, как в API списка).
  */
 export async function findSpecialistIdsWithinRadiusMeters(
   prisma: PrismaService,
@@ -50,7 +50,11 @@ export async function findSpecialistIdsWithinRadiusMeters(
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT s."id"::text AS "id"
     FROM "Specialist" s
-    INNER JOIN "Organization" o ON o."id" = s."activeOrganizationId"
+    INNER JOIN "SpecialistWorkplace" w
+      ON w."specialistId" = s."id"
+      AND w."isActive" = true
+      AND w."deletedAt" IS NULL
+    INNER JOIN "Organization" o ON o."id" = w."organizationId"
     INNER JOIN "Address" a ON a."id" = o."addressId"
     WHERE s."deletedAt" IS NULL
       AND s."listedInDirectory" = true

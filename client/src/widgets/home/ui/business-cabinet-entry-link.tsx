@@ -32,7 +32,7 @@ export function BusinessCabinetEntryLink({
   return (
     <Link
       {...linkProps}
-      href="/business"
+      href="/business/organizations"
       prefetch={false}
       title={label}
       aria-label={label}

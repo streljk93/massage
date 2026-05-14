@@ -8,6 +8,10 @@ import {
   defaultWizardStepForApiStep,
   isSpecialistOnboardingComplete,
 } from "@/entities/business";
+import {
+  pickActiveWorkplaceOrganization,
+  useSpecialistMyOrganizationsQuery,
+} from "@/entities/organizations";
 import { createBrowserSdkClient, specialistsCabinetGetSpecialistOnboarding } from "@/shared/api";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/shared/lib";
@@ -39,6 +43,7 @@ type BusinessLayerChromeProps = {
  */
 export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
   const pathname = usePathname();
+  const setupPath = isSetupPath(pathname);
   const locale = useLocale() as AppLocale;
   const t = useTranslations("businessOnboarding");
   const { data: session, status } = useSession();
@@ -46,7 +51,9 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
 
   const { data: onboard, isFetched } = useQuery({
     queryKey: [...ONB_QK, accessToken, locale],
-    enabled: status === "authenticated" && accessToken.length > 0,
+    enabled:
+      status === "authenticated" && accessToken.length > 0 && !setupPath,
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
         client: createBrowserSdkClient(accessToken, { locale }),
@@ -76,7 +83,7 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
 
   const headerLead = useMemo((): CabinetHeaderLeadRole => {
     // Визард настройки — вне каркаса кабинета: без бургера и дровера
-    if (isSetupPath(pathname)) {
+    if (setupPath) {
       if (status === "unauthenticated") {
         return "back";
       }
@@ -98,14 +105,14 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
       return "menu";
     }
     return "back";
-  }, [pathname, status, accessToken, isFetched]);
+  }, [setupPath, status, accessToken, isFetched]);
 
   const showIncompleteStrip =
     ready &&
     status === "authenticated" &&
     isFetched &&
     !setupComplete &&
-    !isSetupPath(pathname);
+    !setupPath;
 
   const continueSetupHref = useMemo(() => {
     const step = defaultWizardStepForApiStep(
@@ -116,11 +123,22 @@ export function BusinessLayerChrome({ children }: BusinessLayerChromeProps) {
 
   const [pageTitle, setPageTitle] = useState("");
 
+  const orgsQueryForBottomStrip = useSpecialistMyOrganizationsQuery({
+    enabled:
+      status === "authenticated" &&
+      accessToken.length > 0 &&
+      setupComplete &&
+      !setupPath,
+  });
+  const activeWorkplaceForStrip = pickActiveWorkplaceOrganization(
+    orgsQueryForBottomStrip.data,
+  );
   const showBusinessBottomNav =
     ready &&
     status === "authenticated" &&
     setupComplete &&
-    !isSetupPath(pathname);
+    !isSetupPath(pathname) &&
+    (orgsQueryForBottomStrip.isPending || activeWorkplaceForStrip != null);
 
   const showSidebar =
     ready && status === "authenticated" && setupComplete && !isSetupPath(pathname);

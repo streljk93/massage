@@ -1,51 +1,76 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { BriefcaseBusiness, Plus } from "lucide-react";
+import { useMemo } from "react";
+import { BriefcaseBusiness, Plus, UserRound } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/app/i18n/navigation";
+import { Link, useRouter } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
   canOrganization,
   OrganizationCapabilities,
-  pickActiveWorkplaceOrganization,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   createBrowserSdkClient,
+  hiringListCandidates,
+  organizationsCabinetGetCabinetOrganizationProfileForEdit,
   organizationHiringCreateJobPosting,
   organizationHiringListApplications,
   organizationHiringListJobPostings,
+  organizationHiringPatchJobPosting,
   specialistsCabinetGetSpecialistMyOrganizations,
 } from "@/shared/api";
 import type {
+  HiringListCandidatesResponse,
   OrganizationHiringListApplicationsResponse,
   OrganizationHiringListJobPostingsResponse,
 } from "@/shared/api/generated/sdk/types.gen";
-import { Button, Input } from "@/shared/ui";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
+} from "@/shared/ui";
 import { Skeleton } from "@/shared/ui/shadcn/skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServiceCategories } from "../model/use-service-categories";
 
-const JOBS_QK = ["businessHiringJobs"] as const;
-const CONTACTS_QK = ["businessHiringContacts"] as const;
+const JOBS_QK = ["jobs"] as const;
+const CONTACTS_QK = ["contacts"] as const;
+const CANDIDATES_QK = ["candidates"] as const;
+const CABINET_PROFILE_QK = ["businessHiringCabinetProfile"] as const;
 
 type JobPosting =
   OrganizationHiringListJobPostingsResponse["jobPostings"][number];
 type HiringContact =
   OrganizationHiringListApplicationsResponse["contacts"][number];
+type Candidate = HiringListCandidatesResponse["candidates"][number];
+
+function jobsQueryKey(organizationId: string) {
+  return [...JOBS_QK, { organizationId }] as const;
+}
+
+function contactsQueryKey(organizationId: string) {
+  return [...CONTACTS_QK, { organizationId }] as const;
+}
+
+function candidatesQueryKey(jobId: string, filters: Record<string, unknown>) {
+  return [...CANDIDATES_QK, { jobId, filters }] as const;
+}
 
 export function BusinessHiringPage() {
   const t = useTranslations("businessHiringPage");
   useSetBusinessPageTitle(t("title"));
   const locale = useLocale() as AppLocale;
+  const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
   const authed = sessionStatus === "authenticated" && accessToken.length > 0;
   const queryClient = useQueryClient();
-  const [jobTitle, setJobTitle] = useState("");
 
   const sdk = useMemo(
     () => createBrowserSdkClient(accessToken, { locale }),
@@ -65,7 +90,7 @@ export function BusinessHiringPage() {
   });
 
   const activeOrg = useMemo(
-    () => pickActiveWorkplaceOrganization(orgsQuery.data),
+    () => pickSelectedContextOrganization(orgsQuery.data),
     [orgsQuery.data],
   );
   const organizationId = activeOrg?.id ?? "";
@@ -78,8 +103,25 @@ export function BusinessHiringPage() {
     OrganizationCapabilities.HIRING_MANAGE,
   );
 
+  const cabinetProfileQuery = useQuery({
+    queryKey: [...CABINET_PROFILE_QK, { organizationId, locale }],
+    enabled: authed && organizationId.length > 0 && canManageHiring,
+    queryFn: async () => {
+      const { data, error } =
+        await organizationsCabinetGetCabinetOrganizationProfileForEdit({
+          client: sdk,
+          path: { organizationId },
+          query: { locale },
+        });
+      if (error || !data) throw error ?? new Error("cabinet profile");
+      return data;
+    },
+  });
+
+  const majorCategorySlugs = cabinetProfileQuery.data?.majorCategorySlugs ?? [];
+
   const jobsQuery = useQuery({
-    queryKey: [...JOBS_QK, organizationId, accessToken, locale],
+    queryKey: jobsQueryKey(organizationId),
     enabled: authed && organizationId.length > 0 && canViewHiring,
     queryFn: async () => {
       const { data, error } = await organizationHiringListJobPostings({
@@ -92,7 +134,7 @@ export function BusinessHiringPage() {
   });
 
   const contactsQuery = useQuery({
-    queryKey: [...CONTACTS_QK, organizationId, accessToken, locale],
+    queryKey: contactsQueryKey(organizationId),
     enabled: authed && organizationId.length > 0 && canViewHiring,
     queryFn: async () => {
       const { data, error } = await organizationHiringListApplications({
@@ -104,23 +146,47 @@ export function BusinessHiringPage() {
     },
   });
 
-  const refreshHiring = () => {
-    void queryClient.invalidateQueries({ queryKey: JOBS_QK });
-    void queryClient.invalidateQueries({ queryKey: CONTACTS_QK });
-  };
+  const categoriesQuery = useServiceCategories({
+    sdk,
+    locale,
+    majorCategorySlugs,
+  });
+  const categoryById = useMemo(
+    () => new Map((categoriesQuery.data ?? []).map((item) => [item.id, item])),
+    [categoriesQuery.data],
+  );
 
   const createJobMutation = useMutation({
-    mutationFn: async (title: string) => {
-      const { error } = await organizationHiringCreateJobPosting({
+    mutationFn: async () => {
+      const { data, error } = await organizationHiringCreateJobPosting({
         client: sdk,
         path: { organizationId },
-        body: { title, role: "specialist", status: "open" },
+        body: {
+          title: t("newJobTitle"),
+          role: "specialist",
+          status: "draft",
+        },
+      });
+      if (error || !data) throw error ?? new Error("create job");
+      return data;
+    },
+    onSuccess: (job) => {
+      void queryClient.invalidateQueries({ queryKey: jobsQueryKey(organizationId) });
+      router.push(`/business/hiring/job-postings/${job.id}`);
+    },
+  });
+
+  const closeJobMutation = useMutation({
+    mutationFn: async (job: JobPosting) => {
+      const { error } = await organizationHiringPatchJobPosting({
+        client: sdk,
+        path: { organizationId, jobPostingId: job.id },
+        body: { status: "closed" },
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      setJobTitle("");
-      refreshHiring();
+      void queryClient.invalidateQueries({ queryKey: jobsQueryKey(organizationId) });
     },
   });
 
@@ -167,13 +233,12 @@ export function BusinessHiringPage() {
         jobs={jobsQuery.data?.jobPostings ?? []}
         contacts={contactsQuery.data?.contacts ?? []}
         canManageHiring={canManageHiring}
-        jobTitle={jobTitle}
-        setJobTitle={setJobTitle}
+        sdk={sdk}
+        categoryById={categoryById}
         isCreating={createJobMutation.isPending}
-        onCreate={() => {
-          const title = jobTitle.trim();
-          if (title.length >= 2) createJobMutation.mutate(title);
-        }}
+        onCreateJob={() => createJobMutation.mutate()}
+        closeDisabled={closeJobMutation.isPending}
+        onCloseJob={(job) => closeJobMutation.mutate(job)}
       />
     </main>
   );
@@ -183,18 +248,22 @@ function JobsPanel({
   jobs,
   contacts,
   canManageHiring,
-  jobTitle,
-  setJobTitle,
+  sdk,
+  categoryById,
   isCreating,
-  onCreate,
+  onCreateJob,
+  closeDisabled,
+  onCloseJob,
 }: {
   jobs: JobPosting[];
   contacts: HiringContact[];
   canManageHiring: boolean;
-  jobTitle: string;
-  setJobTitle: (value: string) => void;
+  sdk: ReturnType<typeof createBrowserSdkClient>;
+  categoryById: Map<string, { label: string; name: string }>;
   isCreating: boolean;
-  onCreate: () => void;
+  onCreateJob: () => void;
+  closeDisabled: boolean;
+  onCloseJob: (job: JobPosting) => void;
 }) {
   const t = useTranslations("businessHiringPage");
   return (
@@ -206,33 +275,39 @@ function JobsPanel({
         </h2>
       </div>
       {canManageHiring ? (
-        <div className="flex gap-2 rounded-2xl border border-border/60 bg-card p-3">
-          <Input
-            value={jobTitle}
-            onChange={(event) => setJobTitle(event.target.value)}
-            placeholder={t("jobTitlePlaceholder")}
-          />
-          <Button type="button" disabled={isCreating} onClick={onCreate}>
+        <div className="rounded-2xl border border-border/60 bg-card p-3">
+          <Button type="button" disabled={isCreating} onClick={onCreateJob}>
             <Plus className="size-4" aria-hidden />
             {t("createJob")}
           </Button>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("createJobHint")}
+          </p>
         </div>
       ) : null}
       <div className="grid gap-2">
+        {jobs.length === 0 ? (
+          <BusinessEmptyState
+            icon={BriefcaseBusiness}
+            title={t("noJobsTitle")}
+            description={t("noJobsHint")}
+          />
+        ) : null}
         {jobs.map((job) => (
-          <Link
+          <JobCard
             key={job.id}
-            href={`/business/hiring/job-postings/${job.id}`}
-            className="rounded-2xl border border-border/60 bg-card px-4 py-3 transition-colors hover:bg-muted/40"
-          >
-            <p className="font-heading text-sm font-semibold">{job.title}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("jobMeta", {
-                status: t(`jobStatus.${job.status}`),
-                count: job.applicationsCount,
-              })}
-            </p>
-          </Link>
+            job={job}
+            sdk={sdk}
+            categoryName={
+              job.serviceCategoryId != null ?
+                categoryById.get(job.serviceCategoryId)?.name ??
+                job.serviceCategoryName ??
+                null
+              : null
+            }
+            closeDisabled={closeDisabled}
+            onClose={() => onCloseJob(job)}
+          />
         ))}
         {contacts.length > 0 ? (
           <div className="rounded-2xl border border-dashed border-border/70 p-3">
@@ -249,5 +324,132 @@ function JobsPanel({
         ) : null}
       </div>
     </section>
+  );
+}
+
+function JobCard({
+  job,
+  sdk,
+  categoryName,
+  closeDisabled,
+  onClose,
+}: {
+  job: JobPosting;
+  sdk: ReturnType<typeof createBrowserSdkClient>;
+  categoryName: string | null;
+  closeDisabled: boolean;
+  onClose: () => void;
+}) {
+  const t = useTranslations("businessHiringPage");
+  const candidatesQuery = useQuery({
+    queryKey: candidatesQueryKey(job.id, { limit: 5 }),
+    enabled: job.serviceCategoryId != null && job.status !== "closed",
+    queryFn: async () => {
+      const { data, error } = await hiringListCandidates({
+        client: sdk,
+        query: { jobPostingId: job.id, limit: 5 },
+      });
+      if (error || !data) throw error ?? new Error("job candidates");
+      return data;
+    },
+  });
+  const candidates = candidatesQuery.data?.candidates ?? [];
+  const candidatesCountLabel = t("candidatesCount", {
+    count: candidates.length,
+    plus: candidatesQuery.data?.nextCursor != null ? "+" : "",
+  });
+
+  return (
+    <article className="rounded-2xl border border-border/60 bg-card px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <Link
+          href={`/business/hiring/job-postings/${job.id}`}
+          className="min-w-0 flex-1"
+        >
+          <p className="font-heading text-sm font-semibold">{job.title}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {categoryName ?? t("categoryMissing")} ·{" "}
+            {job.experienceMinYears == null ?
+              t("experienceAny")
+            : t("experienceFrom", { years: job.experienceMinYears })}
+          </p>
+        </Link>
+        <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium">
+          {t(`jobStatus.${job.status}`)}
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+        <span>{candidatesCountLabel}</span>
+        <span>{t("applicationsCount", { count: job.applicationsCount })}</span>
+        <span>{t("confidenceHint")}</span>
+      </div>
+      <div className="mt-3 grid gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">{t("matchingCandidatesTitle")}</p>
+          <Link
+            href={`/business/hiring/search?jobPostingId=${job.id}`}
+            className="text-xs font-medium text-primary"
+          >
+            {t("viewAllCandidates")}
+          </Link>
+        </div>
+        {candidatesQuery.isPending ? (
+          <Skeleton className="h-12 rounded-xl" />
+        ) : candidates.length > 0 ? (
+          candidates.map((candidate) => (
+            <CandidateMiniCard key={candidate.specialistId} candidate={candidate} />
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground">{t("zeroMatchHint")}</p>
+        )}
+      </div>
+      {job.status !== "closed" ? (
+        <div className="mt-3 flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={closeDisabled}
+            onClick={onClose}
+          >
+            {t("closeJob")}
+          </Button>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function CandidateMiniCard({ candidate }: { candidate: Candidate }) {
+  const t = useTranslations("businessHiringPage");
+  return (
+    <Link
+      href={`/specialists/${candidate.specialistId}`}
+      className="flex items-center gap-3 rounded-xl border border-border/60 bg-background px-3 py-2"
+    >
+      <Avatar className="size-9">
+        {candidate.imageUrl ? (
+          <AvatarImage src={candidate.imageUrl} alt="" />
+        ) : null}
+        <AvatarFallback>
+          <UserRound className="size-4" aria-hidden />
+        </AvatarFallback>
+      </Avatar>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">
+          {candidate.displayName ?? candidate.specialistId}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">
+          {candidate.experienceYears == null ?
+            t("experienceUnknown")
+          : t("candidateExperience", { years: candidate.experienceYears })}
+          {" · "}
+          {candidate.headline ?? candidate.summary ?? t("candidateNoBio")}
+        </p>
+      </div>
+      <span className="text-xs font-medium text-primary">
+        {t("matchScore", { score: Math.round(candidate.matchScore * 100) })}
+      </span>
+    </Link>
   );
 }

@@ -21,6 +21,23 @@ export type CandidateSearchFilters = {
   experienceMaxYears: number | undefined;
 };
 
+export type CandidateSearchRow = {
+  specialistId: string;
+  skillsCategoryIds: string[];
+  experienceYears: number | null;
+  updatedAt: Date;
+  specialist: {
+    listingName: string | null;
+    imageUrl: string | null;
+    user: { name: string | null };
+    resume: {
+      headline: string | null;
+      summary: string | null;
+      experienceYears: number | null;
+    } | null;
+  };
+};
+
 @Injectable()
 export class HiringRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -29,14 +46,20 @@ export class HiringRepository {
     return this.prisma.jobPosting.findMany({
       where: { organizationId, deletedAt: null },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: { _count: { select: { applications: true } } },
+      include: {
+        serviceCategory: { select: { name: true } },
+        _count: { select: { applications: true } },
+      },
     });
   }
 
   getJobPosting(id: string, prisma: PrismaLike = this.prisma) {
     return prisma.jobPosting.findFirst({
       where: { id, deletedAt: null },
-      include: { organization: { select: { id: true, name: true } } },
+      include: {
+        organization: { select: { id: true, name: true } },
+        serviceCategory: { select: { id: true, name: true } },
+      },
     });
   }
 
@@ -70,7 +93,10 @@ export class HiringRepository {
             : OrganizationMembershipRole.specialist,
         status: toJobPostingStatus(data.status),
       },
-      include: { _count: { select: { applications: true } } },
+      include: {
+        serviceCategory: { select: { name: true } },
+        _count: { select: { applications: true } },
+      },
     });
   }
 
@@ -119,7 +145,10 @@ export class HiringRepository {
           ? { status: toJobPostingStatus(data.status) }
           : {}),
       },
-      include: { _count: { select: { applications: true } } },
+      include: {
+        serviceCategory: { select: { name: true } },
+        _count: { select: { applications: true } },
+      },
     });
   }
 
@@ -189,6 +218,12 @@ export class HiringRepository {
         bio: true,
         experienceYears: true,
         user: { select: { name: true } },
+        profile: { select: { isActive: true } },
+        workplaces: {
+          where: { isActive: true, deletedAt: null },
+          select: { id: true },
+          take: 1,
+        },
         skills: { select: { serviceCategoryId: true } },
         resume: {
           select: {
@@ -205,9 +240,13 @@ export class HiringRepository {
       where: { specialistId },
       create: {
         specialistId,
-        skillsCategoryIds: specialist.skills.map((skill) => skill.serviceCategoryId),
+        skillsCategoryIds: specialist.skills.map(
+          (skill) => skill.serviceCategoryId,
+        ),
         experienceYears:
           specialist.resume?.experienceYears ?? specialist.experienceYears,
+        isActive: specialist.profile?.isActive ?? false,
+        hasActiveWorkplace: specialist.workplaces.length > 0,
         textSearch: [
           specialist.listingName,
           specialist.user.name,
@@ -219,9 +258,13 @@ export class HiringRepository {
           .join(' '),
       },
       update: {
-        skillsCategoryIds: specialist.skills.map((skill) => skill.serviceCategoryId),
+        skillsCategoryIds: specialist.skills.map(
+          (skill) => skill.serviceCategoryId,
+        ),
         experienceYears:
           specialist.resume?.experienceYears ?? specialist.experienceYears,
+        isActive: specialist.profile?.isActive ?? false,
+        hasActiveWorkplace: specialist.workplaces.length > 0,
         textSearch: [
           specialist.listingName,
           specialist.user.name,
@@ -235,8 +278,12 @@ export class HiringRepository {
     });
   }
 
-  async listCandidates(filters: CandidateSearchFilters) {
+  async listCandidates(
+    filters: CandidateSearchFilters,
+  ): Promise<CandidateSearchRow[]> {
     const where: Prisma.SpecialistSearchProjectionWhereInput = {
+      isActive: true,
+      hasActiveWorkplace: true,
       specialist: {
         deletedAt: null,
         resume: {

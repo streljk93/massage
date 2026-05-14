@@ -418,7 +418,7 @@
                           "activeWorkplace": {
                             "type": "object",
                             "nullable": true,
-                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "description": "Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.",
                             "required": [
                               "id",
                               "name"
@@ -923,7 +923,7 @@
                     "activeWorkplace": {
                       "type": "object",
                       "nullable": true,
-                      "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                      "description": "Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.",
                       "required": [
                         "id",
                         "name"
@@ -1492,9 +1492,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -1511,12 +1511,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -2785,7 +2779,7 @@
                           "activeWorkplace": {
                             "type": "object",
                             "nullable": true,
-                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "description": "Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.",
                             "required": [
                               "id",
                               "name"
@@ -4121,6 +4115,8 @@
                         "joinRequests",
                         "offerings",
                         "hiring",
+                        "marketing",
+                        "analytics",
                         "calendar",
                         "bookings"
                       ],
@@ -4206,6 +4202,32 @@
                             },
                             "accept": {
                               "type": "boolean"
+                            }
+                          }
+                        },
+                        "marketing": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean",
+                              "description": "Раздел «Маркетинг» в навигации кабинета (плейсхолдер; только менеджеры организации)."
+                            }
+                          }
+                        },
+                        "analytics": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "view"
+                          ],
+                          "properties": {
+                            "view": {
+                              "type": "boolean",
+                              "description": "Раздел «Аналитика» в навигации кабинета (плейсхолдер; только менеджеры организации)."
                             }
                           }
                         },
@@ -4297,6 +4319,10 @@
                             "format": "uuid"
                           },
                           "displayName": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "imageUrl": {
                             "type": "string",
                             "nullable": true
                           },
@@ -4422,6 +4448,10 @@
                             "nullable": true
                           },
                           "headline": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "imageUrl": {
                             "type": "string",
                             "nullable": true
                           },
@@ -5141,9 +5171,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -5160,12 +5190,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -5216,9 +5240,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -5235,12 +5259,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -5482,7 +5500,7 @@
                   "properties": {
                     "specialist": {
                       "type": "object",
-                      "description": "Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).",
+                      "description": "Снимок профиля мастера из cabinet-profile, доступный организации для pending-заявки.",
                       "additionalProperties": true
                     }
                   }
@@ -7677,6 +7695,8 @@
                               "joinRequests",
                               "offerings",
                               "hiring",
+                              "marketing",
+                              "analytics",
                               "calendar",
                               "bookings"
                             ],
@@ -7765,6 +7785,32 @@
                                   }
                                 }
                               },
+                              "marketing": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean",
+                                    "description": "Раздел «Маркетинг» в навигации кабинета (плейсхолдер; только менеджеры организации)."
+                                  }
+                                }
+                              },
+                              "analytics": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "view"
+                                ],
+                                "properties": {
+                                  "view": {
+                                    "type": "boolean",
+                                    "description": "Раздел «Аналитика» в навигации кабинета (плейсхолдер; только менеджеры организации)."
+                                  }
+                                }
+                              },
                               "calendar": {
                                 "type": "object",
                                 "additionalProperties": false,
@@ -7833,7 +7879,7 @@
                           },
                           "isActiveWorkplace": {
                             "type": "boolean",
-                            "description": "Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false."
+                            "description": "Есть активный `SpecialistWorkplace` в этой организации; для pending_join всегда false."
                           },
                           "publicationModerationStatus": {
                             "type": "string",
@@ -7887,7 +7933,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Текущая активная организация мастера; null — место приёма не выбрано (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма)."
+                      "description": "Выбранная организация в кабинете мастера. Только UI-контекст; место приёма управляется `SpecialistWorkplace.isActive`."
                     }
                   }
                 }
@@ -7909,6 +7955,233 @@
         ]
       }
     },
+    "/specialists/me/workplaces": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistMyWorkplaces",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "profile",
+                    "workplaces"
+                  ],
+                  "properties": {
+                    "profile": {
+                      "type": "object",
+                      "required": [
+                        "isActive"
+                      ],
+                      "properties": {
+                        "isActive": {
+                          "type": "boolean",
+                          "description": "Работает ли пользователь сейчас как специалист."
+                        }
+                      }
+                    },
+                    "workplaces": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "organizationId",
+                          "organizationName",
+                          "isActive",
+                          "createdAt",
+                          "updatedAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "organizationName": {
+                            "type": "string"
+                          },
+                          "isActive": {
+                            "type": "boolean",
+                            "description": "Место приёма, через которое принимаются новые записи и строится витрина специалиста."
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "updatedAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Места приёма мастера и флаг “работаю как специалист”. Витрина опирается на active workplace, не на activeOrganizationId.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      },
+      "post": {
+        "operationId": "SpecialistsCabinet_createSpecialistWorkplace",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "organizationId"
+                ],
+                "properties": {
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Организация, где специалист принимает. Требует активное трудоустройство."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "isActive"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Нет активного трудоустройства"
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Добавить организацию как место приёма. Требует активное трудоустройство в организации.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/profile-state": {
+      "patch": {
+        "operationId": "SpecialistsCabinet_patchSpecialistProfileState",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "isActive"
+                ],
+                "properties": {
+                  "isActive": {
+                    "type": "boolean",
+                    "description": "Работает ли пользователь сейчас как специалист."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "isActive",
+                    "listedInDirectory"
+                  ],
+                  "properties": {
+                    "isActive": {
+                      "type": "boolean"
+                    },
+                    "listedInDirectory": {
+                      "type": "boolean",
+                      "description": "Persisted projection видимости после пересчёта через profile/workplace/onboarding."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Нет профиля специалиста"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Включить или выключить работу как специалист. Пересчитывает persisted visibility projection.",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
     "/specialists/me/active-organization/bookings-preview": {
       "get": {
         "operationId": "SpecialistsCabinet_getSpecialistActiveOrganizationBookingsPreview",
@@ -7921,7 +8194,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`."
+            "description": "Организация активного `SpecialistWorkplace`; должна совпадать с текущим местом приёма."
           },
           {
             "name": "locale",
@@ -8028,7 +8301,7 @@
             "access-token": []
           }
         ],
-        "summary": "Превью активных броней к вам в текущей организации — то же, что будет отменено при смене места приёма.",
+        "summary": "Превью активных броней к вам в активной организации приёма.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -8438,7 +8711,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Текущее место приёма мастера, по которому строится список клиентов."
+                      "description": "OrganizationId активного `SpecialistWorkplace`, по которому строится список клиентов. Имя поля legacy."
                     },
                     "clients": {
                       "type": "array",
@@ -8559,7 +8832,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "UUID организации как место приёма или null — снять место приёма (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма)."
+                    "description": "UUID организации как выбранный контекст кабинета или null — очистить UI-контекст. Не управляет витриной и новыми записями."
                   }
                 }
               }
@@ -8588,12 +8861,12 @@
                           "type": "null"
                         }
                       ],
-                      "description": "Текущее место приёма после операции; null если снято."
+                      "description": "Выбранная организация кабинета после операции; null если контекст очищен."
                     },
                     "cancelledBookingsCount": {
                       "type": "integer",
                       "minimum": 0,
-                      "description": "Сколько активных записей отменено на прежней организации (canceled_by_master)."
+                      "description": "Legacy-поле совместимости. Переключение UI-контекста больше не отменяет записи."
                     }
                   }
                 }
@@ -8615,7 +8888,7 @@
             "access-token": []
           }
         ],
-        "summary": "Текущая организация мастера (адрес витрины и новые записи). При переключении на другую организацию или снятии активного салона (в теле PATCH `organizationId`: uuid другой организации или null) активные брони на прежнем месте приёма отменяются.",
+        "summary": "Выбранная организация в кабинете мастера. Это UI-контекст; витрина и новые записи опираются на SpecialistWorkplace.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -8647,9 +8920,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -8666,12 +8939,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -8688,6 +8955,63 @@
           }
         ],
         "summary": "Создать профиль специалиста, если ещё нет (без привязки к организации, не в витрине).",
+        "tags": [
+          "cabinet-specialists"
+        ]
+      }
+    },
+    "/specialists/me/cabinet-profile": {
+      "get": {
+        "operationId": "SpecialistsCabinet_getSpecialistCabinetProfile",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "specialist"
+                  ],
+                  "properties": {
+                    "specialist": {
+                      "type": "object",
+                      "nullable": true,
+                      "description": "Снимок профиля мастера для кабинета; null если строки Specialist нет.",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Снимок профиля мастера для кабинета (витрина, навыки, контакты). Без шага онбординга.",
         "tags": [
           "cabinet-specialists"
         ]
@@ -8719,9 +9043,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -8738,12 +9062,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -8831,9 +9149,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -8850,12 +9168,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -8981,9 +9293,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -9000,12 +9312,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -9041,9 +9347,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -9060,12 +9366,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -9143,9 +9443,9 @@
               "application/json": {
                 "schema": {
                   "type": "object",
+                  "additionalProperties": false,
                   "required": [
-                    "onboardingStep",
-                    "specialist"
+                    "onboardingStep"
                   ],
                   "properties": {
                     "onboardingStep": {
@@ -9162,12 +9462,6 @@
                         13
                       ],
                       "description": "1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён."
-                    },
-                    "specialist": {
-                      "type": "object",
-                      "nullable": true,
-                      "description": "Профиль специалиста; null если ещё не создан.",
-                      "additionalProperties": true
                     }
                   }
                 }
@@ -9192,6 +9486,270 @@
         "summary": "Кабинет: полная замена навыков мастера (подкатегории каталога без цены).",
         "tags": [
           "cabinet-specialists"
+        ]
+      }
+    },
+    "/workplaces/{workplaceId}": {
+      "patch": {
+        "operationId": "SpecialistWorkplaces_patchSpecialistWorkplace",
+        "parameters": [
+          {
+            "name": "workplaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "minProperties": 1,
+                "properties": {
+                  "isActive": {
+                    "type": "boolean",
+                    "description": "true — активировать это место, false — деактивировать."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "isActive"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Место приёма не найдено"
+          },
+          "409": {
+            "description": "Нельзя деактивировать место с активными бронями"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Изменить место приёма текущего мастера.",
+        "tags": [
+          "cabinet-specialist-workplaces"
+        ]
+      },
+      "delete": {
+        "operationId": "SpecialistWorkplaces_deleteSpecialistWorkplace",
+        "parameters": [
+          {
+            "name": "workplaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "ok"
+                  ],
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Место приёма не найдено"
+          },
+          "409": {
+            "description": "Нельзя удалить место с активными бронями или последнее активное место"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Удалить место приёма текущего мастера.",
+        "tags": [
+          "cabinet-specialist-workplaces"
+        ]
+      }
+    },
+    "/workplaces/{workplaceId}/activate": {
+      "post": {
+        "operationId": "SpecialistWorkplaces_activateSpecialistWorkplace",
+        "parameters": [
+          {
+            "name": "workplaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "isActive"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Место приёма не найдено"
+          },
+          "409": {
+            "description": "Параллельная активация или инвариант БД"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Сделать место приёма активным. В транзакции снимает активность с остальных мест.",
+        "tags": [
+          "cabinet-specialist-workplaces"
+        ]
+      }
+    },
+    "/workplaces/{workplaceId}/deactivate": {
+      "post": {
+        "operationId": "SpecialistWorkplaces_deactivateSpecialistWorkplace",
+        "parameters": [
+          {
+            "name": "workplaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "organizationId",
+                    "isActive"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "organizationId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "isActive": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Нет или невалидный access token"
+          },
+          "404": {
+            "description": "Место приёма не найдено"
+          },
+          "409": {
+            "description": "Нельзя деактивировать место с активными бронями или последнее активное место"
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Выключить место приёма. Проверяет активные брони и инвариант последнего активного места.",
+        "tags": [
+          "cabinet-specialist-workplaces"
         ]
       }
     },
@@ -9561,7 +10119,7 @@
     },
     "/bookings/{id}/visit-reviews": {
       "post": {
-        "description": "Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. Контекст салона для отзыва берётся из `organizationId` брони; если оно отсутствует, может подставляться активная организация мастера.",
+        "description": "Создаёт **два** отзыва: `OrganizationReview` и `SpecialistReview` с привязкой к `bookingId`. Только `status === done`, один раз. Контекст салона для отзыва берётся из `organizationId` брони.",
         "operationId": "Bookings_submitVisitReviews",
         "parameters": [
           {
@@ -12170,42 +12728,6 @@
         ]
       }
     },
-    "/health": {
-      "get": {
-        "operationId": "Health_getHealth",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "status",
-                    "service"
-                  ],
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "service": {
-                      "type": "string",
-                      "example": "back"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "summary": "Проверка доступности сервиса",
-        "tags": [
-          "health"
-        ]
-      }
-    },
     "/hiring/candidates": {
       "get": {
         "operationId": "Hiring_listCandidates",
@@ -12229,6 +12751,12 @@
             "schema": {}
           },
           {
+            "name": "serviceCategoryId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
             "name": "q",
             "required": false,
             "in": "query",
@@ -12242,6 +12770,12 @@
           },
           {
             "name": "cursor",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "jobPostingId",
             "required": false,
             "in": "query",
             "schema": {}
@@ -12270,7 +12804,10 @@
                           "displayName",
                           "headline",
                           "experienceYears",
-                          "skillsCategoryIds"
+                          "skillsCategoryIds",
+                          "matchScore",
+                          "matchReasons",
+                          "matchedCategoryIds"
                         ],
                         "properties": {
                           "specialistId": {
@@ -12298,6 +12835,30 @@
                             "nullable": true
                           },
                           "skillsCategoryIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "matchScore": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "matchReasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "category_match",
+                                "experience_match",
+                                "high_rating",
+                                "recent_activity"
+                              ]
+                            }
+                          },
+                          "matchedCategoryIds": {
                             "type": "array",
                             "items": {
                               "type": "string",
@@ -12367,7 +12928,10 @@
                           "displayName",
                           "headline",
                           "experienceYears",
-                          "skillsCategoryIds"
+                          "skillsCategoryIds",
+                          "matchScore",
+                          "matchReasons",
+                          "matchedCategoryIds"
                         ],
                         "properties": {
                           "specialistId": {
@@ -12395,6 +12959,30 @@
                             "nullable": true
                           },
                           "skillsCategoryIds": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "matchScore": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "matchReasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "enum": [
+                                "category_match",
+                                "experience_match",
+                                "high_rating",
+                                "recent_activity"
+                              ]
+                            }
+                          },
+                          "matchedCategoryIds": {
                             "type": "array",
                             "items": {
                               "type": "string",
@@ -12482,6 +13070,10 @@
                           "serviceCategoryId": {
                             "type": "string",
                             "format": "uuid",
+                            "nullable": true
+                          },
+                          "serviceCategoryName": {
+                            "type": "string",
                             "nullable": true
                           },
                           "experienceMinYears": {
@@ -12573,14 +13165,23 @@
                       "type": "object",
                       "additionalProperties": false,
                       "required": [
+                        "type",
                         "id",
                         "organizationId",
                         "specialistId",
                         "source",
                         "status",
-                        "isActive"
+                        "isActive",
+                        "application"
                       ],
                       "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "manual",
+                            "application"
+                          ]
+                        },
                         "id": {
                           "type": "string",
                           "format": "uuid"
@@ -12621,6 +13222,49 @@
                           "enum": [
                             "youApplied"
                           ]
+                        },
+                        "application": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "status",
+                            "message",
+                            "jobPostingSnapshot",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected"
+                              ]
+                            },
+                            "message": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "jobPostingSnapshot": {
+                              "type": "object",
+                              "additionalProperties": true
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
                         }
                       }
                     }
@@ -12706,6 +13350,10 @@
                           "serviceCategoryId": {
                             "type": "string",
                             "format": "uuid",
+                            "nullable": true
+                          },
+                          "serviceCategoryName": {
+                            "type": "string",
                             "nullable": true
                           },
                           "experienceMinYears": {
@@ -12863,6 +13511,10 @@
                     "serviceCategoryId": {
                       "type": "string",
                       "format": "uuid",
+                      "nullable": true
+                    },
+                    "serviceCategoryName": {
+                      "type": "string",
                       "nullable": true
                     },
                     "experienceMinYears": {
@@ -13029,6 +13681,10 @@
                       "format": "uuid",
                       "nullable": true
                     },
+                    "serviceCategoryName": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "experienceMinYears": {
                       "type": "integer",
                       "nullable": true
@@ -13098,14 +13754,23 @@
                         "type": "object",
                         "additionalProperties": false,
                         "required": [
+                          "type",
                           "id",
                           "organizationId",
                           "specialistId",
                           "source",
                           "status",
-                          "isActive"
+                          "isActive",
+                          "application"
                         ],
                         "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "manual",
+                              "application"
+                            ]
+                          },
                           "id": {
                             "type": "string",
                             "format": "uuid"
@@ -13146,6 +13811,49 @@
                             "enum": [
                               "youApplied"
                             ]
+                          },
+                          "application": {
+                            "type": "object",
+                            "nullable": true,
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "status",
+                              "message",
+                              "jobPostingSnapshot",
+                              "createdAt",
+                              "updatedAt"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": [
+                                  "pending",
+                                  "accepted",
+                                  "rejected"
+                                ]
+                              },
+                              "message": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "jobPostingSnapshot": {
+                                "type": "object",
+                                "additionalProperties": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              },
+                              "updatedAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
                           }
                         }
                       }
@@ -13226,14 +13934,23 @@
                       "type": "object",
                       "additionalProperties": false,
                       "required": [
+                        "type",
                         "id",
                         "organizationId",
                         "specialistId",
                         "source",
                         "status",
-                        "isActive"
+                        "isActive",
+                        "application"
                       ],
                       "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "manual",
+                            "application"
+                          ]
+                        },
                         "id": {
                           "type": "string",
                           "format": "uuid"
@@ -13274,6 +13991,49 @@
                           "enum": [
                             "youApplied"
                           ]
+                        },
+                        "application": {
+                          "type": "object",
+                          "nullable": true,
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "status",
+                            "message",
+                            "jobPostingSnapshot",
+                            "createdAt",
+                            "updatedAt"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "pending",
+                                "accepted",
+                                "rejected"
+                              ]
+                            },
+                            "message": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "jobPostingSnapshot": {
+                              "type": "object",
+                              "additionalProperties": true
+                            },
+                            "createdAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updatedAt": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
                         }
                       }
                     }
@@ -13426,6 +14186,42 @@
         ],
         "tags": [
           "cabinet-specialists-hiring"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "Health_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status",
+                    "service"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "service": {
+                      "type": "string",
+                      "example": "back"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Проверка доступности сервиса",
+        "tags": [
+          "health"
         ]
       }
     },
@@ -15954,7 +16750,7 @@
                           "activeWorkplace": {
                             "type": "object",
                             "nullable": true,
-                            "description": "Текущее место приёма (`activeOrganization`). Профиль салона: GET /organizations/{id}.",
+                            "description": "Активное место приёма из `SpecialistWorkplace`. Профиль салона: GET /organizations/{id}.",
                             "required": [
                               "id",
                               "name"

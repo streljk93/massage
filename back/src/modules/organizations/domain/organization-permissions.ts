@@ -21,6 +21,8 @@ export type OrganizationScopedPermissions = {
     reviewApplications: boolean;
     accept: boolean;
   };
+  marketing: { view: boolean };
+  analytics: { view: boolean };
   calendar: {
     view: boolean;
     viewAll: boolean;
@@ -68,6 +70,8 @@ export function buildOrganizationPermissions(
       reviewApplications: canManageProfile,
       accept: canManageProfile,
     },
+    marketing: { view: canManageProfile },
+    analytics: { view: canManageProfile },
     calendar: {
       view: canUseCalendar,
       viewAll: viewAllResources,
@@ -99,6 +103,8 @@ export function emptyOrganizationPermissions(): OrganizationScopedPermissions {
       reviewApplications: false,
       accept: false,
     },
+    marketing: { view: false },
+    analytics: { view: false },
     calendar: {
       view: false,
       viewAll: false,

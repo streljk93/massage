@@ -8,6 +8,7 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import type { ServiceCategorySkillSection } from "@/entities/services";
 import { ServiceCategorySkillsPicker } from "@/entities/services";
+import { invalidateSpecialistCabinetProfileQueries } from "@/entities/specialists";
 import {
   createBrowserSdkClient,
   specialistsCabinetPatchSpecialistCabinetSkills,
@@ -74,9 +75,16 @@ export function BusinessSkillsPage() {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [...ONB_QK, accessToken, locale] as const,
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...ONB_QK, accessToken, locale] as const,
+        }),
+        invalidateSpecialistCabinetProfileQueries(
+          queryClient,
+          accessToken,
+          locale,
+        ),
+      ]);
     },
   });
 

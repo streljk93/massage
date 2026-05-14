@@ -35,21 +35,25 @@ export function specialistNonCategoryTextSearchWhere(
       { listingName: { contains: q, mode: 'insensitive' } },
       { bio: { contains: q, mode: 'insensitive' } },
       {
-        activeOrganization: {
-          is: {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              {
-                address: {
-                  is: {
-                    OR: [
-                      { addressLine: { contains: q, mode: 'insensitive' } },
-                      { city: { contains: q, mode: 'insensitive' } },
-                    ],
+        workplaces: {
+          some: {
+            isActive: true,
+            deletedAt: null,
+            organization: {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                {
+                  address: {
+                    is: {
+                      OR: [
+                        { addressLine: { contains: q, mode: 'insensitive' } },
+                        { city: { contains: q, mode: 'insensitive' } },
+                      ],
+                    },
                   },
                 },
-              },
-            ],
+              ],
+            },
           },
         },
       },

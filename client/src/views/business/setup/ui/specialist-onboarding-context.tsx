@@ -16,13 +16,17 @@ import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/app/i18n/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
   defaultWizardStepForApiStep,
   isSpecialistOnboardingComplete,
   maxUiStepAllowed,
 } from "@/entities/business";
+import {
+  invalidateSpecialistCabinetProfileQueries,
+  SPECIALIST_CABINET_PROFILE_QK,
+} from "@/entities/specialists";
 import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared/api/generated/sdk/types.gen";
 import {
   createBrowserSdkClient,
@@ -30,6 +34,7 @@ import {
   organizationsGetWorkplaceOrganizationSearch,
   organizationsCabinetPostCreateOrganization,
   organizationsCabinetPostRequestWorkplaceJoin,
+  specialistsCabinetGetSpecialistCabinetProfile,
   specialistsCabinetGetSpecialistOnboarding,
   specialistsCabinetPatchSpecialistOnboardingPreferences,
   specialistsCabinetPatchSpecialistProfile,
@@ -49,6 +54,17 @@ import {
 } from "../lib/specialist-onboarding-utils";
 
 export const ONB_QK = ["specialistOnboarding"] as const;
+
+async function invalidateOnboardingAndCabinetProfile(
+  qc: QueryClient,
+  accessToken: string,
+  locale: AppLocale,
+) {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] }),
+    invalidateSpecialistCabinetProfileQueries(qc, accessToken, locale),
+  ]);
+}
 
 export type SpecialistWorkPatternUi = "solo" | "business" | "employed_salon";
 
@@ -191,7 +207,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     () => createBrowserSdkClient(accessToken, { locale }),
     [accessToken, locale],
   );
-  const { data: onboard, isLoading, refetch } = useQuery({
+  const {
+    data: onboard,
+    isLoading: onboardingQueryLoading,
+    refetch,
+  } = useQuery({
     queryKey: [...ONB_QK, accessToken, locale],
     enabled: sessionStatus === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
@@ -205,9 +225,23 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       return data;
     },
   });
+  const { data: cabinetProfile, isLoading: profileLoading } = useQuery({
+    queryKey: [...SPECIALIST_CABINET_PROFILE_QK, accessToken, locale],
+    enabled: sessionStatus === "authenticated" && accessToken.length > 0,
+    queryFn: async () => {
+      const { data, error } = await specialistsCabinetGetSpecialistCabinetProfile({
+        client: sdk,
+        query: { locale },
+      });
+      if (error || !data) {
+        throw new Error("cabinet-profile");
+      }
+      return data;
+    },
+  });
 
   const apiStep = onboard?.onboardingStep ?? 1;
-  const spec = onboard?.specialist as SpecialistOnboardingSpec | null | undefined;
+  const spec = cabinetProfile?.specialist as SpecialistOnboardingSpec | null | undefined;
 
   const [formError, setFormError] = useState<string | null>(null);
   const [pName, setPName] = useState("");
@@ -303,19 +337,19 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
 
   useEffect(() => {
     if (isSpecialistOnboardingComplete(onboard ?? null)) {
-      router.replace("/business");
+      router.replace("/business/organizations");
     }
   }, [onboard, router]);
 
   useEffect(() => {
-    if (isLoading || !onboard) {
+    if (onboardingQueryLoading || !onboard) {
       return;
     }
     const raw = String(routeStepRaw ?? "");
     if (raw !== String(activeUi)) {
       router.replace(`/business/setup/${activeUi}`, { scroll: false });
     }
-  }, [isLoading, onboard, routeStepRaw, activeUi, router]);
+  }, [onboardingQueryLoading, onboard, routeStepRaw, activeUi, router]);
 
   const setStep = useCallback(
     (n: number, serverOnboardingStep?: number) => {
@@ -368,9 +402,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
-      await queryClient.invalidateQueries({
-        queryKey: [...ONB_QK, accessToken, locale],
-      });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
@@ -406,9 +442,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
-      await queryClient.invalidateQueries({
-        queryKey: [...ONB_QK, accessToken, locale],
-      });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
@@ -450,9 +488,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
-      await queryClient.invalidateQueries({
-        queryKey: [...ONB_QK, accessToken, locale],
-      });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       if (stepAfter === 5) {
@@ -515,9 +555,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         return;
       }
       setPendingPhotoFile(null);
-      await queryClient.invalidateQueries({
-        queryKey: [...ONB_QK, accessToken, locale],
-      });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       if (stepAfter === 4) {
@@ -547,7 +589,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
@@ -618,7 +664,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(st === 409 ? t("vErrOrgJoinConflict") : t("vErrOrg"));
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
       const { data: o2 } = await refetch();
       const stepAfter = Number(o2?.onboardingStep ?? 1);
       setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
@@ -647,7 +697,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
           return;
         }
         setCreateSalonOpen(false);
-        await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+        await invalidateOnboardingAndCabinetProfile(
+          queryClient,
+          accessToken,
+          locale,
+        );
         const { data: o2 } = await refetch();
         const stepAfter = Number(o2?.onboardingStep ?? 1);
         setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
@@ -660,7 +714,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
 
   const onWorkplaceSkip = () => {
     setFormError(null);
-    router.replace("/business");
+    router.replace("/business/organizations");
   };
 
   const onDone = async () => {
@@ -674,8 +728,12 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
-      router.replace("/business");
+      await invalidateOnboardingAndCabinetProfile(
+        queryClient,
+        accessToken,
+        locale,
+      );
+      router.replace("/business/organizations");
     } finally {
       setDoneSubmitting(false);
     }
@@ -699,11 +757,14 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     (sessionStatus === "authenticated" && accessToken.length === 0);
   const unauthenticated =
     sessionStatus === "unauthenticated" || accessToken.length === 0;
-  const onboardingLoading = sessionStatus === "authenticated" && (isLoading || !onboard);
+  const onboardingLoading =
+    sessionStatus === "authenticated" &&
+    (onboardingQueryLoading || profileLoading || !onboard);
   const ready =
     sessionStatus === "authenticated" &&
     accessToken.length > 0 &&
-    !isLoading &&
+    !onboardingQueryLoading &&
+    !profileLoading &&
     !!onboard;
 
   const value: SpecialistOnboardingContextValue = {

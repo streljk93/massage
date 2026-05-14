@@ -189,18 +189,29 @@ describe('organization policy', () => {
       specialistId: 'sp-2',
     };
 
+    for (const caps of [
+      OrganizationCapabilities.HIRING_VIEW,
+      OrganizationCapabilities.MARKETING_VIEW,
+      OrganizationCapabilities.ANALYTICS_VIEW,
+    ] as const) {
+      for (const ctx of [owner, admin]) {
+        expect(canOrganization(ctx, caps)).toBe(true);
+      }
+      expect(canOrganization(specialist, caps)).toBe(false);
+    }
+
     for (const ctx of [owner, admin]) {
-      expect(canOrganization(ctx, OrganizationCapabilities.HIRING_VIEW)).toBe(
-        true,
-      );
-      expect(canOrganization(ctx, OrganizationCapabilities.HIRING_ACCEPT)).toBe(
-        true,
-      );
       expect(buildOrganizationPermissions(ctx).hiring).toMatchObject({
         view: true,
         manage: true,
         reviewApplications: true,
         accept: true,
+      });
+      expect(buildOrganizationPermissions(ctx).marketing).toMatchObject({
+        view: true,
+      });
+      expect(buildOrganizationPermissions(ctx).analytics).toMatchObject({
+        view: true,
       });
     }
 
@@ -212,6 +223,12 @@ describe('organization policy', () => {
       manage: false,
       reviewApplications: false,
       accept: false,
+    });
+    expect(buildOrganizationPermissions(specialist).marketing).toMatchObject({
+      view: false,
+    });
+    expect(buildOrganizationPermissions(specialist).analytics).toMatchObject({
+      view: false,
     });
   });
 

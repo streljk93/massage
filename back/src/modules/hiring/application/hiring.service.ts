@@ -16,6 +16,8 @@ import {
   HiringRepository,
   type CandidateSearchFilters,
 } from '../infrastructure/hiring.repository';
+import { MatchingEngine, type MatchReason } from './matching-engine';
+import { recomputeListedInDirectoryTx } from '../../specialists/application/recompute-specialist-listed-in-directory';
 import type {
   ApplyToJobPostingBody,
   CandidateListQuery,
@@ -33,6 +35,9 @@ type CandidateListItemDto = {
   summary: string | null;
   experienceYears: number | null;
   skillsCategoryIds: string[];
+  matchScore: number;
+  matchReasons: MatchReason[];
+  matchedCategoryIds: string[];
 };
 
 @Injectable()
@@ -40,6 +45,7 @@ export class HiringService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: HiringRepository,
+    private readonly matchingEngine: MatchingEngine,
     private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
 
@@ -55,6 +61,7 @@ export class HiringService {
     body: CreateJobPostingBody,
   ) {
     await this.assertHiring(userId, organizationId, 'manage');
+    this.assertOpenJobPostingHasCategory(body.status, body.serviceCategoryId);
     await this.assertOfferingAndCategoryScope(organizationId, body);
     const row = await this.repository.createJobPosting(
       organizationId,
@@ -79,6 +86,12 @@ export class HiringService {
         message: 'Job posting not found',
       });
     }
+    this.assertOpenJobPostingHasCategory(
+      body.status ?? existing.status,
+      body.serviceCategoryId === undefined
+        ? existing.serviceCategoryId
+        : body.serviceCategoryId,
+    );
     const row = await this.repository.patchJobPosting(
       jobPostingId,
       organizationId,
@@ -87,8 +100,8 @@ export class HiringService {
     return mapJobPosting(row);
   }
 
-  async listCandidates(query: CandidateListQuery) {
-    return this.listCandidatesByFilters(query);
+  async listCandidates(userId: string, query: CandidateListQuery) {
+    return this.listCandidateMatches(userId, query);
   }
 
   async listJobPostingCandidates(
@@ -104,16 +117,9 @@ export class HiringService {
       });
     }
     await this.assertHiring(userId, job.organizationId, 'view');
-    return this.listCandidatesByFilters({
+    return this.listCandidateMatches(userId, {
       ...query,
-      skillCategoryIds:
-        query.skillCategoryIds.length > 0
-          ? query.skillCategoryIds
-          : job.serviceCategoryId != null
-            ? [job.serviceCategoryId]
-            : [],
-      experienceMinYears:
-        query.experienceMinYears ?? job.experienceMinYears ?? undefined,
+      jobPostingId,
     });
   }
 
@@ -131,6 +137,10 @@ export class HiringService {
       body,
     );
     return mapResume(resume);
+  }
+
+  async rebuildSpecialistSearchProjection(specialistId: string) {
+    await this.repository.refreshSpecialistSearchProjection(specialistId);
   }
 
   async applyToJobPosting(
@@ -217,15 +227,33 @@ export class HiringService {
     return { contact: mapContact(await this.acceptContact(contact.id)) };
   }
 
-  private async listCandidatesByFilters(query: CandidateListQuery) {
-    const rows = await this.repository.listCandidates(
-      query as CandidateSearchFilters,
-    );
-    const hasNext = rows.length > query.limit;
-    const page = hasNext ? rows.slice(0, query.limit) : rows;
+  private async listCandidateMatches(
+    userId: string,
+    query: CandidateListQuery,
+  ) {
+    let jobFilters: {
+      serviceCategoryId: string | null;
+      experienceMinYears: number | null;
+    } | null = null;
+    if (query.jobPostingId != null) {
+      const job = await this.repository.getJobPosting(query.jobPostingId);
+      if (job == null) {
+        throw new NotFoundException({
+          code: 'JOB_POSTING_NOT_FOUND',
+          message: 'Job posting not found',
+        });
+      }
+      await this.assertHiring(userId, job.organizationId, 'view');
+      jobFilters = {
+        serviceCategoryId: job.serviceCategoryId,
+        experienceMinYears: job.experienceMinYears,
+      };
+    }
+    const filters = buildCandidateSearchFilters(query, jobFilters);
+    const result = await this.matchingEngine.searchCandidates(filters);
     return {
-      candidates: page.map(mapCandidate),
-      nextCursor: hasNext ? (page.at(-1)?.specialistId ?? null) : null,
+      candidates: result.candidates.map(mapCandidate),
+      nextCursor: result.nextCursor,
     };
   }
 
@@ -328,10 +356,28 @@ export class HiringService {
         },
       });
     }
-    await tx.specialist.update({
-      where: { id: contact.specialistId },
-      data: { activeOrganizationId: contact.organizationId },
+    const activeWorkplacesCount = await tx.specialistWorkplace.count({
+      where: {
+        specialistId: contact.specialistId,
+        isActive: true,
+        deletedAt: null,
+      },
     });
+    await tx.specialistWorkplace.upsert({
+      where: {
+        specialistId_organizationId: {
+          specialistId: contact.specialistId,
+          organizationId: contact.organizationId,
+        },
+      },
+      create: {
+        specialistId: contact.specialistId,
+        organizationId: contact.organizationId,
+        isActive: activeWorkplacesCount === 0,
+      },
+      update: { deletedAt: null },
+    });
+    await recomputeListedInDirectoryTx(tx, contact.specialistId);
   }
 
   private async assertHiring(
@@ -404,6 +450,45 @@ export class HiringService {
       }
     }
   }
+
+  private assertOpenJobPostingHasCategory(
+    status: string | undefined,
+    serviceCategoryId: string | null | undefined,
+  ) {
+    if (status === 'open' && serviceCategoryId == null) {
+      throw new BadRequestException({
+        code: 'JOB_POSTING_CATEGORY_REQUIRED_FOR_OPEN_STATUS',
+        message: 'serviceCategoryId is required when status is open',
+      });
+    }
+  }
+}
+
+function buildCandidateSearchFilters(
+  query: CandidateListQuery,
+  jobFilters: {
+    serviceCategoryId: string | null;
+    experienceMinYears: number | null;
+  } | null,
+): CandidateSearchFilters {
+  const directCategoryIds = [
+    ...(query.serviceCategoryId != null ? [query.serviceCategoryId] : []),
+    ...query.skillCategoryIds,
+  ];
+  return {
+    cursor: query.cursor,
+    limit: query.limit,
+    q: query.q,
+    skillCategoryIds:
+      directCategoryIds.length > 0
+        ? [...new Set(directCategoryIds)]
+        : jobFilters?.serviceCategoryId != null
+          ? [jobFilters.serviceCategoryId]
+          : [],
+    experienceMinYears:
+      query.experienceMinYears ?? jobFilters?.experienceMinYears ?? undefined,
+    experienceMaxYears: query.experienceMaxYears,
+  };
 }
 
 function mapJobPosting(row: {
@@ -414,6 +499,7 @@ function mapJobPosting(row: {
   requirements: string | null;
   organizationOfferingId: string | null;
   serviceCategoryId: string | null;
+  serviceCategory?: { name: string } | null;
   experienceMinYears: number | null;
   role: OrganizationMembershipRole;
   status: string;
@@ -427,6 +513,7 @@ function mapJobPosting(row: {
     requirements: row.requirements,
     organizationOfferingId: row.organizationOfferingId,
     serviceCategoryId: row.serviceCategoryId,
+    serviceCategoryName: row.serviceCategory?.name ?? null,
     experienceMinYears: row.experienceMinYears,
     role: row.role,
     status: row.status,
@@ -453,6 +540,9 @@ function mapResume(
 function mapCandidate(row: {
   specialistId: string;
   skillsCategoryIds: string[];
+  matchScore: number;
+  matchReasons: MatchReason[];
+  matchedCategoryIds: string[];
   specialist: {
     listingName: string | null;
     imageUrl: string | null;
@@ -472,6 +562,9 @@ function mapCandidate(row: {
     summary: row.specialist.resume?.summary ?? null,
     experienceYears: row.specialist.resume?.experienceYears ?? null,
     skillsCategoryIds: row.skillsCategoryIds,
+    matchScore: row.matchScore,
+    matchReasons: row.matchReasons,
+    matchedCategoryIds: row.matchedCategoryIds,
   };
 }
 
@@ -483,8 +576,18 @@ function mapContact(contact: {
   source: string;
   status: string;
   isActive: boolean;
+  application?: {
+    id: string;
+    status: string;
+    message: string | null;
+    jobPostingSnapshot: Prisma.JsonValue;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null;
 }) {
+  const type = contact.application == null ? 'manual' : 'application';
   return {
+    type,
     id: contact.id,
     organizationId: contact.organizationId,
     specialistId: contact.specialistId,
@@ -493,23 +596,42 @@ function mapContact(contact: {
     status: contact.status,
     isActive: contact.isActive,
     displayLabelKey: 'youApplied',
+    application:
+      contact.application == null
+        ? null
+        : {
+            id: contact.application.id,
+            status: contact.application.status,
+            message: contact.application.message,
+            jobPostingSnapshot: contact.application.jobPostingSnapshot,
+            createdAt: contact.application.createdAt.toISOString(),
+            updatedAt: contact.application.updatedAt.toISOString(),
+          },
   };
 }
 
 function buildJobPostingSnapshot(job: {
   title: string;
+  description: string | null;
   requirements: string | null;
   organizationOfferingId: string | null;
   serviceCategoryId: string | null;
+  experienceMinYears: number | null;
   role: OrganizationMembershipRole;
   organization: { name: string };
+  serviceCategory?: { name: string } | null;
 }) {
   return {
     title: job.title,
+    description: job.description,
     requirements: job.requirements,
+    experienceMinYears: job.experienceMinYears,
     organizationOfferingId: job.organizationOfferingId,
     organizationName: job.organization.name,
     serviceCategoryId: job.serviceCategoryId,
+    categoryName: job.serviceCategory?.name ?? null,
     role: job.role,
+    salaryRange: null,
+    location: null,
   };
 }

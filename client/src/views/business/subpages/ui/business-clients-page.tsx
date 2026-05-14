@@ -18,6 +18,7 @@ import {
   canOrganization,
   OrganizationBookingActions,
   OrganizationCapabilities,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
@@ -181,10 +182,11 @@ export function BusinessClientsPage() {
     },
   });
 
-  const activeWorkplace = useMemo(() => {
-    const orgs = orgsQuery.data?.organizations ?? [];
-    return orgs.find((o) => o.isActiveWorkplace === true) ?? null;
-  }, [orgsQuery.data?.organizations]);
+  const activeWorkplace = useMemo(
+    () => pickSelectedContextOrganization(orgsQuery.data),
+    [orgsQuery.data],
+  );
+  const activeOrganizationId = activeWorkplace?.id ?? "";
 
   const hasActiveWorkplace = activeWorkplace != null;
   const canViewClients = canOrganization(
@@ -196,6 +198,7 @@ export function BusinessClientsPage() {
   const clientsQuery = useInfiniteQuery({
     queryKey: [
       ...CLIENTS_QUERY_KEY,
+      activeOrganizationId,
       accessToken,
       locale,
       debouncedSearch,

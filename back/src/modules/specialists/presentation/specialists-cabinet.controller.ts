@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -16,6 +19,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiParam,
   ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
@@ -29,12 +33,23 @@ import {
   type ApiLocale,
 } from '../../../common/i18n';
 import { BookingsService } from '../../bookings/application/bookings.service';
+import { SpecialistCabinetProfileService } from '../application/specialist-cabinet-profile.service';
 import { SpecialistOnboardingService } from '../application/specialist-onboarding.service';
 import { SpecialistWorkplaceService } from '../application/specialist-workplace.service';
 import type { SpecialistActiveOrganizationBookingsPreviewQuery } from '../dto/specialist-active-organization-bookings-preview-query.schema';
 import { specialistActiveOrganizationBookingsPreviewQuerySchema } from '../dto/specialist-active-organization-bookings-preview-query.schema';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
 import { patchSpecialistActiveOrganizationBodySchema } from '../dto/patch-specialist-active-organization-body.schema';
+import type {
+  CreateSpecialistWorkplaceBody,
+  PatchSpecialistProfileStateBody,
+  PatchSpecialistWorkplaceBody,
+} from '../dto/specialist-workplace.schema';
+import {
+  createSpecialistWorkplaceBodySchema,
+  patchSpecialistProfileStateBodySchema,
+  patchSpecialistWorkplaceBodySchema,
+} from '../dto/specialist-workplace.schema';
 import type { SalonCabinetBookingsListQuery } from '../dto/salon-cabinet-bookings-list-query.schema';
 import { salonCabinetBookingsListQuerySchema } from '../dto/salon-cabinet-bookings-list-query.schema';
 import type { SpecialistCabinetClientsListQuery } from '../dto/specialist-cabinet-clients-list-query.schema';
@@ -53,13 +68,20 @@ import {
 import {
   patchSpecialistActiveOrganizationRequestSchema,
   patchSpecialistActiveOrganizationResponseSchema,
+  patchSpecialistProfileStateRequestSchema,
+  patchSpecialistProfileStateResponseSchema,
+  patchSpecialistWorkplaceRequestSchema,
   patchSpecialistOnboardingPreferencesRequestSchema,
   patchSpecialistProfileRequestSchema,
   patchSpecialistSkillsRequestSchema,
+  createSpecialistWorkplaceRequestSchema,
+  specialistMyWorkplacesResponseSchema,
+  specialistWorkplaceResponseSchema,
   specialistActiveOrganizationBookingsPreviewResponseSchema,
   specialistCabinetClientsListResponseSchema,
   specialistMyOrganizationsResponseSchema,
   specialistMyWorkplaceJoinRequestsResponseSchema,
+  specialistCabinetProfileResponseSchema,
   specialistOnboardingResponseSchema,
   specialistSalonBookingsListResponseSchema,
 } from './specialists.openapi-schemas';
@@ -76,6 +98,7 @@ type AuthedRequest = Request & { user: AuthenticatedUser };
 export class SpecialistsCabinetController {
   constructor(
     private readonly specialistWorkplaceService: SpecialistWorkplaceService,
+    private readonly specialistCabinetProfileService: SpecialistCabinetProfileService,
     private readonly specialistOnboardingService: SpecialistOnboardingService,
     private readonly bookingsService: BookingsService,
   ) {}
@@ -93,6 +116,59 @@ export class SpecialistsCabinetController {
     return this.specialistWorkplaceService.listMyOrganizations(req.user.id);
   }
 
+  @Get('me/workplaces')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Места приёма мастера и флаг “работаю как специалист”. Витрина опирается на active workplace, не на activeOrganizationId.',
+  })
+  @ApiOkResponse({ schema: specialistMyWorkplacesResponseSchema })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async getSpecialistMyWorkplaces(@Req() req: AuthedRequest) {
+    return this.specialistWorkplaceService.getMyWorkplaces(req.user.id);
+  }
+
+  @Post('me/workplaces')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Добавить организацию как место приёма. Требует активное трудоустройство в организации.',
+  })
+  @ApiBody({ schema: createSpecialistWorkplaceRequestSchema })
+  @ApiOkResponse({ schema: specialistWorkplaceResponseSchema })
+  @ApiBadRequestResponse({ description: 'Нет активного трудоустройства' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async createSpecialistWorkplace(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(createSpecialistWorkplaceBodySchema))
+    body: CreateSpecialistWorkplaceBody,
+  ) {
+    return this.specialistWorkplaceService.createWorkplace(req.user.id, body);
+  }
+
+  @Patch('me/profile-state')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Включить или выключить работу как специалист. Пересчитывает persisted visibility projection.',
+  })
+  @ApiBody({ schema: patchSpecialistProfileStateRequestSchema })
+  @ApiOkResponse({ schema: patchSpecialistProfileStateResponseSchema })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Нет профиля специалиста' })
+  async patchSpecialistProfileState(
+    @Req() req: AuthedRequest,
+    @Body(new ZodValidationPipe(patchSpecialistProfileStateBodySchema))
+    body: PatchSpecialistProfileStateBody,
+  ) {
+    return this.specialistWorkplaceService.patchProfileState(req.user.id, body);
+  }
+
   @Get('me/active-organization/bookings-preview')
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
@@ -102,11 +178,10 @@ export class SpecialistsCabinetController {
     required: true,
     schema: { type: 'string', format: 'uuid' },
     description:
-      'Текущее место приёма мастера; должно совпадать с `activeOrganizationId` в ответе `GET /specialists/me/organizations`.',
+      'Организация активного `SpecialistWorkplace`; должна совпадать с текущим местом приёма.',
   })
   @ApiOperation({
-    summary:
-      'Превью активных броней к вам в текущей организации — то же, что будет отменено при смене места приёма.',
+    summary: 'Превью активных броней к вам в активной организации приёма.',
   })
   @ApiOkResponse({
     schema: specialistActiveOrganizationBookingsPreviewResponseSchema,
@@ -236,7 +311,7 @@ export class SpecialistsCabinetController {
   @ApiBearerAuth('access-token')
   @ApiOperation({
     summary:
-      'Текущая организация мастера (адрес витрины и новые записи). При переключении на другую организацию или снятии активного салона (в теле PATCH `organizationId`: uuid другой организации или null) активные брони на прежнем месте приёма отменяются.',
+      'Выбранная организация в кабинете мастера. Это UI-контекст; витрина и новые записи опираются на SpecialistWorkplace.',
   })
   @ApiBody({ schema: patchSpecialistActiveOrganizationRequestSchema })
   @ApiOkResponse({ schema: patchSpecialistActiveOrganizationResponseSchema })
@@ -274,6 +349,26 @@ export class SpecialistsCabinetController {
   ) {
     await this.specialistOnboardingService.ensureSpecialist(req.user.id);
     return this.specialistOnboardingService.getOnboarding(req.user.id, locale);
+  }
+
+  @Get('me/cabinet-profile')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Снимок профиля мастера для кабинета (витрина, навыки, контакты). Без шага онбординга.',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiOkResponse({ schema: specialistCabinetProfileResponseSchema })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async getSpecialistCabinetProfile(
+    @Req() req: AuthedRequest,
+    @RequestLocale() locale: ApiLocale,
+  ) {
+    return this.specialistCabinetProfileService.getCabinetProfile(
+      req.user.id,
+      locale,
+    );
   }
 
   @Get('me/onboarding')
@@ -396,6 +491,116 @@ export class SpecialistsCabinetController {
       req.user.id,
       body,
       locale,
+    );
+  }
+}
+
+@ApiTags('cabinet-specialist-workplaces')
+@Controller('workplaces')
+export class SpecialistWorkplacesController {
+  constructor(
+    private readonly specialistWorkplaceService: SpecialistWorkplaceService,
+  ) {}
+
+  @Patch(':workplaceId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Изменить место приёма текущего мастера.' })
+  @ApiParam({ name: 'workplaceId', schema: { type: 'string', format: 'uuid' } })
+  @ApiBody({ schema: patchSpecialistWorkplaceRequestSchema })
+  @ApiOkResponse({ schema: specialistWorkplaceResponseSchema })
+  @ApiConflictResponse({
+    description: 'Нельзя деактивировать место с активными бронями',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Место приёма не найдено' })
+  async patchSpecialistWorkplace(
+    @Req() req: AuthedRequest,
+    @Param('workplaceId', new ParseUUIDPipe()) workplaceId: string,
+    @Body(new ZodValidationPipe(patchSpecialistWorkplaceBodySchema))
+    body: PatchSpecialistWorkplaceBody,
+  ) {
+    return this.specialistWorkplaceService.patchWorkplace(
+      req.user.id,
+      workplaceId,
+      body,
+    );
+  }
+
+  @Post(':workplaceId/activate')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Сделать место приёма активным. В транзакции снимает активность с остальных мест.',
+  })
+  @ApiParam({ name: 'workplaceId', schema: { type: 'string', format: 'uuid' } })
+  @ApiOkResponse({ schema: specialistWorkplaceResponseSchema })
+  @ApiConflictResponse({
+    description: 'Параллельная активация или инвариант БД',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Место приёма не найдено' })
+  async activateSpecialistWorkplace(
+    @Req() req: AuthedRequest,
+    @Param('workplaceId', new ParseUUIDPipe()) workplaceId: string,
+  ) {
+    return this.specialistWorkplaceService.activateWorkplace(
+      req.user.id,
+      workplaceId,
+    );
+  }
+
+  @Post(':workplaceId/deactivate')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Выключить место приёма. Проверяет активные брони и инвариант последнего активного места.',
+  })
+  @ApiParam({ name: 'workplaceId', schema: { type: 'string', format: 'uuid' } })
+  @ApiOkResponse({ schema: specialistWorkplaceResponseSchema })
+  @ApiConflictResponse({
+    description:
+      'Нельзя деактивировать место с активными бронями или последнее активное место',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Место приёма не найдено' })
+  async deactivateSpecialistWorkplace(
+    @Req() req: AuthedRequest,
+    @Param('workplaceId', new ParseUUIDPipe()) workplaceId: string,
+  ) {
+    return this.specialistWorkplaceService.deactivateWorkplace(
+      req.user.id,
+      workplaceId,
+    );
+  }
+
+  @Delete(':workplaceId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Удалить место приёма текущего мастера.' })
+  @ApiParam({ name: 'workplaceId', schema: { type: 'string', format: 'uuid' } })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      required: ['ok'],
+      properties: { ok: { type: 'boolean', enum: [true] } },
+    },
+  })
+  @ApiConflictResponse({
+    description:
+      'Нельзя удалить место с активными бронями или последнее активное место',
+  })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  @ApiNotFoundResponse({ description: 'Место приёма не найдено' })
+  async deleteSpecialistWorkplace(
+    @Req() req: AuthedRequest,
+    @Param('workplaceId', new ParseUUIDPipe()) workplaceId: string,
+  ) {
+    return this.specialistWorkplaceService.deleteWorkplace(
+      req.user.id,
+      workplaceId,
     );
   }
 }

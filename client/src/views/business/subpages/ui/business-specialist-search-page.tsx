@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, UserRound } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import type { AppLocale } from "@/app/i18n/routing";
@@ -10,7 +11,7 @@ import { BusinessEmptyState } from "@/entities/business";
 import {
   canOrganization,
   OrganizationCapabilities,
-  pickActiveWorkplaceOrganization,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
@@ -24,9 +25,20 @@ import type {
   HiringListCandidatesResponse,
 } from "@/shared/api/generated/sdk/types.gen";
 import { cn, motion } from "@/shared/lib";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/ui";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui";
 import { Skeleton } from "@/shared/ui/shadcn/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 const CANDIDATES_QK = ["businessSpecialistCandidates"] as const;
 const SEARCH_JOBS_QK = ["businessSpecialistSearchJobs"] as const;
@@ -37,12 +49,15 @@ export function BusinessSpecialistSearchPage() {
   const t = useTranslations("businessSpecialistSearchPage");
   useSetBusinessPageTitle(t("title"));
   const locale = useLocale() as AppLocale;
+  const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken ?? "";
   const authed = sessionStatus === "authenticated" && accessToken.length > 0;
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [selectedJobPostingId, setSelectedJobPostingId] = useState<string>("");
+  const [selectedJobPostingId, setSelectedJobPostingId] = useState<string>(
+    () => searchParams.get("jobPostingId") ?? "",
+  );
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -69,7 +84,7 @@ export function BusinessSpecialistSearchPage() {
   });
 
   const activeOrg = useMemo(
-    () => pickActiveWorkplaceOrganization(orgsQuery.data),
+    () => pickSelectedContextOrganization(orgsQuery.data),
     [orgsQuery.data],
   );
   const organizationId = activeOrg?.id ?? "";
@@ -94,7 +109,7 @@ export function BusinessSpecialistSearchPage() {
   const effectiveJobPostingId =
     selectedJobPostingId || jobsQuery.data?.jobPostings[0]?.id || "";
 
-  const candidatesQuery = useQuery({
+  const candidatesQuery = useInfiniteQuery({
     queryKey: [
       ...CANDIDATES_QK,
       accessToken,
@@ -102,26 +117,22 @@ export function BusinessSpecialistSearchPage() {
       debouncedSearch,
       effectiveJobPostingId,
     ],
-    enabled: authed && canViewHiring && effectiveJobPostingId.length > 0,
-    queryFn: async () => {
-      const selectedJob = jobsQuery.data?.jobPostings.find(
-        (job) => job.id === effectiveJobPostingId,
-      );
-      if (selectedJob == null) {
-        return { candidates: [], nextCursor: null };
-      }
+    enabled: authed && canViewHiring,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) => {
       const { data, error } = await hiringListCandidates({
         client: sdk,
         query: {
           q: debouncedSearch || undefined,
           limit: 20,
-          skillCategoryIds: selectedJob.serviceCategoryId ?? undefined,
-          experienceMinYears: selectedJob.experienceMinYears ?? undefined,
+          cursor: pageParam,
+          jobPostingId: effectiveJobPostingId || undefined,
         },
       });
       if (error || !data) throw error ?? new Error("candidates");
       return data;
     },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
   if (sessionStatus === "loading" || orgsQuery.isPending) {
@@ -145,7 +156,8 @@ export function BusinessSpecialistSearchPage() {
     );
   }
 
-  const candidates = candidatesQuery.data?.candidates ?? [];
+  const candidates =
+    candidatesQuery.data?.pages.flatMap((page) => page.candidates) ?? [];
   const jobPostings = jobsQuery.data?.jobPostings ?? [];
 
   return (
@@ -187,25 +199,35 @@ export function BusinessSpecialistSearchPage() {
       </section>
 
       <section className="grid gap-2">
-        {jobPostings.length === 0 ? (
+        {jobPostings.length === 0 && debouncedSearch.length === 0 ? (
           <BusinessEmptyState
             icon={Search}
             title={t("noJobPostingsTitle")}
             description={t("noJobPostingsHint")}
           />
         ) : null}
-        {jobPostings.length > 0 ? candidates.map((candidate) => (
+        {candidates.map((candidate) => (
           <CandidateCard
             key={candidate.specialistId}
             candidate={candidate}
           />
-        )) : null}
-        {jobPostings.length > 0 && !candidatesQuery.isPending && candidates.length === 0 ? (
+        ))}
+        {!candidatesQuery.isPending && candidates.length === 0 ? (
           <BusinessEmptyState
             icon={Search}
             title={t("noResultsTitle")}
             description={t("noResultsHint")}
           />
+        ) : null}
+        {candidatesQuery.hasNextPage ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={candidatesQuery.isFetchingNextPage}
+            onClick={() => void candidatesQuery.fetchNextPage()}
+          >
+            {t("loadMore")}
+          </Button>
         ) : null}
       </section>
     </main>
@@ -222,14 +244,29 @@ function CandidateCard({
     <article className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3">
       <Link
         href={`/specialists/${candidate.specialistId}`}
-        className={cn(motion.interactive, "min-w-0 flex-1")}
+        className={cn(motion.interactive, "flex min-w-0 flex-1 items-center gap-3")}
       >
-        <p className="truncate font-heading text-sm font-semibold">
-          {candidate.displayName ?? candidate.specialistId}
-        </p>
-        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-          {candidate.headline ?? candidate.summary ?? t("candidateNoHeadline")}
-        </p>
+        <Avatar className="size-11">
+          {candidate.imageUrl ? <AvatarImage src={candidate.imageUrl} alt="" /> : null}
+          <AvatarFallback>
+            <UserRound className="size-5" aria-hidden />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-heading text-sm font-semibold">
+            {candidate.displayName ?? candidate.specialistId}
+          </p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+            {candidate.experienceYears == null ?
+              t("experienceUnknown")
+            : t("candidateExperience", { years: candidate.experienceYears })}
+            {" · "}
+            {candidate.headline ?? candidate.summary ?? t("candidateNoHeadline")}
+          </p>
+        </div>
+        <span className="text-xs font-semibold text-primary">
+          {t("matchScore", { score: Math.round(candidate.matchScore * 100) })}
+        </span>
       </Link>
     </article>
   );

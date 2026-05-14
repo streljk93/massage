@@ -4,9 +4,16 @@
  */
 export function computeListedInDirectory(input: {
   onboardingCompletedAt: Date | null;
-  activeOrganizationId: string | null;
+  hasActiveWorkplace: boolean;
 }): boolean {
-  return (
-    input.onboardingCompletedAt != null && input.activeOrganizationId != null
-  );
+  return input.onboardingCompletedAt != null && input.hasActiveWorkplace;
+}
+
+/**
+ * Read-side helper: наружу видимость специалиста читается только из persisted projection.
+ */
+export function isSpecialistVisible(input: {
+  listedInDirectory: boolean;
+}): boolean {
+  return input.listedInDirectory;
 }

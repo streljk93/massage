@@ -307,7 +307,6 @@ export class BookingsService {
       where: { id: body.specialistId, deletedAt: null },
       select: {
         id: true,
-        activeOrganizationId: true,
         userId: true,
         listingName: true,
         user: { select: { name: true } },
@@ -321,16 +320,15 @@ export class BookingsService {
         message: 'Specialist not found',
       });
     }
-
-    let organizationId = specialist.activeOrganizationId;
-    if (!organizationId) {
-      const employment =
-        await this.prisma.specialistOrganizationEmployment.findFirst({
-          where: { specialistId: body.specialistId, isActive: true },
-          orderBy: { startDate: 'desc' },
-        });
-      organizationId = employment?.organizationId ?? null;
-    }
+    const activeWorkplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        specialistId: body.specialistId,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true, organizationId: true },
+    });
+    const organizationId = activeWorkplace?.organizationId ?? null;
 
     let listingOrg: {
       listingWorkdayStartMinute: number | null;
@@ -648,6 +646,7 @@ export class BookingsService {
               clientUserId,
               specialistId: body.specialistId,
               organizationId,
+              workplaceId: activeWorkplace!.id,
               organizationOfferingId: orgOfferingId,
               offeringPriceOptionId: optId,
               categoryShortNameSnapshot,
@@ -889,9 +888,7 @@ export class BookingsService {
           where: { deletedAt: null },
           select: { id: true },
         },
-        specialist: {
-          select: { id: true, activeOrganizationId: true },
-        },
+        specialist: { select: { id: true } },
       },
     });
 
@@ -917,8 +914,7 @@ export class BookingsService {
       });
     }
 
-    const organizationId =
-      booking.organizationId ?? booking.specialist.activeOrganizationId;
+    const organizationId = booking.organizationId;
     if (organizationId == null) {
       throw new BadRequestException({
         code: 'BOOKING_ORGANIZATION_UNKNOWN',
@@ -1811,17 +1807,30 @@ export class BookingsService {
       });
     }
 
-    if (specialist.activeOrganizationId == null) {
+    const activeWorkplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        specialistId: specialist.id,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { organizationId: true },
+    });
+    const activeOrganizationId =
+      specialist.activeOrganizationId ??
+      activeWorkplace?.organizationId ??
+      null;
+
+    if (activeOrganizationId == null) {
       return { activeOrganizationId: null, clients: [], nextCursor: null };
     }
 
     const ctx = await this.organizationAccess.resolveContext(
       userId,
-      specialist.activeOrganizationId,
+      activeOrganizationId,
     );
     const rows =
       await this.bookingsRepository.findManyBusinessClientSourceBookingsScoped({
-        organizationId: specialist.activeOrganizationId,
+        organizationId: activeOrganizationId,
         bookingScope: buildOrganizationScope(ctx).bookings,
         q: query.q,
       });
@@ -1839,7 +1848,7 @@ export class BookingsService {
     const nextOffset = safeOffset + clients.length;
 
     return {
-      activeOrganizationId: specialist.activeOrganizationId,
+      activeOrganizationId,
       clients,
       nextCursor: nextOffset < sorted.length ? String(nextOffset) : null,
     };
@@ -1985,16 +1994,28 @@ export class BookingsService {
     id: string;
     activeOrganizationId: string | null;
   }): Promise<SalonCabinetBookingRow[]> {
-    if (specialist.activeOrganizationId == null) {
+    const activeWorkplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        specialistId: specialist.id,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { organizationId: true },
+    });
+    const activeOrganizationId =
+      specialist.activeOrganizationId ??
+      activeWorkplace?.organizationId ??
+      null;
+    if (activeOrganizationId == null) {
       return [];
     }
     const ctx = await this.organizationAccess.resolveContext(
       specialist.userId,
-      specialist.activeOrganizationId,
+      activeOrganizationId,
     );
     return this.bookingsRepository.findManyForSalonCabinetScoped([
       {
-        organizationId: specialist.activeOrganizationId,
+        organizationId: activeOrganizationId,
         bookingScope: buildOrganizationScope(ctx).bookings,
       },
     ]);

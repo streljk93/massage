@@ -5,6 +5,7 @@ export {
   SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
   specialistMyOrganizationsQueryKey,
   pickActiveWorkplaceOrganization,
+  pickSelectedContextOrganization,
   displayNameForCabinetOrganization,
   cabinetOrganizationCoverSrc,
   type SpecialistMyOrganizationRow,

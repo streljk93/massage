@@ -39,18 +39,36 @@ export function pickActiveWorkplaceOrganization(
   if (data == null || data.organizations.length === 0) {
     return null;
   }
-  const aid =
-    typeof data.activeOrganizationId === "string" && data.activeOrganizationId.length > 0 ?
-      data.activeOrganizationId
-    : null;
-  if (aid == null) {
-    return null;
-  }
   return (
     data.organizations.find(
       (o) =>
-        o.id === aid &&
+        o.isActiveWorkplace === true &&
         o.membershipStatus === "employed",
     ) ?? null
+  );
+}
+
+/**
+ * Возвращает организацию, выбранную как UI-контекст кабинета.
+ * Приоритет: activeOrganizationId → isActiveWorkplace → первая employed.
+ */
+export function pickSelectedContextOrganization(
+  data: SpecialistsCabinetGetSpecialistMyOrganizationsResponse | undefined,
+): SpecialistMyOrganizationRow | null {
+  if (data == null || data.organizations.length === 0) return null;
+  const activeOrgId =
+    typeof data.activeOrganizationId === "string" ? data.activeOrganizationId : null;
+  if (activeOrgId != null) {
+    const found = data.organizations.find(
+      (o) => o.id === activeOrgId && o.membershipStatus === "employed",
+    );
+    if (found) return found;
+  }
+  return (
+    data.organizations.find(
+      (o) => o.isActiveWorkplace === true && o.membershipStatus === "employed",
+    ) ??
+    data.organizations.find((o) => o.membershipStatus === "employed") ??
+    null
   );
 }

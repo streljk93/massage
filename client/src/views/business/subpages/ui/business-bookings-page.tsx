@@ -17,6 +17,7 @@ import {
   canOrganization,
   OrganizationBookingActions,
   OrganizationCapabilities,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import {
@@ -105,10 +106,11 @@ export function BusinessBookingsPage() {
     setSalonCancelTargetId(bookingId);
   }, []);
 
-  const activeWorkplace = useMemo(() => {
-    const orgs = orgsQuery.data?.organizations ?? [];
-    return orgs.find((o) => o.isActiveWorkplace === true) ?? null;
-  }, [orgsQuery.data?.organizations]);
+  const activeWorkplace = useMemo(
+    () => pickSelectedContextOrganization(orgsQuery.data),
+    [orgsQuery.data],
+  );
+  const activeOrganizationId = activeWorkplace?.id ?? "";
 
   const hasActiveWorkplace = activeWorkplace != null;
   const canViewActiveWorkplaceBookings = canOrganization(
@@ -133,7 +135,11 @@ export function BusinessBookingsPage() {
   );
 
   const bookingsQuery = useQuery({
-    queryKey: salonBookingsActiveWorkplaceQueryKey(accessToken, locale),
+    queryKey: salonBookingsActiveWorkplaceQueryKey(
+      accessToken,
+      locale,
+      activeOrganizationId,
+    ),
     enabled: authed && orgsQuery.isSuccess && canViewActiveWorkplaceBookings,
     queryFn: async () => {
       const { data: res, error: err } =

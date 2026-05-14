@@ -219,7 +219,11 @@ function specialistIncludeForOrgEmployment() {
         phone: true,
       },
     },
-    activeOrganization: specialistActiveOrganizationInclude,
+    workplaces: {
+      where: { isActive: true, deletedAt: null },
+      take: 1,
+      include: { organization: specialistActiveOrganizationInclude },
+    },
     offeringsExecution: marketplaceSpecialistOfferingInclude,
     publishedProfileRevision: publishedProfileRevisionVitrineSelect,
   } satisfies Prisma.SpecialistInclude;
@@ -234,7 +238,11 @@ function specialistListInclude() {
       },
     },
     skills: serviceCategoryWithLocales,
-    activeOrganization: specialistActiveOrganizationInclude,
+    workplaces: {
+      where: { isActive: true, deletedAt: null },
+      take: 1,
+      include: { organization: specialistActiveOrganizationInclude },
+    },
     offeringsExecution: marketplaceSpecialistOfferingInclude,
     publishedProfileRevision: publishedProfileRevisionVitrineSelect,
   } satisfies Prisma.SpecialistInclude;
@@ -463,7 +471,9 @@ export class DirectoryRepository {
   /**
    * Одна строка списка мастера каталога (как для mapSpecialistRowToListItem).
    */
-  async findSpecialistListRowById(id: string): Promise<SpecialistListRow | null> {
+  async findSpecialistListRowById(
+    id: string,
+  ): Promise<SpecialistListRow | null> {
     return this.prisma.specialist.findUnique({
       where: { id, deletedAt: null },
       include: specialistListInclude(),
@@ -473,7 +483,9 @@ export class DirectoryRepository {
   /**
    * Базовые правила включения строки каталога (без пользовательских фильтров категории/цен).
    */
-  async specialistPassesDirectoryListingBase(specialistId: string): Promise<boolean> {
+  async specialistPassesDirectoryListingBase(
+    specialistId: string,
+  ): Promise<boolean> {
     const parts = await this.specialistDirectoryAndParts(null, null);
     if (parts == null) {
       return false;
@@ -486,7 +498,7 @@ export class DirectoryRepository {
 
   /**
    * Индексируемое ребро оффера × мастер: мастер должен проходить базу каталога,
-   * а `activeOrganizationId` совпадать с организацией `OrganizationOffering`.
+   * а активный workplace совпадать с организацией `OrganizationOffering`.
    */
   async specialistPassesDirectoryListingBaseEdge(
     edgeId: string,
@@ -509,9 +521,15 @@ export class DirectoryRepository {
     }
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: edge.specialistId, deletedAt: null },
-      select: { activeOrganizationId: true },
+      select: {
+        workplaces: {
+          where: { isActive: true, deletedAt: null },
+          select: { organizationId: true },
+          take: 1,
+        },
+      },
     });
-    const activeOrgId = specialist?.activeOrganizationId ?? null;
+    const activeOrgId = specialist?.workplaces[0]?.organizationId ?? null;
     return (
       activeOrgId != null &&
       activeOrgId === edge.organizationOffering.organizationId
@@ -528,10 +546,16 @@ export class DirectoryRepository {
           {
             deletedAt: null,
             listedInDirectory: true,
-            activeOrganizationId: { not: null },
-            activeOrganization: {
-              deletedAt: null,
-              publicationModerationStatus: PublicationModerationStatus.approved,
+            workplaces: {
+              some: {
+                isActive: true,
+                deletedAt: null,
+                organization: {
+                  deletedAt: null,
+                  publicationModerationStatus:
+                    PublicationModerationStatus.approved,
+                },
+              },
             },
           },
           directoryListedSpecialistListingNameWhereInput(),
@@ -759,13 +783,16 @@ export class DirectoryRepository {
             FROM "SpecialistSkill" ssc
             INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
             INNER JOIN "Specialist" sp ON sp.id = ssc."specialistId"
+            INNER JOIN "SpecialistWorkplace" w
+              ON w."specialistId" = sp.id
+              AND w."isActive" = true
+              AND w."deletedAt" IS NULL
             INNER JOIN "OrganizationServiceCategory" osc
-              ON osc."organizationId" = sp."activeOrganizationId"
+              ON osc."organizationId" = w."organizationId"
               AND osc."serviceCategoryId" = sc.id
             WHERE ssc."specialistId"::text IN (${Prisma.join(ids)})
               AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
               AND sp."deletedAt" IS NULL
-              AND sp."activeOrganizationId" IS NOT NULL
               AND ${vitrineCategoryCoverageExists()}
             GROUP BY ssc."specialistId"
           `,
@@ -791,7 +818,7 @@ export class DirectoryRepository {
       const rows = await this.prisma.$queryRaw<
         { specId: string; mp: number | null }[]
       >(
-          Prisma.sql`
+        Prisma.sql`
             SELECT so."specialistId"::text AS "specId",
               MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS mp
             FROM "SpecialistOffering" so
@@ -923,7 +950,7 @@ export class DirectoryRepository {
       const rows = await this.prisma.$queryRaw<
         { orgId: string; mp: number | null }[]
       >(
-          Prisma.sql`
+        Prisma.sql`
             SELECT e."organizationId"::text AS "orgId",
               MIN(COALESCE(sovo."customPrice", po."priceAmount"))::int AS mp
             FROM "SpecialistOrganizationEmployment" e
@@ -945,8 +972,14 @@ export class DirectoryRepository {
               AND e."organizationId"::text IN (${Prisma.join(ids)})
               AND sp."listedInDirectory" = true
               AND sp."deletedAt" IS NULL
-              AND sp."activeOrganizationId" IS NOT NULL
-              AND sp."activeOrganizationId" = e."organizationId"
+              AND EXISTS (
+                SELECT 1
+                FROM "SpecialistWorkplace" w
+                WHERE w."specialistId" = sp.id
+                  AND w."organizationId" = e."organizationId"
+                  AND w."isActive" = true
+                  AND w."deletedAt" IS NULL
+              )
             GROUP BY e."organizationId"
           `,
       );
@@ -1226,9 +1259,15 @@ export class DirectoryRepository {
       where: {
         id,
         deletedAt: null,
-        activeOrganization: {
-          deletedAt: null,
-          publicationModerationStatus: PublicationModerationStatus.approved,
+        workplaces: {
+          some: {
+            isActive: true,
+            deletedAt: null,
+            organization: {
+              deletedAt: null,
+              publicationModerationStatus: PublicationModerationStatus.approved,
+            },
+          },
         },
         AND: [
           directoryListedSpecialistListingNameWhereInput(),
@@ -1248,10 +1287,15 @@ export class DirectoryRepository {
         id,
         deletedAt: null,
         listedInDirectory: true,
-        activeOrganizationId: { not: null },
-        activeOrganization: {
-          deletedAt: null,
-          publicationModerationStatus: PublicationModerationStatus.approved,
+        workplaces: {
+          some: {
+            isActive: true,
+            deletedAt: null,
+            organization: {
+              deletedAt: null,
+              publicationModerationStatus: PublicationModerationStatus.approved,
+            },
+          },
         },
         AND: [
           directoryListedSpecialistListingNameWhereInput(),
@@ -1458,8 +1502,14 @@ export class DirectoryRepository {
       WHERE e."isActive" = true
         AND sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
-        AND sp."activeOrganizationId" IS NOT NULL
-        AND sp."activeOrganizationId" = e."organizationId"
+        AND EXISTS (
+          SELECT 1
+          FROM "SpecialistWorkplace" w
+          WHERE w."specialistId" = sp.id
+            AND w."organizationId" = e."organizationId"
+            AND w."isActive" = true
+            AND w."deletedAt" IS NULL
+        )
     `);
     const r = rows[0];
     return { min: r?.min ?? null, max: r?.max ?? null };
@@ -1522,7 +1572,7 @@ export class DirectoryRepository {
         id,
         deletedAt: null,
         listedInDirectory: true,
-        activeOrganizationId: { not: null },
+        workplaces: { some: { isActive: true, deletedAt: null } },
       },
       select: { id: true },
     });

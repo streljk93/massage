@@ -24,6 +24,7 @@ import {
   specialistMyOrganizationsQueryKey,
   SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX,
 } from "@/entities/organizations";
+import { SPECIALIST_CABINET_PROFILE_QK } from "@/entities/specialists";
 import {
   createBrowserSdkClient,
   organizationsCabinetDeleteOrganizationAsOwner,
@@ -32,11 +33,11 @@ import {
   organizationsCabinetPostReviewWorkplaceJoinRequest,
   specialistOrganizationInvitationsListMyOrganizationInvitations,
   specialistOrganizationInvitationsRespondMyOrganizationInvitation,
-  specialistsCabinetGetSpecialistActiveOrganizationBookingsPreview,
+  specialistWorkplacesActivateSpecialistWorkplace,
+  specialistWorkplacesDeactivateSpecialistWorkplace,
+  specialistsCabinetGetSpecialistMyWorkplaces,
   specialistsCabinetGetSpecialistMyOrganizations,
-  specialistsCabinetPatchSpecialistActiveOrganization,
   type OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponse,
-  type SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponse,
 } from "@/shared/api";
 import { confirmAction, notify } from "@/shared/lib/notifications";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -71,66 +72,6 @@ function orgRoleLabelKey(role: string): "orgRoleOwner" | "orgRoleAdmin" | "orgRo
 }
 
 const ORG_BOOKINGS_CONFIRM_TZ = "Asia/Ho_Chi_Minh";
-
-type OrgSwitchAwayPreviewBooking =
-  SpecialistsCabinetGetSpecialistActiveOrganizationBookingsPreviewResponse["bookings"][number];
-
-function OrgSwitchWorkplaceBookingsConfirmBody({
-  rows,
-}: {
-  rows: OrgSwitchAwayPreviewBooking[];
-}) {
-  const t = useTranslations("businessAppSubpages");
-  const format = useFormatter();
-
-  return (
-    <div className="min-w-0 w-full space-y-2 pt-1 text-foreground">
-      <p className="min-w-0 max-w-full text-destructive text-pretty text-sm leading-snug break-words">
-        {t("orgSwitchWorkplaceCancelAutoFootnote")}
-      </p>
-      <ul
-        className="max-h-44 w-full min-w-0 max-w-full list-none divide-y divide-border overflow-y-auto overflow-x-hidden rounded-lg border border-border/70 bg-card p-0 shadow-sm overscroll-contain"
-        role="list"
-        aria-label={t("orgSwitchWorkplaceBookingsListAria")}
-      >
-        {rows.map((row) => {
-          const start = parseISO(row.startsAt);
-          const end = parseISO(row.endsAt);
-          const dateLine = `${format.dateTime(start, {
-            dateStyle: "short",
-            timeZone: ORG_BOOKINGS_CONFIRM_TZ,
-          })} ${format.dateTime(start, {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: ORG_BOOKINGS_CONFIRM_TZ,
-          })}–${format.dateTime(end, {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: ORG_BOOKINGS_CONFIRM_TZ,
-          })}`;
-          return (
-            <li key={row.id} className="min-w-0 px-2 py-1.5 text-left">
-              <div className="min-w-0 truncate text-[0.8125rem] leading-tight font-medium">
-                {row.clientDisplayName}
-              </div>
-              <div className="mt-px min-w-0 truncate text-[0.6875rem] leading-snug text-muted-foreground tabular-nums">
-                <span>{dateLine}</span>
-                <span className="text-muted-foreground/50"> · </span>
-                <span>
-                  {t("orgSwitchWorkplaceBookingMeta", {
-                    category: row.categoryShortName,
-                    duration: row.durationMinutes,
-                    status: row.statusLabel,
-                  })}
-                </span>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
 
 type OrgDeletePreviewBookingRow =
   OrganizationsCabinetGetDeleteOrganizationBookingsPreviewResponse["bookings"][number];
@@ -209,7 +150,6 @@ export function BusinessOrganizationsPage() {
     [accessToken, locale],
   );
 
-  const [previewSwitchAwayBusy, setPreviewSwitchAwayBusy] = useState(false);
   const [deleteOrganizationFlowBusyOrgId, setDeleteOrganizationFlowBusyOrgId] = useState<string | null>(
     null,
   );
@@ -229,6 +169,7 @@ export function BusinessOrganizationsPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
         queryClient.invalidateQueries({ queryKey: [...ONB_QK] }),
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_CABINET_PROFILE_QK] }),
         queryClient.invalidateQueries({ queryKey: ["specialistSalonBookings"] }),
       ]);
       if (res.cancelledBookingsCount > 0) {
@@ -245,48 +186,78 @@ export function BusinessOrganizationsPage() {
     },
   });
 
-  const setActiveWorkplaceMutation = useMutation({
-    mutationFn: async (organizationId: string | null) => {
-      const { data: res, error } = await specialistsCabinetPatchSpecialistActiveOrganization({
+  const workplacesQuery = useQuery({
+    queryKey: ["specialistMyWorkplaces", accessToken, locale] as const,
+    enabled:
+      sessionStatus === "authenticated" && typeof accessToken === "string" && accessToken.length > 0,
+    queryFn: async () => {
+      const { data: res, error: err } = await specialistsCabinetGetSpecialistMyWorkplaces({
         client: sdk,
-        body: { organizationId },
       });
-      if (error || !res) {
-        throw error ?? new Error("active-organization");
+      if (err || !res) {
+        throw err ?? new Error("workplaces");
       }
       return res;
     },
-    onSuccess: async (res, organizationId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
-        queryClient.invalidateQueries({ queryKey: [...ONB_QK] }),
-        queryClient.invalidateQueries({ queryKey: ["specialistSalonBookings"] }),
-      ]);
-      const cancelled = res.cancelledBookingsCount;
-      if (organizationId === null) {
-        if (cancelled > 0) {
-          notify.success(
-            t("orgClearWorkplaceDoneTitle"),
-            t("orgSwitchWorkplaceCancelledBookings", { count: cancelled }),
-          );
-        } else {
-          notify.success(t("orgClearWorkplaceDoneTitle"));
-        }
-        return;
+  });
+
+  const activateWorkplaceMutation = useMutation({
+    mutationFn: async (workplaceId: string) => {
+      const { data: res, error } = await specialistWorkplacesActivateSpecialistWorkplace({
+        client: sdk,
+        path: { workplaceId },
+      });
+      if (error || !res) {
+        throw error ?? new Error("activate-workplace");
       }
-      if (cancelled > 0) {
-        notify.success(
-          t("orgSwitchWorkplaceDoneTitle"),
-          t("orgSwitchWorkplaceCancelledBookings", { count: cancelled }),
-        );
-      } else {
-        notify.success(t("orgSwitchWorkplaceDoneTitle"));
-      }
+      return res;
     },
-    onError: (_err, organizationId) => {
-      notify.error(
-        organizationId === null ? t("orgClearWorkplaceError") : t("orgSwitchWorkplaceError"),
-      );
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["specialistMyWorkplaces"] }),
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
+        queryClient.invalidateQueries({ queryKey: ["specialistSalonBookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarResources"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarEvents"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarAvailability"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessSpecialistsResources"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessSpecialistsAvailability"] }),
+        queryClient.invalidateQueries({ queryKey: ["searchDirectorySpecialists"] }),
+      ]);
+      notify.success(t("workplacesActivateSuccess"));
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["specialistMyWorkplaces"] });
+      notify.error(t("workplacesActivateError"));
+    },
+  });
+
+  const deactivateWorkplaceMutation = useMutation({
+    mutationFn: async (workplaceId: string) => {
+      const { data: res, error } = await specialistWorkplacesDeactivateSpecialistWorkplace({
+        client: sdk,
+        path: { workplaceId },
+      });
+      if (error || !res) {
+        throw error ?? new Error("deactivate-workplace");
+      }
+      return res;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["specialistMyWorkplaces"] }),
+        queryClient.invalidateQueries({ queryKey: [...SPECIALIST_MY_ORGANIZATIONS_QUERY_KEY_PREFIX] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarResources"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarEvents"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessCalendarAvailability"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessSpecialistsResources"] }),
+        queryClient.invalidateQueries({ queryKey: ["businessSpecialistsAvailability"] }),
+        queryClient.invalidateQueries({ queryKey: ["searchDirectorySpecialists"] }),
+      ]);
+      notify.success(t("workplacesDeactivateSuccess"));
+    },
+    onError: () => {
+      notify.error(t("workplacesDeactivateError"));
     },
   });
 
@@ -306,13 +277,14 @@ export function BusinessOrganizationsPage() {
   });
 
   const organizations = data?.organizations ?? [];
-  const activeWorkplaceId =
-    data != null &&
-    typeof data.activeOrganizationId === "string" &&
-    data.activeOrganizationId.length > 0 ?
-      data.activeOrganizationId
-    : null;
-
+  const workplaces = useMemo(
+    () => workplacesQuery.data?.workplaces ?? [],
+    [workplacesQuery.data?.workplaces],
+  );
+  const workplaceByOrganizationId = useMemo(
+    () => new Map(workplaces.map((w) => [w.organizationId, w] as const)),
+    [workplaces],
+  );
   const managedOrgs = useMemo(() => {
     const orgs = data?.organizations ?? [];
     return orgs.filter(
@@ -631,6 +603,8 @@ export function BusinessOrganizationsPage() {
             const hasDraftUnderReview = draft != null;
             const showModerationPendingBadge =
               hasDraftUnderReview || org.publicationModerationStatus === "pending_review";
+            const workplace = workplaceByOrganizationId.get(org.id) ?? null;
+            const isActiveWorkplace = workplace?.isActive === true;
             const persistedCoverUrl =
               draft?.coverImageUrl != null ?
                 draft.coverImageUrl
@@ -653,8 +627,8 @@ export function BusinessOrganizationsPage() {
               deleteOrganizationMutation.isPending ||
               deleteOrganizationFlowBusyOrgId != null;
             const switchInteractionBusy =
-              setActiveWorkplaceMutation.isPending ||
-              previewSwitchAwayBusy ||
+              activateWorkplaceMutation.isPending ||
+              deactivateWorkplaceMutation.isPending ||
               deleteOrgInteractionBusy;
             const showOwnerDeleteOrg =
               org.membershipStatus === "employed" &&
@@ -683,7 +657,7 @@ export function BusinessOrganizationsPage() {
                 <article
                   className={cn(
                     "overflow-hidden rounded-2xl border bg-card shadow-sm ring-1 ring-border/30",
-                    org.isActiveWorkplace ?
+                    isActiveWorkplace ?
                       "border-primary"
                     : "border-border/60",
                   )}
@@ -1012,10 +986,10 @@ export function BusinessOrganizationsPage() {
                       <Switch
                         id={switchId}
                         size="default"
-                        checked={org.isActiveWorkplace}
+                        checked={isActiveWorkplace}
                         disabled={switchInteractionBusy}
                         aria-label={
-                          org.isActiveWorkplace ?
+                          isActiveWorkplace ?
                             t("orgActiveWorkplaceSwitchClearAria")
                           : t("orgSetActiveWorkplaceAria")
                         }
@@ -1024,99 +998,15 @@ export function BusinessOrganizationsPage() {
                             if (switchInteractionBusy) {
                               return;
                             }
-                            if (!on && org.isActiveWorkplace) {
-                              setPreviewSwitchAwayBusy(true);
-                              try {
-                                const preview =
-                                  await specialistsCabinetGetSpecialistActiveOrganizationBookingsPreview(
-                                    {
-                                      client: sdk,
-                                      query: {
-                                        organizationId: org.id,
-                                        locale,
-                                      },
-                                    },
-                                  );
-                                if (preview.error || !preview.data) {
-                                  notify.error(t("orgSwitchWorkplacePreviewLoadError"));
-                                  return;
-                                }
-                                const rows = preview.data.bookings;
-                                if (rows.length > 0) {
-                                  const ok = await confirmAction({
-                                    title: t("orgClearWorkplaceConfirmTitle"),
-                                    body: (
-                                      <OrgSwitchWorkplaceBookingsConfirmBody rows={rows} />
-                                    ),
-                                    confirmLabel: t("orgClearWorkplaceConfirmAction"),
-                                    cancelLabel: t("orgClearWorkplaceConfirmBack"),
-                                    destructive: true,
-                                  });
-                                  if (!ok) {
-                                    return;
-                                  }
-                                }
-                              } finally {
-                                setPreviewSwitchAwayBusy(false);
-                              }
-                              try {
-                                await setActiveWorkplaceMutation.mutateAsync(null);
-                              } catch {
-                                /* Mutation onError notifies */
-                              }
+                            if (!on && isActiveWorkplace && workplace != null) {
+                              await deactivateWorkplaceMutation.mutateAsync(workplace.id);
                               return;
                             }
 
-                            if (!on || org.isActiveWorkplace) {
+                            if (!on || isActiveWorkplace || workplace == null) {
                               return;
                             }
-
-                            if (
-                              activeWorkplaceId != null &&
-                              activeWorkplaceId !== org.id
-                            ) {
-                              setPreviewSwitchAwayBusy(true);
-                              try {
-                                const preview =
-                                  await specialistsCabinetGetSpecialistActiveOrganizationBookingsPreview(
-                                    {
-                                      client: sdk,
-                                      query: {
-                                        organizationId: activeWorkplaceId,
-                                        locale,
-                                      },
-                                    },
-                                  );
-                                if (preview.error || !preview.data) {
-                                  notify.error(t("orgSwitchWorkplacePreviewLoadError"));
-                                  return;
-                                }
-                                const rows = preview.data.bookings;
-                                if (rows.length > 0) {
-                                  const ok = await confirmAction({
-                                    title: t("orgSwitchWorkplaceCancelBookingsConfirmTitle"),
-                                    body: (
-                                      <OrgSwitchWorkplaceBookingsConfirmBody
-                                        rows={rows}
-                                      />
-                                    ),
-                                    confirmLabel: t("orgSwitchWorkplaceCancelBookingsConfirmAction"),
-                                    cancelLabel: t("orgSwitchWorkplaceCancelBookingsConfirmBack"),
-                                    destructive: true,
-                                  });
-                                  if (!ok) {
-                                    return;
-                                  }
-                                }
-                              } finally {
-                                setPreviewSwitchAwayBusy(false);
-                              }
-                            }
-                            try {
-                              await setActiveWorkplaceMutation.mutateAsync(org.id);
-                            } catch {
-                              /* Mutation onError notifies */
-                            }
+                            await activateWorkplaceMutation.mutateAsync(workplace.id);
                           })();
                         }}
                       />

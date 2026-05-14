@@ -139,7 +139,6 @@ export class MarketplaceListingEdgesIndexService {
             imageAlt: true,
             listingName: true,
             profilePublicationModerationStatus: true,
-            activeOrganizationId: true,
             publishedProfileRevision: {
               select: {
                 listingName: true,

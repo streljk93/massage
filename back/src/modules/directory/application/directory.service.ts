@@ -153,18 +153,20 @@ function isVitrineStaffAtOrganization(
   e: OrganizationListRow['specialistEmployments'][number],
   organizationId: string,
 ): boolean {
+  const activeWorkplaceOrgId =
+    e.specialist.workplaces[0]?.organizationId ?? null;
   return (
     e.isActive &&
     e.specialist.listedInDirectory &&
-    e.specialist.activeOrganizationId === organizationId
+    activeWorkplaceOrgId === organizationId
   );
 }
 
 /**
  * Кого показывать в блоке «сотрудники» профиля организации.
  * Гость — витрина (место приёма = салон и флаг записи в каталоге).
- * Владелец БД — всё активное членство с **текущим местом приёма = этот салон**, даже если мастер
- * сам не в каталоге (`listedInDirectory`); исключаем тех, кто только числится в employment, но снял workplace.
+ * Владелец БД — всё активное членство с **текущим местом приёма = этот салон**;
+ * исключаем тех, кто только числится в employment, но снял workplace.
  */
 function specialistEmploymentsForOrganizationStaffSection(
   employments: OrganizationListRow['specialistEmployments'],
@@ -175,7 +177,7 @@ function specialistEmploymentsForOrganizationStaffSection(
     if (!e.isActive) {
       return false;
     }
-    if (e.specialist.activeOrganizationId !== organizationId) {
+    if (e.specialist.workplaces[0]?.organizationId !== organizationId) {
       return false;
     }
     if (viewerOwnsOrganization) {
@@ -203,13 +205,14 @@ function mapMarketplaceOfferingEdgesToBookable(
   specialist: SpecialistBookableSource,
   locale: ApiLocale,
 ): SpecialistBookableServiceDto[] {
-  type Edge = NonNullable<SpecialistBookableSource['offeringsExecution']>[number];
+  type Edge = NonNullable<
+    SpecialistBookableSource['offeringsExecution']
+  >[number];
   const edges: Edge[] | undefined = specialist.offeringsExecution;
   if (edges == null || edges.length === 0) {
     return [];
   }
-  const orgId =
-    specialist.activeOrganization?.id ?? specialist.activeOrganizationId ?? null;
+  const orgId = specialist.workplaces[0]?.organization.id ?? null;
   if (orgId == null) {
     return [];
   }
@@ -281,19 +284,17 @@ function specialistStorefrontFilteredServiceCategories(
   s: SpecialistListRow,
   storefrontCategoryIdsByOrg?: Map<string, Set<string>>,
 ): SpecialistListRow['skills'] {
-  const orgId = s.activeOrganizationId;
+  const orgId = s.workplaces[0]?.organizationId ?? null;
   if (orgId == null || storefrontCategoryIdsByOrg == null) {
     return s.skills;
   }
   const visible = storefrontCategoryIdsByOrg.get(orgId) ?? new Set<string>();
-  return s.skills.filter((link) =>
-    visible.has(link.serviceCategoryId),
-  );
+  return s.skills.filter((link) => visible.has(link.serviceCategoryId));
 }
 
 type SpecialistBookableSource = Pick<
   SpecialistListRow,
-  'activeOrganization' | 'activeOrganizationId' | 'offeringsExecution'
+  'workplaces' | 'offeringsExecution'
 >;
 
 /** Услуги для записи: опубликованные офферы активной точки + назначения `SpecialistOffering`. */
@@ -315,7 +316,7 @@ function mapSpecialistRowToListItem(
 ): SpecialistListItemDto {
   const slotGroups = buildListingSlotGroupsFromOccupiedKeys(occupiedKeys, now);
 
-  const loc = s.activeOrganization;
+  const loc = s.workplaces[0]?.organization ?? null;
   const addr = loc?.address;
   const addressLine = addr?.addressLine ?? null;
   const city = addr?.city ?? null;
@@ -580,12 +581,8 @@ export class DirectoryService {
     const slice = idPage
       .map((id) => rowMap.get(id))
       .filter((r): r is SpecialistListRow => r != null);
-    const nextCursor =
-      hasMore ?
-        encodeDirectoryIndexedSpecialistsCursor(
-          options.sort,
-          indexedPage + 1,
-        )
+    const nextCursor = hasMore
+      ? encodeDirectoryIndexedSpecialistsCursor(options.sort, indexedPage + 1)
       : null;
 
     const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
@@ -600,7 +597,7 @@ export class DirectoryService {
     const storefrontOrgIds = [
       ...new Set(
         slice
-          .map((s) => s.activeOrganizationId)
+          .map((s) => s.workplaces[0]?.organizationId ?? null)
           .filter(
             (id): id is string => typeof id === 'string' && id.length > 0,
           ),
@@ -884,7 +881,7 @@ export class DirectoryService {
     const storefrontOrgIds = [
       ...new Set(
         slice
-          .map((s) => s.activeOrganizationId)
+          .map((s) => s.workplaces[0]?.organizationId ?? null)
           .filter(
             (id): id is string => typeof id === 'string' && id.length > 0,
           ),
@@ -1059,7 +1056,7 @@ export class DirectoryService {
       await this.directoryRepository.countDistinctDoneClientsBySpecialistIds([
         id,
       ]);
-    const orgIdRow = row.activeOrganizationId;
+    const orgIdRow = row.workplaces[0]?.organizationId ?? null;
     const storefrontCategoryIdsByOrg =
       typeof orgIdRow === 'string' && orgIdRow.length > 0
         ? await this.directoryRepository.findOrganizationStorefrontCategoryIdMap(
@@ -1081,8 +1078,8 @@ export class DirectoryService {
 
     const pendingWorkplace =
       isOwner &&
-      row.activeOrganization &&
-      row.activeOrganization.publicationModerationStatus !==
+      row.workplaces[0]?.organization &&
+      row.workplaces[0].organization.publicationModerationStatus !==
         PublicationModerationStatus.approved;
 
     if (!pendingWorkplace) {
@@ -1092,7 +1089,7 @@ export class DirectoryService {
     return {
       ...dto,
       activeWorkplacePublicationModerationStatus:
-        row.activeOrganization!.publicationModerationStatus,
+        row.workplaces[0].organization.publicationModerationStatus,
     };
   }
 
@@ -1146,9 +1143,7 @@ export class DirectoryService {
       occupiedBySpecialist,
       storefront,
       storefrontCategoriesByOrg.get(id) ?? new Set<string>(),
-      isOwner ?
-        { specialistIdsForOccupancyPreview: specialistIds }
-      : undefined,
+      isOwner ? { specialistIdsForOccupancyPreview: specialistIds } : undefined,
     );
     // Гости: только витрина (запись через каталог). Владелец БД: весь активный персонал.
     const staff: OrganizationStaffMemberDto[] = staffEmployments.map((e) =>
@@ -1281,7 +1276,7 @@ export class DirectoryService {
     const storefrontOrgIds = [
       ...new Set(
         rows
-          .map((r) => r.activeOrganizationId)
+          .map((r) => r.workplaces[0]?.organizationId ?? null)
           .filter(
             (oid): oid is string => typeof oid === 'string' && oid.length > 0,
           ),
@@ -1297,7 +1292,7 @@ export class DirectoryService {
       if (!s) {
         continue;
       }
-      if (!s.listedInDirectory || s.activeOrganizationId == null) {
+      if (!s.listedInDirectory || s.workplaces[0]?.organizationId == null) {
         continue;
       }
       out.push(

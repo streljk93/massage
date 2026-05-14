@@ -44,7 +44,7 @@ export class FavoritesRepository {
         id: { in: ids },
         deletedAt: null,
         listedInDirectory: true,
-        activeOrganizationId: { not: null },
+        workplaces: { some: { isActive: true, deletedAt: null } },
       },
       select: { id: true },
     });

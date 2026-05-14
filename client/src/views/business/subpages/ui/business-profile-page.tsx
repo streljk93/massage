@@ -6,20 +6,19 @@ import { useLocale, useTranslations } from "next-intl";
 import { useMemo } from "react";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
-import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   BusinessSpecialistCabinetProfile,
+  SPECIALIST_CABINET_PROFILE_QK,
   type CabinetSpecialistBlob,
 } from "@/entities/specialists";
+import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   createBrowserSdkClient,
-  specialistsCabinetGetSpecialistOnboarding,
+  specialistsCabinetGetSpecialistCabinetProfile,
 } from "@/shared/api";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@/app/i18n/navigation";
 import { Button } from "@/shared/ui";
-
-const ONB_QK = ["specialistOnboarding"] as const;
 
 export function BusinessProfilePage() {
   const t = useTranslations("businessAppSubpages");
@@ -33,26 +32,29 @@ export function BusinessProfilePage() {
     [accessToken, locale],
   );
 
-  const onboardQuery = useQuery({
-    queryKey: [...ONB_QK, accessToken, locale] as const,
+  const profileQuery = useQuery({
+    queryKey: [...SPECIALIST_CABINET_PROFILE_QK, accessToken, locale] as const,
     enabled: sessionStatus === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
-      const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
+      const { data, error } = await specialistsCabinetGetSpecialistCabinetProfile({
         client: sdk,
         query: { locale },
       });
       if (error || !data) {
-        throw new Error("onboarding");
+        throw new Error("cabinet-profile");
       }
       return data;
     },
   });
 
-  const specialist = onboardQuery.data?.specialist as CabinetSpecialistBlob | null | undefined;
+  const specialist = profileQuery.data?.specialist as
+    | CabinetSpecialistBlob
+    | null
+    | undefined;
 
   return (
     <main className="flex w-full min-h-0 flex-1 flex-col gap-4 px-4 pt-2">
-      {specialist != null && onboardQuery.isSuccess ?
+      {specialist != null && profileQuery.isSuccess ?
         <div className="flex w-full min-w-0 flex-row flex-wrap items-stretch gap-2">
           <Button
             variant="secondary"
@@ -79,7 +81,7 @@ export function BusinessProfilePage() {
           title={t("profileSignInTitle")}
           description={t("profileSignInHint")}
         />
-      : onboardQuery.isLoading ?
+      : profileQuery.isLoading ?
         <div
           className="flex justify-center py-12 text-muted-foreground"
           aria-busy
@@ -87,7 +89,7 @@ export function BusinessProfilePage() {
         >
           <Loader2 className="size-8 animate-spin" aria-hidden />
         </div>
-      : onboardQuery.isError ?
+      : profileQuery.isError ?
         <div className="flex flex-col gap-3">
           <BusinessEmptyState
             icon={UsersRound}
@@ -98,7 +100,7 @@ export function BusinessProfilePage() {
             type="button"
             variant="secondary"
             className="h-12 w-full rounded-2xl"
-            onClick={() => void onboardQuery.refetch()}
+            onClick={() => void profileQuery.refetch()}
           >
             {t("profileRetry")}
           </Button>

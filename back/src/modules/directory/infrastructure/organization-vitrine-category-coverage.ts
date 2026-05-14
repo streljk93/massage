@@ -118,8 +118,14 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
         AND e."isActive" = true
         AND sp."listedInDirectory" = true
         AND sp."deletedAt" IS NULL
-        AND sp."activeOrganizationId" IS NOT NULL
-        AND sp."activeOrganizationId" = e."organizationId"
+        AND EXISTS (
+          SELECT 1
+          FROM "SpecialistWorkplace" w
+          WHERE w."specialistId" = sp.id
+            AND w."organizationId" = e."organizationId"
+            AND w."isActive" = true
+            AND w."deletedAt" IS NULL
+        )
     )
   `;
 }
@@ -153,8 +159,14 @@ export async function queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecial
           AND e."isActive" = true
           AND sp."listedInDirectory" = true
           AND sp."deletedAt" IS NULL
-          AND sp."activeOrganizationId" IS NOT NULL
-          AND sp."activeOrganizationId" = e."organizationId"
+          AND EXISTS (
+            SELECT 1
+            FROM "SpecialistWorkplace" w
+            WHERE w."specialistId" = sp.id
+              AND w."organizationId" = e."organizationId"
+              AND w."isActive" = true
+              AND w."deletedAt" IS NULL
+          )
       )
     `,
   );
@@ -366,12 +378,15 @@ export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
       INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
       INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
       INNER JOIN "MajorServiceCategory" msc ON msc.id = sc."majorServiceCategoryId"
+      INNER JOIN "SpecialistWorkplace" w
+        ON w."specialistId" = sp.id
+        AND w."isActive" = true
+        AND w."deletedAt" IS NULL
       INNER JOIN "OrganizationServiceCategory" osc
-        ON osc."organizationId" = sp."activeOrganizationId"
+        ON osc."organizationId" = w."organizationId"
         AND osc."serviceCategoryId" = sc.id
       WHERE sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
-        AND sp."activeOrganizationId" IS NOT NULL
         AND sc."deletedAt" IS NULL
         AND sc."isActive" = true
         ${majorClause}
@@ -407,12 +422,15 @@ export async function querySpecialistIdsMatchingStorefrontCategoryTextSearch(
       FROM "Specialist" sp
       INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
       INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
+      INNER JOIN "SpecialistWorkplace" w
+        ON w."specialistId" = sp.id
+        AND w."isActive" = true
+        AND w."deletedAt" IS NULL
       INNER JOIN "OrganizationServiceCategory" osc
-        ON osc."organizationId" = sp."activeOrganizationId"
+        ON osc."organizationId" = w."organizationId"
         AND osc."serviceCategoryId" = sc.id
       WHERE sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
-        AND sp."activeOrganizationId" IS NOT NULL
         AND sc."deletedAt" IS NULL
         AND sc."isActive" = true
         ${restrict}
@@ -462,8 +480,14 @@ export async function queryDistinctStorefrontOrganizationServiceCategoryIds(pris
             AND e0."isActive" = true
             AND sp0."listedInDirectory" = true
             AND sp0."deletedAt" IS NULL
-            AND sp0."activeOrganizationId" IS NOT NULL
-            AND sp0."activeOrganizationId" = e0."organizationId"
+            AND EXISTS (
+              SELECT 1
+              FROM "SpecialistWorkplace" w0
+              WHERE w0."specialistId" = sp0.id
+                AND w0."organizationId" = e0."organizationId"
+                AND w0."isActive" = true
+                AND w0."deletedAt" IS NULL
+            )
         )
     `,
   );

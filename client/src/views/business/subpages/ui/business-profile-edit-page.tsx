@@ -8,16 +8,18 @@ import type { AppLocale } from "@/app/i18n/routing";
 import { useRouter } from "@/app/i18n/navigation";
 import { BusinessEmptyState } from "@/entities/business";
 import {
-  keyToYears,
   SpecialistProfileEditForm,
   type CabinetSpecialistBlob,
   type ExperienceKey,
+  SPECIALIST_CABINET_PROFILE_QK,
+  invalidateSpecialistCabinetProfileQueries,
+  keyToYears,
   yearsToKey,
 } from "@/entities/specialists";
 import {
   createBrowserSdkClient,
   filesUploadPublic,
-  specialistsCabinetGetSpecialistOnboarding,
+  specialistsCabinetGetSpecialistCabinetProfile,
   specialistsCabinetPatchSpecialistProfile,
 } from "@/shared/api";
 import {
@@ -47,22 +49,22 @@ export function BusinessProfileEditPage() {
     [accessToken, locale],
   );
 
-  const onboardQuery = useQuery({
-    queryKey: [...ONB_QK, accessToken, locale] as const,
+  const profileQuery = useQuery({
+    queryKey: [...SPECIALIST_CABINET_PROFILE_QK, accessToken, locale] as const,
     enabled: sessionStatus === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
-      const { data, error } = await specialistsCabinetGetSpecialistOnboarding({
+      const { data, error } = await specialistsCabinetGetSpecialistCabinetProfile({
         client: sdk,
         query: { locale },
       });
       if (error || !data) {
-        throw new Error("onboarding");
+        throw new Error("cabinet-profile");
       }
       return data;
     },
   });
 
-  const specialist = onboardQuery.data?.specialist as CabinetSpecialistBlob | null | undefined;
+  const specialist = profileQuery.data?.specialist as CabinetSpecialistBlob | null | undefined;
 
   const [formError, setFormError] = useState<string | null>(null);
   const [pName, setPName] = useState("");
@@ -189,7 +191,16 @@ export function BusinessProfileEditPage() {
         return;
       }
       setPendingPhotoFile(null);
-      await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+      await Promise.all([
+        invalidateSpecialistCabinetProfileQueries(
+          queryClient,
+          accessToken,
+          locale,
+        ),
+        queryClient.invalidateQueries({
+          queryKey: [...ONB_QK, accessToken, locale] as const,
+        }),
+      ]);
       router.push("/business/profile");
     } finally {
       setProfileSaving(false);
@@ -212,7 +223,7 @@ export function BusinessProfileEditPage() {
           title={t("profileSignInTitle")}
           description={t("profileSignInHint")}
         />
-      : onboardQuery.isLoading ?
+      : profileQuery.isLoading ?
         <div
           className="flex justify-center py-12 text-muted-foreground"
           aria-busy
@@ -220,7 +231,7 @@ export function BusinessProfileEditPage() {
         >
           <Loader2 className="size-8 animate-spin" aria-hidden />
         </div>
-      : onboardQuery.isError ?
+      : profileQuery.isError ?
         <div className="flex flex-col gap-3">
           <BusinessEmptyState
             icon={UsersRound}
@@ -231,7 +242,7 @@ export function BusinessProfileEditPage() {
             type="button"
             variant="secondary"
             className="h-12 w-full rounded-2xl"
-            onClick={() => void onboardQuery.refetch()}
+            onClick={() => void profileQuery.refetch()}
           >
             {t("profileRetry")}
           </Button>

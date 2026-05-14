@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Calendar,
   CalendarClock,
   ChevronLeft,
   Loader2,
@@ -19,7 +20,7 @@ import {
   canOrganization,
   OrganizationCalendarActions,
   OrganizationCapabilities,
-  pickActiveWorkplaceOrganization,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
@@ -47,6 +48,7 @@ import { confirmAction, notify } from "@/shared/lib/notifications";
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
   Button,
   Input,
   Select,
@@ -234,7 +236,7 @@ export function BusinessSpecialistsPage() {
   });
 
   const activeOrg = useMemo(
-    () => pickActiveWorkplaceOrganization(orgsQuery.data),
+    () => pickSelectedContextOrganization(orgsQuery.data),
     [orgsQuery.data],
   );
   const organizationId = activeOrg?.id ?? "";
@@ -247,6 +249,8 @@ export function BusinessSpecialistsPage() {
     OrganizationCapabilities.CALENDAR,
     { calendarAction: OrganizationCalendarActions.MANAGE_WORKING_HOURS },
   );
+  const canLoadWorkingHoursResources =
+    canManageWorkingHours || activeOrg?.isActiveWorkplace === true;
 
   const teamQuery = useQuery({
     queryKey: [...TEAM_QK, organizationId, accessToken, locale],
@@ -263,8 +267,8 @@ export function BusinessSpecialistsPage() {
   });
 
   const resourcesQuery = useQuery({
-    queryKey: [...RESOURCES_QK, accessToken, locale],
-    enabled: authed,
+    queryKey: [...RESOURCES_QK, organizationId, accessToken, locale],
+    enabled: authed && organizationId.length > 0 && canLoadWorkingHoursResources,
     queryFn: async () => {
       const { data, error } = await calendarListResources({ client: sdk });
       if (error || !data) throw error ?? new Error("resources");
@@ -273,7 +277,13 @@ export function BusinessSpecialistsPage() {
   });
 
   const directInviteQuery = useQuery({
-    queryKey: [...DIRECT_INVITE_QK, accessToken, locale, debouncedInviteSearch],
+    queryKey: [
+      ...DIRECT_INVITE_QK,
+      organizationId,
+      accessToken,
+      locale,
+      debouncedInviteSearch,
+    ],
     enabled:
       authed &&
       canInvite &&
@@ -476,11 +486,13 @@ export function BusinessSpecialistsPage() {
 
       <div className="mt-5 px-4">
         <WorkingHoursSection
+          organizationId={organizationId}
           specialistResources={specialistResources}
           team={team}
           sdk={sdk}
           accessToken={accessToken}
           canManage={canManageWorkingHours}
+          isActiveWorkplace={activeOrg.isActiveWorkplace}
         />
       </div>
     </main>
@@ -526,6 +538,9 @@ function TeamRow({
         })}
       >
         <Avatar className="shrink-0">
+          {member.imageUrl?.trim() ?
+            <AvatarImage src={member.imageUrl} alt="" />
+          : null}
           <AvatarFallback className={roleAvatarClassName(member.role)}>
             {initials}
           </AvatarFallback>
@@ -700,6 +715,9 @@ function InvitePanel({
                   })}
                 >
                   <Avatar className="shrink-0">
+                    {s.imageUrl?.trim() ?
+                      <AvatarImage src={s.imageUrl} alt="" />
+                    : null}
                     <AvatarFallback className="bg-muted font-medium text-muted-foreground">
                       {getInitials(s.displayName)}
                     </AvatarFallback>
@@ -748,19 +766,33 @@ function InvitePanel({
 // --- WorkingHoursSection ---
 
 function WorkingHoursSection({
+  organizationId,
   specialistResources,
   team,
   sdk,
   accessToken,
   canManage,
+  isActiveWorkplace,
 }: {
+  organizationId: string;
   specialistResources: CalendarResource[];
   team: TeamMember[];
   sdk: SdkClient;
   accessToken: string;
   canManage: boolean;
+  isActiveWorkplace: boolean;
 }) {
   const t = useTranslations("businessSpecialistsPage");
+  const inactiveScheduleMembers = useMemo(() => {
+    const activeSpecialistIds = new Set(
+      specialistResources
+        .map((resource) => resource.specialistId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    );
+    return team.filter(
+      (member) => !activeSpecialistIds.has(member.specialistId),
+    );
+  }, [specialistResources, team]);
 
   return (
     <section>
@@ -771,19 +803,33 @@ function WorkingHoursSection({
         </h2>
       </div>
 
-      {specialistResources.length === 0 ? (
-        <p className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
-          {t("noResource")}
-        </p>
+      {!canManage && !isActiveWorkplace ? (
+        <BusinessEmptyState
+          icon={Calendar}
+          title={t("inactiveOwnScheduleEmptyTitle")}
+          description={t("inactiveOwnScheduleEmptyHint")}
+          className="w-full"
+        />
+      ) : specialistResources.length === 0 ? (
+        inactiveScheduleMembers.length > 0 ? (
+          <InactiveWorkingHoursMembers members={inactiveScheduleMembers} />
+        ) : (
+          <p className="rounded-2xl border border-border/50 bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
+            {t("noResource")}
+          </p>
+        )
       ) : canManage ? (
         <WorkingHoursGrid
+          organizationId={organizationId}
           specialistResources={specialistResources}
           team={team}
+          inactiveMembers={inactiveScheduleMembers}
           sdk={sdk}
           accessToken={accessToken}
         />
       ) : (
         <WorkingHoursReadOnly
+          organizationId={organizationId}
           resourceId={specialistResources[0]!.id}
           sdk={sdk}
           accessToken={accessToken}
@@ -805,13 +851,17 @@ const WEEK_GRID_TEMPLATE =
   "minmax(6rem, 8rem) repeat(7, minmax(2.75rem, 1fr))";
 
 function WorkingHoursGrid({
+  organizationId,
   specialistResources,
   team,
+  inactiveMembers,
   sdk,
   accessToken,
 }: {
+  organizationId: string;
   specialistResources: CalendarResource[];
   team: TeamMember[];
+  inactiveMembers: TeamMember[];
   sdk: SdkClient;
   accessToken: string;
 }) {
@@ -827,7 +877,8 @@ function WorkingHoursGrid({
   // Загружаем расписание для каждого ресурса параллельно
   const availabilityQueries = useQueries({
     queries: specialistResources.map((r) => ({
-      queryKey: [...AVAILABILITY_QK, r.id, accessToken],
+      queryKey: [...AVAILABILITY_QK, organizationId, r.id, accessToken],
+      enabled: organizationId.length > 0,
       queryFn: async () => {
         const { data, error } = await calendarGetResourceAvailability({
           client: sdk,
@@ -880,7 +931,7 @@ function WorkingHoursGrid({
     onSuccess: (_data, vars) => {
       for (const id of vars.resourceIds) {
         void queryClient.invalidateQueries({
-          queryKey: [...AVAILABILITY_QK, id, accessToken],
+          queryKey: [...AVAILABILITY_QK, organizationId, id, accessToken],
         });
       }
       notify.success(
@@ -1057,86 +1108,136 @@ function WorkingHoursGrid({
                   ))}
                 </div>
               ))
-            : specialistResources.map((resource) => {
-                const schedule = schedulesMap.get(resource.id);
-                const displayName = getResourceDisplayName(resource);
+            : (
+                <>
+                  {specialistResources.map((resource) => {
+                    const schedule = schedulesMap.get(resource.id);
+                    const displayName = getResourceDisplayName(resource);
 
-                return (
-                  <div
-                    key={resource.id}
-                    className="grid w-full border-b border-border/40 last:border-b-0"
-                    style={{ gridTemplateColumns: WEEK_GRID_TEMPLATE }}
-                  >
-                    {/* Имя специалиста → редактировать все дни (sticky) */}
-                    <button
-                      type="button"
-                      onClick={() => openEdit(resource.id, null)}
-                      className={cn(
-                        motion.interactive,
-                        "sticky left-0 z-10 flex items-center bg-card px-4 py-3 text-left",
-                        "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/40",
-                      )}
-                      aria-label={t("editAllDaysAria", { name: displayName })}
-                    >
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                        {displayName}
-                      </span>
-                    </button>
-
-                    {/* Ячейки дней → редактировать конкретный день */}
-                    {WEEKDAYS.map((wd) => {
-                      const day = schedule?.[wd];
-                      const isWorking = day?.enabled === true;
-
-                      return (
+                    return (
+                      <div
+                        key={resource.id}
+                        className="grid w-full border-b border-border/40 last:border-b-0"
+                        style={{ gridTemplateColumns: WEEK_GRID_TEMPLATE }}
+                      >
+                        {/* Имя специалиста → редактировать все дни (sticky) */}
                         <button
-                          key={wd}
                           type="button"
-                          onClick={() => openEdit(resource.id, wd)}
+                          onClick={() => openEdit(resource.id, null)}
                           className={cn(
                             motion.interactive,
-                            "flex min-w-0 w-full flex-col items-center justify-center gap-0.5 px-0.5 py-3",
+                            "sticky left-0 z-10 flex items-center bg-card px-4 py-3 text-left",
+                            "after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/40",
                           )}
-                          aria-label={t("editDayAria", {
+                          aria-label={t("editAllDaysAria", {
                             name: displayName,
-                            day: t(weekdayI18nKey(wd)),
                           })}
                         >
-                          <span
-                            className={cn(
-                              "size-2 rounded-full transition-colors",
-                              isWorking ? "bg-primary" : "bg-border",
-                            )}
-                          />
-                          {isWorking && day ? (
-                            <span className="max-w-full truncate text-center text-[0.6rem] tabular-nums leading-tight text-muted-foreground">
-                              {shortTime(day.startMinute)}–
-                              {shortTime(day.endMinute)}
-                            </span>
-                          ) : (
-                            <span className="text-[0.6rem] leading-tight text-muted-foreground/40">
-                              —
-                            </span>
-                          )}
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                            {displayName}
+                          </span>
                         </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+
+                        {/* Ячейки дней → редактировать конкретный день */}
+                        {WEEKDAYS.map((wd) => {
+                          const day = schedule?.[wd];
+                          const isWorking = day?.enabled === true;
+
+                          return (
+                            <button
+                              key={wd}
+                              type="button"
+                              onClick={() => openEdit(resource.id, wd)}
+                              className={cn(
+                                motion.interactive,
+                                "flex min-w-0 w-full flex-col items-center justify-center gap-0.5 px-0.5 py-3",
+                              )}
+                              aria-label={t("editDayAria", {
+                                name: displayName,
+                                day: t(weekdayI18nKey(wd)),
+                              })}
+                            >
+                              <span
+                                className={cn(
+                                  "size-2 rounded-full transition-colors",
+                                  isWorking ? "bg-primary" : "bg-border",
+                                )}
+                              />
+                              {isWorking && day ? (
+                                <span className="max-w-full truncate text-center text-[0.6rem] tabular-nums leading-tight text-muted-foreground">
+                                  {shortTime(day.startMinute)}–
+                                  {shortTime(day.endMinute)}
+                                </span>
+                              ) : (
+                                <span className="text-[0.6rem] leading-tight text-muted-foreground/40">
+                                  —
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                  <InactiveWorkingHoursGridRows members={inactiveMembers} />
+                </>
+              )}
         </div>
       </div>
     </div>
   );
 }
 
+function InactiveWorkingHoursMembers({ members }: { members: TeamMember[] }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
+      <InactiveWorkingHoursGridRows members={members} />
+    </div>
+  );
+}
+
+function InactiveWorkingHoursGridRows({ members }: { members: TeamMember[] }) {
+  const t = useTranslations("businessSpecialistsPage");
+  if (members.length === 0) return null;
+  return (
+    <>
+      {members.map((member) => (
+        <div
+          key={member.employmentId}
+          className="grid w-full border-b border-border/40 last:border-b-0"
+          style={{ gridTemplateColumns: WEEK_GRID_TEMPLATE }}
+        >
+          <div className="sticky left-0 z-10 flex min-w-0 items-center bg-card px-4 py-3 after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-border/40">
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+              {member.displayName ?? member.specialistId}
+            </span>
+          </div>
+          <div
+            className="flex min-w-0 flex-col justify-center gap-1 px-3 py-3"
+            style={{ gridColumn: "span 7" }}
+          >
+            <span className="text-xs font-medium text-muted-foreground">
+              {t("inactiveScheduleBadge")}
+            </span>
+            <span className="text-[0.6875rem] leading-snug text-muted-foreground/75">
+              {t("inactiveScheduleHint")}
+            </span>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 // --- WorkingHoursReadOnly ---
 
 function WorkingHoursReadOnly({
+  organizationId,
   resourceId,
   sdk,
   accessToken,
 }: {
+  organizationId: string;
   resourceId: string;
   sdk: SdkClient;
   accessToken: string;
@@ -1144,8 +1245,8 @@ function WorkingHoursReadOnly({
   const t = useTranslations("businessSpecialistsPage");
 
   const query = useQuery({
-    queryKey: [...AVAILABILITY_QK, resourceId, accessToken],
-    enabled: resourceId.length > 0,
+    queryKey: [...AVAILABILITY_QK, organizationId, resourceId, accessToken],
+    enabled: organizationId.length > 0 && resourceId.length > 0,
     queryFn: async () => {
       const { data, error } = await calendarGetResourceAvailability({
         client: sdk,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { BriefcaseBusiness, Check, X } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -10,14 +10,16 @@ import { BusinessEmptyState } from "@/entities/business";
 import {
   canOrganization,
   OrganizationCapabilities,
-  pickActiveWorkplaceOrganization,
+  pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
 import {
   createBrowserSdkClient,
+  organizationsCabinetGetCabinetOrganizationProfileForEdit,
   organizationHiringListApplications,
   organizationHiringListJobPostings,
+  organizationHiringPatchJobPosting,
   organizationHiringReviewApplication,
   specialistsCabinetGetSpecialistMyOrganizations,
 } from "@/shared/api";
@@ -25,12 +27,24 @@ import type {
   OrganizationHiringListApplicationsResponse,
   OrganizationHiringListJobPostingsResponse,
 } from "@/shared/api/generated/sdk/types.gen";
-import { Button } from "@/shared/ui";
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Textarea,
+} from "@/shared/ui";
 import { Skeleton } from "@/shared/ui/shadcn/skeleton";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServiceCategories } from "../model/use-service-categories";
 
 const JOB_DETAIL_QK = ["businessSpecialistJobPosting"] as const;
 const JOB_CONTACTS_QK = ["businessSpecialistJobContacts"] as const;
+const CABINET_PROFILE_QK = ["businessHiringJobCabinetProfile"] as const;
+const NONE_VALUE = "__none__";
 
 type JobPosting =
   OrganizationHiringListJobPostingsResponse["jobPostings"][number];
@@ -66,13 +80,17 @@ export function BusinessSpecialistJobPostingPage() {
   });
 
   const activeOrg = useMemo(
-    () => pickActiveWorkplaceOrganization(orgsQuery.data),
+    () => pickSelectedContextOrganization(orgsQuery.data),
     [orgsQuery.data],
   );
   const organizationId = activeOrg?.id ?? "";
   const canAccept = canOrganization(
     activeOrg,
     OrganizationCapabilities.HIRING_ACCEPT,
+  );
+  const canManage = canOrganization(
+    activeOrg,
+    OrganizationCapabilities.HIRING_MANAGE,
   );
 
   const jobsQuery = useQuery({
@@ -101,6 +119,27 @@ export function BusinessSpecialistJobPostingPage() {
     },
   });
 
+  const cabinetProfileQuery = useQuery({
+    queryKey: [...CABINET_PROFILE_QK, organizationId, locale],
+    enabled: authed && organizationId.length > 0 && canManage,
+    queryFn: async () => {
+      const { data, error } =
+        await organizationsCabinetGetCabinetOrganizationProfileForEdit({
+          client: sdk,
+          path: { organizationId },
+          query: { locale },
+        });
+      if (error || !data) throw error ?? new Error("cabinet profile");
+      return data;
+    },
+  });
+
+  const categoriesQuery = useServiceCategories({
+    sdk,
+    locale,
+    majorCategorySlugs: cabinetProfileQuery.data?.majorCategorySlugs ?? [],
+  });
+
   const reviewMutation = useMutation({
     mutationFn: async ({
       contactId,
@@ -118,6 +157,27 @@ export function BusinessSpecialistJobPostingPage() {
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: JOB_CONTACTS_QK });
+    },
+  });
+
+  const patchJobMutation = useMutation({
+    mutationFn: async (body: {
+      title: string;
+      serviceCategoryId: string | null;
+      experienceMinYears: number | null;
+      requirements: string | null;
+      description: string | null;
+      status: "draft" | "open" | "closed";
+    }) => {
+      const { error } = await organizationHiringPatchJobPosting({
+        client: sdk,
+        path: { organizationId, jobPostingId },
+        body: { ...body, role: "specialist" },
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: JOB_DETAIL_QK });
     },
   });
 
@@ -160,7 +220,36 @@ export function BusinessSpecialistJobPostingPage() {
             count: job.applicationsCount,
           })}
         </p>
+        {job.serviceCategoryName || job.experienceMinYears != null ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {job.serviceCategoryName ?? t("categoryMissing")} ·{" "}
+            {job.experienceMinYears == null ?
+              t("experienceAny")
+            : t("experienceFrom", { years: job.experienceMinYears })}
+          </p>
+        ) : null}
+        {job.description ? (
+          <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
+            {job.description}
+          </p>
+        ) : null}
+        {job.requirements ? (
+          <p className="mt-3 whitespace-pre-line text-sm text-muted-foreground">
+            {job.requirements}
+          </p>
+        ) : null}
       </section>
+
+      {canManage ? (
+        <JobPostingEditForm
+          key={job.id}
+          job={job}
+          categories={categoriesQuery.data ?? []}
+          categoriesLoading={categoriesQuery.isPending}
+          disabled={patchJobMutation.isPending}
+          onSubmit={(body) => patchJobMutation.mutate(body)}
+        />
+      ) : null}
 
       <section className="grid gap-2">
         {contacts.map((contact) => (
@@ -186,6 +275,139 @@ export function BusinessSpecialistJobPostingPage() {
   );
 }
 
+function JobPostingEditForm({
+  job,
+  categories,
+  categoriesLoading,
+  disabled,
+  onSubmit,
+}: {
+  job: JobPosting;
+  categories: { id: string; label: string }[];
+  categoriesLoading: boolean;
+  disabled: boolean;
+  onSubmit: (body: {
+    title: string;
+    serviceCategoryId: string | null;
+    experienceMinYears: number | null;
+    requirements: string | null;
+    description: string | null;
+    status: "draft" | "open" | "closed";
+  }) => void;
+}) {
+  const t = useTranslations("businessSpecialistJobPostingPage");
+  const [title, setTitle] = useState(job.title);
+  const [categoryId, setCategoryId] = useState(
+    job.serviceCategoryId ?? NONE_VALUE,
+  );
+  const [experience, setExperience] = useState(
+    job.experienceMinYears == null ? NONE_VALUE : String(job.experienceMinYears),
+  );
+  const [requirements, setRequirements] = useState(job.requirements ?? "");
+  const [description, setDescription] = useState(job.description ?? "");
+  const [status, setStatus] = useState<JobPosting["status"]>(job.status);
+
+  const canSubmit = title.trim().length >= 2 && !disabled;
+
+  return (
+    <section className="grid gap-3 rounded-2xl border border-border/60 bg-card p-4">
+      <div>
+        <p className="text-xs font-semibold tracking-wide text-primary uppercase">
+          {t("editEyebrow")}
+        </p>
+        <h2 className="mt-1 font-heading text-lg font-semibold">
+          {t("editTitle")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("editHint")}</p>
+      </div>
+
+      <Input
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        placeholder={t("jobTitlePlaceholder")}
+      />
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Select
+          value={categoryId}
+          onValueChange={setCategoryId}
+          disabled={categoriesLoading}
+        >
+          <SelectTrigger className="rounded-xl bg-background">
+            <SelectValue placeholder={t("categoryPlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE}>{t("categoryNone")}</SelectItem>
+            {categories.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={experience} onValueChange={setExperience}>
+          <SelectTrigger className="rounded-xl bg-background">
+            <SelectValue placeholder={t("experiencePlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE_VALUE}>{t("experienceAny")}</SelectItem>
+            <SelectItem value="0">{t("experienceOption.0")}</SelectItem>
+            <SelectItem value="1">{t("experienceOption.1")}</SelectItem>
+            <SelectItem value="3">{t("experienceOption.3")}</SelectItem>
+            <SelectItem value="5">{t("experienceOption.5")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Textarea
+        value={requirements}
+        onChange={(event) => setRequirements(event.target.value)}
+        placeholder={t("requirementsPlaceholder")}
+      />
+      <Textarea
+        value={description}
+        onChange={(event) => setDescription(event.target.value)}
+        placeholder={t("descriptionPlaceholder")}
+      />
+
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <Select
+          value={status}
+          onValueChange={(value) => setStatus(value as JobPosting["status"])}
+        >
+          <SelectTrigger className="rounded-xl bg-background">
+            <SelectValue placeholder={t("statusPlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="draft">{t("jobStatus.draft")}</SelectItem>
+            <SelectItem value="open">{t("jobStatus.open")}</SelectItem>
+            <SelectItem value="closed">{t("jobStatus.closed")}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          disabled={disabled || !canSubmit}
+          onClick={() =>
+            onSubmit({
+              title: title.trim(),
+              serviceCategoryId:
+                categoryId === NONE_VALUE ? null : categoryId,
+              experienceMinYears:
+                experience === NONE_VALUE ? null : Number(experience),
+              requirements: requirements.trim() || null,
+              description: description.trim() || null,
+              status,
+            })
+          }
+        >
+          {disabled ? t("saving") : t("save")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 function ContactRow({
   contact,
   canAccept,
@@ -207,6 +429,11 @@ function ContactRow({
         <p className="text-xs text-muted-foreground">
           {t(`contactStatus.${contact.status}`)}
         </p>
+        {contact.application?.message ? (
+          <p className="mt-1 max-w-xl text-xs text-muted-foreground">
+            {contact.application.message}
+          </p>
+        ) : null}
       </div>
       {canAccept && contact.status === "pending" ? (
         <div className="flex gap-2">

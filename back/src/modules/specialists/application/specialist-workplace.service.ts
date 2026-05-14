@@ -1,15 +1,16 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN } from '../../bookings/domain/booking-cancel-reason';
 import { appendInputMassOrganizationCancelBooking } from '../../bookings/domain/booking-mass-organization-cancel';
 import { BookingAppendService } from '../../bookings/application/booking-append.service';
 import { BookingStatusLocaleRepository } from '../../bookings/infrastructure/booking-status-locale.repository';
 import { BookingsRepository } from '../../bookings/infrastructure/bookings.repository';
 import type { BookingStatus, Prisma } from '@prisma/client';
 import {
+  CalendarResourceType,
   GalleryMediaKind,
   GalleryOwnerKind,
   OrganizationProfileRevisionStatus,
@@ -25,7 +26,6 @@ import {
 } from '../../../common/i18n';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import type { PatchSpecialistActiveOrganizationBody } from '../dto/patch-specialist-active-organization-body.schema';
-import { computeListedInDirectory } from '../domain/specialist-directory-flags';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
 import { CalendarService } from '../../calendar/application/calendar.service';
 import { OrganizationAccessPolicyService } from '../../organizations/application/organization-access-policy.service';
@@ -33,6 +33,18 @@ import {
   emptyOrganizationPermissions,
   type OrganizationScopedPermissions,
 } from '../../organizations/domain/organization-permissions';
+import type {
+  CreateSpecialistWorkplaceBody,
+  PatchSpecialistProfileStateBody,
+  PatchSpecialistWorkplaceBody,
+} from '../dto/specialist-workplace.schema';
+import { recomputeListedInDirectoryTx } from './recompute-specialist-listed-in-directory';
+
+const ACTIVE_BOOKING_STATUSES = [
+  'pending',
+  'confirmed',
+  'in_progress',
+] as const;
 
 @Injectable()
 export class SpecialistWorkplaceService {
@@ -46,6 +58,117 @@ export class SpecialistWorkplaceService {
     private readonly calendarService: CalendarService,
     private readonly organizationAccess: OrganizationAccessPolicyService,
   ) {}
+
+  private async assertHasActiveEmployment(
+    tx: Prisma.TransactionClient,
+    specialistId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const employment = await tx.specialistOrganizationEmployment.findFirst({
+      where: { specialistId, organizationId, isActive: true },
+      select: { id: true },
+    });
+    if (employment == null) {
+      throw new BadRequestException({
+        code: 'WORKPLACE_REQUIRES_ACTIVE_EMPLOYMENT',
+        message:
+          'Specialist must have active employment in the organization before adding it as a workplace',
+      });
+    }
+  }
+
+  private async assertCanDeactivateWorkplaceTx(
+    tx: Prisma.TransactionClient,
+    workplace: {
+      id: string;
+      specialistId: string;
+      isActive: boolean;
+    },
+  ): Promise<void> {
+    await this.assertWorkplaceHasNoActiveBookingsTx(tx, workplace.id);
+  }
+
+  private async assertWorkplaceHasNoActiveBookingsTx(
+    tx: Prisma.TransactionClient,
+    workplaceId: string,
+  ): Promise<void> {
+    const activeBookingsCount = await tx.booking.count({
+      where: {
+        workplaceId,
+        deletedAt: null,
+        status: { in: [...ACTIVE_BOOKING_STATUSES] },
+      },
+    });
+    if (activeBookingsCount > 0) {
+      throw new ConflictException({
+        code: 'CANNOT_DEACTIVATE_WORKPLACE_WITH_ACTIVE_BOOKINGS',
+        message: 'Cannot deactivate workplace while it has active bookings',
+      });
+    }
+  }
+
+  private async activateWorkplaceTx(
+    tx: Prisma.TransactionClient,
+    workplace: {
+      id: string;
+      specialistId: string;
+      organizationId: string;
+    },
+  ): Promise<void> {
+    await this.assertHasActiveEmployment(
+      tx,
+      workplace.specialistId,
+      workplace.organizationId,
+    );
+    const currentActiveWorkplaces = await tx.specialistWorkplace.findMany({
+      where: {
+        specialistId: workplace.specialistId,
+        isActive: true,
+        deletedAt: null,
+        NOT: { id: workplace.id },
+      },
+      select: { id: true },
+    });
+    for (const current of currentActiveWorkplaces) {
+      await this.assertWorkplaceHasNoActiveBookingsTx(tx, current.id);
+    }
+    await tx.specialistWorkplace.updateMany({
+      where: {
+        specialistId: workplace.specialistId,
+        isActive: true,
+        deletedAt: null,
+      },
+      data: { isActive: false },
+    });
+    await tx.calendarResource.updateMany({
+      where: {
+        specialistId: workplace.specialistId,
+        type: CalendarResourceType.specialist,
+        deletedAt: null,
+        NOT: { organizationId: workplace.organizationId },
+      },
+      data: { isActive: false },
+    });
+    await tx.specialistWorkplace.update({
+      where: { id: workplace.id },
+      data: { isActive: true, deletedAt: null },
+    });
+    await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
+      organizationId: workplace.organizationId,
+      specialistId: workplace.specialistId,
+    });
+    await recomputeListedInDirectoryTx(tx, workplace.specialistId);
+  }
+
+  private mapUniqueActiveWorkplaceConflict(e: unknown): never {
+    if ((e as { code?: string }).code === 'P2002') {
+      throw new ConflictException({
+        code: 'ANOTHER_WORKPLACE_ALREADY_ACTIVE',
+        message: 'Another workplace is already active; refresh and try again',
+      });
+    }
+    throw e;
+  }
 
   /**
    * Активные брони мастера в организации перед сменой места приёма: append событий массовой отмены.
@@ -121,13 +244,16 @@ export class SpecialistWorkplaceService {
   }> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: {
+        id: true,
+        activeOrganizationId: true,
+      },
     });
     if (!specialist) {
       return { organizations: [], activeOrganizationId: null };
     }
-    const employments =
-      await this.prisma.specialistOrganizationEmployment.findMany({
+    const [employments, activeWorkplaces] = await Promise.all([
+      this.prisma.specialistOrganizationEmployment.findMany({
         where: { specialistId: specialist.id, isActive: true },
         include: {
           organization: {
@@ -139,7 +265,19 @@ export class SpecialistWorkplaceService {
           },
         },
         orderBy: { startDate: 'desc' },
-      });
+      }),
+      this.prisma.specialistWorkplace.findMany({
+        where: {
+          specialistId: specialist.id,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: { organizationId: true },
+      }),
+    ]);
+    const activeWorkplaceOrgIds = new Set(
+      activeWorkplaces.map((w) => w.organizationId),
+    );
     const employedOrgIds = [
       ...new Set(employments.map((x) => x.organization.id)),
     ];
@@ -263,10 +401,7 @@ export class SpecialistWorkplaceService {
                   coverUrlByRevisionId.get(pending.revisionId) ?? null,
               }
             : null;
-        const ctx = await accessCache.resolve(
-          userId,
-          e.organization.id,
-        );
+        const ctx = await accessCache.resolve(userId, e.organization.id);
         return {
           id: e.organization.id,
           name: e.organization.name,
@@ -274,8 +409,7 @@ export class SpecialistWorkplaceService {
           workplaceJoinRequestId: null,
           role: e.role,
           permissions: this.organizationAccess.buildPermissionsForContext(ctx),
-          isActiveWorkplace:
-            specialist.activeOrganizationId === e.organization.id,
+          isActiveWorkplace: activeWorkplaceOrgIds.has(e.organization.id),
           publicationModerationStatus:
             pending != null
               ? PublicationModerationStatus.pending_review
@@ -322,6 +456,299 @@ export class SpecialistWorkplaceService {
       ],
       activeOrganizationId: specialist.activeOrganizationId,
     };
+  }
+
+  async getMyWorkplaces(userId: string): Promise<{
+    profile: { isActive: boolean };
+    workplaces: Array<{
+      id: string;
+      organizationId: string;
+      organizationName: string;
+      isActive: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+  }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+    const [, workplaces] = await Promise.all([
+      this.prisma.$transaction(async (tx) => {
+        await tx.specialistProfile.upsert({
+          where: { specialistId: specialist.id },
+          create: { specialistId: specialist.id, isActive: true },
+          update: { isActive: true },
+          select: { specialistId: true },
+        });
+        return recomputeListedInDirectoryTx(tx, specialist.id);
+      }),
+      this.prisma.specialistWorkplace.findMany({
+        where: { specialistId: specialist.id, deletedAt: null },
+        orderBy: [{ isActive: 'desc' }, { createdAt: 'asc' }],
+        include: { organization: { select: { name: true } } },
+      }),
+    ]);
+    return {
+      profile: { isActive: true },
+      workplaces: workplaces.map((w) => ({
+        id: w.id,
+        organizationId: w.organizationId,
+        organizationName: w.organization.name,
+        isActive: w.isActive,
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
+      })),
+    };
+  }
+
+  async createWorkplace(
+    userId: string,
+    body: CreateSpecialistWorkplaceBody,
+  ): Promise<{ id: string; organizationId: string; isActive: boolean }> {
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        await this.assertHasActiveEmployment(
+          tx,
+          specialist.id,
+          body.organizationId,
+        );
+        const activeWorkplacesCount = await tx.specialistWorkplace.count({
+          where: {
+            specialistId: specialist.id,
+            isActive: true,
+            deletedAt: null,
+          },
+        });
+        const row = await tx.specialistWorkplace.upsert({
+          where: {
+            specialistId_organizationId: {
+              specialistId: specialist.id,
+              organizationId: body.organizationId,
+            },
+          },
+          create: {
+            specialistId: specialist.id,
+            organizationId: body.organizationId,
+            isActive: activeWorkplacesCount === 0,
+          },
+          update: { deletedAt: null },
+          select: { id: true, organizationId: true, isActive: true },
+        });
+        if (activeWorkplacesCount === 0 && !row.isActive) {
+          await this.activateWorkplaceTx(tx, {
+            id: row.id,
+            specialistId: specialist.id,
+            organizationId: row.organizationId,
+          });
+        } else {
+          await recomputeListedInDirectoryTx(tx, specialist.id);
+        }
+        const fresh = await tx.specialistWorkplace.findUniqueOrThrow({
+          where: { id: row.id },
+          select: { id: true, organizationId: true, isActive: true },
+        });
+        return fresh;
+      });
+    } catch (e: unknown) {
+      this.mapUniqueActiveWorkplaceConflict(e);
+    }
+  }
+
+  async activateWorkplace(
+    userId: string,
+    workplaceId: string,
+  ): Promise<{ id: string; organizationId: string; isActive: boolean }> {
+    const workplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        id: workplaceId,
+        deletedAt: null,
+        specialist: { userId, deletedAt: null },
+      },
+      select: { id: true, specialistId: true, organizationId: true },
+    });
+    if (!workplace) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_NOT_FOUND',
+        message: 'Workplace not found',
+      });
+    }
+    try {
+      await this.prisma.$transaction((tx) =>
+        this.activateWorkplaceTx(tx, workplace),
+      );
+    } catch (e: unknown) {
+      this.mapUniqueActiveWorkplaceConflict(e);
+    }
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      workplace.specialistId,
+    );
+    return this.prisma.specialistWorkplace.findUniqueOrThrow({
+      where: { id: workplace.id },
+      select: { id: true, organizationId: true, isActive: true },
+    });
+  }
+
+  async patchWorkplace(
+    userId: string,
+    workplaceId: string,
+    body: PatchSpecialistWorkplaceBody,
+  ): Promise<{ id: string; organizationId: string; isActive: boolean }> {
+    if (body.isActive === true) {
+      return this.activateWorkplace(userId, workplaceId);
+    }
+    if (body.isActive === false) {
+      return this.deactivateWorkplace(userId, workplaceId);
+    }
+    const workplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        id: workplaceId,
+        deletedAt: null,
+        specialist: { userId, deletedAt: null },
+      },
+      select: { id: true, organizationId: true, isActive: true },
+    });
+    if (!workplace) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_NOT_FOUND',
+        message: 'Workplace not found',
+      });
+    }
+    return workplace;
+  }
+
+  async deactivateWorkplace(
+    userId: string,
+    workplaceId: string,
+  ): Promise<{ id: string; organizationId: string; isActive: boolean }> {
+    const workplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        id: workplaceId,
+        deletedAt: null,
+        specialist: { userId, deletedAt: null },
+      },
+      select: {
+        id: true,
+        specialistId: true,
+        organizationId: true,
+        isActive: true,
+      },
+    });
+    if (!workplace) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_NOT_FOUND',
+        message: 'Workplace not found',
+      });
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.assertCanDeactivateWorkplaceTx(tx, workplace);
+      await tx.specialistWorkplace.update({
+        where: { id: workplace.id },
+        data: { isActive: false },
+      });
+      await tx.calendarResource.updateMany({
+        where: {
+          organizationId: workplace.organizationId,
+          specialistId: workplace.specialistId,
+          type: CalendarResourceType.specialist,
+          deletedAt: null,
+        },
+        data: { isActive: false },
+      });
+      await recomputeListedInDirectoryTx(tx, workplace.specialistId);
+    });
+    return this.prisma.specialistWorkplace.findUniqueOrThrow({
+      where: { id: workplace.id },
+      select: { id: true, organizationId: true, isActive: true },
+    });
+  }
+
+  async deleteWorkplace(
+    userId: string,
+    workplaceId: string,
+  ): Promise<{ ok: true }> {
+    const workplace = await this.prisma.specialistWorkplace.findFirst({
+      where: {
+        id: workplaceId,
+        deletedAt: null,
+        specialist: { userId, deletedAt: null },
+      },
+      select: {
+        id: true,
+        specialistId: true,
+        organizationId: true,
+        isActive: true,
+      },
+    });
+    if (!workplace) {
+      throw new NotFoundException({
+        code: 'WORKPLACE_NOT_FOUND',
+        message: 'Workplace not found',
+      });
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await this.assertCanDeactivateWorkplaceTx(tx, workplace);
+      await tx.specialistWorkplace.update({
+        where: { id: workplace.id },
+        data: { isActive: false, deletedAt: new Date() },
+      });
+      await tx.calendarResource.updateMany({
+        where: {
+          organizationId: workplace.organizationId,
+          specialistId: workplace.specialistId,
+          type: CalendarResourceType.specialist,
+          deletedAt: null,
+        },
+        data: { isActive: false },
+      });
+      await recomputeListedInDirectoryTx(tx, workplace.specialistId);
+    });
+    return { ok: true };
+  }
+
+  async patchProfileState(
+    userId: string,
+    body: PatchSpecialistProfileStateBody,
+  ): Promise<{ isActive: boolean; listedInDirectory: boolean }> {
+    void body;
+    const specialist = await this.prisma.specialist.findFirst({
+      where: { userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!specialist) {
+      throw new NotFoundException({
+        code: 'SPECIALIST_PROFILE_NOT_FOUND',
+        message: 'Specialist profile not found for this user',
+      });
+    }
+    const listedInDirectory = await this.prisma.$transaction(async (tx) => {
+      await tx.specialistProfile.upsert({
+        where: { specialistId: specialist.id },
+        create: { specialistId: specialist.id, isActive: true },
+        update: { isActive: true },
+      });
+      return recomputeListedInDirectoryTx(tx, specialist.id);
+    });
+    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      specialist.id,
+    );
+    return { isActive: true, listedInDirectory };
   }
 
   /**
@@ -379,10 +806,7 @@ export class SpecialistWorkplaceService {
     return parseApiLocale(user?.locale);
   }
 
-  /**
-   * Превью активных броней с вами как мастером на текущем месте приёма —
-   * то же множество, что будет отменено при смене активной организации.
-   */
+  /** Превью активных броней с вами как мастером на активном месте приёма. */
   async previewBookingsWhenLeavingActiveOrganization(
     userId: string,
     organizationIdFromQuery: string,
@@ -402,7 +826,14 @@ export class SpecialistWorkplaceService {
   }> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: {
+        id: true,
+        workplaces: {
+          where: { isActive: true, deletedAt: null },
+          select: { organizationId: true },
+          take: 1,
+        },
+      },
     });
     if (!specialist) {
       throw new NotFoundException({
@@ -411,7 +842,9 @@ export class SpecialistWorkplaceService {
       });
     }
 
-    if (specialist.activeOrganizationId !== organizationIdFromQuery) {
+    const activeOrganizationId =
+      specialist.workplaces[0]?.organizationId ?? null;
+    if (activeOrganizationId !== organizationIdFromQuery) {
       throw new BadRequestException({
         code: 'NOT_CURRENT_ACTIVE_WORKPLACE_ORGANIZATION',
         message:
@@ -464,7 +897,7 @@ export class SpecialistWorkplaceService {
   }> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: { id: true },
     });
     if (!specialist) {
       throw new NotFoundException({
@@ -474,55 +907,13 @@ export class SpecialistWorkplaceService {
     }
 
     if (body.organizationId === null) {
-      const previousOrgId = specialist.activeOrganizationId;
-      if (previousOrgId == null) {
-        return {
-          activeOrganizationId: null,
-          cancelledBookingsCount: 0,
-        };
-      }
-
-      const cancelled = await this.prisma.$transaction(async (tx) => {
-        await tx.specialist.update({
-          where: { id: specialist.id },
-          data: { activeOrganizationId: null },
-        });
-        const fresh = await tx.specialist.findFirst({
-          where: { id: specialist.id },
-          select: { onboardingCompletedAt: true, activeOrganizationId: true },
-        });
-        if (fresh) {
-          await tx.specialist.update({
-            where: { id: specialist.id },
-            data: {
-              listedInDirectory: computeListedInDirectory({
-                onboardingCompletedAt: fresh.onboardingCompletedAt,
-                activeOrganizationId: fresh.activeOrganizationId,
-              }),
-            },
-          });
-        }
-        return this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
-          specialistId: specialist.id,
-          organizationId: previousOrgId,
-          actorUserId: userId,
-          cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
-          cancellationComment: null,
-        });
+      await this.prisma.specialist.update({
+        where: { id: specialist.id },
+        data: { activeOrganizationId: null },
       });
-      for (const row of cancelled) {
-        void this.pushNotifications.notifyClientBookingStatusChange(
-          row.id,
-          row.fromStatus,
-          row.toStatus,
-        );
-      }
-      await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
-        specialist.id,
-      );
       return {
         activeOrganizationId: null,
-        cancelledBookingsCount: cancelled.length,
+        cancelledBookingsCount: 0,
       };
     }
 
@@ -549,74 +940,18 @@ export class SpecialistWorkplaceService {
       throw new BadRequestException({
         code: 'NOT_EMPLOYED_AT_ORGANIZATION',
         message:
-          'You are not an active member of this organization; cannot set it as workplace',
+          'You are not an active member of this organization; cannot set it as active organization context',
       });
     }
 
-    const previousOrgId = specialist.activeOrganizationId;
-    if (previousOrgId === body.organizationId) {
-      await this.prisma.$transaction((tx) =>
-        this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
-          organizationId: body.organizationId!,
-          specialistId: specialist.id,
-        }),
-      );
-      return {
-        activeOrganizationId: body.organizationId,
-        cancelledBookingsCount: 0,
-      };
-    }
-
-    const cancelled = await this.prisma.$transaction(async (tx) => {
-      await tx.specialist.update({
-        where: { id: specialist.id },
-        data: { activeOrganizationId: body.organizationId },
-      });
-      const fresh = await tx.specialist.findFirst({
-        where: { id: specialist.id },
-        select: { onboardingCompletedAt: true, activeOrganizationId: true },
-      });
-      if (fresh) {
-        await tx.specialist.update({
-          where: { id: specialist.id },
-          data: {
-            listedInDirectory: computeListedInDirectory({
-              onboardingCompletedAt: fresh.onboardingCompletedAt,
-              activeOrganizationId: fresh.activeOrganizationId,
-            }),
-          },
-        });
-      }
-      await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
-        organizationId: body.organizationId!,
-        specialistId: specialist.id,
-      });
-      if (!previousOrgId) {
-        return [];
-      }
-      return this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
-        specialistId: specialist.id,
-        organizationId: previousOrgId,
-        actorUserId: userId,
-        cancelReason: BOOKING_AUTO_CANCEL_MASTER_LEFT_WORKPLACE_EN,
-        cancellationComment: null,
-      });
+    await this.prisma.specialist.update({
+      where: { id: specialist.id },
+      data: { activeOrganizationId: body.organizationId },
     });
-    for (const row of cancelled) {
-      void this.pushNotifications.notifyClientBookingStatusChange(
-        row.id,
-        row.fromStatus,
-        row.toStatus,
-      );
-    }
-
-    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
-      specialist.id,
-    );
 
     return {
       activeOrganizationId: body.organizationId,
-      cancelledBookingsCount: cancelled.length,
+      cancelledBookingsCount: 0,
     };
   }
 }

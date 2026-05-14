@@ -38,6 +38,7 @@ import {
 type CalendarAccessContext = {
   userId: string;
   specialistId: string;
+  specialistHasActiveWorkplaceInContext: boolean;
   organizationId: string;
   scope: OrganizationDataScope;
   access: OrganizationAccessContext;
@@ -108,6 +109,40 @@ function canManageCalendarEvent(
     specialistId: eventSpecialistIdForPolicy(ctx, row),
     createdByUserId: row.createdByUserId,
   });
+}
+
+async function filterSpecialistResourcesWithActiveWorkplace(
+  prisma: PrismaService,
+  organizationId: string,
+  resources: CalendarResourceRow[],
+): Promise<CalendarResourceRow[]> {
+  const specialistIds = [
+    ...new Set(
+      resources
+        .map((resource) => resource.specialistId)
+        .filter((id): id is string => id != null),
+    ),
+  ];
+  if (specialistIds.length === 0) {
+    return resources;
+  }
+  const workplaces = await prisma.specialistWorkplace.findMany({
+    where: {
+      organizationId,
+      specialistId: { in: specialistIds },
+      isActive: true,
+      deletedAt: null,
+    },
+    select: { specialistId: true },
+  });
+  const activeSpecialistIds = new Set(
+    workplaces.map((workplace) => workplace.specialistId),
+  );
+  return resources.filter(
+    (resource) =>
+      resource.specialistId == null ||
+      activeSpecialistIds.has(resource.specialistId),
+  );
 }
 
 function mapEvent(
@@ -231,19 +266,37 @@ export class CalendarService {
     }>;
   }> {
     const ctx = await this.resolveAccessContext(userId);
-    const ownResource = await this.prisma.$transaction((tx) =>
-      this.ensureSpecialistResourceForOrganizationTx(tx, {
-        organizationId: ctx.organizationId,
-        specialistId: ctx.specialistId,
-      }),
-    );
+    const ownResource = ctx.specialistHasActiveWorkplaceInContext
+      ? await this.prisma.$transaction((tx) =>
+          this.ensureSpecialistResourceForOrganizationTx(tx, {
+            organizationId: ctx.organizationId,
+            specialistId: ctx.specialistId,
+          }),
+        )
+      : null;
     const resources =
       await this.calendarRepository.listResourcesForOrganization({
         organizationId: ctx.organizationId,
         type: CalendarResourceType.specialist,
         ...ctx.scope.resources,
       });
-    const list = resources.length > 0 ? resources : [ownResource];
+    const activeWorkplaceResources =
+      await filterSpecialistResourcesWithActiveWorkplace(
+        this.prisma,
+        ctx.organizationId,
+        resources,
+      );
+    const visibleResources = ctx.specialistHasActiveWorkplaceInContext
+      ? activeWorkplaceResources
+      : activeWorkplaceResources.filter(
+          (r) => r.specialistId !== ctx.specialistId,
+        );
+    const list =
+      visibleResources.length > 0
+        ? visibleResources
+        : ownResource != null
+          ? [ownResource]
+          : [];
     return {
       organizationId: ctx.organizationId,
       resources: list.map((r) => ({
@@ -282,10 +335,28 @@ export class CalendarService {
         type: CalendarResourceType.specialist,
         ...ctx.scope.resources,
       });
-    const allowedIds = new Set(allowedResources.map((r) => r.id));
+    const activeWorkplaceResources =
+      await filterSpecialistResourcesWithActiveWorkplace(
+        this.prisma,
+        ctx.organizationId,
+        allowedResources,
+      );
+    const visibleAllowedResources = ctx.specialistHasActiveWorkplaceInContext
+      ? activeWorkplaceResources
+      : activeWorkplaceResources.filter(
+          (r) => r.specialistId !== ctx.specialistId,
+        );
+    const allowedIds = new Set(visibleAllowedResources.map((r) => r.id));
     const requested = args.resourceIds?.length
       ? [...new Set(args.resourceIds)]
       : [...allowedIds];
+    if (requested.length === 0) {
+      return {
+        organizationId: ctx.organizationId,
+        events: [],
+        nextCursor: null,
+      };
+    }
     if (requested.some((id) => !allowedIds.has(id))) {
       throw new ForbiddenException({
         code: 'CALENDAR_RESOURCE_FORBIDDEN',
@@ -663,7 +734,13 @@ export class CalendarService {
       type: CalendarResourceType.specialist,
       ...ctx.scope.resources,
     });
-    const allowedIds = new Set(allowed.map((r) => r.id));
+    const activeWorkplaceResources =
+      await filterSpecialistResourcesWithActiveWorkplace(
+        this.prisma,
+        ctx.organizationId,
+        allowed,
+      );
+    const allowedIds = new Set(activeWorkplaceResources.map((r) => r.id));
     if (resourceIds.some((id) => !allowedIds.has(id))) {
       throw new ForbiddenException({
         code: 'CALENDAR_RESOURCE_FORBIDDEN',
@@ -681,8 +758,14 @@ export class CalendarService {
         organizationId: ctx.organizationId,
         type: CalendarResourceType.specialist,
       });
+    const activeWorkplaceResources =
+      await filterSpecialistResourcesWithActiveWorkplace(
+        this.prisma,
+        ctx.organizationId,
+        resources,
+      );
     const resourceById = new Map(
-      resources.map((resource) => [resource.id, resource]),
+      activeWorkplaceResources.map((resource) => [resource.id, resource]),
     );
     for (const resourceId of resourceIds) {
       const resource = resourceById.get(resourceId);
@@ -789,6 +872,23 @@ export class CalendarService {
         message: 'Resource belongs to another organization',
       });
     }
+    if (resource.specialistId != null) {
+      const activeWorkplace = await this.prisma.specialistWorkplace.findFirst({
+        where: {
+          organizationId: ctx.organizationId,
+          specialistId: resource.specialistId,
+          isActive: true,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (activeWorkplace == null) {
+        throw new ForbiddenException({
+          code: 'CALENDAR_RESOURCE_INACTIVE_WORKPLACE',
+          message: 'Specialist is not receiving clients in this organization',
+        });
+      }
+    }
     assertCanOrganization(ctx.access, OrganizationCapabilities.CALENDAR, {
       type: 'Resource',
       action:
@@ -807,7 +907,15 @@ export class CalendarService {
   ): Promise<CalendarAccessContext> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: {
+        id: true,
+        activeOrganizationId: true,
+        workplaces: {
+          where: { isActive: true, deletedAt: null },
+          select: { organizationId: true },
+          take: 1,
+        },
+      },
     });
     if (specialist == null) {
       throw new NotFoundException({
@@ -815,26 +923,33 @@ export class CalendarService {
         message: 'Specialist profile not found',
       });
     }
-    if (specialist.activeOrganizationId == null) {
+    const activeOrganizationId =
+      specialist.activeOrganizationId ??
+      specialist.workplaces[0]?.organizationId ??
+      null;
+    if (activeOrganizationId == null) {
       throw new NotFoundException({
-        code: 'ACTIVE_ORGANIZATION_NOT_FOUND',
-        message: 'Active organization is required for calendar',
+        code: 'ACTIVE_ORGANIZATION_CONTEXT_NOT_FOUND',
+        message: 'Active organization context is required for calendar',
       });
     }
     const orgCtx = await this.organizationAccess.resolveContext(
       userId,
-      specialist.activeOrganizationId,
+      activeOrganizationId,
     );
     assertCanOrganization(orgCtx, OrganizationCapabilities.CALENDAR, {
       type: 'Resource',
       action: OrganizationCalendarActions.VIEW,
-      organizationId: specialist.activeOrganizationId,
+      organizationId: activeOrganizationId,
       specialistId: specialist.id,
     });
     return {
       userId,
       specialistId: specialist.id,
-      organizationId: specialist.activeOrganizationId,
+      specialistHasActiveWorkplaceInContext: specialist.workplaces.some(
+        (workplace) => workplace.organizationId === activeOrganizationId,
+      ),
+      organizationId: activeOrganizationId,
       scope: buildOrganizationScope(orgCtx),
       access: orgCtx,
     };

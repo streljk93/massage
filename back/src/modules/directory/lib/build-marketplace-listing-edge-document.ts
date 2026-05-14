@@ -31,7 +31,6 @@ export type ListingEdgeSourceRow = {
     imageAlt: string | null;
     listingName: string | null;
     profilePublicationModerationStatus: PublicationModerationStatus;
-    activeOrganizationId: string | null;
     publishedProfileRevision?: SpecialistPublishedRevisionVitrine | null;
   };
   organizationOffering: {
@@ -94,14 +93,6 @@ export function buildMarketplaceListingEdgeDocument(input: {
   if (!input.vitrineCategoryIdsForOrg.has(off.category.id)) {
     return null;
   }
-  if (
-    typeof row.specialist.activeOrganizationId === 'string' &&
-    row.specialist.activeOrganizationId.length > 0 &&
-    row.specialist.activeOrganizationId !== org.id
-  ) {
-    return null;
-  }
-
   const overrides = new Map<string, number>();
   for (const o of row.priceOverrides) {
     overrides.set(o.offeringPriceOptionId, o.customPrice);

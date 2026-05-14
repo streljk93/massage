@@ -62,19 +62,22 @@ export class HiringController {
   @UseGuards(JwtAccessGuard)
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Глобальный поиск кандидатов по публичным резюме.' })
+  @ApiQuery({ name: 'jobPostingId', required: false })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'q', required: false })
+  @ApiQuery({ name: 'serviceCategoryId', required: false })
   @ApiQuery({ name: 'skillCategoryIds', required: false })
   @ApiQuery({ name: 'experienceMinYears', required: false })
   @ApiQuery({ name: 'experienceMaxYears', required: false })
   @ApiOkResponse({ schema: candidateListResponseSchema })
   @ApiUnauthorizedResponse()
   async listCandidates(
+    @Req() req: AuthedRequest,
     @Query(new ZodValidationPipe(candidateListQuerySchema))
     query: CandidateListQuery,
   ) {
-    return this.hiring.listCandidates(query);
+    return this.hiring.listCandidates(req.user.id, query);
   }
 
   @Get('job-postings/:jobPostingId/candidates')

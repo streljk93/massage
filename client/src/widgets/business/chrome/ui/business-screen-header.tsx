@@ -11,6 +11,7 @@ import { cn, motion } from "@/shared/lib";
 import { localeFlagEmoji } from "@/shared/lib";
 import { BusinessCabinetNavDrawerTrigger } from "./business-cabinet-nav-drawer";
 import { useCabinetHeaderLeadRole } from "./business-cabinet-nav-context";
+import { useBusinessCabinetAvatarSrc } from "../lib/use-business-cabinet-avatar-src";
 
 function initialsFromUser(user: {
   name?: string | null;
@@ -87,7 +88,8 @@ export function BusinessScreenHeader({
     : tHome("avatarLinkLoginAria");
 
   const user = session?.user;
-  const displaySrc = isAuthed && user?.image ? user.image : undefined;
+  const cabinetAvatarSrc = useBusinessCabinetAvatarSrc();
+  const displaySrc = isAuthed ? cabinetAvatarSrc : undefined;
   const displayAlt = isAuthed
     ? user?.name?.trim() || user?.email || avatarAlt
     : tHome("guestWelcome");

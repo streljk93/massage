@@ -10,6 +10,8 @@ export const OrganizationCapabilities = {
   HIRING_MANAGE: "organization.hiring.manage",
   HIRING_REVIEW_APPLICATIONS: "organization.hiring.review_applications",
   HIRING_ACCEPT: "organization.hiring.accept",
+  MARKETING_VIEW: "organization.marketing.view",
+  ANALYTICS_VIEW: "organization.analytics.view",
   CALENDAR: "organization.calendar",
   BOOKINGS: "organization.bookings",
 } as const;
@@ -48,6 +50,8 @@ export type OrganizationScopedPermissions = {
     reviewApplications: boolean;
     accept: boolean;
   };
+  marketing: { view: boolean };
+  analytics: { view: boolean };
   calendar: {
     view: boolean;
     viewAll: boolean;
@@ -108,6 +112,10 @@ export function canOrganization(
       return permissions.hiring.reviewApplications;
     case OrganizationCapabilities.HIRING_ACCEPT:
       return permissions.hiring.accept;
+    case OrganizationCapabilities.MARKETING_VIEW:
+      return permissions.marketing.view;
+    case OrganizationCapabilities.ANALYTICS_VIEW:
+      return permissions.analytics.view;
     case OrganizationCapabilities.CALENDAR:
       return canCalendarAction(permissions, options?.calendarAction);
     case OrganizationCapabilities.BOOKINGS:

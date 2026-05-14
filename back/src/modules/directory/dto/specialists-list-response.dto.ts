@@ -75,9 +75,7 @@ export type SpecialistListItemDto = {
    */
   listingWorkdayStartMinute: number;
   listingWorkdayEndMinute: number;
-  /**
-   * Текущее место приёма (`activeOrganization`). `null`, если мастер не привязан к салону.
-   */
+  /** Активное место приёма из `SpecialistWorkplace`. `null`, если мастер не принимает в организации. */
   activeWorkplace: {
     id: string;
     name: string;

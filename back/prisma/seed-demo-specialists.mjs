@@ -273,7 +273,13 @@ async function ensureSpecialistOfferingAssignmentsForListedAtOrg(
     where: {
       deletedAt: null,
       listedInDirectory: true,
-      activeOrganizationId: organizationId,
+      workplaces: {
+        some: {
+          organizationId,
+          isActive: true,
+          deletedAt: null,
+        },
+      },
     },
     select: { id: true },
   });
@@ -597,10 +603,12 @@ export async function seedDemoSpecialists(prisma) {
     where: { id: ownerSpecialist.id },
     data: { activeOrganizationId: org.id },
   });
+  await ensureSpecialistActiveWorkplace(prisma, ownerSpecialist.id, org.id);
   await prisma.specialist.update({
     where: { id: workerSpecialist.id },
     data: { activeOrganizationId: org.id },
   });
+  await ensureSpecialistActiveWorkplace(prisma, workerSpecialist.id, org.id);
 
   const massageMajor = await prisma.majorServiceCategory.findUnique({
     where: { slug: 'massage' },
@@ -757,7 +765,7 @@ export async function seedDemoSpecialists(prisma) {
   await prisma.specialist.updateMany({
     where: {
       listedInDirectory: true,
-      activeOrganizationId: { not: null },
+      workplaces: { some: { isActive: true, deletedAt: null } },
       onboardingCompletedAt: null,
       deletedAt: null,
     },
@@ -962,6 +970,49 @@ async function ensureEmployment(prisma, specialistId, organizationId, role) {
 
 /**
  * @param {import('@prisma/client').PrismaClient} prisma
+ * @param {string} specialistId
+ * @param {string} organizationId
+ */
+async function ensureSpecialistActiveWorkplace(
+  prisma,
+  specialistId,
+  organizationId,
+) {
+  await prisma.specialistProfile.upsert({
+    where: { specialistId },
+    create: { specialistId, isActive: true },
+    update: { isActive: true },
+  });
+  await prisma.specialistWorkplace.updateMany({
+    where: {
+      specialistId,
+      isActive: true,
+      deletedAt: null,
+      NOT: { organizationId },
+    },
+    data: { isActive: false },
+  });
+  await prisma.specialistWorkplace.upsert({
+    where: {
+      specialistId_organizationId: {
+        specialistId,
+        organizationId,
+      },
+    },
+    create: {
+      specialistId,
+      organizationId,
+      isActive: true,
+    },
+    update: {
+      isActive: true,
+      deletedAt: null,
+    },
+  });
+}
+
+/**
+ * @param {import('@prisma/client').PrismaClient} prisma
  * @param {string} organizationId
  * @param {Record<string, import('@prisma/client').ServiceCategory>} bySlug
  */
@@ -1097,6 +1148,7 @@ async function topUpOriginalSalon(prisma, ctx) {
       where: { id: specialist.id },
       data: { activeOrganizationId: org.id },
     });
+    await ensureSpecialistActiveWorkplace(prisma, specialist.id, org.id);
 
     const pick = ['herbal-massage', 'deep-tissue-massage', 'neck-shoulder-back-therapy']
       .map((s) => ctx.bySlug[s])
@@ -1296,6 +1348,7 @@ async function upsertFullSalon(prisma, args) {
       where: { id: spec.id },
       data: { activeOrganizationId: org.id },
     });
+    await ensureSpecialistActiveWorkplace(prisma, spec.id, org.id);
   }
 
   const categoryRot = [

@@ -12,6 +12,10 @@ export const OrganizationCapabilities = {
   HIRING_MANAGE: 'organization.hiring.manage',
   HIRING_REVIEW_APPLICATIONS: 'organization.hiring.review_applications',
   HIRING_ACCEPT: 'organization.hiring.accept',
+  /** Раздел кабинета «Маркетинг» (навигация; отдельных API пока нет). */
+  MARKETING_VIEW: 'organization.marketing.view',
+  /** Раздел кабинета «Аналитика» (навигация; отдельных API пока нет). */
+  ANALYTICS_VIEW: 'organization.analytics.view',
   CALENDAR: 'organization.calendar',
   BOOKINGS: 'organization.bookings',
 } as const;

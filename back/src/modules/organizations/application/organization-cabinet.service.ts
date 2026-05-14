@@ -47,9 +47,10 @@ import { GalleryService } from '../../gallery/application/gallery.service';
 import { ModerationEnqueueService } from '../../moderation/application/moderation-enqueue.service';
 import { PushNotificationsService } from '../../notifications/application/push-notifications.service';
 import { SpecialistOfferingEdgeLifecycleService } from '../../directory/application/specialist-offering-edge-lifecycle.service';
+import { SpecialistCabinetProfileService } from '../../specialists/application/specialist-cabinet-profile.service';
 import { SpecialistOnboardingService } from '../../specialists/application/specialist-onboarding.service';
+import { recomputeListedInDirectoryTx } from '../../specialists/application/recompute-specialist-listed-in-directory';
 import { CalendarService } from '../../calendar/application/calendar.service';
-import { computeListedInDirectory } from '../../specialists/domain/specialist-directory-flags';
 import { OrganizationAccessPolicyService } from './organization-access-policy.service';
 import {
   OrganizationCapabilities,
@@ -145,6 +146,7 @@ export class OrganizationCabinetService {
     private readonly addressPersistence: AddressPersistenceService,
     private readonly gallery: GalleryService,
     private readonly specialistOnboarding: SpecialistOnboardingService,
+    private readonly specialistCabinetProfile: SpecialistCabinetProfileService,
     private readonly moderationEnqueue: ModerationEnqueueService,
     private readonly bookingsRepository: BookingsRepository,
     private readonly bookingAppend: BookingAppendService,
@@ -278,21 +280,7 @@ export class OrganizationCabinetService {
     tx: Prisma.TransactionClient,
     specialistId: string,
   ): Promise<void> {
-    const fresh = await tx.specialist.findFirst({
-      where: { id: specialistId },
-      select: { onboardingCompletedAt: true, activeOrganizationId: true },
-    });
-    if (fresh) {
-      await tx.specialist.update({
-        where: { id: specialistId },
-        data: {
-          listedInDirectory: computeListedInDirectory({
-            onboardingCompletedAt: fresh.onboardingCompletedAt,
-            activeOrganizationId: fresh.activeOrganizationId,
-          }),
-        },
-      });
-    }
+    await recomputeListedInDirectoryTx(tx, specialistId);
   }
 
   private async grantSpecialistMembershipAtOrganization(
@@ -326,9 +314,19 @@ export class OrganizationCabinetService {
         },
       });
     }
-    await tx.specialist.update({
-      where: { id: specialistId },
-      data: { activeOrganizationId: organizationId },
+    const activeWorkplacesCount = await tx.specialistWorkplace.count({
+      where: { specialistId, isActive: true, deletedAt: null },
+    });
+    await tx.specialistWorkplace.upsert({
+      where: {
+        specialistId_organizationId: { specialistId, organizationId },
+      },
+      create: {
+        specialistId,
+        organizationId,
+        isActive: activeWorkplacesCount === 0,
+      },
+      update: { deletedAt: null },
     });
     await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
       specialistId,
@@ -442,17 +440,21 @@ export class OrganizationCabinetService {
           cancelReason: BOOKING_CANCEL_REASON_ORGANIZATION_DELETED_EN,
           cancellationComment: null,
         });
-      const workplaceSpecialists = await tx.specialist.findMany({
-        where: { activeOrganizationId: organizationId },
-        select: { id: true },
+      const workplaceSpecialists = await tx.specialistWorkplace.findMany({
+        where: { organizationId, deletedAt: null },
+        select: { specialistId: true },
       });
       for (const s of workplaceSpecialists) {
-        await tx.specialist.update({
-          where: { id: s.id },
-          data: { activeOrganizationId: null },
+        await tx.specialistWorkplace.updateMany({
+          where: { specialistId: s.specialistId, organizationId },
+          data: { isActive: false, deletedAt: now },
         });
-        await this.syncSpecialistListedInDirectory(tx, s.id);
+        await this.syncSpecialistListedInDirectory(tx, s.specialistId);
       }
+      await tx.specialist.updateMany({
+        where: { activeOrganizationId: organizationId },
+        data: { activeOrganizationId: null },
+      });
       await tx.organizationOffering.updateMany({
         where: { organizationId, deletedAt: null },
         data: {
@@ -528,6 +530,7 @@ export class OrganizationCabinetService {
       employmentId: string;
       specialistId: string;
       displayName: string | null;
+      imageUrl: string | null;
       role: OrganizationMembershipRole;
       permissions: { manageRole: boolean; remove: boolean };
     }>;
@@ -552,6 +555,7 @@ export class OrganizationCabinetService {
         specialist: {
           select: {
             listingName: true,
+            imageUrl: true,
             user: { select: { id: true, name: true } },
           },
         },
@@ -575,6 +579,7 @@ export class OrganizationCabinetService {
           r.specialist.listingName?.trim() ||
           r.specialist.user?.name?.trim() ||
           null,
+        imageUrl: r.specialist.imageUrl?.trim() || null,
         permissions: {
           manageRole:
             permissions.team.manageRoles &&
@@ -605,6 +610,7 @@ export class OrganizationCabinetService {
       specialistId: string;
       displayName: string | null;
       headline: string | null;
+      imageUrl: string | null;
       alreadyMember: boolean;
     }>;
   }> {
@@ -632,6 +638,7 @@ export class OrganizationCabinetService {
         id: true,
         listingName: true,
         bio: true,
+        imageUrl: true,
         user: { select: { name: true } },
         employments: {
           where: { organizationId, isActive: true },
@@ -646,6 +653,7 @@ export class OrganizationCabinetService {
         specialistId: row.id,
         displayName: row.listingName?.trim() || row.user?.name?.trim() || null,
         headline: row.bio?.trim() || null,
+        imageUrl: row.imageUrl?.trim() || null,
         alreadyMember: row.employments.length > 0,
       })),
     };
@@ -913,7 +921,7 @@ export class OrganizationCabinetService {
             id: true,
             specialistId: true,
             specialist: {
-              select: { userId: true, activeOrganizationId: true },
+              select: { userId: true },
             },
             organization: { select: { ownerUserId: true } },
           },
@@ -933,21 +941,46 @@ export class OrganizationCabinetService {
         }
 
         const now = new Date();
+        const activeWorkplace = await tx.specialistWorkplace.findFirst({
+          where: {
+            specialistId: target.specialistId,
+            organizationId,
+            isActive: true,
+            deletedAt: null,
+          },
+          select: { id: true },
+        });
+        if (activeWorkplace != null) {
+          throw new ConflictException({
+            code: 'CANNOT_REMOVE_EMPLOYMENT_WITH_ACTIVE_WORKPLACE',
+            message:
+              'Specialist must switch workplace or turn off activity before being removed from this organization',
+          });
+        }
         await tx.specialistOrganizationEmployment.update({
           where: { id: target.id },
           data: { isActive: false, endDate: now },
         });
+        await tx.specialistWorkplace.updateMany({
+          where: {
+            specialistId: target.specialistId,
+            organizationId,
+            deletedAt: null,
+          },
+          data: { isActive: false, deletedAt: now },
+        });
+        await this.syncSpecialistListedInDirectory(tx, target.specialistId);
         await this.deactivateSpecialistCalendarResourceAtOrganizationTx(tx, {
           specialistId: target.specialistId,
           organizationId,
         });
-        if (target.specialist.activeOrganizationId === organizationId) {
-          await tx.specialist.update({
-            where: { id: target.specialistId },
-            data: { activeOrganizationId: null },
-          });
-          await this.syncSpecialistListedInDirectory(tx, target.specialistId);
-        }
+        await tx.specialist.updateMany({
+          where: {
+            id: target.specialistId,
+            activeOrganizationId: organizationId,
+          },
+          data: { activeOrganizationId: null },
+        });
         const cancelled =
           await this.massCancelBookingsAtSpecialistOrganizationTx(tx, {
             specialistId: target.specialistId,
@@ -1196,7 +1229,7 @@ export class OrganizationCabinetService {
       });
     }
     const specialist =
-      await this.specialistOnboarding.buildSpecialistCabinetSnapshotForSpecialistId(
+      await this.specialistCabinetProfile.buildSpecialistCabinetSnapshotForSpecialistId(
         applicantSpecialistId,
         locale,
       );
@@ -1433,7 +1466,14 @@ export class OrganizationCabinetService {
           'Для режима «свой салон» тип организации в запросе должен быть business.',
       });
     }
-    const hadActiveWorkplace = specialist.activeOrganizationId != null;
+    const hadActiveWorkplace =
+      (await this.prisma.specialistWorkplace.count({
+        where: {
+          specialistId: specialist.id,
+          isActive: true,
+          deletedAt: null,
+        },
+      })) > 0;
     const majors = await this.resolveMajorCategoriesFromBodySlugs(
       body.majorCategorySlugs,
     );
@@ -1648,27 +1688,24 @@ export class OrganizationCabinetService {
       });
 
       if (!hadActiveWorkplace) {
-        await tx.specialist.update({
-          where: { id: specialist.id },
-          data: { activeOrganizationId: orgId },
-        });
-      }
-
-      const fresh = await tx.specialist.findFirst({
-        where: { id: specialist.id },
-        select: { onboardingCompletedAt: true, activeOrganizationId: true },
-      });
-      if (fresh) {
-        await tx.specialist.update({
-          where: { id: specialist.id },
+        await tx.specialistWorkplace.create({
           data: {
-            listedInDirectory: computeListedInDirectory({
-              onboardingCompletedAt: fresh.onboardingCompletedAt,
-              activeOrganizationId: fresh.activeOrganizationId,
-            }),
+            specialistId: specialist.id,
+            organizationId: orgId,
+            isActive: true,
+          },
+        });
+      } else {
+        await tx.specialistWorkplace.create({
+          data: {
+            specialistId: specialist.id,
+            organizationId: orgId,
+            isActive: false,
           },
         });
       }
+
+      await this.syncSpecialistListedInDirectory(tx, specialist.id);
 
       await syncOrganizationServiceCategoriesFromPublishedOfferings(tx, orgId);
 

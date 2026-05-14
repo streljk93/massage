@@ -610,8 +610,9 @@ model Organization {
 
   reviews                    OrganizationReview[]
   bookings                   Booking[]
+  specialistWorkplaces       SpecialistWorkplace[]
   specialistEmployments      SpecialistOrganizationEmployment[]
-  /// Мастера, у которых эта организация выбрана как текущее место приёма.
+  /// Мастера, у которых эта организация выбрана в UI-контексте кабинета.
   specialistsActiveWorkplace Specialist[]                       @relation("SpecialistActiveOrganization")
   locales                    OrganizationLocale[]
   serviceCategories          OrganizationServiceCategory[]
@@ -809,6 +810,18 @@ model SpecialistProfileRevision {
   @@index([specialistId, status])
 }
 
+/// Операционный профиль мастера: работает ли он сейчас как специалист. Не хранит витринный черновик.
+model SpecialistProfile {
+  specialistId String     @id
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+}
+
 /// Профиль специалиста (мастер), 1:1 с пользователем со «статусом специалиста».
 model Specialist {
   id     String @id @default(uuid())
@@ -839,14 +852,14 @@ model Specialist {
   /// Режим работы из онбординга; null пока пользователь не выбрал («как работаете»).
   onboardingWorkPattern SpecialistWorkPattern?
 
-  /// Текущее место приёма (адрес и гео для витрины берутся от этой организации).
+  /// Выбранная организация в кабинете мастера (UI-контекст). Не влияет на витрину и новые записи.
   activeOrganizationId String?
   activeOrganization   Organization? @relation("SpecialistActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 
   /// Показывать в клиентском каталоге/поиске как мастера (запись к человеку). Не путать с ролью в организации: владелец без приёма — false.
   listedInDirectory Boolean @default(false)
 
-  /// Завершён сценарий первичной настройки (финальный экран); витрина — только вместе с `activeOrganizationId` и флагом listed.
+  /// Завершён сценарий первичной настройки (финальный экран); витрина — только вместе с активным `SpecialistWorkplace` и флагом listed.
   onboardingCompletedAt DateTime?
 
   /// Записи сразу в `confirmed` (без ожидания ручного подтверждения мастером / без pending).
@@ -857,8 +870,10 @@ model Specialist {
   deletedAt DateTime?
 
   profileRevisions SpecialistProfileRevision[] @relation("SpecialistProfileRevisions")
+  profile          SpecialistProfile?
 
   employments             SpecialistOrganizationEmployment[]
+  workplaces              SpecialistWorkplace[]
   workplaceJoinRequests   SpecialistWorkplaceJoinRequest[]
   bookings                Booking[]
   reviews                 SpecialistReview[]
@@ -874,6 +889,30 @@ model Specialist {
   hiringSearchProjection  SpecialistSearchProjection?
 
   @@index([activeOrganizationId])
+}
+
+/// Место приёма специалиста в организации. В MVP частные адреса не поддерживаются.
+model SpecialistWorkplace {
+  id String @id @default(uuid())
+
+  specialistId String
+  specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  isActive Boolean @default(false)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  bookings Booking[]
+
+  @@unique([specialistId, organizationId])
+  @@index([specialistId])
+  @@index([organizationId])
+  @@index([isActive])
 }
 
 /// Период недоступности мастера (отпуск, личные дни). Пересечение с активной бронью запрещено при создании записи.
@@ -964,11 +1003,15 @@ model SpecialistSearchProjection {
 
   skillsCategoryIds String[]
   experienceYears   Int?
+  isActive          Boolean  @default(true)
+  hasActiveWorkplace Boolean @default(false)
   textSearch        String?  @db.Text
 
   updatedAt DateTime @updatedAt
 
   @@index([experienceYears])
+  @@index([isActive])
+  @@index([hasActiveWorkplace])
 }
 
 /// Период работы специалиста в организации (история смены салонов).
@@ -1518,6 +1561,9 @@ model Booking {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
+  workplaceId String?
+  workplace   SpecialistWorkplace? @relation(fields: [workplaceId], references: [id], onDelete: SetNull)
+
   organizationOfferingId String
   organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Restrict)
 
@@ -1570,6 +1616,7 @@ model Booking {
   @@index([clientUserId])
   @@index([specialistId])
   @@index([organizationId])
+  @@index([workplaceId])
   @@index([startsAt])
   @@index([status])
   @@index([status, pendingExpiresAt])

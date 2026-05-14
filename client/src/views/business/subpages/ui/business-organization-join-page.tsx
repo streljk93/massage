@@ -16,6 +16,9 @@ import {
 import { Button, SearchAutocomplete } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
+import {
+  invalidateSpecialistCabinetProfileQueries,
+} from "@/entities/specialists";
 const ONB_QK = ["specialistOnboarding"] as const;
 const JOIN_REQ_QK = ["specialistMyWorkplaceJoinRequests"] as const;
 
@@ -98,6 +101,11 @@ export function BusinessOrganizationJoinPage() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] });
+      await invalidateSpecialistCabinetProfileQueries(
+        queryClient,
+        accessToken,
+        locale,
+      );
       await queryClient.invalidateQueries({
         queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
       });

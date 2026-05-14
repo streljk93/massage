@@ -3,7 +3,8 @@ import { organizationScopedPermissionsSchema } from '../../organizations/present
 
 export const specialistOnboardingResponseSchema = {
   type: 'object',
-  required: ['onboardingStep', 'specialist'],
+  additionalProperties: false,
+  required: ['onboardingStep'],
   properties: {
     onboardingStep: {
       type: 'integer',
@@ -11,10 +12,20 @@ export const specialistOnboardingResponseSchema = {
       description:
         '1 — строки Specialist нет; 2 — выбор режима работы (solo/business/employed_salon); 3 — сферы (большие категории онбординга); 4 — профиль мастера; 5 — поля вертикали массажа (если выбрана); 11 — место работы (создание org или заявка); 12 — навыки (подкатегории каталога без цены); 13 — финальный экран перед complete; 6 — онбординг завершён.',
     },
+  },
+};
+
+/** Снимок профиля для экранов кабинета без шага онбординга. */
+export const specialistCabinetProfileResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialist'],
+  properties: {
     specialist: {
       type: 'object',
       nullable: true,
-      description: 'Профиль специалиста; null если ещё не создан.',
+      description:
+        'Снимок профиля мастера для кабинета; null если строки Specialist нет.',
       additionalProperties: true,
     },
   },
@@ -58,7 +69,7 @@ export const patchSpecialistActiveOrganizationRequestSchema = {
     organizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
       description:
-        'UUID организации как место приёма или null — снять место приёма (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).',
+        'UUID организации как выбранный контекст кабинета или null — очистить UI-контекст. Не управляет витриной и новыми записями.',
     },
   },
 };
@@ -69,13 +80,117 @@ export const patchSpecialistActiveOrganizationResponseSchema = {
   properties: {
     activeOrganizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
-      description: 'Текущее место приёма после операции; null если снято.',
+      description:
+        'Выбранная организация кабинета после операции; null если контекст очищен.',
     },
     cancelledBookingsCount: {
       type: 'integer',
       minimum: 0,
       description:
-        'Сколько активных записей отменено на прежней организации (canceled_by_master).',
+        'Legacy-поле совместимости. Переключение UI-контекста больше не отменяет записи.',
+    },
+  },
+};
+
+export const specialistWorkplaceSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'organizationId',
+    'organizationName',
+    'isActive',
+    'createdAt',
+    'updatedAt',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    organizationId: { type: 'string', format: 'uuid' },
+    organizationName: { type: 'string' },
+    isActive: {
+      type: 'boolean',
+      description:
+        'Место приёма, через которое принимаются новые записи и строится витрина специалиста.',
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+export const specialistWorkplaceResponseSchema = {
+  type: 'object',
+  required: ['id', 'organizationId', 'isActive'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    organizationId: { type: 'string', format: 'uuid' },
+    isActive: { type: 'boolean' },
+  },
+};
+
+export const specialistMyWorkplacesResponseSchema = {
+  type: 'object',
+  required: ['profile', 'workplaces'],
+  properties: {
+    profile: {
+      type: 'object',
+      required: ['isActive'],
+      properties: {
+        isActive: {
+          type: 'boolean',
+          description: 'Работает ли пользователь сейчас как специалист.',
+        },
+      },
+    },
+    workplaces: {
+      type: 'array',
+      items: specialistWorkplaceSchema,
+    },
+  },
+};
+
+export const createSpecialistWorkplaceRequestSchema = {
+  type: 'object',
+  required: ['organizationId'],
+  properties: {
+    organizationId: {
+      type: 'string',
+      format: 'uuid',
+      description:
+        'Организация, где специалист принимает. Требует активное трудоустройство.',
+    },
+  },
+};
+
+export const patchSpecialistWorkplaceRequestSchema = {
+  type: 'object',
+  minProperties: 1,
+  properties: {
+    isActive: {
+      type: 'boolean',
+      description: 'true — активировать это место, false — деактивировать.',
+    },
+  },
+};
+
+export const patchSpecialistProfileStateRequestSchema = {
+  type: 'object',
+  required: ['isActive'],
+  properties: {
+    isActive: {
+      type: 'boolean',
+      description: 'Работает ли пользователь сейчас как специалист.',
+    },
+  },
+};
+
+export const patchSpecialistProfileStateResponseSchema = {
+  type: 'object',
+  required: ['isActive', 'listedInDirectory'],
+  properties: {
+    isActive: { type: 'boolean' },
+    listedInDirectory: {
+      type: 'boolean',
+      description:
+        'Persisted projection видимости после пересчёта через profile/workplace/onboarding.',
     },
   },
 };
@@ -170,7 +285,7 @@ export const specialistMyOrganizationsResponseSchema = {
           isActiveWorkplace: {
             type: 'boolean',
             description:
-              'Совпадает с `activeOrganizationId` мастера — только для employed; для pending_join всегда false.',
+              'Есть активный `SpecialistWorkplace` в этой организации; для pending_join всегда false.',
           },
           publicationModerationStatus: {
             type: 'string',
@@ -211,7 +326,7 @@ export const specialistMyOrganizationsResponseSchema = {
     activeOrganizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
       description:
-        'Текущая активная организация мастера; null — место приёма не выбрано (новые записи к мастеру через салон не принимаются, пока снова не выбрано место приёма).',
+        'Выбранная организация в кабинете мастера. Только UI-контекст; место приёма управляется `SpecialistWorkplace.isActive`.',
     },
   },
 };
@@ -478,7 +593,7 @@ export const specialistCabinetClientsListResponseSchema = {
     activeOrganizationId: {
       oneOf: [{ type: 'string', format: 'uuid' }, { type: 'null' }],
       description:
-        'Текущее место приёма мастера, по которому строится список клиентов.',
+        'OrganizationId активного `SpecialistWorkplace`, по которому строится список клиентов. Имя поля legacy.',
     },
     clients: {
       type: 'array',

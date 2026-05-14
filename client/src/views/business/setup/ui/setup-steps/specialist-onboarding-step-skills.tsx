@@ -12,8 +12,6 @@ export default function SpecialistOnboardingStepSkills() {
   const catalogQuery = useSpecialistOnboardingCatalogCategories(true);
   const { isLoading } = catalogQuery;
   const catalog = catalogQuery.data;
-  const majors = catalog?.majors ?? [];
-  const categories = catalog?.categories ?? [];
   const {
     spec,
     draftSkillCategoryIds,
@@ -22,12 +20,12 @@ export default function SpecialistOnboardingStepSkills() {
   } = useSpecialistOnboarding();
 
   const workplaceMajorsEmpty =
-    spec?.activeOrganizationId != null &&
-    spec.activeOrganizationId !== "" &&
-    Array.isArray(spec.activeWorkplaceMajorCategorySlugs) &&
+    Array.isArray(spec?.activeWorkplaceMajorCategorySlugs) &&
     spec.activeWorkplaceMajorCategorySlugs.length === 0;
 
   const sections: ServiceCategorySkillSection[] = useMemo(() => {
+    const majors = catalog?.majors ?? [];
+    const categories = catalog?.categories ?? [];
     const majorNameBySlug = new Map(majors.map((m) => [m.slug, m.name]));
     const byMajor = new Map<
       string,
@@ -45,7 +43,7 @@ export default function SpecialistOnboardingStepSkills() {
         a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
       ),
     }));
-  }, [majors, categories]);
+  }, [catalog?.categories, catalog?.majors]);
 
   function toggle(id: string) {
     setDraftSkillCategoryIds((prev) => {

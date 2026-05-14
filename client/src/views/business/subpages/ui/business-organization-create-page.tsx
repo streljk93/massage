@@ -19,6 +19,7 @@ import {
 } from "@/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
+import { invalidateSpecialistCabinetProfileQueries } from "@/entities/specialists";
 const ONB_QK = ["specialistOnboarding"] as const;
 
 export function BusinessOrganizationCreatePage() {
@@ -54,6 +55,11 @@ export function BusinessOrganizationCreatePage() {
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: [...ONB_QK, accessToken, locale] }),
+        invalidateSpecialistCabinetProfileQueries(
+          queryClient,
+          accessToken,
+          locale,
+        ),
         queryClient.invalidateQueries({
           queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
         }),

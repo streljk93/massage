@@ -21,7 +21,14 @@ export class SpecialistOfferingEdgeLifecycleService {
   async reconcileAssignmentsForSpecialist(specialistId: string): Promise<void> {
     const specialist = await this.prisma.specialist.findFirst({
       where: { id: specialistId, deletedAt: null },
-      select: { id: true, activeOrganizationId: true },
+      select: {
+        id: true,
+        workplaces: {
+          where: { isActive: true, deletedAt: null },
+          select: { organizationId: true },
+          take: 1,
+        },
+      },
     });
     if (specialist == null) {
       return;
@@ -49,11 +56,9 @@ export class SpecialistOfferingEdgeLifecycleService {
     const removedEdgeIds: string[] = [];
     const now = new Date();
 
-    if (
-      specialist.activeOrganizationId == null ||
-      specialist.activeOrganizationId.trim() === '' ||
-      categoryIds.length === 0
-    ) {
+    const orgId = specialist.workplaces[0]?.organizationId ?? null;
+
+    if (orgId == null || categoryIds.length === 0) {
       for (const e of activeEdges) {
         removedEdgeIds.push(e.id);
       }
@@ -69,8 +74,6 @@ export class SpecialistOfferingEdgeLifecycleService {
       await this.flushIndexRemovalsThenRefresh(removedEdgeIds, specialistId);
       return;
     }
-
-    const orgId = specialist.activeOrganizationId;
 
     const desiredRows = await this.prisma.organizationOffering.findMany({
       where: {

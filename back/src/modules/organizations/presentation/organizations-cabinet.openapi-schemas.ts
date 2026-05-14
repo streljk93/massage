@@ -7,6 +7,8 @@ export const organizationScopedPermissionsSchema = {
     'joinRequests',
     'offerings',
     'hiring',
+    'marketing',
+    'analytics',
     'calendar',
     'bookings',
   ],
@@ -51,6 +53,30 @@ export const organizationScopedPermissionsSchema = {
         manage: { type: 'boolean' },
         reviewApplications: { type: 'boolean' },
         accept: { type: 'boolean' },
+      },
+    },
+    marketing: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['view'],
+      properties: {
+        view: {
+          type: 'boolean',
+          description:
+            'Раздел «Маркетинг» в навигации кабинета (плейсхолдер; только менеджеры организации).',
+        },
+      },
+    },
+    analytics: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['view'],
+      properties: {
+        view: {
+          type: 'boolean',
+          description:
+            'Раздел «Аналитика» в навигации кабинета (плейсхолдер; только менеджеры организации).',
+        },
       },
     },
     calendar: {
@@ -110,6 +136,8 @@ export const organizationCabinetTeamMemberSchema = {
     employmentId: { type: 'string', format: 'uuid' },
     specialistId: { type: 'string', format: 'uuid' },
     displayName: { type: 'string', nullable: true },
+    /// Витринное фото мастера (`Specialist.imageUrl`), если задано.
+    imageUrl: { type: 'string', nullable: true },
     role: {
       type: 'string',
       enum: ['owner', 'admin', 'specialist'],
@@ -149,6 +177,7 @@ export const organizationTeamInviteCandidateSchema = {
     specialistId: { type: 'string', format: 'uuid' },
     displayName: { type: 'string', nullable: true },
     headline: { type: 'string', nullable: true },
+    imageUrl: { type: 'string', nullable: true },
     alreadyMember: { type: 'boolean' },
   },
 };
@@ -442,7 +471,7 @@ export const workplaceJoinApplicantCabinetProfileResponseSchema = {
     specialist: {
       type: 'object',
       description:
-        'Тот же объект, что `specialist` в GET /specialists/me/onboarding (кабинет мастера).',
+        'Снимок профиля мастера из cabinet-profile, доступный организации для pending-заявки.',
       additionalProperties: true,
     },
   },

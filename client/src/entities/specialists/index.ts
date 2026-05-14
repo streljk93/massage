@@ -29,3 +29,5 @@ export {
   type SpecialistProfileEditFormProps,
 } from "./ui/specialist-profile-edit-form";
 export type { Cat } from "./lib/personal-service-catalog-draft";
+export { SPECIALIST_CABINET_PROFILE_QK } from "./lib/specialist-cabinet-profile-query-key";
+export { invalidateSpecialistCabinetProfileQueries } from "./lib/invalidate-specialist-cabinet-profile-queries";

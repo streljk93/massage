@@ -3,6 +3,7 @@ import { PrismaModule } from '../../infrastructure/prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 import { OrganizationAccessPolicyModule } from '../organizations/organization-access-policy.module';
 import { HiringService } from './application/hiring.service';
+import { MatchingEngine } from './application/matching-engine';
 import { HiringRepository } from './infrastructure/hiring.repository';
 import {
   HiringController,
@@ -17,7 +18,7 @@ import {
     OrganizationHiringController,
     SpecialistHiringController,
   ],
-  providers: [HiringService, HiringRepository],
+  providers: [HiringService, MatchingEngine, HiringRepository],
   exports: [HiringService],
 })
 export class HiringModule {}

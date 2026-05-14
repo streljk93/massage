@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "orgSwitcher": {
+        "label": "Organization",
+        "noOrg": "Select organization",
+        "triggerAria": "Switch organization context",
+        "createNew": "Create new organization",
+        "activeWorkplaceBadge": "Active",
+        "acceptingHere": "Accepting clients here"
+      }
+    },
+    "vi": {
+      "orgSwitcher": {
+        "label": "Tổ chức",
+        "noOrg": "Chọn tổ chức",
+        "triggerAria": "Chuyển đổi ngữ cảnh tổ chức",
+        "createNew": "Tạo tổ chức mới",
+        "activeWorkplaceBadge": "Đang hoạt động",
+        "acceptingHere": "Đang tiếp khách tại đây"
+      }
+    },
+    "ru": {
+      "orgSwitcher": {
+        "label": "Организация",
+        "noOrg": "Выбрать организацию",
+        "triggerAria": "Переключить контекст организации",
+        "createNew": "Создать организацию",
+        "activeWorkplaceBadge": "Активна",
+        "acceptingHere": "Принимаю здесь"
+      }
+    }
+  }
+}
