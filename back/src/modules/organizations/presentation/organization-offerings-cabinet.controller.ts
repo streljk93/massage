@@ -13,6 +13,11 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import {
+  ApiLocaleQueryDocs,
+  RequestLocale,
+  type ApiLocale,
+} from '../../../common/i18n';
+import {
   ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
@@ -69,6 +74,7 @@ import {
   createSpecialistOfferingPriceOverrideRequestSchema,
   createSpecialistOfferingPriceOverrideResponseSchema,
   organizationOfferingPatchResponseSchema,
+  organizationOfferingDetailResponseSchema,
   organizationOfferingsListResponseSchema,
   patchOfferingPriceOptionRequestSchema,
   patchOfferingPriceOptionResponseSchema,
@@ -78,6 +84,7 @@ import {
   patchSpecialistOfferingPriceOverrideRequestSchema,
   patchSpecialistOfferingPriceOverrideResponseSchema,
   publishOrganizationOfferingResponseSchema,
+  unpublishOrganizationOfferingResponseSchema,
 } from './organization-offerings-cabinet.openapi-schemas';
 
 type AuthedRequest = Request & { user: AuthenticatedUser };
@@ -97,14 +104,16 @@ export class OrganizationOfferingsCabinetController {
       'Список коммерческих офферов точки (OrganizationOffering): опции и привязки мастеров.',
   })
   @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiLocaleQueryDocs()
   @ApiOkResponse({ schema: organizationOfferingsListResponseSchema })
   @ApiUnauthorizedResponse()
   async listMine(
     @Req() req: AuthedRequest,
     @Param('organizationId', new ParseUUIDPipe()) organizationId: string,
+    @RequestLocale() locale: ApiLocale,
   ) {
     const userId = req.user.id;
-    return this.offeringsCabinet.listOfferings(userId, organizationId);
+    return this.offeringsCabinet.listOfferings(userId, organizationId, locale);
   }
 
   @Post()
@@ -141,6 +150,30 @@ export class OrganizationOfferingsCabinetController {
   ) {
     const userId = req.user.id;
     return this.offeringsCabinet.listAssignableSpecialists(userId, organizationId);
+  }
+
+  @Get(':offeringId')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Один оффер точки для просмотра/редактирования.' })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'offeringId', format: 'uuid' })
+  @ApiLocaleQueryDocs()
+  @ApiOkResponse({ schema: organizationOfferingDetailResponseSchema })
+  @ApiUnauthorizedResponse()
+  async getOffering(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe()) organizationId: string,
+    @Param('offeringId', new ParseUUIDPipe()) offeringId: string,
+    @RequestLocale() locale: ApiLocale,
+  ) {
+    const userId = req.user.id;
+    return this.offeringsCabinet.getOffering(
+      userId,
+      organizationId,
+      offeringId,
+      locale,
+    );
   }
 
   @Patch(':offeringId')
@@ -194,6 +227,52 @@ export class OrganizationOfferingsCabinetController {
       organizationId,
       offeringId,
     );
+  }
+
+  @Post(':offeringId/unpublish')
+  @HttpCode(200)
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Снять оффер с публикации (`hidden`): витрина/поиск скрываются, существующие брони не меняются.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'offeringId', format: 'uuid' })
+  @ApiOkResponse({ schema: unpublishOrganizationOfferingResponseSchema })
+  @ApiUnauthorizedResponse()
+  async unpublishOffering(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe()) organizationId: string,
+    @Param('offeringId', new ParseUUIDPipe()) offeringId: string,
+  ) {
+    const userId = req.user.id;
+    return this.offeringsCabinet.unpublishOffering(
+      userId,
+      organizationId,
+      offeringId,
+    );
+  }
+
+  @Delete(':offeringId')
+  @HttpCode(204)
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Мягкое удаление оффера точки (скрыт из кабинета и витрины; строка в БД сохраняется для броней).',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiParam({ name: 'offeringId', format: 'uuid' })
+  @ApiNoContentResponse()
+  @ApiUnauthorizedResponse()
+  async deleteOffering(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe()) organizationId: string,
+    @Param('offeringId', new ParseUUIDPipe()) offeringId: string,
+  ): Promise<void> {
+    const userId = req.user.id;
+    await this.offeringsCabinet.deleteOffering(userId, organizationId, offeringId);
   }
 
   @Post(':offeringId/price-options')

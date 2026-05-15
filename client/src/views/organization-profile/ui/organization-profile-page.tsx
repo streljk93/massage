@@ -70,6 +70,7 @@ import { telHrefFromDisplayPhone } from "@/shared/lib/tel-href";
 import { notify } from "@/shared/lib/notifications";
 import {
   expandIntervalToListingOccupiedSlotKeys,
+  specialistAvailableCoversProposed,
   specialistOccupiedOverlapsProposed,
 } from "@/shared/lib/listing-booking-interval-slot-keys";
 import { bookingStartsAtIsoUtc } from "@/views/specialist-profile/lib/booking-starts-at";
@@ -163,6 +164,20 @@ function mergeSalonBookableOptions(
       { numeric: true },
     ),
   );
+}
+
+function bookingSlotKeysForDuration(
+  calendarDate: string,
+  slotTime: string,
+  durationMinutes: number,
+): Set<string> {
+  const startsAtIso = bookingStartsAtIsoUtc({
+    calendarDate,
+    slotTime,
+  });
+  const start = new Date(startsAtIso);
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  return expandIntervalToListingOccupiedSlotKeys(start, end);
 }
 
 function anchorOptionForMenuKey(
@@ -439,12 +454,60 @@ export function OrganizationProfilePage({
     return selectedService.durationMinutes[0];
   }, [durationByMenuKey, selectedService, selectedServiceMenuKey]);
 
+  const specialistsWithSelectedMenuService = useMemo(() => {
+    if (!selectedServiceMenuKey) {
+      return profile.specialists;
+    }
+    return profile.specialists.filter((p) =>
+      p.bookableServices.some(
+        (b) => serviceMenuKeyFromStaff(b) === selectedServiceMenuKey,
+      ),
+    );
+  }, [profile.specialists, selectedServiceMenuKey]);
+
   const filteredDaySlots = useMemo(() => {
     if (selectedBookingMinutes === undefined) {
       return [];
     }
-    return filterSlotTimesForDuration(daySlots, selectedBookingMinutes);
-  }, [daySlots, selectedBookingMinutes]);
+    const durationFiltered = filterSlotTimesForDuration(
+      daySlots,
+      selectedBookingMinutes,
+    );
+    const calendarDate = profile.slotCalendarDates[dayIndex];
+    if (!calendarDate) {
+      return [];
+    }
+    const hasAvailabilityKeys = specialistsWithSelectedMenuService.some(
+      (p) => p.availableListingSlotKeys.length > 0,
+    );
+    if (!hasAvailabilityKeys) {
+      return durationFiltered;
+    }
+    return durationFiltered.filter((slotTime) => {
+      const proposed = bookingSlotKeysForDuration(
+        calendarDate,
+        slotTime,
+        selectedBookingMinutes,
+      );
+      return specialistsWithSelectedMenuService.some(
+        (p) =>
+          specialistAvailableCoversProposed(
+            p.availableListingSlotKeys,
+            proposed,
+          ) &&
+          !specialistOccupiedOverlapsProposed(
+            p.occupiedListingSlotKeys,
+            proposed,
+          ),
+      );
+    });
+  }, [
+    dayIndex,
+    daySlots,
+    profile.slotCalendarDates,
+    selectedBookingMinutes,
+    specialistsWithSelectedMenuService,
+  ]);
 
   const effectiveSlot = useMemo(() => {
     if (filteredDaySlots.length === 0) {
@@ -512,13 +575,11 @@ export function OrganizationProfilePage({
     if (!calendarDate) {
       return null;
     }
-    const startsAtIso = bookingStartsAtIsoUtc({
+    return bookingSlotKeysForDuration(
       calendarDate,
-      slotTime: effectiveSlot.trim(),
-    });
-    const start = new Date(startsAtIso);
-    const end = new Date(start.getTime() + selectedBookingMinutes * 60_000);
-    return expandIntervalToListingOccupiedSlotKeys(start, end);
+      effectiveSlot.trim(),
+      selectedBookingMinutes,
+    );
   }, [
     dayIndex,
     effectiveSlot,
@@ -526,23 +587,16 @@ export function OrganizationProfilePage({
     selectedBookingMinutes,
   ]);
 
-  const specialistsWithSelectedMenuService = useMemo(() => {
-    if (!selectedServiceMenuKey) {
-      return profile.specialists;
-    }
-    return profile.specialists.filter((p) =>
-      p.bookableServices.some(
-        (b) => serviceMenuKeyFromStaff(b) === selectedServiceMenuKey,
-      ),
-    );
-  }, [profile.specialists, selectedServiceMenuKey]);
-
   const selectableSpecialistsAtSlot = useMemo(() => {
     if (!proposedBookingSlotKeys || proposedBookingSlotKeys.size === 0) {
       return specialistsWithSelectedMenuService;
     }
     return specialistsWithSelectedMenuService.filter(
       (p) =>
+        specialistAvailableCoversProposed(
+          p.availableListingSlotKeys,
+          proposedBookingSlotKeys,
+        ) &&
         !specialistOccupiedOverlapsProposed(
           p.occupiedListingSlotKeys,
           proposedBookingSlotKeys,
@@ -1304,6 +1358,13 @@ export function OrganizationProfilePage({
                   </h2>
                   <div className="flex flex-col gap-3">
                     {specialistsWithSelectedMenuService.map((pick, index) => {
+                      const scheduleUnavailable =
+                        proposedBookingSlotKeys !== null &&
+                        proposedBookingSlotKeys.size > 0 &&
+                        !specialistAvailableCoversProposed(
+                          pick.availableListingSlotKeys,
+                          proposedBookingSlotKeys,
+                        );
                       const scheduleBusy =
                         proposedBookingSlotKeys !== null &&
                         proposedBookingSlotKeys.size > 0 &&
@@ -1318,7 +1379,7 @@ export function OrganizationProfilePage({
                           selected={
                             pick.specialistId === selectedSalonSpecialistId
                           }
-                          scheduleDisabled={scheduleBusy}
+                          scheduleDisabled={scheduleUnavailable || scheduleBusy}
                           scheduleDisabledLabel={t("specialistBusyThisSlot")}
                           selectLabel={t("specialistSelectCta")}
                           selectedLabel={t("specialistSelectedCta")}

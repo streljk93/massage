@@ -13,6 +13,11 @@ import {
 import { addMilliseconds, subHours } from 'date-fns';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { CALENDAR_BLOCKING_EVENT_STATUSES } from '../../calendar/domain/calendar-event-status';
+import type {
+  ListingAvailabilityOverride,
+  ListingAvailabilityResource,
+  ListingAvailabilityRule,
+} from '../domain/workday-free-slots';
 import {
   directoryListedSpecialistListingNameWhereInput,
   specialistProfileListingWhereInput,
@@ -704,6 +709,44 @@ export class DirectoryRepository {
       andParts.push({ id: { in: ids } });
     }
 
+    if (filters.bodyZoneSlugs.length > 0) {
+      const rows = await this.prisma.organization.findMany({
+        where: {
+          id: { in: workplaceOrgIds },
+          offerings: {
+            some: {
+              deletedAt: null,
+              publicationStatus: OfferingPublicationStatus.published,
+              bodyZones: {
+                some: {
+                  bodyZone: {
+                    slug: { in: filters.bodyZoneSlugs },
+                    deletedAt: null,
+                    isActive: true,
+                  },
+                },
+              },
+              specialistAssignments: {
+                some: {
+                  deletedAt: null,
+                  status: SpecialistOfferingStatus.active,
+                  specialist: {
+                    deletedAt: null,
+                    listedInDirectory: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      if (rows.length === 0) {
+        return null;
+      }
+      andParts.push({ id: { in: rows.map((r) => r.id) } });
+    }
+
     if (q.length > 0) {
       const catHitIds =
         await queryOrganizationIdsMatchingStorefrontCategoryTextSearch(
@@ -1072,6 +1115,67 @@ export class DirectoryRepository {
           ];
         }),
       );
+  }
+
+  async findActiveSpecialistResourceAvailabilityForListing(
+    specialistIds: string[],
+  ): Promise<{
+    resources: ListingAvailabilityResource[];
+    rules: ListingAvailabilityRule[];
+    overrides: ListingAvailabilityOverride[];
+  }> {
+    if (specialistIds.length === 0) {
+      return { resources: [], rules: [], overrides: [] };
+    }
+    const rows = await this.prisma.calendarResource.findMany({
+      where: {
+        specialistId: { in: specialistIds },
+        type: CalendarResourceType.specialist,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        specialistId: true,
+        organization: { select: { timeZone: true } },
+        availabilityRules: {
+          where: { deletedAt: null },
+          select: {
+            resourceId: true,
+            weekday: true,
+            startMinute: true,
+            endMinute: true,
+            type: true,
+          },
+        },
+        availabilityOverrides: {
+          where: { deletedAt: null },
+          select: {
+            resourceId: true,
+            date: true,
+            startsAt: true,
+            endsAt: true,
+            type: true,
+          },
+        },
+      },
+    });
+    const resources: ListingAvailabilityResource[] = [];
+    const rules: ListingAvailabilityRule[] = [];
+    const overrides: ListingAvailabilityOverride[] = [];
+    for (const row of rows) {
+      if (row.specialistId == null) {
+        continue;
+      }
+      resources.push({
+        specialistId: row.specialistId,
+        resourceId: row.id,
+        timeZone: row.organization.timeZone,
+      });
+      rules.push(...row.availabilityRules);
+      overrides.push(...row.availabilityOverrides);
+    }
+    return { resources, rules, overrides };
   }
 
   async findSpecialistsPage(args: {

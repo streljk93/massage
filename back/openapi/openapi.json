@@ -322,7 +322,7 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },
@@ -827,7 +827,7 @@
                               "type": "string",
                               "example": "09:00"
                             },
-                            "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                            "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                           }
                         }
                       },
@@ -1243,11 +1243,11 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },
-                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                            "description": "Для организаций — свободные слоты по календарной доступности мастеров."
                           },
                           "specialistOccupiedSlotKeys": {
                             "type": "array",
@@ -1970,11 +1970,11 @@
                               "type": "string",
                               "example": "09:00"
                             },
-                            "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                            "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                           }
                         }
                       },
-                      "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                      "description": "Для организаций — свободные слоты по календарной доступности мастеров."
                     },
                     "specialistOccupiedSlotKeys": {
                       "type": "array",
@@ -2022,7 +2022,8 @@
                           "rating",
                           "metaLine",
                           "bookableServices",
-                          "occupiedListingSlotKeys"
+                          "occupiedListingSlotKeys",
+                          "availableListingSlotKeys"
                         ],
                         "properties": {
                           "id": {
@@ -2124,6 +2125,13 @@
                               "type": "string"
                             },
                             "description": "Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)"
+                          },
+                          "availableListingSlotKeys": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Ключи доступных слотов витрины yyyy-MM-dd|HH:mm по рабочему календарю мастера."
                           }
                         }
                       }
@@ -2683,7 +2691,7 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },
@@ -2953,11 +2961,11 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },
-                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                            "description": "Для организаций — свободные слоты по календарной доступности мастеров."
                           },
                           "specialistOccupiedSlotKeys": {
                             "type": "array",
@@ -4173,9 +4181,13 @@
                           "type": "object",
                           "additionalProperties": false,
                           "required": [
+                            "view",
                             "manage"
                           ],
                           "properties": {
+                            "view": {
+                              "type": "boolean"
+                            },
                             "manage": {
                               "type": "boolean"
                             }
@@ -5890,6 +5902,20 @@
         "operationId": "OrganizationOfferingsCabinet_listMine",
         "parameters": [
           {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
             "name": "organizationId",
             "required": true,
             "in": "path",
@@ -5922,6 +5948,10 @@
                           "description",
                           "publicationStatus",
                           "categoryId",
+                          "category",
+                          "locales",
+                          "bodyZones",
+                          "eligibleSpecialists",
                           "priceOptions",
                           "specialistAssignments"
                         ],
@@ -5956,6 +5986,127 @@
                           "categoryId": {
                             "type": "string",
                             "format": "uuid"
+                          },
+                          "category": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "slug",
+                              "name",
+                              "shortName",
+                              "majorCategory"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              },
+                              "shortName": {
+                                "type": "string"
+                              },
+                              "majorCategory": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "required": [
+                                  "id",
+                                  "slug",
+                                  "name"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "slug": {
+                                    "type": "string"
+                                  },
+                                  "name": {
+                                    "type": "string"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "locales": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "locale",
+                                "title",
+                                "description"
+                              ],
+                              "properties": {
+                                "locale": {
+                                  "type": "string",
+                                  "enum": [
+                                    "en",
+                                    "vi",
+                                    "ru"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            }
+                          },
+                          "bodyZones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "slug",
+                                "name"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          },
+                          "eligibleSpecialists": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "specialistId",
+                                "displayName"
+                              ],
+                              "properties": {
+                                "specialistId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "displayName": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              }
+                            }
                           },
                           "priceOptions": {
                             "type": "array",
@@ -6107,6 +6258,42 @@
                   "description": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "bodyZoneIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "locales": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "locale",
+                        "title",
+                        "description"
+                      ],
+                      "properties": {
+                        "locale": {
+                          "type": "string",
+                          "enum": [
+                            "en",
+                            "vi",
+                            "ru"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -6228,6 +6415,331 @@
       }
     },
     "/organizations/{organizationId}/offerings/{offeringId}": {
+      "get": {
+        "operationId": "OrganizationOfferingsCabinet_getOffering",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "offering"
+                  ],
+                  "properties": {
+                    "offering": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "slug",
+                        "title",
+                        "description",
+                        "publicationStatus",
+                        "categoryId",
+                        "category",
+                        "locales",
+                        "bodyZones",
+                        "eligibleSpecialists",
+                        "priceOptions",
+                        "specialistAssignments"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "publicationStatus": {
+                          "type": "string"
+                        },
+                        "firstPublishedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "lastPublishedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "nullable": true
+                        },
+                        "categoryId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "category": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "id",
+                            "slug",
+                            "name",
+                            "shortName",
+                            "majorCategory"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "slug": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "shortName": {
+                              "type": "string"
+                            },
+                            "majorCategory": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "required": [
+                                "id",
+                                "slug",
+                                "name"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "locales": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "locale",
+                              "title",
+                              "description"
+                            ],
+                            "properties": {
+                              "locale": {
+                                "type": "string",
+                                "enum": [
+                                  "en",
+                                  "vi",
+                                  "ru"
+                                ]
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "description": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "bodyZones": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "slug",
+                              "name"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "slug": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "eligibleSpecialists": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "specialistId",
+                              "displayName"
+                            ],
+                            "properties": {
+                              "specialistId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "displayName": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            }
+                          }
+                        },
+                        "priceOptions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "durationMinutes",
+                              "priceAmount",
+                              "currency",
+                              "status"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "durationMinutes": {
+                                "type": "integer"
+                              },
+                              "priceAmount": {
+                                "type": "integer"
+                              },
+                              "currency": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "specialistAssignments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "id",
+                              "specialistId",
+                              "status",
+                              "displayName",
+                              "priceOverrides"
+                            ],
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "specialistId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "displayName": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "priceOverrides": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "additionalProperties": false,
+                                  "required": [
+                                    "id",
+                                    "offeringPriceOptionId",
+                                    "customPrice"
+                                  ],
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "offeringPriceOptionId": {
+                                      "type": "string",
+                                      "format": "uuid"
+                                    },
+                                    "customPrice": {
+                                      "type": "integer"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Один оффер точки для просмотра/редактирования.",
+        "tags": [
+          "cabinet-organizations-offerings"
+        ]
+      },
       "patch": {
         "operationId": "OrganizationOfferingsCabinet_patchOffering",
         "parameters": [
@@ -6271,6 +6783,42 @@
                   "categoryId": {
                     "type": "string",
                     "format": "uuid"
+                  },
+                  "bodyZoneIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    }
+                  },
+                  "locales": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "locale",
+                        "title",
+                        "description"
+                      ],
+                      "properties": {
+                        "locale": {
+                          "type": "string",
+                          "enum": [
+                            "en",
+                            "vi",
+                            "ru"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -6336,6 +6884,44 @@
           }
         ],
         "summary": "Обновить оффер (slug/category — только до первой публикации; title/description — всегда).",
+        "tags": [
+          "cabinet-organizations-offerings"
+        ]
+      },
+      "delete": {
+        "operationId": "OrganizationOfferingsCabinet_deleteOffering",
+        "parameters": [
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Мягкое удаление оффера точки (скрыт из кабинета и витрины; строка в БД сохраняется для броней).",
         "tags": [
           "cabinet-organizations-offerings"
         ]
@@ -6409,6 +6995,79 @@
           }
         ],
         "summary": "Опубликовать оффер (нужна ≥1 активная VND опция). Переиндексация marketplace-рёбер активных мастеров точки.",
+        "tags": [
+          "cabinet-organizations-offerings"
+        ]
+      }
+    },
+    "/organizations/{organizationId}/offerings/{offeringId}/unpublish": {
+      "post": {
+        "operationId": "OrganizationOfferingsCabinet_unpublishOffering",
+        "parameters": [
+          {
+            "name": "offeringId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "organizationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "publicationStatus",
+                    "firstPublishedAt",
+                    "lastPublishedAt"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "publicationStatus": {
+                      "type": "string"
+                    },
+                    "firstPublishedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    },
+                    "lastPublishedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Снять оффер с публикации (`hidden`): витрина/поиск скрываются, существующие брони не меняются.",
         "tags": [
           "cabinet-organizations-offerings"
         ]
@@ -7753,9 +8412,13 @@
                                 "type": "object",
                                 "additionalProperties": false,
                                 "required": [
+                                  "view",
                                   "manage"
                                 ],
                                 "properties": {
+                                  "view": {
+                                    "type": "boolean"
+                                  },
                                   "manage": {
                                     "type": "boolean"
                                   }
@@ -15003,6 +15666,143 @@
         ]
       }
     },
+    "/catalog/major-categories/{majorSlug}/body-zones": {
+      "get": {
+        "description": "Возвращает активные BodyZone для вертикали (MVP: massage). Названия по query `locale` с fallback en/slug.",
+        "operationId": "Catalog_getBodyZonesByMajorSlug",
+        "parameters": [
+          {
+            "name": "locale",
+            "required": false,
+            "in": "query",
+            "description": "Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.",
+            "schema": {
+              "enum": [
+                "en",
+                "vi",
+                "ru"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "majorSlug",
+            "required": true,
+            "in": "path",
+            "description": "Slug большой категории (MajorServiceCategory.slug)",
+            "schema": {
+              "example": "massage"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "majorCategory",
+                    "bodyZones"
+                  ],
+                  "properties": {
+                    "majorCategory": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "Массаж"
+                        },
+                        "slug": {
+                          "type": "string",
+                          "example": "massage"
+                        }
+                      }
+                    },
+                    "bodyZones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "slug",
+                          "name",
+                          "sortOrder"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "slug": {
+                            "type": "string",
+                            "example": "neck"
+                          },
+                          "name": {
+                            "type": "string",
+                            "example": "Neck"
+                          },
+                          "sortOrder": {
+                            "type": "integer",
+                            "example": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Неверный формат majorSlug или locale"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "statusCode",
+                    "message"
+                  ],
+                  "properties": {
+                    "statusCode": {
+                      "type": "number",
+                      "example": 404
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "MAJOR_CATEGORY_NOT_FOUND"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Анатомические зоны по slug большой категории",
+        "tags": [
+          "catalog"
+        ]
+      }
+    },
     "/catalog/major-categories/{majorSlug}/categories/{categorySlug}": {
       "get": {
         "description": "Возвращает большую категорию и одну активную подкатегорию. Названия по query `locale` (en, vi, ru); при отсутствии перевода — fallback en, затем канонические поля сущности.",
@@ -16398,11 +17198,11 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },
-                            "description": "Пусто; занятость по мастерам — в specialistOccupiedSlotKeys."
+                            "description": "Для организаций — свободные слоты по календарной доступности мастеров."
                           },
                           "specialistOccupiedSlotKeys": {
                             "type": "array",
@@ -16654,7 +17454,7 @@
                                     "type": "string",
                                     "example": "09:00"
                                   },
-                                  "description": "У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys)."
+                                  "description": "HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю."
                                 }
                               }
                             },

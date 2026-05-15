@@ -33,7 +33,7 @@ const listingSlotGroupItemSchema = {
       type: 'array',
       items: { type: 'string', example: '09:00' },
       description:
-        'У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).',
+        'HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.',
     },
   },
 };
@@ -321,7 +321,7 @@ export const organizationListItemSchema = {
       type: 'array',
       items: listingSlotGroupItemSchema,
       description:
-        'Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.',
+        'Для организаций — свободные слоты по календарной доступности мастеров.',
     },
     specialistOccupiedSlotKeys: {
       type: 'array',
@@ -360,6 +360,7 @@ const organizationStaffMemberSchema = {
     'metaLine',
     'bookableServices',
     'occupiedListingSlotKeys',
+    'availableListingSlotKeys',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -377,6 +378,12 @@ const organizationStaffMemberSchema = {
       items: { type: 'string' },
       description:
         'Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)',
+    },
+    availableListingSlotKeys: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Ключи доступных слотов витрины yyyy-MM-dd|HH:mm по рабочему календарю мастера.',
     },
   },
 };

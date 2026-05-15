@@ -14,7 +14,7 @@ export type OrganizationScopedPermissions = {
   profile: { manage: boolean; delete: boolean };
   team: { view: boolean; manageRoles: boolean; removeMembers: boolean };
   joinRequests: { review: boolean };
-  offerings: { manage: boolean };
+  offerings: { view: boolean; manage: boolean };
   hiring: {
     view: boolean;
     manage: boolean;
@@ -63,7 +63,7 @@ export function buildOrganizationPermissions(
       removeMembers: canRemoveMembers,
     },
     joinRequests: { review: canManageProfile },
-    offerings: { manage: canManageProfile },
+    offerings: { view: canViewTeam, manage: canManageProfile },
     hiring: {
       view: canManageProfile,
       manage: canManageProfile,
@@ -96,7 +96,7 @@ export function emptyOrganizationPermissions(): OrganizationScopedPermissions {
     profile: { manage: false, delete: false },
     team: { view: false, manageRoles: false, removeMembers: false },
     joinRequests: { review: false },
-    offerings: { manage: false },
+    offerings: { view: false, manage: false },
     hiring: {
       view: false,
       manage: false,

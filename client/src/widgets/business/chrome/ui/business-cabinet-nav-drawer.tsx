@@ -55,16 +55,7 @@ type NavLinkItem = {
   icon: LucideIcon;
   /** Если задано — пункт показывается только при наличии capability у выбранной организации. */
   requiredCapability?: OrganizationCapability;
-  href:
-    | "/business/dashboard"
-    | "/business/bookings"
-    | "/business/calendar"
-    | "/business/clients"
-    | "/business/hiring"
-    | "/business/hiring/search"
-    | "/business/profile"
-    | "/business/specialists"
-    | "/business/organizations";
+  href: string;
   labelKey: string;
 };
 
@@ -146,6 +137,7 @@ const ORGANIZATION_NAV: readonly (NavLinkItem | NavSoonItem)[] = [
     icon: Tags,
     href: "/business/organizations",
     labelKey: "servicesAndPrices",
+    requiredCapability: OrganizationCapabilities.OFFERINGS_VIEW,
   },
   { kind: "soon", id: "finance", icon: Wallet, labelKey: "finance" },
   { kind: "soon", id: "reviews", icon: Star, labelKey: "reviews" },
@@ -173,6 +165,9 @@ function resolveActiveNavId(pathname: string): string | null {
   if (pathname.startsWith("/business/specialists")) return "specialists";
   if (pathname.startsWith("/business/hiring/search")) return "jobSearch";
   if (pathname.startsWith("/business/hiring")) return "hiring";
+  if (/^\/business\/organizations\/[^/]+\/offerings(?:\/|$)/.test(pathname)) {
+    return "services";
+  }
   if (pathname.startsWith("/business/organizations")) return "workplaces";
   if (pathname.startsWith("/business/profile")) return "profile";
   return null;
@@ -196,11 +191,13 @@ function NavRows({
   activeId,
   tNav,
   mode,
+  selectedOrganizationId,
 }: {
   items: readonly (NavLinkItem | NavSoonItem)[];
   activeId: string | null;
   tNav: (key: string) => string;
   mode: "drawer" | "sidebar";
+  selectedOrganizationId?: string;
 }) {
   const Wrap =
     mode === "drawer"
@@ -240,11 +237,15 @@ function NavRows({
           );
         }
         const active = route.id === activeId;
+        const href =
+          route.id === "services" && selectedOrganizationId
+            ? `/business/organizations/${selectedOrganizationId}/offerings`
+            : route.href;
         return (
           <li key={route.id}>
             <Wrap asChild>
               <Link
-                href={route.href}
+                href={href}
                 className={cn(
                   motion.interactive,
                   "group/nav-item flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[0.875rem] leading-snug tracking-tight transition-colors",
@@ -326,6 +327,7 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
               activeId={activeId}
               tNav={tNav}
               mode={mode}
+              selectedOrganizationId={selectedOrg?.id}
             />
             <div className="my-2.5 h-px bg-border/25" aria-hidden />
           </>

@@ -99,4 +99,22 @@ export function defaultBodyZoneSlugsForCategorySlug(
   return defaultBodyZoneSlugsForCategorySlugs([categorySlug]);
 }
 
+const FULL_BODY_ZONE_SLUG = "full-body";
+
+/**
+ * Зоны «все включены по умолчанию» в селекторе: перечисляем все части тела из каталога,
+ * чтобы пользователь мог снимать лишнее. Если в UI доступен только full-body — остаётся он.
+ */
+export function allSelectableBodyZoneSlugsDefault(
+  selectableSlugsInUiOrder: string[],
+): string[] {
+  const nonFull = selectableSlugsInUiOrder.filter((s) => s !== FULL_BODY_ZONE_SLUG);
+  if (nonFull.length > 0) {
+    return nonFull;
+  }
+  return selectableSlugsInUiOrder.includes(FULL_BODY_ZONE_SLUG)
+    ? [FULL_BODY_ZONE_SLUG]
+    : [];
+}
+
 

@@ -24,6 +24,7 @@ import { ZodValidationPipe } from '../../../common/pipes/zod-validation.pipe';
 import { CatalogService } from '../application/catalog.service';
 import type {
   CatalogBulkCategoriesResponseDto,
+  CatalogBodyZonesResponseDto,
   CatalogCategoriesResponseDto,
 } from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
@@ -36,6 +37,7 @@ import {
 } from '../dto/major-slug-param.schema';
 import {
   catalogBulkCategoriesResponseSchema,
+  catalogBodyZonesResponseSchema,
   catalogCategoriesResponseSchema,
   catalogCategoryDetailResponseSchema,
   catalogMajorCategoriesListResponseSchema,
@@ -107,6 +109,34 @@ export class CatalogController {
       query.majorSlugs,
       locale,
       { listedInDirectory: query.listedInDirectory },
+    );
+  }
+
+  @Get('major-categories/:majorSlug/body-zones')
+  @ApiOperation({
+    summary: 'Анатомические зоны по slug большой категории',
+    description:
+      'Возвращает активные BodyZone для вертикали (MVP: massage). Названия по query `locale` с fallback en/slug.',
+  })
+  @ApiParam({
+    name: 'majorSlug',
+    example: 'massage',
+    description: 'Slug большой категории (MajorServiceCategory.slug)',
+  })
+  @ApiLocaleQueryDocs()
+  @ApiOkResponse({ schema: catalogBodyZonesResponseSchema })
+  @ApiNotFoundResponse({ schema: catalogMajorCategoryNotFoundSchema })
+  @ApiBadRequestResponse({
+    description: 'Неверный формат majorSlug или locale',
+  })
+  async getBodyZonesByMajorSlug(
+    @Param(new ZodValidationPipe(majorSlugParamSchema))
+    params: MajorSlugParam,
+    @RequestLocale() locale: ApiLocale,
+  ): Promise<CatalogBodyZonesResponseDto> {
+    return this.catalogService.getBodyZonesByMajorSlug(
+      params.majorSlug,
+      locale,
     );
   }
 

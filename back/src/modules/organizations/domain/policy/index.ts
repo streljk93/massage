@@ -49,6 +49,7 @@ const platformOrganizationPolicy: Partial<
   [OrganizationCapabilities.TEAM_MANAGE_ROLES]: false,
   [OrganizationCapabilities.TEAM_REMOVE_MEMBERS]: false,
   [OrganizationCapabilities.JOIN_REQUESTS_REVIEW]: true,
+  [OrganizationCapabilities.OFFERINGS_VIEW]: false,
   [OrganizationCapabilities.OFFERINGS_MANAGE]: false,
   [OrganizationCapabilities.HIRING_VIEW]: false,
   [OrganizationCapabilities.HIRING_MANAGE]: false,

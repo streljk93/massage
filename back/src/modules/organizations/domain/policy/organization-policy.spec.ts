@@ -232,6 +232,37 @@ describe('organization policy', () => {
     });
   });
 
+  it('allows organization specialists to view offerings but not manage them', () => {
+    const owner = { ...baseCtx, isOwner: true };
+    const admin = { ...baseCtx, role: 'admin' as const, specialistId: 'sp-1' };
+    const specialist = {
+      ...baseCtx,
+      role: 'specialist' as const,
+      specialistId: 'sp-2',
+    };
+
+    for (const ctx of [owner, admin, specialist]) {
+      expect(canOrganization(ctx, OrganizationCapabilities.OFFERINGS_VIEW)).toBe(
+        true,
+      );
+      expect(buildOrganizationPermissions(ctx).offerings.view).toBe(true);
+    }
+
+    for (const ctx of [owner, admin]) {
+      expect(
+        canOrganization(ctx, OrganizationCapabilities.OFFERINGS_MANAGE),
+      ).toBe(true);
+      expect(buildOrganizationPermissions(ctx).offerings.manage).toBe(true);
+    }
+
+    expect(
+      canOrganization(specialist, OrganizationCapabilities.OFFERINGS_MANAGE),
+    ).toBe(false);
+    expect(buildOrganizationPermissions(specialist).offerings.manage).toBe(
+      false,
+    );
+  });
+
   it('keeps team role and removal permissions behind their own capabilities', () => {
     const owner = { ...baseCtx, isOwner: true };
     const admin = { ...baseCtx, role: 'admin' as const, specialistId: 'sp-1' };

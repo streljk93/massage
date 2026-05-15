@@ -7,6 +7,7 @@ import {
 } from '../../../common/i18n';
 import type {
   CatalogBulkCategoriesResponseDto,
+  CatalogBodyZonesResponseDto,
   CatalogCategoriesResponseDto,
 } from '../dto/catalog-categories-response.dto';
 import type { CatalogCategoryDetailResponseDto } from '../dto/catalog-category-detail-response.dto';
@@ -115,6 +116,35 @@ export class CatalogService {
         row as unknown as CategoryLocaleShape,
         locale,
       ),
+    };
+  }
+
+  async getBodyZonesByMajorSlug(
+    majorSlug: string,
+    locale: ApiLocale,
+  ): Promise<CatalogBodyZonesResponseDto> {
+    const row = await this.catalogRepository.findBodyZonesByMajorSlug(majorSlug);
+    if (!row) {
+      throw new NotFoundException({
+        code: 'MAJOR_CATEGORY_NOT_FOUND',
+        message: `Major service category not found: ${majorSlug}`,
+      });
+    }
+    return {
+      majorCategory: {
+        id: row.id,
+        name: pickLocalizedMajorName(row, locale),
+        slug: row.slug,
+      },
+      bodyZones: row.bodyZones.map((z) => ({
+        id: z.id,
+        slug: z.slug,
+        name:
+          z.locales.find((l) => l.locale === locale)?.name?.trim() ||
+          z.locales.find((l) => l.locale === 'en')?.name?.trim() ||
+          z.slug,
+        sortOrder: z.sortOrder,
+      })),
     };
   }
 }

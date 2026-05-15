@@ -5,6 +5,7 @@ export const OrganizationCapabilities = {
   TEAM_MANAGE_ROLES: "organization.team.manage_roles",
   TEAM_REMOVE_MEMBERS: "organization.team.remove_members",
   JOIN_REQUESTS_REVIEW: "organization.join_requests.review",
+  OFFERINGS_VIEW: "organization.offerings.view",
   OFFERINGS_MANAGE: "organization.offerings.manage",
   HIRING_VIEW: "organization.hiring.view",
   HIRING_MANAGE: "organization.hiring.manage",
@@ -43,7 +44,7 @@ export type OrganizationScopedPermissions = {
   profile: { manage: boolean; delete: boolean };
   team: { view: boolean; manageRoles: boolean; removeMembers: boolean };
   joinRequests: { review: boolean };
-  offerings: { manage: boolean };
+  offerings: { view: boolean; manage: boolean };
   hiring: {
     view: boolean;
     manage: boolean;
@@ -102,6 +103,8 @@ export function canOrganization(
       return permissions.team.removeMembers;
     case OrganizationCapabilities.JOIN_REQUESTS_REVIEW:
       return permissions.joinRequests.review;
+    case OrganizationCapabilities.OFFERINGS_VIEW:
+      return permissions.offerings.view;
     case OrganizationCapabilities.OFFERINGS_MANAGE:
       return permissions.offerings.manage;
     case OrganizationCapabilities.HIRING_VIEW:

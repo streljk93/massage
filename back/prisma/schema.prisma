@@ -518,7 +518,8 @@ model BodyZone {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  locales BodyZoneLocale[]
+  locales               BodyZoneLocale[]
+  organizationOfferings OrganizationOfferingBodyZone[]
 
   @@unique([majorServiceCategoryId, slug])
   @@index([majorServiceCategoryId])
@@ -1001,11 +1002,11 @@ model SpecialistSearchProjection {
   specialistId String     @id
   specialist   Specialist @relation(fields: [specialistId], references: [id], onDelete: Cascade)
 
-  skillsCategoryIds String[]
-  experienceYears   Int?
-  isActive          Boolean  @default(true)
-  hasActiveWorkplace Boolean @default(false)
-  textSearch        String?  @db.Text
+  skillsCategoryIds  String[]
+  experienceYears    Int?
+  isActive           Boolean  @default(true)
+  hasActiveWorkplace Boolean  @default(false)
+  textSearch         String?  @db.Text
 
   updatedAt DateTime @updatedAt
 
@@ -1438,11 +1439,40 @@ model OrganizationOffering {
 
   priceOptions          OfferingPriceOption[]
   specialistAssignments SpecialistOffering[]
+  bodyZones             OrganizationOfferingBodyZone[]
+  locales               OrganizationOfferingLocale[]
   bookings              Booking[]
   jobPostings           JobPosting[]
 
   @@index([organizationId])
   @@index([organizationId, slug])
+}
+
+model OrganizationOfferingLocale {
+  id                     String               @id @default(uuid())
+  organizationOfferingId String
+  organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Cascade)
+  locale                 String
+  title                  String
+  description            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationOfferingId, locale])
+  @@index([locale])
+}
+
+model OrganizationOfferingBodyZone {
+  organizationOfferingId String
+  bodyZoneId             String
+  organizationOffering   OrganizationOffering @relation(fields: [organizationOfferingId], references: [id], onDelete: Cascade)
+  bodyZone               BodyZone             @relation(fields: [bodyZoneId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@id([organizationOfferingId, bodyZoneId])
+  @@index([bodyZoneId])
 }
 
 /// Вариант цены/длительности оффера точки; lifecycle — status + soft-delete.

@@ -68,6 +68,29 @@ export const catalogBulkCategoriesResponseSchema = {
   },
 };
 
+export const catalogBodyZoneItemSchema = {
+  type: 'object',
+  required: ['id', 'slug', 'name', 'sortOrder'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    slug: { type: 'string', example: 'neck' },
+    name: { type: 'string', example: 'Neck' },
+    sortOrder: { type: 'integer', example: 0 },
+  },
+};
+
+export const catalogBodyZonesResponseSchema = {
+  type: 'object',
+  required: ['majorCategory', 'bodyZones'],
+  properties: {
+    majorCategory: catalogMajorCategorySchema,
+    bodyZones: {
+      type: 'array',
+      items: catalogBodyZoneItemSchema,
+    },
+  },
+};
+
 export const catalogMajorCategoryNotFoundSchema = {
   type: 'object',
   required: ['statusCode', 'message'],

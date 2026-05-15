@@ -18,3 +18,17 @@ export type CatalogCategoriesResponseDto = {
 export type CatalogBulkCategoriesResponseDto = {
   sections: CatalogCategoriesResponseDto[];
 };
+
+export type CatalogBodyZonesResponseDto = {
+  majorCategory: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  bodyZones: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    sortOrder: number;
+  }>;
+};

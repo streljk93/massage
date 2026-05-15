@@ -7,6 +7,7 @@ export const OrganizationCapabilities = {
   TEAM_MANAGE_ROLES: 'organization.team.manage_roles',
   TEAM_REMOVE_MEMBERS: 'organization.team.remove_members',
   JOIN_REQUESTS_REVIEW: 'organization.join_requests.review',
+  OFFERINGS_VIEW: 'organization.offerings.view',
   OFFERINGS_MANAGE: 'organization.offerings.manage',
   HIRING_VIEW: 'organization.hiring.view',
   HIRING_MANAGE: 'organization.hiring.manage',

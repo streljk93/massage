@@ -33,6 +33,7 @@ export function organizationCardSeedFromApi(
   o: OrganizationDirectoryCardSource,
   now: Date = new Date(),
 ): OrganizationCardSeedFromApi {
+  const serverSlotGroups = (o.slotGroups ?? []) as DirectorySlotGroupSeed[];
   const per = (o.specialistOccupiedSlotKeys ?? []).map((e) => ({
     specialistId: e.specialistId,
     keys: e.keys ?? [],
@@ -50,12 +51,15 @@ export function organizationCardSeedFromApi(
     rating: o.rating,
     metaLine: o.metaLine,
     servicesLine: o.servicesLine,
-    slotGroups: freeDirectorySlotGroupSeedsForOrganization(
-      per,
-      now,
-      UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
-      workday,
-    ),
+    slotGroups:
+      serverSlotGroups.length > 0
+        ? serverSlotGroups
+        : freeDirectorySlotGroupSeedsForOrganization(
+            per,
+            now,
+            UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
+            workday,
+          ),
     categories: o.categories ?? [],
     addressLine: o.addressLine ?? null,
     city: o.city ?? null,

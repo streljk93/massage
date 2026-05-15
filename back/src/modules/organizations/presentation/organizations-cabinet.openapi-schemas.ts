@@ -41,8 +41,11 @@ export const organizationScopedPermissionsSchema = {
     offerings: {
       type: 'object',
       additionalProperties: false,
-      required: ['manage'],
-      properties: { manage: { type: 'boolean' } },
+      required: ['view', 'manage'],
+      properties: {
+        view: { type: 'boolean' },
+        manage: { type: 'boolean' },
+      },
     },
     hiring: {
       type: 'object',

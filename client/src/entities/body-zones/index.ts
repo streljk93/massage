@@ -5,6 +5,7 @@ export {
   type BodyZonesSelectorProps,
 } from "./ui/body-zones-selector";
 export {
+  allSelectableBodyZoneSlugsDefault,
   defaultBodyZoneSlugsForCategorySlugs,
   defaultBodyZoneSlugsForCategorySlug,
   getAllowedBodyZoneSlugsForCategorySlugs,
@@ -12,3 +13,7 @@ export {
   normalizeBodyZoneSlugsForCategories,
   normalizeBodyZoneSlugsForCategory,
 } from "./lib/body-zone-compatibility";
+export {
+  bodyZoneSelectOptionsForServiceCategorySlug,
+  type BodyZoneCatalogRow,
+} from "./lib/body-zone-select-options";

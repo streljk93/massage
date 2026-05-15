@@ -23,8 +23,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const OFFERINGS_QK = ["organizationOfferingsCabinet"] as const;
 
-export const OFFERING_DRAFT_SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
 export function slugifyOfferingDraftTitle(raw: string): string {
   return raw
     .trim()
@@ -32,6 +30,14 @@ export function slugifyOfferingDraftTitle(raw: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+function buildInternalOfferingDraftSlug(title: string): string {
+  const base = slugifyOfferingDraftTitle(title) || "offering";
+  const suffix =
+    globalThis.crypto?.randomUUID?.().replace(/[^a-z0-9]/g, "").slice(0, 8) ??
+    Math.random().toString(36).slice(2, 10);
+  return `${base.slice(0, 70)}-${suffix}`;
 }
 
 type Props = {
@@ -93,22 +99,17 @@ export function OrganizationOfferingDraftCreateSection({
   }, [catalogQuery.data?.sections]);
 
   const [draftTitle, setDraftTitle] = useState("");
-  const [draftSlug, setDraftSlug] = useState("");
   const [draftCategoryId, setDraftCategoryId] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
 
   const createDraftMut = useMutation({
     mutationFn: async () => {
-      const slug = draftSlug.trim().toLowerCase();
-      if (!OFFERING_DRAFT_SLUG_RE.test(slug)) {
-        throw new Error("slug");
-      }
       const { error } = await organizationOfferingsCabinetCreateDraft({
         client: sdk,
         path: { organizationId },
         body: {
           title: draftTitle.trim(),
-          slug,
+          slug: buildInternalOfferingDraftSlug(draftTitle),
           categoryId: draftCategoryId.trim(),
           description: draftDescription.trim() || null,
         },
@@ -117,7 +118,6 @@ export function OrganizationOfferingDraftCreateSection({
     },
     onSuccess: () => {
       setDraftTitle("");
-      setDraftSlug("");
       setDraftCategoryId("");
       setDraftDescription("");
       void queryClient.invalidateQueries({ queryKey: OFFERINGS_QK });
@@ -157,27 +157,7 @@ export function OrganizationOfferingDraftCreateSection({
               id="draft-title"
               value={draftTitle}
               onChange={(e) => setDraftTitle(e.target.value)}
-              onBlur={() => {
-                if (draftSlug.trim().length === 0 && draftTitle.trim().length > 0) {
-                  const s = slugifyOfferingDraftTitle(draftTitle);
-                  if (s.length > 0) {
-                    setDraftSlug(s);
-                  }
-                }
-              }}
               className="rounded-xl"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-muted-foreground" htmlFor="draft-slug">
-              {t("fieldSlug")}
-            </label>
-            <Input
-              id="draft-slug"
-              value={draftSlug}
-              onChange={(e) => setDraftSlug(e.target.value.toLowerCase())}
-              className="rounded-xl"
-              disabled={majorsMissing}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -218,7 +198,6 @@ export function OrganizationOfferingDraftCreateSection({
               majorsMissing ||
               catalogLoading ||
               draftTitle.trim().length === 0 ||
-              !OFFERING_DRAFT_SLUG_RE.test(draftSlug.trim().toLowerCase()) ||
               draftCategoryId.trim().length === 0
             }
             onClick={() => void createDraftMut.mutate()}

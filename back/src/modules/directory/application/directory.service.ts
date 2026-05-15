@@ -51,7 +51,10 @@ import {
   type OrganizationLocaleListShape,
 } from '../../../common/i18n';
 import { buildListingSlotGroupsFromOccupiedKeys } from '../domain/build-occupied-listing-slot-groups';
-import { mergeCalendarEventsToOccupiedKeysPerSpecialist } from '../domain/workday-free-slots';
+import {
+  computeAvailableListingSlotKeysPerSpecialist,
+  mergeCalendarEventsToOccupiedKeysPerSpecialist,
+} from '../domain/workday-free-slots';
 import type { CatalogFilterOptionsResponseDto } from '../dto/catalog-filter-options-response.dto';
 import type { DirectoryBodyZoneTagDto } from '../dto/directory-body-zone-tag.dto';
 import type { DirectoryCategoryTagDto } from '../dto/directory-category-tag.dto';
@@ -383,8 +386,9 @@ function mapSpecialistRowToListItem(
 function mapOrganizationRowToListItem(
   o: OrganizationListRow,
   locale: ApiLocale,
-  _now: Date,
+  now: Date,
   occupiedMap: Map<string, Set<string>>,
+  availableMap: Map<string, Set<string>>,
   storefront: { imageUrl: string | null; imageAlt: string | null },
   /** Подмножество OSC с покрытием мастером — только они на витрине. */
   storefrontCategoryIds: Set<string>,
@@ -413,6 +417,12 @@ function mapOrganizationRowToListItem(
         a.localeCompare(b),
       ),
     }));
+  const organizationAvailableSlotKeys = new Set<string>();
+  for (const specialistId of occupancySpecialistIds) {
+    for (const key of availableMap.get(specialistId) ?? []) {
+      organizationAvailableSlotKeys.add(key);
+    }
+  }
 
   const vitrineLinks = o.serviceCategories.filter((l) =>
     storefrontCategoryIds.has(l.serviceCategoryId),
@@ -449,7 +459,10 @@ function mapOrganizationRowToListItem(
     metaLine,
     servicesLine,
     categories: mapDirectoryCategoryTags(vitrineLinks, locale),
-    slotGroups: [],
+    slotGroups: buildListingSlotGroupsFromOccupiedKeys(
+      organizationAvailableSlotKeys,
+      now,
+    ),
     specialistOccupiedSlotKeys,
     listingWorkdayStartMinute: orgWd.startMinute,
     listingWorkdayEndMinute: orgWd.endMinute,
@@ -462,6 +475,7 @@ function mapSpecialistToStaffMember(
   /** Строка локации салона (карточка сотрудника привязана к этой организации). */
   organizationMetaLine: string,
   occupiedKeys: Set<string>,
+  availableKeys: Set<string>,
   /** Владелец салона видит «живые» имена мастеров; гости — витринные (заморозка при pending). */
   viewerIsOrganizationOwner: boolean,
 ): OrganizationStaffMemberDto {
@@ -480,6 +494,7 @@ function mapSpecialistToStaffMember(
     imageUrl: staffImg,
     bookableServices: mapSpecialistOwnBookableServices(s, locale),
     occupiedListingSlotKeys: [...occupiedKeys].sort(),
+    availableListingSlotKeys: [...availableKeys].sort(),
   };
 }
 
@@ -716,6 +731,24 @@ export class DirectoryService {
         previewWindowMs,
       );
     return mergeCalendarEventsToOccupiedKeysPerSpecialist(calendarEventRows);
+  }
+
+  private async buildAvailableBySpecialistMap(
+    specialistIds: string[],
+    now: Date,
+    calendarDays: number,
+    occupiedBySpecialist: Map<string, Set<string>>,
+  ): Promise<Map<string, Set<string>>> {
+    const availability =
+      await this.directoryRepository.findActiveSpecialistResourceAvailabilityForListing(
+        specialistIds,
+      );
+    return computeAvailableListingSlotKeysPerSpecialist({
+      ...availability,
+      occupiedBySpecialist,
+      now,
+      calendarDays,
+    });
   }
 
   async listSpecialists(
@@ -997,6 +1030,12 @@ export class DirectoryService {
       now,
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
+    const availableBySpecialist = await this.buildAvailableBySpecialistMap(
+      [...specialistIds],
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+      occupiedBySpecialist,
+    );
     const last = slice[slice.length - 1];
     const nextCursor =
       hasMore && last
@@ -1022,6 +1061,7 @@ export class DirectoryService {
           locale,
           now,
           occupiedBySpecialist,
+          availableBySpecialist,
           storefrontByOrg.get(o.id) ?? {
             imageUrl: null,
             imageAlt: null,
@@ -1124,6 +1164,12 @@ export class DirectoryService {
       now,
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
+    const availableBySpecialist = await this.buildAvailableBySpecialistMap(
+      specialistIds,
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+      occupiedBySpecialist,
+    );
     const storefrontByOrg =
       await this.directoryRepository.findStorefrontImageFieldsForOrganizationIds(
         [id],
@@ -1141,6 +1187,7 @@ export class DirectoryService {
       locale,
       now,
       occupiedBySpecialist,
+      availableBySpecialist,
       storefront,
       storefrontCategoriesByOrg.get(id) ?? new Set<string>(),
       isOwner ? { specialistIdsForOccupancyPreview: specialistIds } : undefined,
@@ -1152,6 +1199,7 @@ export class DirectoryService {
         locale,
         base.metaLine,
         occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
+        availableBySpecialist.get(e.specialist.id) ?? new Set(),
         isOwner,
       ),
     );
@@ -1215,6 +1263,12 @@ export class DirectoryService {
       now,
       this.getUnifiedDirectorySlotPreviewCalendarDays(),
     );
+    const availableBySpecialist = await this.buildAvailableBySpecialistMap(
+      [...specialistIds],
+      now,
+      this.getUnifiedDirectorySlotPreviewCalendarDays(),
+      occupiedBySpecialist,
+    );
     const storefrontByOrg =
       await this.directoryRepository.findStorefrontImageFieldsForOrganizationIds(
         ids,
@@ -1235,6 +1289,7 @@ export class DirectoryService {
           locale,
           now,
           occupiedBySpecialist,
+          availableBySpecialist,
           storefrontByOrg.get(id) ?? {
             imageUrl: null,
             imageAlt: null,

@@ -10,6 +10,8 @@ import {
 export const offeringsPolicy: Partial<
   Record<OrganizationCapability, PolicyHandler>
 > = {
+  [OrganizationCapabilities.OFFERINGS_VIEW]: (ctx) =>
+    !Rules.isMember(ctx) ? deny('NOT_MEMBER') : allow(),
   [OrganizationCapabilities.OFFERINGS_MANAGE]: (ctx) =>
     !Rules.isMember(ctx)
       ? deny('NOT_MEMBER')

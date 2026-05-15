@@ -148,4 +148,22 @@ export class CatalogRepository {
       ...serviceCategoryWithMajorLocalesArgs,
     });
   }
+
+  async findBodyZonesByMajorSlug(majorSlug: string) {
+    return this.prisma.majorServiceCategory.findFirst({
+      where: {
+        slug: majorSlug,
+        deletedAt: null,
+        isActive: true,
+      },
+      include: {
+        locales: true,
+        bodyZones: {
+          where: { deletedAt: null, isActive: true },
+          orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+          include: { locales: true },
+        },
+      },
+    });
+  }
 }

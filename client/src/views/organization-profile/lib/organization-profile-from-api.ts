@@ -1,10 +1,5 @@
 import type { SalonSpecialistPick } from "@/entities/specialists";
 import type { OrganizationsGetByIdResponse } from "@/shared/api";
-import {
-  freeDirectorySlotGroupSeedsForOrganization,
-  UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
-} from "@/shared/lib/directory-free-slot-groups-from-occupied";
-import { normalizeClientListingWorkday } from "@/shared/lib/directory-listing-workday";
 import { availabilityFromDirectorySlotGroups } from "@/shared/lib/directory-slot-calendar";
 import { resolveDirectoryImageSrc } from "@/entities/organizations";
 import type { OrganizationProfileData } from "../model/organization-profile-data";
@@ -39,25 +34,11 @@ export function organizationProfileFromApiDetail(
         b.marketplaceOfferingPriceOptionIds as readonly string[],
     })),
     occupiedListingSlotKeys: s.occupiedListingSlotKeys ?? [],
+    availableListingSlotKeys: s.availableListingSlotKeys ?? [],
   }));
 
-  const now = new Date();
-  const perSpecialist = (detail.staff ?? []).map((s) => ({
-    specialistId: s.id,
-    keys: s.occupiedListingSlotKeys ?? [],
-  }));
-  const workday = normalizeClientListingWorkday(
-    detail.listingWorkdayStartMinute,
-    detail.listingWorkdayEndMinute,
-  );
-  const freeGroups = freeDirectorySlotGroupSeedsForOrganization(
-    perSpecialist,
-    now,
-    UNIFIED_DIRECTORY_SLOT_PREVIEW_CALENDAR_DAYS,
-    workday,
-  );
   const { calendarDays, timeSlotsByDay, slotCalendarDates } =
-    availabilityFromDirectorySlotGroups(freeGroups);
+    availabilityFromDirectorySlotGroups(detail.slotGroups ?? []);
 
   const vitrineGallery = (detail.vitrineGalleryItems ?? []).map((it) => ({
     src: resolveDirectoryImageSrc(it.url),

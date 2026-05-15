@@ -5,14 +5,8 @@ import {
   vnWallClockToUtcDate,
 } from "@/shared/lib/datetime/vn-listing-datetime";
 
-/** Как `SLOT_GRID_MINUTES` и рабочий день на бэкенде (`listing-slot-policy`). */
+/** Как `SLOT_GRID_MINUTES` на бэкенде (`listing-slot-policy`). */
 const SLOT_GRID_MINUTES = 30;
-
-const DEFAULT_WORKDAY = {
-  startHour: 8,
-  startMinute: 0,
-  endHour: 22,
-} as const;
 
 function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
   const dayKeys: string[] = [];
@@ -31,13 +25,11 @@ function collectDayKeysOverlapping(startsAt: Date, endsAt: Date): string[] {
   return dayKeys;
 }
 
-function slotInstantsForWorkday(dayKey: string): Date[] {
+function slotInstantsForListingDay(dayKey: string): Date[] {
   const [y, mo, d] = dayKey.split("-").map(Number);
-  const dayStartMin =
-    DEFAULT_WORKDAY.startHour * 60 + DEFAULT_WORKDAY.startMinute;
-  const lastStartMin = DEFAULT_WORKDAY.endHour * 60 - SLOT_GRID_MINUTES;
+  const lastStartMin = 24 * 60 - SLOT_GRID_MINUTES;
   const out: Date[] = [];
-  for (let m = dayStartMin; m <= lastStartMin; m += SLOT_GRID_MINUTES) {
+  for (let m = 0; m <= lastStartMin; m += SLOT_GRID_MINUTES) {
     const hh = Math.floor(m / 60);
     const mm = m % 60;
     out.push(vnWallClockToUtcDate(y, mo, d, hh, mm));
@@ -58,7 +50,7 @@ export function expandIntervalToListingOccupiedSlotKeys(
     return keys;
   }
   for (const dayKey of collectDayKeysOverlapping(startsAt, endsAt)) {
-    for (const S of slotInstantsForWorkday(dayKey)) {
+    for (const S of slotInstantsForListingDay(dayKey)) {
       const slotEnd = S.getTime() + SLOT_GRID_MINUTES * 60_000;
       if (S.getTime() < endsAt.getTime() && slotEnd > startsAt.getTime()) {
         keys.add(formatListingOccupiedSlotKey(S));
@@ -82,4 +74,20 @@ export function specialistOccupiedOverlapsProposed(
     }
   }
   return false;
+}
+
+export function specialistAvailableCoversProposed(
+  availableListingSlotKeys: readonly string[] | undefined,
+  proposedKeys: Set<string>,
+): boolean {
+  if (!availableListingSlotKeys?.length || proposedKeys.size === 0) {
+    return false;
+  }
+  const available = new Set(availableListingSlotKeys);
+  for (const k of proposedKeys) {
+    if (!available.has(k)) {
+      return false;
+    }
+  }
+  return true;
 }

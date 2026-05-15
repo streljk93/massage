@@ -23,6 +23,11 @@ export type OrganizationStaffMemberDto = {
    * Нужны клиенту, чтобы скрыть мастера при выбранном слоте, если интервал пересекается с бронью.
    */
   occupiedListingSlotKeys: string[];
+  /**
+   * Ключи доступных ячеек витрины `yyyy-MM-dd|HH:mm` по календарю мастера.
+   * Интервал записи можно предлагать мастеру только если все его ячейки есть здесь.
+   */
+  availableListingSlotKeys: string[];
 };
 
 export type OrganizationDetailResponseDto = OrganizationListItemDto & {

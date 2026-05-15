@@ -24,6 +24,60 @@ export const organizationOfferingCabinetPriceOverrideSchema = {
   },
 };
 
+export const organizationOfferingCabinetLocaleSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['locale', 'title', 'description'],
+  properties: {
+    locale: { type: 'string', enum: ['en', 'vi', 'ru'] },
+    title: { type: 'string' },
+    description: { type: 'string', nullable: true },
+  },
+};
+
+export const organizationOfferingCabinetBodyZoneSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'slug', 'name'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    slug: { type: 'string' },
+    name: { type: 'string' },
+  },
+};
+
+export const organizationOfferingCabinetCategorySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['id', 'slug', 'name', 'shortName', 'majorCategory'],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    slug: { type: 'string' },
+    name: { type: 'string' },
+    shortName: { type: 'string' },
+    majorCategory: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['id', 'slug', 'name'],
+      properties: {
+        id: { type: 'string', format: 'uuid' },
+        slug: { type: 'string' },
+        name: { type: 'string' },
+      },
+    },
+  },
+};
+
+export const organizationOfferingCabinetEligibleSpecialistSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['specialistId', 'displayName'],
+  properties: {
+    specialistId: { type: 'string', format: 'uuid' },
+    displayName: { type: 'string', nullable: true },
+  },
+};
+
 export const organizationOfferingCabinetSpecialistAssignmentSchema = {
   type: 'object',
   additionalProperties: false,
@@ -50,6 +104,10 @@ export const organizationOfferingsCabinetItemSchema = {
     'description',
     'publicationStatus',
     'categoryId',
+    'category',
+    'locales',
+    'bodyZones',
+    'eligibleSpecialists',
     'priceOptions',
     'specialistAssignments',
   ],
@@ -62,6 +120,19 @@ export const organizationOfferingsCabinetItemSchema = {
     firstPublishedAt: { type: 'string', format: 'date-time', nullable: true },
     lastPublishedAt: { type: 'string', format: 'date-time', nullable: true },
     categoryId: { type: 'string', format: 'uuid' },
+    category: organizationOfferingCabinetCategorySchema,
+    locales: {
+      type: 'array',
+      items: organizationOfferingCabinetLocaleSchema,
+    },
+    bodyZones: {
+      type: 'array',
+      items: organizationOfferingCabinetBodyZoneSchema,
+    },
+    eligibleSpecialists: {
+      type: 'array',
+      items: organizationOfferingCabinetEligibleSpecialistSchema,
+    },
     priceOptions: {
       type: 'array',
       items: organizationOfferingCabinetPriceOptionSchema,
@@ -85,6 +156,15 @@ export const organizationOfferingsListResponseSchema = {
   },
 };
 
+export const organizationOfferingDetailResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['offering'],
+  properties: {
+    offering: organizationOfferingsCabinetItemSchema,
+  },
+};
+
 export const createOrganizationOfferingDraftRequestSchema = {
   type: 'object',
   additionalProperties: false,
@@ -97,6 +177,14 @@ export const createOrganizationOfferingDraftRequestSchema = {
     },
     categoryId: { type: 'string', format: 'uuid' },
     description: { type: 'string', nullable: true },
+    bodyZoneIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+    },
+    locales: {
+      type: 'array',
+      items: organizationOfferingCabinetLocaleSchema,
+    },
   },
 };
 
@@ -145,6 +233,14 @@ export const patchOrganizationOfferingRequestSchema = {
       pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$',
     },
     categoryId: { type: 'string', format: 'uuid' },
+    bodyZoneIds: {
+      type: 'array',
+      items: { type: 'string', format: 'uuid' },
+    },
+    locales: {
+      type: 'array',
+      items: organizationOfferingCabinetLocaleSchema,
+    },
   },
 };
 
@@ -174,6 +270,9 @@ export const publishOrganizationOfferingResponseSchema = {
     lastPublishedAt: { type: 'string', format: 'date-time', nullable: true },
   },
 };
+
+export const unpublishOrganizationOfferingResponseSchema =
+  publishOrganizationOfferingResponseSchema;
 
 export const createOfferingPriceOptionRequestSchema = {
   type: 'object',

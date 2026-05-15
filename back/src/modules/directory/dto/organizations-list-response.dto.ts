@@ -34,8 +34,8 @@ export type OrganizationListItemDto = {
   /** Выбранные подкатегории каталога (`?locale` влияет на `shortName`). */
   categories: DirectoryCategoryTagDto[];
   /**
-   * Устарело для организаций: всегда `[]`. Свободные слоты считать на клиенте:
-   * сетка превью минус {@link specialistOccupiedSlotKeys} по мастерам.
+   * Для организаций — свободные слоты по календарной доступности мастеров.
+   * Для мастеров в legacy-ответах — занятые слоты.
    */
   slotGroups: ListingSlotGroupSeed[];
   /**

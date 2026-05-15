@@ -66,6 +66,9 @@ export function directoryOrganizationHasFreeSlotAt(
     return false;
   }
   const timeN = normalizeDirectorySlotTimeHm(slotTimeRaw);
+  if ((o.slotGroups ?? []).length > 0) {
+    return freeGroupTimesForDay(o.slotGroups ?? [], slotDay, timeN);
+  }
   const per = (o.specialistOccupiedSlotKeys ?? []).map((e) => ({
     specialistId: e.specialistId,
     keys: e.keys ?? [],

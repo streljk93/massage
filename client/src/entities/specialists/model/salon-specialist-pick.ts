@@ -25,4 +25,8 @@ export type SalonSpecialistPick = {
    * Ключи занятых слотов витрины `yyyy-MM-dd|HH:mm` (GET /organizations/:id → staff).
    */
   occupiedListingSlotKeys: readonly string[];
+  /**
+   * Ключи доступных слотов витрины по рабочему календарю мастера.
+   */
+  availableListingSlotKeys: readonly string[];
 };

@@ -136,7 +136,29 @@ export function specialistListFiltersWhere(
     });
   }
 
-  // bodyZoneSlugs: ранее через личный Service; после cutover не сужает выборку.
+  if (f.bodyZoneSlugs.length > 0) {
+    and.push({
+      offeringsExecution: {
+        some: {
+          deletedAt: null,
+          status: SpecialistOfferingStatus.active,
+          organizationOffering: {
+            deletedAt: null,
+            publicationStatus: OfferingPublicationStatus.published,
+            bodyZones: {
+              some: {
+                bodyZone: {
+                  slug: { in: f.bodyZoneSlugs },
+                  deletedAt: null,
+                  isActive: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 
   if (f.gender != null) {
     and.push({

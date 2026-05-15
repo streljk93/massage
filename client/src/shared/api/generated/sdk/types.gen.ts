@@ -210,7 +210,7 @@ export type SpecialistsListResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;
@@ -429,7 +429,7 @@ export type SpecialistsGetByIdResponses = {
              */
             calendarDate: string;
             /**
-             * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+             * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
              */
             times: Array<string>;
         }>;
@@ -583,7 +583,7 @@ export type OrganizationsListResponses = {
                 shortName: string;
             }>;
             /**
-             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             * Для организаций — свободные слоты по календарной доступности мастеров.
              */
             slotGroups: Array<{
                 /**
@@ -591,7 +591,7 @@ export type OrganizationsListResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;
@@ -878,7 +878,7 @@ export type OrganizationsGetByIdResponses = {
             shortName: string;
         }>;
         /**
-         * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+         * Для организаций — свободные слоты по календарной доступности мастеров.
          */
         slotGroups: Array<{
             /**
@@ -886,7 +886,7 @@ export type OrganizationsGetByIdResponses = {
              */
             calendarDate: string;
             /**
-             * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+             * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
              */
             times: Array<string>;
         }>;
@@ -948,6 +948,10 @@ export type OrganizationsGetByIdResponses = {
              * Ключи занятых слотов витрины yyyy-MM-dd|HH:mm (пересечение с выбранным интервалом — мастер недоступен)
              */
             occupiedListingSlotKeys: Array<string>;
+            /**
+             * Ключи доступных слотов витрины yyyy-MM-dd|HH:mm по рабочему календарю мастера.
+             */
+            availableListingSlotKeys: Array<string>;
         }>;
         /**
          * Уникальные пользователи, у которых есть хотя бы одна бронь в статусе `done` в этом салоне.
@@ -1145,7 +1149,7 @@ export type PersonalizationGetRecommendationsResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;
@@ -1234,7 +1238,7 @@ export type PersonalizationGetRecommendationsResponses = {
                 shortName: string;
             }>;
             /**
-             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             * Для организаций — свободные слоты по календарной доступности мастеров.
              */
             slotGroups: Array<{
                 /**
@@ -1242,7 +1246,7 @@ export type PersonalizationGetRecommendationsResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;
@@ -1726,6 +1730,7 @@ export type OrganizationsCabinetGetCabinetOrganizationTeamMembersResponses = {
                 review: boolean;
             };
             offerings: {
+                view: boolean;
                 manage: boolean;
             };
             hiring: {
@@ -2414,7 +2419,12 @@ export type OrganizationOfferingsCabinetListMineData = {
     path: {
         organizationId: unknown;
     };
-    query?: never;
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
     url: '/organizations/{organizationId}/offerings';
 };
 
@@ -2433,6 +2443,31 @@ export type OrganizationOfferingsCabinetListMineResponses = {
             firstPublishedAt?: string | null;
             lastPublishedAt?: string | null;
             categoryId: string;
+            category: {
+                id: string;
+                slug: string;
+                name: string;
+                shortName: string;
+                majorCategory: {
+                    id: string;
+                    slug: string;
+                    name: string;
+                };
+            };
+            locales: Array<{
+                locale: 'en' | 'vi' | 'ru';
+                title: string;
+                description: string | null;
+            }>;
+            bodyZones: Array<{
+                id: string;
+                slug: string;
+                name: string;
+            }>;
+            eligibleSpecialists: Array<{
+                specialistId: string;
+                displayName: string | null;
+            }>;
             priceOptions: Array<{
                 id: string;
                 durationMinutes: number;
@@ -2463,6 +2498,12 @@ export type OrganizationOfferingsCabinetCreateDraftData = {
         slug: string;
         categoryId: string;
         description?: string | null;
+        bodyZoneIds?: Array<string>;
+        locales?: Array<{
+            locale: 'en' | 'vi' | 'ru';
+            title: string;
+            description: string | null;
+        }>;
     };
     path: {
         organizationId: unknown;
@@ -2510,12 +2551,117 @@ export type OrganizationOfferingsCabinetListAssignableSpecialistsResponses = {
 
 export type OrganizationOfferingsCabinetListAssignableSpecialistsResponse = OrganizationOfferingsCabinetListAssignableSpecialistsResponses[keyof OrganizationOfferingsCabinetListAssignableSpecialistsResponses];
 
+export type OrganizationOfferingsCabinetDeleteOfferingData = {
+    body?: never;
+    path: {
+        offeringId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/offerings/{offeringId}';
+};
+
+export type OrganizationOfferingsCabinetDeleteOfferingErrors = {
+    401: unknown;
+};
+
+export type OrganizationOfferingsCabinetDeleteOfferingResponses = {
+    204: void;
+};
+
+export type OrganizationOfferingsCabinetDeleteOfferingResponse = OrganizationOfferingsCabinetDeleteOfferingResponses[keyof OrganizationOfferingsCabinetDeleteOfferingResponses];
+
+export type OrganizationOfferingsCabinetGetOfferingData = {
+    body?: never;
+    path: {
+        offeringId: unknown;
+        organizationId: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/organizations/{organizationId}/offerings/{offeringId}';
+};
+
+export type OrganizationOfferingsCabinetGetOfferingErrors = {
+    401: unknown;
+};
+
+export type OrganizationOfferingsCabinetGetOfferingResponses = {
+    200: {
+        offering: {
+            id: string;
+            slug: string;
+            title: string;
+            description: string | null;
+            publicationStatus: string;
+            firstPublishedAt?: string | null;
+            lastPublishedAt?: string | null;
+            categoryId: string;
+            category: {
+                id: string;
+                slug: string;
+                name: string;
+                shortName: string;
+                majorCategory: {
+                    id: string;
+                    slug: string;
+                    name: string;
+                };
+            };
+            locales: Array<{
+                locale: 'en' | 'vi' | 'ru';
+                title: string;
+                description: string | null;
+            }>;
+            bodyZones: Array<{
+                id: string;
+                slug: string;
+                name: string;
+            }>;
+            eligibleSpecialists: Array<{
+                specialistId: string;
+                displayName: string | null;
+            }>;
+            priceOptions: Array<{
+                id: string;
+                durationMinutes: number;
+                priceAmount: number;
+                currency: string;
+                status: string;
+            }>;
+            specialistAssignments: Array<{
+                id: string;
+                specialistId: string;
+                status: string;
+                displayName: string | null;
+                priceOverrides: Array<{
+                    id: string;
+                    offeringPriceOptionId: string;
+                    customPrice: number;
+                }>;
+            }>;
+        };
+    };
+};
+
+export type OrganizationOfferingsCabinetGetOfferingResponse = OrganizationOfferingsCabinetGetOfferingResponses[keyof OrganizationOfferingsCabinetGetOfferingResponses];
+
 export type OrganizationOfferingsCabinetPatchOfferingData = {
     body: {
         title?: string;
         description?: string | null;
         slug?: string;
         categoryId?: string;
+        bodyZoneIds?: Array<string>;
+        locales?: Array<{
+            locale: 'en' | 'vi' | 'ru';
+            title: string;
+            description: string | null;
+        }>;
     };
     path: {
         offeringId: unknown;
@@ -2567,6 +2713,31 @@ export type OrganizationOfferingsCabinetPublishOfferingResponses = {
 };
 
 export type OrganizationOfferingsCabinetPublishOfferingResponse = OrganizationOfferingsCabinetPublishOfferingResponses[keyof OrganizationOfferingsCabinetPublishOfferingResponses];
+
+export type OrganizationOfferingsCabinetUnpublishOfferingData = {
+    body?: never;
+    path: {
+        offeringId: unknown;
+        organizationId: unknown;
+    };
+    query?: never;
+    url: '/organizations/{organizationId}/offerings/{offeringId}/unpublish';
+};
+
+export type OrganizationOfferingsCabinetUnpublishOfferingErrors = {
+    401: unknown;
+};
+
+export type OrganizationOfferingsCabinetUnpublishOfferingResponses = {
+    200: {
+        id: string;
+        publicationStatus: string;
+        firstPublishedAt: string | null;
+        lastPublishedAt: string | null;
+    };
+};
+
+export type OrganizationOfferingsCabinetUnpublishOfferingResponse = OrganizationOfferingsCabinetUnpublishOfferingResponses[keyof OrganizationOfferingsCabinetUnpublishOfferingResponses];
 
 export type OrganizationOfferingsCabinetCreatePriceOptionData = {
     body: {
@@ -3020,6 +3191,7 @@ export type SpecialistsCabinetGetSpecialistMyOrganizationsResponses = {
                     review: boolean;
                 };
                 offerings: {
+                    view: boolean;
                     manage: boolean;
                 };
                 hiring: {
@@ -5666,6 +5838,55 @@ export type CatalogGetBulkCategoriesByMajorSlugsResponses = {
 
 export type CatalogGetBulkCategoriesByMajorSlugsResponse = CatalogGetBulkCategoriesByMajorSlugsResponses[keyof CatalogGetBulkCategoriesByMajorSlugsResponses];
 
+export type CatalogGetBodyZonesByMajorSlugData = {
+    body?: never;
+    path: {
+        /**
+         * Slug большой категории (MajorServiceCategory.slug)
+         */
+        majorSlug: unknown;
+    };
+    query?: {
+        /**
+         * Локаль для локализованных полей из таблиц *Locale. Если не задана, применяется правило ручки (например `User.locale` или en). Невалидное значение — 400.
+         */
+        locale?: 'en' | 'vi' | 'ru';
+    };
+    url: '/catalog/major-categories/{majorSlug}/body-zones';
+};
+
+export type CatalogGetBodyZonesByMajorSlugErrors = {
+    /**
+     * Неверный формат majorSlug или locale
+     */
+    400: unknown;
+    404: {
+        statusCode: number;
+        message: string;
+        code?: 'MAJOR_CATEGORY_NOT_FOUND';
+    };
+};
+
+export type CatalogGetBodyZonesByMajorSlugError = CatalogGetBodyZonesByMajorSlugErrors[keyof CatalogGetBodyZonesByMajorSlugErrors];
+
+export type CatalogGetBodyZonesByMajorSlugResponses = {
+    200: {
+        majorCategory: {
+            id: string;
+            name: string;
+            slug: string;
+        };
+        bodyZones: Array<{
+            id: string;
+            slug: string;
+            name: string;
+            sortOrder: number;
+        }>;
+    };
+};
+
+export type CatalogGetBodyZonesByMajorSlugResponse = CatalogGetBodyZonesByMajorSlugResponses[keyof CatalogGetBodyZonesByMajorSlugResponses];
+
 export type CatalogGetCategoryByMajorAndSlugData = {
     body?: never;
     path: {
@@ -6247,7 +6468,7 @@ export type FavoritesListOrganizationsListingResponses = {
                 shortName: string;
             }>;
             /**
-             * Пусто; занятость по мастерам — в specialistOccupiedSlotKeys.
+             * Для организаций — свободные слоты по календарной доступности мастеров.
              */
             slotGroups: Array<{
                 /**
@@ -6255,7 +6476,7 @@ export type FavoritesListOrganizationsListingResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;
@@ -6349,7 +6570,7 @@ export type FavoritesListSpecialistsListingResponses = {
                  */
                 calendarDate: string;
                 /**
-                 * У мастера — занятые слоты; у салона — пусто (см. specialistOccupiedSlotKeys).
+                 * HH:mm. У мастера в legacy-ответах — занятость; у организации — свободные слоты по календарю.
                  */
                 times: Array<string>;
             }>;

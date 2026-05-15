@@ -11,3 +11,7 @@ export { localeFlagEmoji } from "./locale-flag-emoji";
 export { previewSrcForPersistedGalleryUrl } from "./preview-src-for-persisted-gallery-url";
 export { resolveApiResourceUrl } from "./resolve-api-resource-url";
 export { telHrefFromDisplayPhone } from "./tel-href";
+export {
+  formatVndAmountInputDisplay,
+  parseVndAmountInputToInt,
+} from "./vnd-amount-input";

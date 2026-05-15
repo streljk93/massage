@@ -33,7 +33,6 @@ import {
   SelectValue,
 } from "@/shared/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { OrganizationOfferingDraftCreateSection } from "./organization-offering-draft-create-section";
 
 const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 const CABINET_TEAM_QK = ["organizationCabinetTeam"] as const;
@@ -53,7 +52,6 @@ function orgRoleLabelKey(
 export function BusinessOrganizationCabinetPage() {
   const t = useTranslations("businessOrganizationCabinetPage");
   useSetBusinessPageTitle(t("pageTitle"));
-  const tOfferings = useTranslations("businessOrganizationOfferingsPage");
   const tPage = useTranslations("businessAppSubpages");
   const locale = useLocale() as AppLocale;
   const params = useParams<{ organizationId: string }>();
@@ -99,6 +97,9 @@ export function BusinessOrganizationCabinetPage() {
   const canManage =
     employed &&
     canOrganization(membership, OrganizationCapabilities.PROFILE_MANAGE);
+  const canViewOfferings =
+    employed &&
+    canOrganization(membership, OrganizationCapabilities.OFFERINGS_VIEW);
 
   const teamQuery = useQuery({
     queryKey: [
@@ -438,23 +439,8 @@ export function BusinessOrganizationCabinetPage() {
         ) : null}
       </section>
 
-      {canManage ? (
+      {canViewOfferings ? (
         <>
-          {cabinetProfileQuery.isSuccess ? (
-            <OrganizationOfferingDraftCreateSection
-              organizationId={organizationId}
-              sdk={sdk}
-              locale={locale}
-              majorCategorySlugs={cabinetProfileQuery.data.majorCategorySlugs}
-              t={tOfferings}
-            />
-          ) : cabinetProfileQuery.isPending ? (
-            <div
-              className="h-36 animate-pulse rounded-2xl bg-muted/50"
-              aria-busy
-            />
-          ) : null}
-
           <Link
             href={`/business/organizations/${organizationId}/offerings`}
             className={cn(
@@ -477,31 +463,33 @@ export function BusinessOrganizationCabinetPage() {
             />
           </Link>
 
-          <Link
-            href={`/business/organizations/${organizationId}/edit`}
-            className={cn(
-              motion.interactive,
-              "flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 text-left text-card-foreground shadow-none transition-colors hover:bg-muted/40",
-            )}
-            aria-label={t("editProfileAria")}
-          >
-            <Pencil
-              className="size-5 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="font-heading text-sm font-semibold leading-snug">
-                {t("editProfileTitle")}
+          {canManage ? (
+            <Link
+              href={`/business/organizations/${organizationId}/edit`}
+              className={cn(
+                motion.interactive,
+                "flex items-center gap-3 rounded-2xl border border-border/60 bg-card px-4 py-3 text-left text-card-foreground shadow-none transition-colors hover:bg-muted/40",
+              )}
+              aria-label={t("editProfileAria")}
+            >
+              <Pencil
+                className="size-5 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="font-heading text-sm font-semibold leading-snug">
+                  {t("editProfileTitle")}
+                </span>
+                <span className="text-pretty text-xs leading-snug text-muted-foreground">
+                  {t("editProfileHint")}
+                </span>
               </span>
-              <span className="text-pretty text-xs leading-snug text-muted-foreground">
-                {t("editProfileHint")}
-              </span>
-            </span>
-            <ChevronRight
-              className="size-5 shrink-0 text-muted-foreground"
-              aria-hidden
-            />
-          </Link>
+              <ChevronRight
+                className="size-5 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+            </Link>
+          ) : null}
         </>
       ) : (
         <p className="text-pretty text-sm leading-snug text-muted-foreground">

@@ -1,10 +1,22 @@
 "use client";
 
-import { Loader2, Package, Trash2, UserMinus } from "lucide-react";
+import {
+  Eye,
+  Layers,
+  Loader2,
+  Package,
+  Pencil,
+  Plus,
+  PowerOff,
+  Trash2,
+  UploadCloud,
+  Users,
+} from "lucide-react";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { Link } from "@/app/i18n/navigation";
 import type { AppLocale } from "@/app/i18n/routing";
 import { BusinessEmptyState } from "@/entities/business";
 import {
@@ -13,69 +25,147 @@ import {
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
 import {
-  catalogGetBulkCategoriesByMajorSlugs,
   createBrowserSdkClient,
-  organizationOfferingsCabinetCreatePriceOption,
-  organizationOfferingsCabinetCreateSpecialistAssignment,
-  organizationOfferingsCabinetListAssignableSpecialists,
+  organizationOfferingsCabinetDeleteOffering,
   organizationOfferingsCabinetListMine,
-  organizationOfferingsCabinetPatchPriceOption,
-  organizationOfferingsCabinetPatchSpecialistAssignment,
   organizationOfferingsCabinetPublishOffering,
-  organizationsCabinetGetCabinetOrganizationProfileForEdit,
+  organizationOfferingsCabinetUnpublishOffering,
   specialistsCabinetGetSpecialistMyOrganizations,
-  type OrganizationOfferingsCabinetListAssignableSpecialistsResponse,
   type OrganizationOfferingsCabinetListMineResponse,
 } from "@/shared/api";
-import { cn } from "@/shared/lib";
+import { cn, motion } from "@/shared/lib";
+import { Button } from "@/shared/ui";
 import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/ui";
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/shared/ui/shadcn/alert-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
-import { OrganizationOfferingDraftCreateSection } from "./organization-offering-draft-create-section";
 
-const CABINET_EDIT_QK = ["organizationCabinetEditProfile"] as const;
 const OFFERINGS_QK = ["organizationOfferingsCabinet"] as const;
-const ASSIGNABLE_QK = ["organizationOfferingsAssignableSpecialists"] as const;
 
 type OfferingCabinetRow =
   OrganizationOfferingsCabinetListMineResponse["offerings"][number];
 
-type AssignableRow =
-  OrganizationOfferingsCabinetListAssignableSpecialistsResponse["specialists"][number];
+function statusConfig(status: string) {
+  if (status === "published") {
+    return {
+      borderClass: "border-l-emerald-500/80",
+      badgeBg: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300",
+      dotClass: "bg-emerald-500",
+    };
+  }
+  if (status === "hidden") {
+    return {
+      borderClass: "border-l-amber-500/80",
+      badgeBg: "bg-amber-500/12 text-amber-800 dark:text-amber-300",
+      dotClass: "bg-amber-500",
+    };
+  }
+  return {
+    borderClass: "border-l-border/40",
+    badgeBg: "bg-muted text-muted-foreground",
+    dotClass: "bg-muted-foreground/50",
+  };
+}
 
-function OrganizationOfferingCabinetCard({
+function statusLabel(
+  status: string,
+  t: ReturnType<typeof useTranslations<"businessOrganizationOfferingsPage">>,
+) {
+  if (status === "published") return t("statusPublished");
+  if (status === "hidden") return t("statusHidden");
+  return t("statusDraft");
+}
+
+function InitialAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+  return (
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/12 text-[0.6rem] font-semibold leading-none text-primary">
+      {initials || "?"}
+    </span>
+  );
+}
+
+function OfferingSpecialists({
+  offering,
+  t,
+}: {
+  offering: OfferingCabinetRow;
+  t: ReturnType<typeof useTranslations<"businessOrganizationOfferingsPage">>;
+}) {
+  const activeAssignments = offering.specialistAssignments.filter(
+    (a) => a.status === "active",
+  );
+  const items =
+    activeAssignments.length > 0
+      ? activeAssignments.map((a) => ({
+          key: a.id,
+          label: a.displayName ?? a.specialistId,
+        }))
+      : offering.eligibleSpecialists.map((s) => ({
+          key: s.specialistId,
+          label: s.displayName ?? s.specialistId,
+        }));
+
+  const isAssigned = activeAssignments.length > 0;
+
+  return (
+    <div className="border-t border-border/40 px-4 py-3">
+      <div className="flex items-center gap-1.5">
+        <Users className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="text-xs font-medium text-muted-foreground">
+          {isAssigned ? t("assignmentsTitle") : t("eligibleSpecialistsTitle")}
+        </span>
+      </div>
+      {items.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {items.map((s) => (
+            <span
+              key={s.key}
+              className="flex items-center gap-1.5 rounded-full border border-border/50 bg-background pl-1 pr-2.5 py-0.5 text-xs"
+            >
+              <InitialAvatar name={s.label} />
+              <span className="font-medium leading-none">{s.label}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          {t("noEligibleSpecialists")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function OfferingCard({
   offering,
   organizationId,
   sdk,
   format,
   t,
-  categoryLabel,
-  assignable,
+  canManage,
 }: {
   offering: OfferingCabinetRow;
   organizationId: string;
   sdk: ReturnType<typeof createBrowserSdkClient>;
   format: ReturnType<typeof useFormatter>;
   t: ReturnType<typeof useTranslations<"businessOrganizationOfferingsPage">>;
-  categoryLabel: string;
-  assignable: AssignableRow[];
+  canManage: boolean;
 }) {
   const qc = useQueryClient();
-  const [durationStr, setDurationStr] = useState("");
-  const [priceStr, setPriceStr] = useState("");
-  const [pickSpecialistId, setPickSpecialistId] = useState("");
-
-  const invalidateOfferingsBundle = (): void => {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const invalidate = (): void => {
     void qc.invalidateQueries({ queryKey: OFFERINGS_QK });
-    void qc.invalidateQueries({ queryKey: ASSIGNABLE_QK });
   };
 
   const publishMut = useMutation({
@@ -86,322 +176,299 @@ function OrganizationOfferingCabinetCard({
       });
       if (error) throw new Error("publish");
     },
-    onSuccess: invalidateOfferingsBundle,
+    onSuccess: invalidate,
   });
 
-  const addOptionMut = useMutation({
-    mutationFn: async (body: { durationMinutes: number; priceAmount: number }) => {
-      const { error } = await organizationOfferingsCabinetCreatePriceOption({
+  const unpublishMut = useMutation({
+    mutationFn: async () => {
+      const { error } = await organizationOfferingsCabinetUnpublishOffering({
         client: sdk,
         path: { organizationId, offeringId: offering.id },
-        body: {
-          durationMinutes: body.durationMinutes,
-          priceAmount: body.priceAmount,
-          currency: "VND",
-        },
       });
-      if (error) throw new Error("option");
+      if (error) throw new Error("unpublish");
     },
-    onSuccess: () => {
-      setDurationStr("");
-      setPriceStr("");
-      invalidateOfferingsBundle();
-    },
+    onSuccess: invalidate,
   });
 
-  const removeOptionMut = useMutation({
-    mutationFn: async (optionId: string) => {
-      const { error } = await organizationOfferingsCabinetPatchPriceOption({
+  const deleteMut = useMutation({
+    mutationFn: async () => {
+      const { error } = await organizationOfferingsCabinetDeleteOffering({
         client: sdk,
-        path: {
-          organizationId,
-          offeringId: offering.id,
-          optionId,
-        },
-        body: { remove: true },
+        path: { organizationId, offeringId: offering.id },
       });
-      if (error) throw new Error("rm-option");
-    },
-    onSuccess: invalidateOfferingsBundle,
-  });
-
-  const assignMut = useMutation({
-    mutationFn: async (specialistId: string) => {
-      const { error } =
-        await organizationOfferingsCabinetCreateSpecialistAssignment({
-          client: sdk,
-          path: { organizationId, offeringId: offering.id },
-          body: { specialistId },
-        });
-      if (error) throw new Error("assign");
+      if (error) throw error;
     },
     onSuccess: () => {
-      setPickSpecialistId("");
-      invalidateOfferingsBundle();
+      invalidate();
+      setDeleteOpen(false);
     },
   });
 
-  const removeAssignmentMut = useMutation({
-    mutationFn: async (assignmentId: string) => {
-      const { error } =
-        await organizationOfferingsCabinetPatchSpecialistAssignment({
-          client: sdk,
-          path: {
-            organizationId,
-            offeringId: offering.id,
-            assignmentId,
-          },
-          body: { status: "removed" },
-        });
-      if (error) throw new Error("rm-assign");
-    },
-    onSuccess: invalidateOfferingsBundle,
-  });
-
-  const isPublishedEver = Boolean(offering.firstPublishedAt);
   const canPublishGate = offering.priceOptions.some(
     (o) => o.status === "active" && o.currency === "VND",
   );
-  const assignedIds = new Set(
-    offering.specialistAssignments.map((a) => a.specialistId),
-  );
-  const pickable = assignable.filter((a) => !assignedIds.has(a.specialistId));
-
-  const addOptionSubmit = (): void => {
-    const dm = Number.parseInt(durationStr.trim(), 10);
-    const pr = Number.parseInt(priceStr.trim(), 10);
-    if (
-      Number.isNaN(dm) ||
-      dm <= 0 ||
-      Number.isNaN(pr) ||
-      pr < 0 ||
-      addOptionMut.isPending
-    ) {
-      return;
-    }
-    addOptionMut.mutate({ durationMinutes: dm, priceAmount: pr });
-  };
+  const { borderClass, badgeBg, dotClass } = statusConfig(offering.publicationStatus);
+  const activePrices = offering.priceOptions.filter((o) => o.status === "active");
+  const inactivePrices = offering.priceOptions.filter((o) => o.status !== "active");
 
   return (
-    <li className="rounded-2xl border border-border/60 bg-card p-4 text-card-foreground">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-heading text-sm font-semibold leading-snug">
-            {offering.title}
-          </h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {categoryLabel} · {offering.slug}
-          </p>
-          {offering.description?.trim() ?
-            <p className="mt-2 text-pretty text-sm leading-snug text-muted-foreground">
-              {offering.description}
+    <li
+      className={cn(
+        "overflow-hidden rounded-2xl border border-l-4 border-border/60 bg-card text-card-foreground",
+        borderClass,
+      )}
+    >
+      {/* Card header */}
+      <div className="p-4 pb-3">
+        <div className="flex items-start gap-2.5">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-heading text-sm font-semibold leading-snug">
+              {offering.title}
+            </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {offering.category.majorCategory.name}
+              {" · "}
+              {offering.category.name}
             </p>
-          : null}
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium",
-            offering.publicationStatus === "published" ?
-              "bg-emerald-500/15 text-emerald-800 dark:text-emerald-200"
-            : "bg-muted text-muted-foreground",
-          )}
-        >
-          {offering.publicationStatus === "published" ?
-            t("statusPublished")
-          : t("statusDraft")}
-        </span>
-      </div>
-
-      {isPublishedEver ?
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t("editSlugLockedHint")}
-        </p>
-      : null}
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          className="rounded-xl"
-          disabled={
-            publishMut.isPending ||
-            !canPublishGate ||
-            offering.publicationStatus === "published"
-          }
-          onClick={() => void publishMut.mutate()}
-        >
-          {publishMut.isPending ?
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-          : t("publish")}
-        </Button>
-        {!canPublishGate ?
-          <span className="self-center text-xs text-muted-foreground">
-            {t("publishBlockedHint")}
+          </div>
+          <span
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
+              badgeBg,
+            )}
+          >
+            <span className={cn("size-1.5 rounded-full shrink-0", dotClass)} aria-hidden />
+            {statusLabel(offering.publicationStatus, t)}
           </span>
-        : null}
+        </div>
+
+        {offering.description?.trim() ? (
+          <p className="mt-2.5 line-clamp-2 text-pretty text-sm leading-snug text-muted-foreground">
+            {offering.description}
+          </p>
+        ) : null}
+
+        {offering.bodyZones.length > 0 ? (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {offering.bodyZones.map((zone) => (
+              <span
+                key={zone.id}
+                className="rounded-full bg-muted/70 px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {zone.name}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
 
-      <div className="mt-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("addOptionTitle")}
-        </h4>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-          <div className="flex min-w-[7rem] flex-1 flex-col gap-1">
-            <label
-              className="text-xs font-medium text-muted-foreground"
-              htmlFor={`dur-${offering.id}`}
-            >
-              {t("durationLabel")}
-            </label>
-            <Input
-              id={`dur-${offering.id}`}
-              inputMode="numeric"
-              value={durationStr}
-              onChange={(e) => setDurationStr(e.target.value)}
-              className="rounded-xl"
-              aria-label={t("durationLabel")}
-            />
+      {/* Price options */}
+      <div className="border-t border-border/40 px-4 py-3">
+        {offering.priceOptions.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {activePrices.map((po) => (
+              <div
+                key={po.id}
+                className="flex items-center gap-1.5 rounded-xl border border-border/50 bg-muted/40 px-2.5 py-1.5 text-xs font-medium tabular-nums"
+              >
+                <span className="text-foreground">
+                  {po.durationMinutes}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    {t("minuteAbbr")}
+                  </span>
+                </span>
+                <span className="text-border">·</span>
+                <span className="text-foreground">
+                  {po.currency === "VND"
+                    ? format.number(po.priceAmount, {
+                        style: "currency",
+                        currency: "VND",
+                        currencyDisplay: "narrowSymbol",
+                      })
+                    : format.number(po.priceAmount)}
+                </span>
+              </div>
+            ))}
+            {inactivePrices.map((po) => (
+              <div
+                key={po.id}
+                className="flex items-center gap-1.5 rounded-xl border border-border/30 bg-muted/20 px-2.5 py-1.5 text-xs tabular-nums text-muted-foreground/60 line-through"
+              >
+                <span>{po.durationMinutes} {t("minuteAbbr")}</span>
+                <span>·</span>
+                <span>
+                  {po.currency === "VND"
+                    ? format.number(po.priceAmount, {
+                        style: "currency",
+                        currency: "VND",
+                        currencyDisplay: "narrowSymbol",
+                      })
+                    : format.number(po.priceAmount)}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="flex min-w-[7rem] flex-1 flex-col gap-1">
-            <label
-              className="text-xs font-medium text-muted-foreground"
-              htmlFor={`price-${offering.id}`}
-            >
-              {t("priceLabel")}
-            </label>
-            <Input
-              id={`price-${offering.id}`}
-              inputMode="numeric"
-              value={priceStr}
-              onChange={(e) => setPriceStr(e.target.value)}
-              className="rounded-xl"
-              aria-label={t("priceLabel")}
-            />
-          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">{t("noPriceOptions")}</p>
+        )}
+      </div>
+
+      {/* Specialists */}
+      <OfferingSpecialists offering={offering} t={t} />
+
+      {/* Action footer */}
+      {canManage ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 bg-muted/[0.07] px-4 py-2.5">
           <Button
+            asChild
             type="button"
             size="sm"
-            variant="secondary"
-            className="rounded-xl"
-            disabled={addOptionMut.isPending}
-            onClick={addOptionSubmit}
+            variant="ghost"
+            className="h-8 gap-1.5 rounded-xl px-2.5 text-xs"
           >
-            {t("addOption")}
+            <Link
+              href={`/business/organizations/${organizationId}/offerings/${offering.id}`}
+            >
+              <Pencil className="size-3.5" aria-hidden />
+              {t("edit")}
+            </Link>
           </Button>
-        </div>
-      </div>
 
-      <ul className="mt-3 space-y-1">
-        {offering.priceOptions.map((po) => (
-          <li
-            key={po.id}
-            className="flex items-center justify-between gap-2 text-sm tabular-nums"
-          >
-            <span>
-              {t("optionMinutes", {
-                minutes: po.durationMinutes,
-                price:
-                  po.currency === "VND" ?
-                    format.number(po.priceAmount, {
-                      style: "currency",
-                      currency: "VND",
-                      currencyDisplay: "narrowSymbol",
-                    })
-                  : format.number(po.priceAmount),
-              })}
-              {" "}
-              <span className="text-xs text-muted-foreground">
-                (
-                {po.status === "active" ?
-                  t("optionStatusActive")
-                : t("optionStatusOther", { status: po.status })}
-                )
-              </span>
-            </span>
+          {offering.publicationStatus === "published" ? (
             <Button
               type="button"
-              size="icon"
+              size="sm"
               variant="ghost"
-              className="size-9 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
-              disabled={removeOptionMut.isPending}
-              aria-label={t("removeOptionAria")}
-              onClick={() => void removeOptionMut.mutate(po.id)}
+              className="h-8 gap-1.5 rounded-xl px-2.5 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-400"
+              disabled={unpublishMut.isPending}
+              onClick={() => void unpublishMut.mutate()}
             >
-              <Trash2 className="size-4" aria-hidden />
+              {unpublishMut.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              ) : (
+                <PowerOff className="size-3.5" aria-hidden />
+              )}
+              {t("unpublish")}
             </Button>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-4 border-t border-border/50 pt-4">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t("assignmentsTitle")}
-        </h4>
-        <ul className="mt-2 space-y-2">
-          {offering.specialistAssignments.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-start justify-between gap-2 rounded-xl bg-muted/30 px-3 py-2 text-sm"
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-8 gap-1.5 rounded-xl px-2.5 text-xs text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-400 disabled:opacity-50"
+              disabled={publishMut.isPending || !canPublishGate}
+              onClick={() => void publishMut.mutate()}
             >
-              <div className="min-w-0">
-                <span className="font-medium">{a.displayName ?? a.specialistId}</span>
-                <p className="text-xs text-muted-foreground">
-                  {t("assignmentStatus", { status: a.status })}
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="size-9 shrink-0 rounded-xl text-muted-foreground hover:text-destructive"
-                disabled={removeAssignmentMut.isPending}
-                aria-label={t("removeAssignmentAria")}
-                onClick={() => void removeAssignmentMut.mutate(a.id)}
-              >
-                <UserMinus className="size-4" aria-hidden />
-              </Button>
-            </li>
-          ))}
-        </ul>
+              {publishMut.isPending ? (
+                <Loader2 className="size-3.5 animate-spin" aria-hidden />
+              ) : (
+                <UploadCloud className="size-3.5" aria-hidden />
+              )}
+              {t("publish")}
+            </Button>
+          )}
 
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select
-            value={pickSpecialistId}
-            onValueChange={(v) => setPickSpecialistId(v)}
-            disabled={pickable.length === 0 || assignMut.isPending}
-          >
-            <SelectTrigger className="w-full rounded-xl sm:w-[min(22rem,calc(100%-4rem))]">
-              <SelectValue placeholder={t("addSpecialistPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {pickable.map((s) => (
-                <SelectItem key={s.specialistId} value={s.specialistId}>
-                  {s.displayName ?? s.specialistId}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!canPublishGate && offering.publicationStatus !== "published" ? (
+            <span className="text-xs text-muted-foreground">
+              {t("publishBlockedHint")}
+            </span>
+          ) : null}
+
           <Button
             type="button"
             size="sm"
-            className="rounded-xl"
-            disabled={
-              assignMut.isPending ||
-              pickSpecialistId.trim().length === 0 ||
-              pickable.length === 0
-            }
-            onClick={() => assignMut.mutate(pickSpecialistId.trim())}
+            variant="ghost"
+            className="h-8 gap-1.5 rounded-xl px-2.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
           >
-            {t("assign")}
+            <Trash2 className="size-3.5" aria-hidden />
+            {t("deleteService")}
           </Button>
         </div>
-        {pickable.length === 0 && assignable.length > 0 ?
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t("assignDisabledHint")}
-          </p>
-        : null}
-      </div>
+      ) : null}
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteServiceConfirmTitle")}</AlertDialogTitle>
+            <AlertDialogDescription className="text-pretty">
+              {t("deleteServiceConfirmDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              tone="muted"
+              className="rounded-xl"
+              onClick={() => setDeleteOpen(false)}
+            >
+              {t("deleteServiceCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="rounded-xl border border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              disabled={deleteMut.isPending}
+              onClick={() => void deleteMut.mutate()}
+            >
+              {deleteMut.isPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <Trash2 className="size-4" aria-hidden />
+              )}
+              {t("deleteServiceConfirm")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </li>
+  );
+}
+
+function OfferingsLoadingSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-busy aria-label="Loading">
+      {[0, 1, 2].map((i) => (
+        <div
+          key={i}
+          className="overflow-hidden rounded-2xl border border-l-4 border-border/60 border-l-border/30 bg-card"
+        >
+          <div className="p-4 pb-3">
+            <div className="flex items-start gap-2.5">
+              <div className="flex-1 space-y-1.5">
+                <div
+                  className="h-4 animate-pulse rounded-md bg-muted/60"
+                  style={{ width: `${55 + i * 15}%` }}
+                />
+                <div className="h-3 w-1/3 animate-pulse rounded-md bg-muted/40" />
+              </div>
+              <div className="h-6 w-20 animate-pulse rounded-full bg-muted/50" />
+            </div>
+          </div>
+          <div className="border-t border-border/40 px-4 py-3">
+            <div className="flex gap-2">
+              {[0, 1].map((j) => (
+                <div
+                  key={j}
+                  className="h-7 w-24 animate-pulse rounded-xl bg-muted/50"
+                />
+              ))}
+            </div>
+          </div>
+          <div className="border-t border-border/40 px-4 py-3">
+            <div className="flex gap-1.5">
+              {[0, 1].map((j) => (
+                <div
+                  key={j}
+                  className="h-6 w-20 animate-pulse rounded-full bg-muted/40"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -428,9 +495,8 @@ export function BusinessOrganizationOfferingsPage() {
     queryKey: specialistMyOrganizationsQueryKey(accessToken, locale),
     enabled: authed,
     queryFn: async () => {
-      const { data: res, error: err } = await specialistsCabinetGetSpecialistMyOrganizations({
-        client: sdk,
-      });
+      const { data: res, error: err } =
+        await specialistsCabinetGetSpecialistMyOrganizations({ client: sdk });
       if (err || !res) {
         throw err ?? new Error("organizations");
       }
@@ -444,79 +510,25 @@ export function BusinessOrganizationOfferingsPage() {
     [membershipsQuery.data?.organizations, organizationId],
   );
 
-  const canManage =
+  const employed =
     membership != null &&
     membership.membershipStatus === "employed" &&
+    organizationId !== "";
+  const canView =
+    employed &&
+    canOrganization(membership, OrganizationCapabilities.OFFERINGS_VIEW);
+  const canManage =
+    employed &&
     canOrganization(membership, OrganizationCapabilities.OFFERINGS_MANAGE);
-
-  const cabinetProfileQuery = useQuery({
-    queryKey: [...CABINET_EDIT_QK, organizationId, accessToken, locale] as const,
-    enabled:
-      authed &&
-      typeof organizationId === "string" &&
-      organizationId.length > 0 &&
-      canManage &&
-      membershipsQuery.isSuccess,
-    queryFn: async () => {
-      const { data: res, error: err } =
-        await organizationsCabinetGetCabinetOrganizationProfileForEdit({
-          client: sdk,
-          path: { organizationId },
-          query: { locale },
-        });
-      if (err || !res) {
-        throw err ?? new Error("cabinet-profile");
-      }
-      return res;
-    },
-  });
-
-  const majorSlugsCsv = useMemo(
-    () =>
-      cabinetProfileQuery.data?.majorCategorySlugs
-        ?.filter((s) => s.trim().length > 0)
-        .join(",")
-        ?.trim() ?? "",
-    [cabinetProfileQuery.data?.majorCategorySlugs],
-  );
-
-  const catalogQuery = useQuery({
-    queryKey: ["catalogBulkCategories", majorSlugsCsv, locale] as const,
-    enabled: authed && majorSlugsCsv.length > 0 && canManage,
-    queryFn: async () => {
-      const { data, error } = await catalogGetBulkCategoriesByMajorSlugs({
-        client: sdk,
-        query: {
-          majorSlugs: majorSlugsCsv,
-          locale,
-        },
-      });
-      if (error || !data) {
-        throw error ?? new Error("catalog");
-      }
-      return data;
-    },
-  });
-
-  const categoryLabelById = useMemo(() => {
-    const m = new Map<string, string>();
-    const sections = catalogQuery.data?.sections ?? [];
-    for (const sec of sections) {
-      const majorLabel = sec.majorCategory.name;
-      for (const c of sec.categories) {
-        m.set(c.id, `${majorLabel} — ${c.name}`);
-      }
-    }
-    return m;
-  }, [catalogQuery.data?.sections]);
 
   const offeringsQuery = useQuery({
     queryKey: [...OFFERINGS_QK, organizationId, accessToken, locale] as const,
-    enabled: authed && canManage && membershipsQuery.isSuccess,
+    enabled: authed && canView && membershipsQuery.isSuccess,
     queryFn: async () => {
       const { data: res, error: err } = await organizationOfferingsCabinetListMine({
         client: sdk,
         path: { organizationId },
+        query: { locale },
       });
       if (err || !res) {
         throw err ?? new Error("offerings");
@@ -525,40 +537,13 @@ export function BusinessOrganizationOfferingsPage() {
     },
   });
 
-  const assignableQuery = useQuery({
-    queryKey: [...ASSIGNABLE_QK, organizationId, accessToken, locale] as const,
-    enabled: authed && canManage && membershipsQuery.isSuccess,
-    queryFn: async () => {
-      const { data: res, error: err } =
-        await organizationOfferingsCabinetListAssignableSpecialists({
-          client: sdk,
-          path: { organizationId },
-        });
-      if (err || !res) {
-        throw err ?? new Error("assignable");
-      }
-      return res;
-    },
-  });
-
-  const membershipDraftName = membership?.salonCabinetPreview?.name?.trim();
   const orgTitle =
-    membershipDraftName != null && membershipDraftName.length > 0 ?
-      membershipDraftName
-    : (membership?.name ?? "");
+    membership?.salonCabinetPreview?.name?.trim() || membership?.name || "";
 
-  if (
-    sessionStatus === "loading" ||
-    membershipsQuery.isPending ||
-    (canManage && cabinetProfileQuery.isPending)
-  ) {
+  if (sessionStatus === "loading" || membershipsQuery.isPending) {
     return (
       <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
-        <div
-          className="h-40 animate-pulse rounded-2xl bg-muted/50"
-          aria-busy
-          aria-label={t("loadingAria")}
-        />
+        <OfferingsLoadingSkeleton />
       </main>
     );
   }
@@ -575,11 +560,7 @@ export function BusinessOrganizationOfferingsPage() {
     );
   }
 
-  if (
-    membershipsQuery.isError ||
-    !membership ||
-    organizationId === ""
-  ) {
+  if (membershipsQuery.isError || !membership || organizationId === "") {
     return (
       <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
@@ -591,7 +572,7 @@ export function BusinessOrganizationOfferingsPage() {
     );
   }
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
         <BusinessEmptyState
@@ -599,26 +580,6 @@ export function BusinessOrganizationOfferingsPage() {
           title={orgTitle}
           description={t("forbiddenHint")}
         />
-      </main>
-    );
-  }
-
-  if (cabinetProfileQuery.isError) {
-    return (
-      <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
-        <BusinessEmptyState
-          icon={Package}
-          title={tPage("organizationEditLoadErrorTitle")}
-          description={tPage("organizationEditLoadErrorHint")}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          className="rounded-xl"
-          onClick={() => void cabinetProfileQuery.refetch()}
-        >
-          {t("loadErrorRetry")}
-        </Button>
       </main>
     );
   }
@@ -644,40 +605,77 @@ export function BusinessOrganizationOfferingsPage() {
   }
 
   const offerings = offeringsQuery.data?.offerings ?? [];
-  const assignable = assignableQuery.data?.specialists ?? [];
+  const publishedCount = offerings.filter(
+    (o) => o.publicationStatus === "published",
+  ).length;
 
   return (
     <main className="flex w-full min-h-0 flex-1 flex-col gap-5 px-4 pt-2">
-      {cabinetProfileQuery.data ?
-        <OrganizationOfferingDraftCreateSection
-          organizationId={organizationId}
-          sdk={sdk}
-          locale={locale}
-          majorCategorySlugs={cabinetProfileQuery.data.majorCategorySlugs}
-          t={t}
-        />
-      : null}
+      {(offeringsQuery.isSuccess && offerings.length > 0) || canManage ? (
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            {offeringsQuery.isSuccess && offerings.length > 0 ? (
+              <>
+                <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-emerald-500/15">
+                    <Eye className="size-3 text-emerald-700 dark:text-emerald-400" aria-hidden />
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {publishedCount}
+                    </span>
+                    {" "}
+                    {t("statsPublished")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-border/50 bg-card px-3 py-2">
+                  <span className="flex size-5 items-center justify-center rounded-full bg-muted">
+                    <Layers className="size-3 text-muted-foreground" aria-hidden />
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {offerings.length - publishedCount}
+                    </span>
+                    {" "}
+                    {t("statsDraftsHidden")}
+                  </span>
+                </div>
+              </>
+            ) : null}
+          </div>
+          {canManage ? (
+            <Button asChild className={cn(motion.interactivePress, "shrink-0 rounded-xl")}>
+              <Link
+                href={`/business/organizations/${organizationId}/offerings/new`}
+              >
+                <Plus className="size-4" aria-hidden />
+                {t("createService")}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
-      {offerings.length === 0 ?
+      {/* Offerings list */}
+      {offeringsQuery.isPending ? (
+        <OfferingsLoadingSkeleton />
+      ) : offerings.length === 0 ? (
         <BusinessEmptyState
           icon={Package}
           title={t("emptyTitle")}
           description={t("emptyHint")}
         />
-      : (
+      ) : (
         <ul className="flex flex-col gap-4">
           {offerings.map((row) => (
-            <OrganizationOfferingCabinetCard
+            <OfferingCard
               key={row.id}
               offering={row}
               organizationId={organizationId}
               sdk={sdk}
               format={format}
               t={t}
-              categoryLabel={
-                categoryLabelById.get(row.categoryId) ?? t("categoryLabelFallback")
-              }
-              assignable={assignable}
+              canManage={canManage}
             />
           ))}
         </ul>
