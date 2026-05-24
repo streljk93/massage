@@ -22,7 +22,9 @@
         "sortNewest": "Newest",
         "sortPriceAsc": "Cheaper",
         "sortPriceDesc": "More expensive",
-        "sortRating": "Highest rating"
+        "sortRating": "Highest rating",
+        "filtersAppliedCountOrgs": "{count, plural, one {# salon} other {# salons}} in the loaded list",
+        "filtersAppliedCountSpecs": "{count, plural, one {# specialist} other {# specialists}} in the loaded list"
       }
     },
     "vi": {
@@ -47,7 +49,9 @@
         "sortNewest": "Mới",
         "sortPriceAsc": "Rẻ hơn",
         "sortPriceDesc": "Đắt hơn",
-        "sortRating": "Đánh giá cao"
+        "sortRating": "Đánh giá cao",
+        "filtersAppliedCountOrgs": "{count} salon trong danh sách đã tải",
+        "filtersAppliedCountSpecs": "{count} chuyên viên trong danh sách đã tải"
       }
     },
     "ru": {
@@ -72,7 +76,9 @@
         "sortNewest": "Новые",
         "sortPriceAsc": "Дешевле",
         "sortPriceDesc": "Дороже",
-        "sortRating": "С высоким рейтингом"
+        "sortRating": "С высоким рейтингом",
+        "filtersAppliedCountOrgs": "{count, plural, one {# салон в загруженном списке} few {# салона в загруженном списке} many {# салонов в загруженном списке} other {# салонов в загруженном списке}}",
+        "filtersAppliedCountSpecs": "{count, plural, one {# специалист в загруженном списке} few {# специалиста в загруженном списке} many {# специалистов в загруженном списке} other {# специалистов в загруженном списке}}"
       }
     }
   }

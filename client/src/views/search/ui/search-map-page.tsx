@@ -255,9 +255,9 @@ function SearchMapInteractiveLayer({
         </div>
       : null}
 
-      {/* Табы и закрытие — как на /search: внутри max-w-lg + px-4 */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 pt-3">
-        <div className="pointer-events-none mx-auto flex w-full max-w-lg items-center gap-1 px-4">
+      {/* Табы и закрытие — ширина как у desktop-профиля */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 pt-3 lg:pt-5">
+        <div className="pointer-events-none mx-auto flex w-full max-w-7xl items-center gap-1 px-4 lg:px-12">
           <div className="pointer-events-auto flex min-w-0 flex-1 items-center justify-center px-1">
             <div
               className="flex w-full min-w-0 rounded-full bg-muted p-1"
@@ -302,7 +302,7 @@ function SearchMapInteractiveLayer({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-40 mx-auto max-w-lg px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))]">
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-40 mx-auto max-w-7xl px-4 pb-[calc(5.75rem+env(safe-area-inset-bottom))] lg:px-12 lg:pb-6">
         <div className="pointer-events-auto mb-1.5 flex justify-end">
           <button
             type="button"
@@ -439,9 +439,12 @@ export function SearchMapPageClient({
         buildSearchMapQueryString(next, { pickRadius: true })
       : buildSearchQueryString(next);
       if (qs) {
-        router.replace(`/search/map?${qs}`);
+        router.replace(`/search/map?${qs}`, { scroll: false });
       } else {
-        router.replace(pickRadius ? "/search/map?pickRadius=1" : "/search/map");
+        router.replace(
+          pickRadius ? "/search/map?pickRadius=1" : "/search/map",
+          { scroll: false },
+        );
       }
     },
     [pickRadius, router, searchParams],
@@ -464,7 +467,7 @@ export function SearchMapPageClient({
   );
 
   return (
-    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-surface-background">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <SearchMapInteractiveLayer
           key={pickRadius ? `radius-${tab}` : tab}

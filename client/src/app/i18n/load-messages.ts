@@ -4,7 +4,7 @@ import {
   bookingHistoryCardI18n,
   bookingListCardI18n,
 } from "@/entities/booking";
-import { catalogFiltersDialogI18n } from "@/entities/catalog";
+import { catalogFiltersI18n } from "@/entities/catalog";
 import { bodyZonesSelectorI18n } from "@/entities/body-zones";
 import {
   businessActiveOrganizationContextCardI18n,
@@ -80,7 +80,9 @@ import { calendarWidgetI18n } from "@/widgets/calendar";
 import {
   homeBottomNavI18n,
   homeScreenHeaderI18n,
+  homeTopNavI18n,
 } from "@/widgets/home";
+import { profileVitrineI18n } from "@/widgets/profile-vitrine";
 import type { ColocatedI18nBundle } from "./types";
 import { mergeBundlesForLocale } from "./merge-messages";
 
@@ -94,6 +96,8 @@ const bundles: ColocatedI18nBundle[] = [
   availabilitySlotStripI18n,
   homeBottomNavI18n,
   homeScreenHeaderI18n,
+  homeTopNavI18n,
+  profileVitrineI18n,
   businessAppBottomNavI18n,
   businessScreenHeaderI18n,
   orgSwitcherI18n,
@@ -138,7 +142,7 @@ const bundles: ColocatedI18nBundle[] = [
   profileHelpPageI18n,
   profileTermsPageI18n,
   profileThemePageI18n,
-  catalogFiltersDialogI18n,
+  catalogFiltersI18n,
   bodyZonesSelectorI18n,
   searchPageI18n,
   searchMapPageI18n,

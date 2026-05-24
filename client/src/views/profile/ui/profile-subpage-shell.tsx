@@ -4,7 +4,11 @@ import type { ReactNode } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/app/i18n/navigation";
-import { HomeBottomNav } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  consumerPageRootClass,
+  consumerSubpageContentClass,
+} from "@/widgets/home";
 import { Button } from "@/shared/ui/button";
 import { cn, goBackOrFallback } from "@/shared/lib";
 
@@ -26,9 +30,9 @@ export function ProfileSubpageShell({
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      <header className="sticky top-0 z-40 border-b border-border/50 bg-surface-background/95 pb-2 backdrop-blur-md">
-        <div className="mx-auto flex max-w-lg items-center gap-2 px-4 pt-3">
+    <div className={consumerPageRootClass()}>
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/95 pb-2 backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 pt-3 lg:px-12">
           <Button
             type="button"
             variant="ghost"
@@ -50,12 +54,10 @@ export function ProfileSubpageShell({
         </div>
       </header>
 
-      <div
-        className={cn(
-          "mx-auto w-full max-w-lg flex-1 px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] pt-4",
-          className,
-        )}
-      >
+      <div className={cn(consumerSubpageContentClass(), className)}>
+        <h1 className="mb-6 hidden font-heading text-2xl font-bold tracking-tight text-foreground lg:block">
+          {title}
+        </h1>
         {children}
       </div>
 

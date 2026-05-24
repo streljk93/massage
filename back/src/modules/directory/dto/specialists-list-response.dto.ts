@@ -89,4 +89,9 @@ export type SpecialistListItemDto = {
 export type SpecialistsListResponseDto = {
   specialists: SpecialistListItemDto[];
   cursorPage: CursorPageMetaDto;
+  /**
+   * Сколько карточек соответствует фильтрам запроса (без учёта курсора и размера страницы).
+   * Одинаково на каждой странице выдачи.
+   */
+  matchingCount: number;
 };

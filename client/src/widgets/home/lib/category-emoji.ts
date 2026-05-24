@@ -1,52 +1,29 @@
-import type { LucideIcon } from "lucide-react";
-import {
-  Baby,
-  Circle,
-  Droplets,
-  FlaskConical,
-  Footprints,
-  Hand,
-  HeartPulse,
-  Leaf,
-  Sparkles,
-  Target,
-  UserRound,
-  Waves,
-} from "lucide-react";
-
 /**
- * Иконки подкатегорий «Массаж» на главной: по `slug` из каталога,
+ * Emoji подкатегорий «Массаж» на главной: по `slug` из каталога,
  * иначе — циклический запасной набор.
  */
-const MASSAGE_CATEGORY_ICON_BY_SLUG: Record<string, LucideIcon> = {
-  "thai-massage": Sparkles,
-  "aroma-massage": FlaskConical,
-  "herbal-massage": Leaf,
-  "deep-tissue-massage": Target,
-  "hot-stone-massage": Circle,
-  "foot-massage": Footprints,
-  "hair-wash": Droplets,
-  "prenatal-massage": HeartPulse,
-  "kids-massage": Baby,
-  "neck-shoulder-back-therapy": UserRound,
-  combo: Sparkles,
+const MASSAGE_CATEGORY_EMOJI_BY_SLUG: Record<string, string> = {
+  "thai-massage": "🙏",
+  "aroma-massage": "🌸",
+  "herbal-massage": "🌿",
+  "deep-tissue-massage": "💪",
+  "hot-stone-massage": "♨️",
+  "foot-massage": "🦶",
+  "hair-wash": "💆",
+  "prenatal-massage": "🤰",
+  "kids-massage": "👶",
+  "neck-shoulder-back-therapy": "🧘",
+  combo: "✨",
 };
 
-const FALLBACK_ICONS: readonly LucideIcon[] = [
-  Hand,
-  Leaf,
-  Footprints,
-  Waves,
-  Sparkles,
-  UserRound,
-] as const;
+const FALLBACK_EMOJIS = ["💆", "🌿", "🦶", "🌊", "✨", "🧘"] as const;
 
-export function categoryIconFromIndex(index: number): LucideIcon {
-  return FALLBACK_ICONS[index % FALLBACK_ICONS.length]!;
+export function categoryEmojiFromIndex(index: number): string {
+  return FALLBACK_EMOJIS[index % FALLBACK_EMOJIS.length]!;
 }
 
-/** Иконка для категории массажа: по slug, иначе по индексу. */
-export function massageCategoryIcon(slug: string, index: number): LucideIcon {
+/** Emoji для категории массажа: по slug, иначе по индексу. */
+export function massageCategoryEmoji(slug: string, index: number): string {
   const key = slug.trim().toLowerCase();
-  return MASSAGE_CATEGORY_ICON_BY_SLUG[key] ?? categoryIconFromIndex(index);
+  return MASSAGE_CATEGORY_EMOJI_BY_SLUG[key] ?? categoryEmojiFromIndex(index);
 }

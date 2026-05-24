@@ -280,6 +280,10 @@ export type SpecialistsListResponses = {
              */
             hasMore: boolean;
         };
+        /**
+         * Число карточек, совпадающих с фильтрами запроса (без учёта курсора и limit). Одинаково на каждой странице выдачи.
+         */
+        matchingCount: number;
     };
 };
 
@@ -621,6 +625,10 @@ export type OrganizationsListResponses = {
              */
             hasMore: boolean;
         };
+        /**
+         * Число карточек, совпадающих с фильтрами запроса (без учёта курсора и limit). Одинаково на каждой странице выдачи.
+         */
+        matchingCount: number;
     };
 };
 

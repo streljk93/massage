@@ -1,12 +1,14 @@
-export { default as catalogFiltersDialogI18n } from "./model/catalog-filters-dialog.i18n.json";
+export { default as catalogFiltersI18n } from "./model/catalog-filters.i18n.json";
 export {
   specialistHasPriceInRange,
   priceSliderStep,
   specialistListPriceBounds,
 } from "./lib/specialist-list-price-bounds";
+export { catalogFiltersPanelWidthClass } from "./ui/catalog-filter-layout";
 export {
-  CatalogFiltersDialog,
+  CatalogFilters,
   type CatalogFilterCategoryOption,
   type CatalogFiltersPriceConfig,
+  type CatalogFiltersProps,
   type CatalogSlotTimeFilterValue,
-} from "./ui/catalog-filters-dialog";
+} from "./ui/catalog-filters";

@@ -20,7 +20,12 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import { promoteUserCacheToGuestOnLogout } from "@/entities/favorites";
 import { resetPersonalizationSessionId } from "@/shared/lib/personalization/personalization-session-id";
-import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  HomeScreenHeader,
+  consumerPageMainClass,
+  consumerPageRootClass,
+} from "@/widgets/home";
 import { Button } from "@/shared/ui/button";
 import { cn, motion } from "@/shared/lib";
 import { profileUserDemo } from "../lib/mock-data";
@@ -140,9 +145,9 @@ export function ProfilePage() {
   const menuItems = isAuthed ? authedMenuItems : guestMenuItems;
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
+    <div className={consumerPageRootClass()}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-4 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+        <main className={consumerPageMainClass("space-y-4")}>
           <HomeScreenHeader
             title={t("title")}
             titleVariant="section"

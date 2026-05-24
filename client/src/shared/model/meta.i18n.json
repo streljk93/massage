@@ -2,19 +2,19 @@
   "messages": {
     "en": {
       "meta": {
-        "siteName": "Services",
+        "siteName": "BukVu",
         "siteDescription": "Online booking for massage therapists, salons and specialists in one app."
       }
     },
     "vi": {
       "meta": {
-        "siteName": "Services",
+        "siteName": "BukVu",
         "siteDescription": "Đặt lịch trực tuyến với chuyên viên massage, salon và chuyên gia trong một ứng dụng."
       }
     },
     "ru": {
       "meta": {
-        "siteName": "Services",
+        "siteName": "BukVu",
         "siteDescription": "Онлайн-запись к мастерам массажа, салоны и специалисты в одном сервисе."
       }
     }

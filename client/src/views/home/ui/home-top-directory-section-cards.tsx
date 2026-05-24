@@ -23,7 +23,7 @@ export function HomeTopSpecialistCards({ list }: { list: SpecialistList }) {
   const now = useListingClock();
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5 lg:grid lg:auto-rows-fr lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:grid-cols-3">
       {list.map((s) => {
         const card = specialistCardSeedFromApi(s, now);
         return (
@@ -50,7 +50,7 @@ export function HomeTopOrganizationCards({ list }: { list: OrganizationList }) {
   const now = useListingClock();
 
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5 lg:grid lg:auto-rows-fr lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:grid-cols-3">
       {list.map((o) => {
         const card = organizationCardSeedFromApi(o, now);
         return (

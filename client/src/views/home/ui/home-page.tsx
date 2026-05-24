@@ -20,9 +20,11 @@ import {
 import {
   HomeBottomNav,
   HomeScreenHeader,
+  consumerPageMainClass,
+  consumerPageRootClass,
 } from "@/widgets/home";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
-import { massageCategoryIcon } from "@/widgets/home/lib/category-emoji";
+import { massageCategoryEmoji } from "@/widgets/home/lib/category-emoji";
 import { HomeCurrentBookingSection } from "./home-current-booking-section";
 import { HomeForYouSection } from "./home-for-you-section";
 import {
@@ -35,6 +37,12 @@ import { searchTabQueryValue } from "@/shared/lib/search-tab";
 function isAbsoluteHttpUrl(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
+
+/** Как у {@link HomeTopNav}: полупрозрачная заливка + blur. */
+const promoGlassPanelClass = cn(
+  "border-border/80 bg-background/75 backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/55",
+  "dark:border-border/85 dark:supports-[backdrop-filter]:bg-background/45",
+);
 
 function PromoSlide({
   title,
@@ -49,37 +57,45 @@ function PromoSlide({
   imageSrc: string;
   ctaHref?: string | null;
 }) {
+  const ctaClassName =
+    "mt-1 w-fit rounded-xl px-5 lg:mt-2 lg:h-11 lg:px-6 lg:text-base";
+
   const ctaButton =
     ctaHref ?
       isAbsoluteHttpUrl(ctaHref) ?
-        <Button variant="primary" className="mt-1 w-fit rounded-xl px-5" asChild>
+        <Button variant="primary" className={ctaClassName} asChild>
           <a href={ctaHref} target="_blank" rel="noopener noreferrer">
             {cta}
           </a>
         </Button>
-      : <Button variant="primary" className="mt-1 w-fit rounded-xl px-5" asChild>
+      : <Button variant="primary" className={ctaClassName} asChild>
           <Link href={ctaHref}>{cta}</Link>
         </Button>
-    : <Button variant="primary" className="mt-1 w-fit rounded-xl px-5">
+    : <Button variant="primary" className={ctaClassName}>
         {cta}
       </Button>;
 
   return (
-    <div className="flex min-h-[9.5rem] flex-1 flex-row overflow-hidden rounded-2xl bg-muted">
-      <div className="flex flex-1 flex-col justify-center gap-2 p-4 sm:gap-3">
-        <h2 className="font-heading text-xl font-bold tracking-tight text-foreground">
+    <div className="relative min-h-[9.5rem] overflow-hidden rounded-2xl md:min-h-[11rem] lg:min-h-[18rem] lg:rounded-3xl xl:min-h-[20rem]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageSrc}
+        alt=""
+        className="absolute inset-0 size-full object-cover"
+      />
+      <div
+        className={cn(
+          promoGlassPanelClass,
+          "absolute inset-y-0 left-0 z-[1] flex w-[min(100%,18rem)] flex-col justify-center gap-2 border-r p-4 sm:gap-3 sm:w-[min(100%,20rem)] lg:w-[min(100%,22rem)] lg:gap-4 lg:p-8 xl:w-[min(100%,26rem)] xl:p-10",
+        )}
+      >
+        <h2 className="font-heading text-xl font-bold tracking-tight text-foreground lg:text-3xl lg:leading-tight xl:text-[2rem]">
           {title}
         </h2>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+        <p className="text-sm text-muted-foreground lg:text-base lg:leading-relaxed">
+          {subtitle}
+        </p>
         {ctaButton}
-      </div>
-      <div className="relative w-[38%] max-w-[9rem] shrink-0 sm:max-w-none sm:flex-1">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc}
-          alt=""
-          className="absolute inset-0 size-full object-cover"
-        />
       </div>
     </div>
   );
@@ -176,15 +192,15 @@ export async function HomePage() {
       catalog.categories.map((c, index) => ({
         key: c.id,
         label: c.shortName,
-        Icon: massageCategoryIcon(c.slug, index),
+        emoji: massageCategoryEmoji(c.slug, index),
         href: `/search?category=${encodeURIComponent(c.slug)}`,
       }))
     : [];
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
+    <div className={consumerPageRootClass()}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+        <main className={consumerPageMainClass("space-y-3")}>
           <HomeScreenHeader
             title={t("home.welcome", { name: homeUser.firstName })}
             titleVariant="greeting"
@@ -193,7 +209,10 @@ export async function HomePage() {
           />
 
           <Slider
+            className="lg:mt-1"
             dotsPlacement="overlay"
+            dotsOverlayVariant="onMedia"
+            dotsOverlayContainerClassName="lg:bottom-4"
             dotsAriaLabel={t("home.promoSliderDotsAria")}
             slides={promoSlidesResolved.map((p) => ({
               id: p.id,
@@ -239,13 +258,13 @@ export async function HomePage() {
               <h2 id="categories-heading" className="sr-only">
                 {t("home.categoriesHeading")}
               </h2>
-              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-6 lg:gap-2 lg:overflow-visible xl:grid-cols-8">
                 {categoryChips.map((c) => (
                   <CategoryCard
                     key={c.key}
                     href={c.href}
                     label={c.label}
-                    icon={<c.Icon className="size-5" aria-hidden />}
+                    icon={c.emoji}
                   />
                 ))}
               </div>

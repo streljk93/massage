@@ -13,5 +13,6 @@ export { resolveApiResourceUrl } from "./resolve-api-resource-url";
 export { telHrefFromDisplayPhone } from "./tel-href";
 export {
   formatVndAmountInputDisplay,
+  formatVndListingLabel,
   parseVndAmountInputToInt,
 } from "./vnd-amount-input";

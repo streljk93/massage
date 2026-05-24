@@ -6,6 +6,7 @@ import { AppProviders } from "@/app/providers";
 import { DocumentLangFromLocale } from "@/app/document-lang-from-locale";
 import type { AppLocale } from "@/app/i18n/routing";
 import { routing } from "@/app/i18n/routing";
+import { HomeConsumerShell } from "@/widgets/home";
 
 type Props = {
   children: React.ReactNode;
@@ -84,7 +85,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <DocumentLangFromLocale />
-      <AppProviders>{children}</AppProviders>
+      <AppProviders>
+        <HomeConsumerShell>{children}</HomeConsumerShell>
+      </AppProviders>
     </NextIntlClientProvider>
   );
 }

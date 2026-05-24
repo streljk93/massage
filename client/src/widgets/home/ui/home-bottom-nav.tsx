@@ -48,7 +48,7 @@ export function HomeBottomNav({
   return (
     <div
       className={cn(
-        "fixed right-0 bottom-0 left-0 z-50 flex flex-col bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md",
+        "fixed right-0 bottom-0 left-0 z-50 flex flex-col bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden",
         className,
       )}
     >

@@ -12,6 +12,8 @@ export type OrganizationProfileData = {
   reviewsCount: number;
   phone: string | null;
   addressLine: string;
+  /** Витринное описание организации. */
+  description: string | null;
   yearsInBusiness: number;
   /** Уникальные клиенты с бронью в `done` (см. API `clientsCount`). */
   clientsCount: number;

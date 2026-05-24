@@ -5,12 +5,16 @@
  */
 export const ADV_PLACEMENT_HOME_PROMO = 'home_promo';
 
+/** Full-bleed карусель главной: 16:9, достаточно для max-w-7xl @2x. */
+function promoImageUrl(photoId) {
+  return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=1920&h=1080&q=85`;
+}
+
 const homePromoSpecs = [
   {
     refKey: 'adv_home_promo_0',
     sortOrder: 0,
-    imageUrl:
-      'https://images.unsplash.com/photo-1519823551278-64ac92734fb1?w=400&h=300&fit=crop',
+    imageUrl: promoImageUrl('photo-1519823551278-64ac92734fb1'),
     targetUrl: null,
     ownerKind: 'internal',
     canonical: {
@@ -39,8 +43,7 @@ const homePromoSpecs = [
   {
     refKey: 'adv_home_promo_1',
     sortOrder: 1,
-    imageUrl:
-      'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&h=300&fit=crop',
+    imageUrl: promoImageUrl('photo-1544161515-4ab6ce6db874'),
     targetUrl: null,
     ownerKind: 'internal',
     canonical: {
@@ -69,8 +72,7 @@ const homePromoSpecs = [
   {
     refKey: 'adv_home_promo_2',
     sortOrder: 2,
-    imageUrl:
-      'https://images.unsplash.com/photo-1600334129128-685c5582fd35?w=400&h=300&fit=crop',
+    imageUrl: promoImageUrl('photo-1540555700478-4be289fbecef'),
     targetUrl: null,
     ownerKind: 'internal',
     canonical: {

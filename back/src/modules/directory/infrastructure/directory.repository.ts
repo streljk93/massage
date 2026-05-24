@@ -1261,6 +1261,40 @@ export class DirectoryRepository {
     });
   }
 
+  /** Сколько организаций в каталоге по тем же фильтрам, что и GET /organizations (без курсора). */
+  async countOrganizationsForDirectoryList(args: {
+    filters: OrganizationListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
+  }): Promise<number> {
+    const parts = await this.organizationDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (parts == null) {
+      return 0;
+    }
+    return await this.prisma.organization.count({
+      where: { AND: parts },
+    });
+  }
+
+  /** Сколько мастеров в каталоге по тем же фильтрам, что и GET /specialists (без курсора). */
+  async countSpecialistsForDirectoryList(args: {
+    filters: SpecialistListApiFilters | null;
+    radius: DirectoryListRadiusFilter | null;
+  }): Promise<number> {
+    const parts = await this.specialistDirectoryAndParts(
+      args.filters,
+      args.radius,
+    );
+    if (parts == null) {
+      return 0;
+    }
+    return await this.prisma.specialist.count({
+      where: { AND: parts },
+    });
+  }
+
   async findOrganizationById(id: string): Promise<OrganizationListRow | null> {
     const eligible =
       await queryOrganizationIdsInDirectoryWithCurrentWorkplaceSpecialists(

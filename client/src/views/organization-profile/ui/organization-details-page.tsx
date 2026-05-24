@@ -7,7 +7,11 @@ import { AppBackButton } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 import { httpsHrefFromWebsiteStored } from "@/shared/lib/http-href";
 import { telHrefFromDisplayPhone } from "@/shared/lib/tel-href";
-import { HomeBottomNav } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  consumerPageRootClass,
+  consumerSubpageContentClass,
+} from "@/widgets/home";
 
 export type OrganizationDetailsStaffItem = {
   id: string;
@@ -68,12 +72,16 @@ export function OrganizationDetailsPage({
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      <div className="mx-auto w-full max-w-lg flex-1 px-4 pt-3 pb-28">
+    <div className={consumerPageRootClass()}>
+      <div className={consumerSubpageContentClass()}>
         <div className="mb-6 flex items-center gap-2">
-          <AppBackButton fallback={fallback} ariaLabel={t("backAria")} />
+          <AppBackButton
+            fallback={fallback}
+            ariaLabel={t("backAria")}
+            className="lg:hidden"
+          />
           <div className="min-w-0">
-            <h1 className="font-heading text-lg font-semibold leading-tight text-foreground">
+            <h1 className="font-heading text-lg font-semibold leading-tight text-foreground lg:text-2xl">
               {t("title")}
             </h1>
             <p className="truncate text-sm text-muted-foreground">{name}</p>

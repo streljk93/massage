@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { vnNoonUtcForCalendarYmd } from "@/shared/lib/datetime/vn-listing-datetime";
 import {
   directoryOrganizationHasFreeSlotAt,
   directorySpecialistHasFreeSlotAt,
@@ -44,18 +43,28 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/shared/ui/shadcn/empty";
-import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  HomeScreenHeader,
+  consumerPageMainClass,
+  consumerPageRootClass,
+} from "@/widgets/home";
 import {
   createBrowserSdkClient,
   directoryGetCatalogFilterOptions,
   personalizationGetRecommendations,
+  type DirectoryGetCatalogFilterOptionsResponse,
   type OrganizationsListResponse,
   type SpecialistsListResponse,
 } from "@/shared/api";
 import { useCursorPaginationSentinel } from "@/shared/lib/use-cursor-pagination-sentinel";
 import { useDelayedLoadingIndicator } from "@/shared/lib/use-delayed-loading-indicator";
 import { useListingClock } from "@/shared/lib/use-listing-clock";
-import { CursorPaginationDirectoryListSkeleton } from "@/shared/ui/cursor-pagination-directory-card-skeleton";
+import { formatVndListingLabel } from "@/shared/lib/vnd-amount-input";
+import {
+  CursorPaginationDirectoryCardSkeleton,
+  CursorPaginationDirectoryListSkeleton,
+} from "@/shared/ui/cursor-pagination-directory-card-skeleton";
 import { organizationCardSeedFromApi } from "@/entities/organizations";
 import { specialistCardSeedFromApi } from "@/entities/specialists";
 import { homeUser } from "@/widgets/home/lib/mock-data";
@@ -76,24 +85,28 @@ import {
   type SearchOrganizationsListApiFilters,
   type SearchSpecialistsListApiFilters,
 } from "../lib/search-directory-list-api-filters";
-import { SEARCH_TABS } from "@/shared/lib/search-tab";
+import { SEARCH_TABS, type SearchTab } from "@/shared/lib/search-tab";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
+import { SEARCH_DIRECTORY_CURSOR_PAGE_SIZE } from "@/shared/config/directory-cursor-pagination";
 import { trackSearchFiltersApplied } from "@/shared/lib/personalization/personalization-track";
 import {
   applySearchUrlPatch,
+  buildSearchFiltersResultHintSignature,
   buildSearchMapQueryString,
   buildSearchQueryString,
   parseSearchUrlFilters,
   type SearchUrlFilters,
 } from "../lib/search-url-filters";
 import {
-  buildSearchSlotDayOptions,
   buildSearchSlotTimeOptions,
 } from "../lib/search-slot-time-options";
+import { SearchFiltersResultHint } from "./search-filters-result-hint";
+import { SearchFiltersSidebar } from "./search-filters-sidebar";
 import {
-  CatalogFiltersDialog,
+  CatalogFilters,
   priceSliderStep,
   specialistListPriceBounds,
+  type CatalogFiltersProps,
   type CatalogSlotTimeFilterValue,
 } from "@/entities/catalog";
 
@@ -102,6 +115,10 @@ export type SearchPageClientProps = {
   initialSpecialistsPage: SpecialistsListResponse | null;
   initialOrgListPrefetch: SearchOrganizationsListPrefetchSnapshot;
   initialSpecListPrefetch: SearchSpecialistsListPrefetchSnapshot;
+  initialCatalogFilterOrganizations: DirectoryGetCatalogFilterOptionsResponse | null;
+  initialCatalogFilterSpecialists: DirectoryGetCatalogFilterOptionsResponse | null;
+  /** ISO-время с SSR для согласованной гидрации слотов и карточек. */
+  initialListingNowIso: string;
 };
 
 export function SearchPageClient({
@@ -109,6 +126,9 @@ export function SearchPageClient({
   initialSpecialistsPage,
   initialOrgListPrefetch,
   initialSpecListPrefetch,
+  initialCatalogFilterOrganizations,
+  initialCatalogFilterSpecialists,
+  initialListingNowIso,
 }: SearchPageClientProps) {
   const tSearch = useTranslations("search");
   const tSlots = useTranslations("slots");
@@ -116,7 +136,7 @@ export function SearchPageClient({
   const locale = useLocale() as AppLocale;
   const { data: session } = useSession();
   const accessToken = session?.accessToken ?? "";
-  const listingNow = useListingClock();
+  const listingNow = useListingClock(60_000, initialListingNowIso);
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -220,7 +240,7 @@ export function SearchPageClient({
   const replaceUrlFilters = useCallback(
     (next: SearchUrlFilters) => {
       const qs = buildSearchQueryString(next);
-      router.replace(qs ? `${pathname}?${qs}` : pathname);
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname],
   );
@@ -229,24 +249,17 @@ export function SearchPageClient({
     if (searchParams.get("filters") !== "1") {
       return;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- открыть фильтры по `filters=1` при возврате с карты; сразу убираем параметр из URL
-    setDraftOrgCategorySlugs(urlFilters.orgCategorySlugs);
-    setDraftSpecCategorySlugs(urlFilters.specCategorySlugs);
-    setDraftOrgBodyZoneSlugs(urlFilters.orgBodyZoneSlugs);
-    setDraftSpecBodyZoneSlugs(urlFilters.specBodyZoneSlugs);
-    setDraftSpecialistGender(urlFilters.specialistGender);
-    setDraftSlotPick({
-      day: urlFilters.slotDay ?? "",
-      time: urlFilters.slotTime ?? "",
-    });
-    setDraftSpecPriceRange(null);
-    setDraftResetRequested(false);
-    setFiltersOpen(true);
+    const desktop =
+      typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 1024px)").matches;
+    if (!desktop) {
+      setFiltersOpen(true);
+    }
     const next = new URLSearchParams(searchParams.toString());
     next.delete("filters");
     const q = next.toString();
     router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
-  }, [searchParams, pathname, router, urlFilters]);
+  }, [searchParams, pathname, router]);
 
   const urlFiltersRef = useRef(urlFilters);
 
@@ -256,21 +269,10 @@ export function SearchPageClient({
 
   const [qDraft, setQDraft] = useState(urlFilters.q);
   const qDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [draftOrgCategorySlugs, setDraftOrgCategorySlugs] = useState<string[]>([]);
-  const [draftSpecCategorySlugs, setDraftSpecCategorySlugs] = useState<string[]>([]);
-  const [draftOrgBodyZoneSlugs, setDraftOrgBodyZoneSlugs] = useState<string[]>([]);
-  const [draftSpecBodyZoneSlugs, setDraftSpecBodyZoneSlugs] = useState<string[]>([]);
-  const [draftSpecialistGender, setDraftSpecialistGender] = useState<
-    "male" | "female" | null
+  const priceFilterDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [localSpecPriceRange, setLocalSpecPriceRange] = useState<
+    [number, number] | null
   >(null);
-  const [draftSlotPick, setDraftSlotPick] = useState<CatalogSlotTimeFilterValue>({
-    day: "",
-    time: "",
-  });
-  const [draftSpecPriceRange, setDraftSpecPriceRange] = useState<[number, number] | null>(
-    null,
-  );
-  const [draftResetRequested, setDraftResetRequested] = useState(false);
 
   // Синхронизация черновика строки поиска с URL (назад/вперёд, обновление query не из поля).
   useLayoutEffect(() => {
@@ -282,6 +284,9 @@ export function SearchPageClient({
     return () => {
       if (qDebounceRef.current != null) {
         clearTimeout(qDebounceRef.current);
+      }
+      if (priceFilterDebounceRef.current != null) {
+        clearTimeout(priceFilterDebounceRef.current);
       }
     };
   }, []);
@@ -327,6 +332,13 @@ export function SearchPageClient({
       replaceUrlFilters(next);
     },
     [replaceUrlFilters],
+  );
+
+  const commitFilterPatch = useCallback(
+    (patch: Partial<SearchUrlFilters>) => {
+      commitUrlFilters(applySearchUrlPatch(urlFiltersRef.current, patch));
+    },
+    [commitUrlFilters],
   );
 
   const applySearchSort = useCallback(
@@ -381,10 +393,14 @@ export function SearchPageClient({
     tab === "organizations" ?
       urlFilters.orgBodyZoneSlugs
     : urlFilters.specBodyZoneSlugs;
-  const dialogCategorySlugs =
-    tab === "organizations" ? draftOrgCategorySlugs : draftSpecCategorySlugs;
-  const dialogBodyZoneSlugs =
-    tab === "organizations" ? draftOrgBodyZoneSlugs : draftSpecBodyZoneSlugs;
+
+  const slotPickValue = useMemo(
+    (): CatalogSlotTimeFilterValue => ({
+      day: urlFilters.slotDay ?? "",
+      time: urlFilters.slotTime ?? "",
+    }),
+    [urlFilters.slotDay, urlFilters.slotTime],
+  );
 
   const orgApiFilters = useMemo((): SearchOrganizationsListApiFilters => {
     return {
@@ -462,17 +478,6 @@ export function SearchPageClient({
   );
 
   const slotTimeOptionsStatic = useMemo(() => buildSearchSlotTimeOptions(), []);
-  const slotDayOptions = useMemo(
-    () =>
-      buildSearchSlotDayOptions(listingNow, (calendarDate) =>
-        format.dateTime(vnNoonUtcForCalendarYmd(calendarDate), {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        }),
-      ),
-    [listingNow, format],
-  );
 
   const displayOrganizations = useMemo(() => {
     const d = urlFilters.slotDay;
@@ -536,11 +541,25 @@ export function SearchPageClient({
     );
   }, [tab, organizations, specialists, locale]);
 
+  const catalogFilterInitialData = useMemo((): DirectoryGetCatalogFilterOptionsResponse | undefined => {
+    const initial =
+      tab === "organizations" ?
+        initialCatalogFilterOrganizations
+      : initialCatalogFilterSpecialists;
+    return initial ?? undefined;
+  }, [
+    tab,
+    initialCatalogFilterOrganizations,
+    initialCatalogFilterSpecialists,
+  ]);
+
   const { data: catalogFilterApi, isSuccess: catalogFilterQuerySuccess } =
     useQuery({
       queryKey: ["directoryCatalogFilter", tab, locale] as const,
-      enabled: filtersOpen,
+      enabled: true,
       retry: 1,
+      initialData: catalogFilterInitialData,
+      staleTime: 5 * 60 * 1000,
       queryFn: async () => {
         const res = await directoryGetCatalogFilterOptions({
           client: createBrowserSdkClient(accessToken, { locale }),
@@ -558,9 +577,8 @@ export function SearchPageClient({
     });
 
   const categoryOptions = useMemo(() => {
-    const fromApi = catalogFilterApi?.categories;
-    if (fromApi && fromApi.length > 0) {
-      return fromApi;
+    if (catalogFilterApi?.categories != null) {
+      return catalogFilterApi.categories;
     }
     return categoryOptionsFallback;
   }, [catalogFilterApi, categoryOptionsFallback]);
@@ -585,49 +603,72 @@ export function SearchPageClient({
     );
   }, [catalogFilterApi?.priceRangeVnd, priceSpecialistBounds]);
 
-  const priceFilterForDialog = useMemo(() => {
-    if (tab !== "specialists") {
-      return null;
-    }
+  const appliedSpecPriceRange = useMemo((): [number, number] | null => {
     if (specialistPriceExtent == null) {
       return null;
     }
     const ext = specialistPriceExtent;
-    const storedMin = urlFilters.priceMinVnd;
-    const storedMax = urlFilters.priceMaxVnd;
-    const fromApplied: [number, number] = [
+    return [
       Math.max(
         ext.min,
-        Math.min(storedMin ?? ext.min, ext.max),
+        Math.min(urlFilters.priceMinVnd ?? ext.min, ext.max),
       ),
       Math.max(
         ext.min,
-        Math.min(storedMax ?? ext.max, ext.max),
+        Math.min(urlFilters.priceMaxVnd ?? ext.max, ext.max),
       ),
     ];
-    const value = draftSpecPriceRange ?? fromApplied;
+  }, [
+    specialistPriceExtent,
+    urlFilters.priceMinVnd,
+    urlFilters.priceMaxVnd,
+  ]);
+
+  useEffect(() => {
+    if (appliedSpecPriceRange != null) {
+      setLocalSpecPriceRange(appliedSpecPriceRange);
+    }
+  }, [appliedSpecPriceRange]);
+
+  const priceFilterForDialog = useMemo(() => {
+    if (tab !== "specialists") {
+      return null;
+    }
+    if (specialistPriceExtent == null || appliedSpecPriceRange == null) {
+      return null;
+    }
+    const ext = specialistPriceExtent;
+    const value = localSpecPriceRange ?? appliedSpecPriceRange;
     return {
       extent: ext,
       value,
       step: priceSliderStep(ext.min, ext.max),
       onValueChange: (v: [number, number]) => {
-        setDraftResetRequested(false);
-        setDraftSpecPriceRange(v);
+        setLocalSpecPriceRange(v);
+        if (priceFilterDebounceRef.current != null) {
+          clearTimeout(priceFilterDebounceRef.current);
+        }
+        priceFilterDebounceRef.current = setTimeout(() => {
+          priceFilterDebounceRef.current = null;
+          const base = urlFiltersRef.current;
+          commitUrlFilters(
+            applySearchUrlPatch(
+              base,
+              v[0] <= ext.min && v[1] >= ext.max ?
+                { priceMinVnd: null, priceMaxVnd: null }
+              : { priceMinVnd: v[0], priceMaxVnd: v[1] },
+            ),
+          );
+        }, 300);
       },
-      formatValue: (n: number) =>
-        format.number(n, {
-          style: "currency",
-          currency: "VND",
-          maximumFractionDigits: 0,
-        }),
+      formatValue: formatVndListingLabel,
     };
   }, [
     tab,
     specialistPriceExtent,
-    urlFilters.priceMinVnd,
-    urlFilters.priceMaxVnd,
-    draftSpecPriceRange,
-    format,
+    appliedSpecPriceRange,
+    localSpecPriceRange,
+    commitUrlFilters,
   ]);
 
   const readOnlyOrgVndLine = useMemo(() => {
@@ -638,14 +679,11 @@ export function SearchPageClient({
     if (r == null) {
       return null;
     }
-    const fmt = (n: number) =>
-      format.number(n, {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-      });
-    return { min: fmt(r.min), max: fmt(r.max) };
-  }, [tab, catalogFilterApi?.priceRangeVnd, format]);
+    return {
+      min: formatVndListingLabel(r.min),
+      max: formatVndListingLabel(r.max),
+    };
+  }, [tab, catalogFilterApi?.priceRangeVnd]);
 
   const hasPriceInListData = useMemo(
     () =>
@@ -666,13 +704,15 @@ export function SearchPageClient({
 
   const hasActiveSlotFilter =
     urlFilters.slotDay != null && urlFilters.slotTime != null;
+  const hasAnySlotUrlPick =
+    urlFilters.slotDay != null || urlFilters.slotTime != null;
 
   const hasActiveFilters =
     filterCategorySlugs.length > 0 ||
     filterBodyZoneSlugs.length > 0 ||
     (tab === "specialists" && urlFilters.specialistGender != null) ||
     hasActivePriceFilter ||
-    hasActiveSlotFilter ||
+    hasAnySlotUrlPick ||
     hasRadiusFilter;
 
   const mapHref = useMemo(() => {
@@ -691,100 +731,157 @@ export function SearchPageClient({
     return `${format.number(m, { maximumFractionDigits: 0 })} m`;
   }, [format, hasRadiusFilter, urlFilters.radiusM]);
 
-  function toggleFilterCategory(slug: string) {
-    setDraftResetRequested(false);
+  const searchDirectoryMatchingCount = useMemo(() => {
     if (tab === "organizations") {
-      setDraftOrgCategorySlugs((current) =>
-        current.includes(slug) ?
-          current.filter((s) => s !== slug)
-        : [...current, slug],
-      );
-    } else {
-      setDraftSpecCategorySlugs((current) =>
-        current.includes(slug) ?
-          current.filter((s) => s !== slug)
-        : [...current, slug],
+      return organizationsInfinite.data?.pages[0]?.matchingCount;
+    }
+    return specialistsInfinite.data?.pages[0]?.matchingCount;
+  }, [
+    tab,
+    organizationsInfinite.data?.pages,
+    specialistsInfinite.data?.pages,
+  ]);
+
+  const filtersResultHintDisplayCount = useMemo(() => {
+    if (hasActiveSlotFilter) {
+      return (
+        tab === "organizations" ?
+          displayOrganizations.length
+        : displaySpecialists.length
       );
     }
+    return (
+      searchDirectoryMatchingCount ??
+      (tab === "organizations" ? organizations.length : specialists.length)
+    );
+  }, [
+    hasActiveSlotFilter,
+    tab,
+    displayOrganizations.length,
+    displaySpecialists.length,
+    searchDirectoryMatchingCount,
+    organizations.length,
+    specialists.length,
+  ]);
+
+  const filtersResultHintSig = useMemo(
+    () => buildSearchFiltersResultHintSignature(urlFilters),
+    [urlFilters],
+  );
+
+  const hintActiveTabRef = useRef(tab);
+  const filteredListCountHintRef = useRef(filtersResultHintDisplayCount);
+
+  useEffect(() => {
+    hintActiveTabRef.current = tab;
+  }, [tab]);
+
+  useEffect(() => {
+    filteredListCountHintRef.current = filtersResultHintDisplayCount;
+  }, [filtersResultHintDisplayCount]);
+
+  const filtersHintPrevSigRef = useRef<string | null>(null);
+  const filtersResultHintHideRef = useRef<number | null>(null);
+  const [filtersResultHint, setFiltersResultHint] = useState<{
+    key: number;
+    count: number;
+    tab: SearchTab;
+  } | null>(null);
+
+  useEffect(() => {
+    const prev = filtersHintPrevSigRef.current;
+    if (prev === filtersResultHintSig) {
+      return;
+    }
+    if (prev === null) {
+      filtersHintPrevSigRef.current = filtersResultHintSig;
+      return;
+    }
+
+    filtersHintPrevSigRef.current = filtersResultHintSig;
+
+    if (filtersResultHintHideRef.current != null) {
+      window.clearTimeout(filtersResultHintHideRef.current);
+      filtersResultHintHideRef.current = null;
+    }
+    setFiltersResultHint(null);
+
+    const showTimer = window.setTimeout(() => {
+      if (!window.matchMedia("(min-width: 1024px)").matches) {
+        return;
+      }
+      setFiltersResultHint({
+        key: Date.now(),
+        count: filteredListCountHintRef.current,
+        tab: hintActiveTabRef.current,
+      });
+
+      filtersResultHintHideRef.current = window.setTimeout(() => {
+        setFiltersResultHint(null);
+        filtersResultHintHideRef.current = null;
+      }, 2600);
+    }, 400);
+
+    return () => {
+      window.clearTimeout(showTimer);
+      if (filtersResultHintHideRef.current != null) {
+        window.clearTimeout(filtersResultHintHideRef.current);
+        filtersResultHintHideRef.current = null;
+      }
+    };
+  }, [filtersResultHintSig]);
+
+  function toggleFilterCategory(slug: string) {
+    const base = urlFiltersRef.current;
+    if (tab === "organizations") {
+      const current = base.orgCategorySlugs;
+      const next = current.includes(slug) ?
+        current.filter((s) => s !== slug)
+      : [...current, slug];
+      commitFilterPatch({ orgCategorySlugs: next });
+      return;
+    }
+    const current = base.specCategorySlugs;
+    const next = current.includes(slug) ?
+      current.filter((s) => s !== slug)
+    : [...current, slug];
+    commitFilterPatch({ specCategorySlugs: next });
   }
 
   function setFilterBodyZones(next: string[]) {
-    setDraftResetRequested(false);
     if (tab === "organizations") {
-      setDraftOrgBodyZoneSlugs(next);
-    } else {
-      setDraftSpecBodyZoneSlugs(next);
+      commitFilterPatch({ orgBodyZoneSlugs: next });
+      return;
     }
+    commitFilterPatch({ specBodyZoneSlugs: next });
   }
 
   function resetAllFilters() {
-    setDraftResetRequested(true);
-    setDraftSlotPick({ day: "", time: "" });
-    // Сброс категорий делаем для обеих вкладок, чтобы legacy-вход с `category`
-    // (из главной) не оставлял скрытый фильтр во второй вкладке.
-    setDraftOrgCategorySlugs([]);
-    setDraftSpecCategorySlugs([]);
-    if (tab === "organizations") {
-      setDraftOrgBodyZoneSlugs([]);
-    } else {
-      setDraftSpecBodyZoneSlugs([]);
-      setDraftSpecialistGender(null);
-      if (specialistPriceExtent != null) {
-        setDraftSpecPriceRange([
-          specialistPriceExtent.min,
-          specialistPriceExtent.max,
-        ]);
-      } else {
-        setDraftSpecPriceRange(null);
-      }
+    if (priceFilterDebounceRef.current != null) {
+      clearTimeout(priceFilterDebounceRef.current);
+      priceFilterDebounceRef.current = null;
     }
+    const base = urlFiltersRef.current;
+    const next = applySearchUrlPatch(base, {
+      orgCategorySlugs: [],
+      specCategorySlugs: [],
+      orgBodyZoneSlugs: [],
+      specBodyZoneSlugs: [],
+      specialistGender: null,
+      slotDay: null,
+      slotTime: null,
+      priceMinVnd: null,
+      priceMaxVnd: null,
+      sort: SEARCH_DIRECTORY_DEFAULT_SORT,
+      radiusM: null,
+      radiusLat: null,
+      radiusLng: null,
+    });
+    commitUrlFilters(next);
   }
 
   const openFiltersDialog = () => {
-    setDraftOrgCategorySlugs(urlFiltersRef.current.orgCategorySlugs);
-    setDraftSpecCategorySlugs(urlFiltersRef.current.specCategorySlugs);
-    setDraftOrgBodyZoneSlugs(urlFiltersRef.current.orgBodyZoneSlugs);
-    setDraftSpecBodyZoneSlugs(urlFiltersRef.current.specBodyZoneSlugs);
-    setDraftSpecialistGender(urlFiltersRef.current.specialistGender);
-    setDraftSlotPick({
-      day: urlFiltersRef.current.slotDay ?? "",
-      time: urlFiltersRef.current.slotTime ?? "",
-    });
-    setDraftSpecPriceRange(null);
-    setDraftResetRequested(false);
     setFiltersOpen(true);
-  };
-
-  const applyDraftFilters = () => {
-    const base = urlFiltersRef.current;
-    let next = applySearchUrlPatch(base, {
-      orgCategorySlugs: draftOrgCategorySlugs,
-      specCategorySlugs: draftSpecCategorySlugs,
-      orgBodyZoneSlugs: draftOrgBodyZoneSlugs,
-      specBodyZoneSlugs: draftSpecBodyZoneSlugs,
-      specialistGender: draftSpecialistGender,
-      slotDay: draftSlotPick.day && draftSlotPick.time ? draftSlotPick.day : null,
-      slotTime:
-        draftSlotPick.day && draftSlotPick.time ? draftSlotPick.time : null,
-    });
-    if (tab === "specialists" && specialistPriceExtent != null) {
-      const v = draftSpecPriceRange;
-      next = applySearchUrlPatch(
-        next,
-        v == null || (v[0] <= specialistPriceExtent.min && v[1] >= specialistPriceExtent.max) ?
-          { priceMinVnd: null, priceMaxVnd: null }
-        : { priceMinVnd: v[0], priceMaxVnd: v[1] },
-      );
-    }
-    if (draftResetRequested) {
-      next = applySearchUrlPatch(next, {
-        sort: SEARCH_DIRECTORY_DEFAULT_SORT,
-        radiusM: null,
-        radiusLat: null,
-        radiusLng: null,
-      });
-    }
-    commitUrlFilters(next);
   };
 
   /**
@@ -831,9 +928,265 @@ export function SearchPageClient({
     specialists.length === 0 &&
     (hasActiveFilters || urlFilters.q.trim() !== "");
 
+  const catalogFiltersProps = useMemo((): CatalogFiltersProps => {
+    return {
+      showResetButton: hasActiveFilters,
+      onResetFilters: resetAllFilters,
+      selectedCategorySlugs: filterCategorySlugs,
+      onToggleCategory: toggleFilterCategory,
+      selectedBodyZoneSlugs: filterBodyZoneSlugs,
+      bodyZoneOptions,
+      onChangeBodyZoneSlugs: setFilterBodyZones,
+      genderOptions: tab === "specialists" ? genderOptions : [],
+      selectedGender: tab === "specialists" ? urlFilters.specialistGender : null,
+      onSelectGender:
+        tab === "specialists"
+          ? (gender) => {
+              commitFilterPatch({ specialistGender: gender });
+            }
+          : undefined,
+      categoryOptions,
+      priceFilter: priceFilterForDialog,
+      slotTimeFilter: {
+        value: slotPickValue,
+        onChange: (next) => {
+          commitFilterPatch({
+            slotDay: next.day.trim() ? next.day : null,
+            slotTime: next.time.trim() ? next.time : null,
+          });
+        },
+        timeOptions: slotTimeOptionsStatic,
+      },
+      readOnlyVndLine: readOnlyOrgVndLine,
+      showReadOnlyVndNote: readOnlyOrgVndLine != null,
+      showPriceDataUnavailable:
+        tab === "specialists" &&
+        catalogFilterQuerySuccess &&
+        !catalogFilterApi?.priceRangeVnd &&
+        !hasPriceInListData &&
+        specialists.length > 0,
+      radiusMapFilter: {
+        isActive: hasRadiusFilter,
+        activeDetailLabel: radiusFilterDetailLabel,
+        onSelectOnMap: () => {
+          setFiltersOpen(false);
+          const base = urlFiltersRef.current;
+          const qs = buildSearchMapQueryString(base, { pickRadius: true });
+          router.push(
+            qs ? `/search/map?${qs}` : "/search/map?pickRadius=1",
+          );
+        },
+      },
+    };
+  }, [
+    hasActiveFilters,
+    resetAllFilters,
+    filterCategorySlugs,
+    toggleFilterCategory,
+    filterBodyZoneSlugs,
+    bodyZoneOptions,
+    setFilterBodyZones,
+    tab,
+    genderOptions,
+    urlFilters.specialistGender,
+    commitFilterPatch,
+    categoryOptions,
+    priceFilterForDialog,
+    slotPickValue,
+    slotTimeOptionsStatic,
+    readOnlyOrgVndLine,
+    catalogFilterQuerySuccess,
+    catalogFilterApi?.priceRangeVnd,
+    hasPriceInListData,
+    specialists.length,
+    hasRadiusFilter,
+    radiusFilterDetailLabel,
+    router,
+  ]);
+
+  const listPanel = (
+    <div className="space-y-2.5" role="tabpanel">
+      {orgListError || specListError ?
+        <p className="text-center text-sm text-destructive" role="alert">
+          {tSearch("listLoadError")}
+        </p>
+      : rawListLoading && !hasServerListData ?
+        showListSkeleton ?
+          <CursorPaginationDirectoryListSkeleton
+            count={SEARCH_DIRECTORY_CURSOR_PAGE_SIZE}
+          />
+        : <div className="min-h-80 w-full shrink-0" aria-hidden />
+      : tab === "organizations" ?
+        <>
+          {showSalonsEmptyFilterMessage ?
+            <Empty className="rounded-2xl bg-surface-light/50 py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchX aria-hidden />
+                </EmptyMedia>
+                <EmptyDescription className="max-w-md font-medium text-foreground">
+                  {tSearch("noSalonsForFilters")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          : null}
+          {hasActiveSlotFilter &&
+          !orgListLoading &&
+          organizations.length > 0 &&
+          displayOrganizations.length === 0 ?
+            <Empty className="rounded-2xl bg-surface-light/50 py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CalendarClock aria-hidden />
+                </EmptyMedia>
+                <EmptyTitle className="text-muted-foreground">
+                  {tSearch("noSlotMatch")}
+                </EmptyTitle>
+                <EmptyDescription className="max-w-md text-xs leading-relaxed">
+                  {tSearch("slotFilterClientNote")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          : null}
+          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0 xl:grid-cols-2">
+            {displayOrganizations.map((o) => {
+              const card = organizationCardSeedFromApi(o, listingNow);
+              return (
+                <OrganizationCard
+                  key={card.id}
+                  {...card}
+                  imageAlt={card.name}
+                  profileHref={`/organizations/${o.id}`}
+                  slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                    locale,
+                    maxGroups: 5,
+                    now: listingNow,
+                  })}
+                />
+              );
+            })}
+            {showNextPageSkeleton ?
+              Array.from({ length: SEARCH_DIRECTORY_CURSOR_PAGE_SIZE }, (_, skeletonIndex) => (
+                <CursorPaginationDirectoryCardSkeleton
+                  key={`org-next-page-${skeletonIndex}`}
+                />
+              ))
+            : null}
+          </div>
+          <div
+            ref={orgSentinelRef}
+            className="h-2 w-full shrink-0"
+            aria-hidden
+          />
+        </>
+      : <>
+          {showSpecialistsEmptyFilterMessage ?
+            <Empty className="rounded-2xl bg-surface-light/50 py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <SearchX aria-hidden />
+                </EmptyMedia>
+                <EmptyDescription className="max-w-md font-medium text-foreground">
+                  {tSearch("noSpecialistsForFilters")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          : null}
+          {hasActiveSlotFilter &&
+          !specListLoading &&
+          specialists.length > 0 &&
+          displaySpecialists.length === 0 ?
+            <Empty className="rounded-2xl bg-surface-light/50 py-4">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <CalendarClock aria-hidden />
+                </EmptyMedia>
+                <EmptyTitle className="text-muted-foreground">
+                  {tSearch("noSlotMatch")}
+                </EmptyTitle>
+                <EmptyDescription className="max-w-md text-xs leading-relaxed">
+                  {tSearch("slotFilterClientNote")}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          : null}
+          <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0 xl:grid-cols-2">
+            {displaySpecialists.map((s) => {
+              const card = specialistCardSeedFromApi(s, listingNow);
+              return (
+                <SpecialistCard
+                  key={card.id}
+                  {...card}
+                  imageAlt={card.name}
+                  profileHref={`/specialists/${s.id}`}
+                  slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
+                    locale,
+                    maxGroups: 5,
+                    now: listingNow,
+                  })}
+                />
+              );
+            })}
+            {showNextPageSkeleton ?
+              Array.from({ length: SEARCH_DIRECTORY_CURSOR_PAGE_SIZE }, (_, skeletonIndex) => (
+                <CursorPaginationDirectoryCardSkeleton
+                  key={`spec-next-page-${skeletonIndex}`}
+                />
+              ))
+            : null}
+          </div>
+          <div
+            ref={specSentinelRef}
+            className="h-2 w-full shrink-0"
+            aria-hidden
+          />
+        </>
+      }
+    </div>
+  );
+
+  const renderSearchTabButtons = (layout: "mobile" | "desktop") =>
+    SEARCH_TABS.map(({ id, labelKey }) => {
+      const selected = tab === id;
+      return (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={selected}
+          className={cn(
+            motion.interactivePressStrong,
+            "rounded-full py-2.5 text-sm font-medium transition-colors",
+            layout === "mobile" ?
+              "min-w-0 flex-1 text-center"
+            : "flex h-9 min-w-0 w-full items-center justify-center px-2 text-center",
+            selected
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => {
+            const base = urlFiltersRef.current;
+            if (id === "organizations") {
+              commitUrlFilters(
+                applySearchUrlPatch(base, {
+                  tab: id,
+                  priceMinVnd: null,
+                  priceMaxVnd: null,
+                }),
+              );
+            } else {
+              commitUrlFilters(applySearchUrlPatch(base, { tab: id }));
+            }
+          }}
+        >
+          {tSearch(labelKey)}
+        </button>
+      );
+    });
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-surface-background">
-      <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className={consumerPageRootClass("min-h-0 flex-1")}>
+      <main className={consumerPageMainClass("space-y-3")}>
         <HomeScreenHeader
           title={tSearch("title")}
           avatarAlt={homeUser.firstName}
@@ -841,47 +1194,22 @@ export function SearchPageClient({
         />
 
         <div
-          className="flex rounded-full bg-muted p-1"
+          className="flex rounded-full bg-muted p-1 lg:hidden"
           role="tablist"
           aria-label={tSearch("tablistAria")}
         >
-          {SEARCH_TABS.map(({ id, labelKey }) => {
-            const selected = tab === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                className={cn(
-                  motion.interactivePressStrong,
-                  "min-w-0 flex-1 rounded-full py-2.5 text-center text-sm font-medium transition-colors",
-                  selected
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => {
-                  const base = urlFiltersRef.current;
-                  if (id === "organizations") {
-                    commitUrlFilters(
-                      applySearchUrlPatch(base, {
-                        tab: id,
-                        priceMinVnd: null,
-                        priceMaxVnd: null,
-                      }),
-                    );
-                  } else {
-                    commitUrlFilters(applySearchUrlPatch(base, { tab: id }));
-                  }
-                }}
-              >
-                {tSearch(labelKey)}
-              </button>
-            );
-          })}
+          {renderSearchTabButtons("mobile")}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
+          <div
+            className="hidden h-11 max-w-[318px] shrink-0 grid-cols-2 rounded-full bg-muted p-1 lg:mr-4 lg:grid lg:w-full lg:items-center"
+            role="tablist"
+            aria-label={tSearch("tablistAria")}
+          >
+            {renderSearchTabButtons("desktop")}
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
           <div className="min-w-0 flex-1">
             <Input
               value={qDraft}
@@ -909,7 +1237,7 @@ export function SearchPageClient({
             type="button"
             variant="secondary"
             tone="light"
-            className="relative size-11 shrink-0 rounded-full p-0"
+            className="relative size-11 shrink-0 rounded-full p-0 lg:hidden"
             aria-label={tSearch("filtersAria")}
             aria-expanded={filtersOpen}
             onClick={() => {
@@ -996,194 +1324,39 @@ export function SearchPageClient({
               <MapIcon className="size-5 text-muted-foreground" aria-hidden />
             </Link>
           </Button>
+          </div>
         </div>
 
-        <div className="space-y-2.5" role="tabpanel">
-          {orgListError || specListError ?
-            <p className="text-center text-sm text-destructive" role="alert">
-              {tSearch("listLoadError")}
-            </p>
-          : rawListLoading && !hasServerListData ?
-            showListSkeleton ?
-              <CursorPaginationDirectoryListSkeleton count={6} />
-            : <div className="min-h-80 w-full shrink-0" aria-hidden />
-          : tab === "organizations" ?
-            <>
-              {showSalonsEmptyFilterMessage ?
-                <Empty className="rounded-2xl bg-surface-light/50 py-4">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <SearchX aria-hidden />
-                    </EmptyMedia>
-                    <EmptyDescription className="max-w-md font-medium text-foreground">
-                      {tSearch("noSalonsForFilters")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              : null}
-              {hasActiveSlotFilter &&
-              !orgListLoading &&
-              organizations.length > 0 &&
-              displayOrganizations.length === 0 ?
-                <Empty className="rounded-2xl bg-surface-light/50 py-4">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <CalendarClock aria-hidden />
-                    </EmptyMedia>
-                    <EmptyTitle className="text-muted-foreground">
-                      {tSearch("noSlotMatch")}
-                    </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-xs leading-relaxed">
-                      {tSearch("slotFilterClientNote")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              : null}
-              {displayOrganizations.map((o) => {
-                const card = organizationCardSeedFromApi(o, listingNow);
-                return (
-                  <OrganizationCard
-                    key={card.id}
-                    {...card}
-                    imageAlt={card.name}
-                    profileHref={`/organizations/${o.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                      locale,
-                      maxGroups: 5,
-                      now: listingNow,
-                    })}
-                  />
-                );
-              })}
-              {showNextPageSkeleton ?
-                <CursorPaginationDirectoryListSkeleton
-                  count={displayOrganizations.length > 0 ? 2 : 6}
+        <div className="lg:flex lg:items-stretch lg:gap-4">
+          <SearchFiltersSidebar
+            ariaLabel={tSearch("filtersAria")}
+            hint={
+              filtersResultHint ?
+                <SearchFiltersResultHint
+                  animateKey={filtersResultHint.key}
+                  count={filtersResultHint.count}
+                  tab={filtersResultHint.tab}
                 />
-              : null}
-              <div
-                ref={orgSentinelRef}
-                className="h-2 w-full shrink-0"
-                aria-hidden
-              />
-            </>
-          : <>
-              {showSpecialistsEmptyFilterMessage ?
-                <Empty className="rounded-2xl bg-surface-light/50 py-4">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <SearchX aria-hidden />
-                    </EmptyMedia>
-                    <EmptyDescription className="max-w-md font-medium text-foreground">
-                      {tSearch("noSpecialistsForFilters")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              : null}
-              {hasActiveSlotFilter &&
-              !specListLoading &&
-              specialists.length > 0 &&
-              displaySpecialists.length === 0 ?
-                <Empty className="rounded-2xl bg-surface-light/50 py-4">
-                  <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <CalendarClock aria-hidden />
-                    </EmptyMedia>
-                    <EmptyTitle className="text-muted-foreground">
-                      {tSearch("noSlotMatch")}
-                    </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-xs leading-relaxed">
-                      {tSearch("slotFilterClientNote")}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              : null}
-              {displaySpecialists.map((s) => {
-                const card = specialistCardSeedFromApi(s, listingNow);
-                return (
-                  <SpecialistCard
-                    key={card.id}
-                    {...card}
-                    imageAlt={card.name}
-                    profileHref={`/specialists/${s.id}`}
-                    slotGroups={slotGroupsFromSeed(card.slotGroups, tSlots, {
-                      locale,
-                      maxGroups: 5,
-                      now: listingNow,
-                    })}
-                  />
-                );
-              })}
-              {showNextPageSkeleton ?
-                <CursorPaginationDirectoryListSkeleton
-                  count={displaySpecialists.length > 0 ? 2 : 6}
-                />
-              : null}
-              <div
-                ref={specSentinelRef}
-                className="h-2 w-full shrink-0"
-                aria-hidden
-              />
-            </>
-          }
+              : null
+            }
+          >
+            <CatalogFilters
+              {...catalogFiltersProps}
+              presentation="panel"
+            />
+          </SearchFiltersSidebar>
+          <div className="min-w-0 flex-1">{listPanel}</div>
         </div>
       </main>
 
       <HomeBottomNav activeId="search" />
-      <CatalogFiltersDialog
+      <CatalogFilters
+        {...catalogFiltersProps}
+        presentation="dialog"
         open={filtersOpen}
-        onApplyFilters={applyDraftFilters}
-        onOpenChange={(open) => {
-          setFiltersOpen(open);
-        }}
-        selectedCategorySlugs={dialogCategorySlugs}
-        onToggleCategory={toggleFilterCategory}
-        selectedBodyZoneSlugs={dialogBodyZoneSlugs}
-        bodyZoneOptions={bodyZoneOptions}
-        onChangeBodyZoneSlugs={setFilterBodyZones}
-        genderOptions={tab === "specialists" ? genderOptions : []}
-        selectedGender={tab === "specialists" ? draftSpecialistGender : null}
-        onSelectGender={
-          tab === "specialists"
-            ? (gender) => {
-                setDraftResetRequested(false);
-                setDraftSpecialistGender(gender);
-              }
-            : undefined
-        }
-        onResetFilters={resetAllFilters}
-        categoryOptions={categoryOptions}
-        priceFilter={priceFilterForDialog}
-        slotTimeFilter={{
-          value: draftSlotPick,
-          onChange: (next) => {
-            setDraftResetRequested(false);
-            setDraftSlotPick(next);
-          },
-          dayOptions: slotDayOptions,
-          timeOptions: slotTimeOptionsStatic,
-        }}
-        readOnlyVndLine={readOnlyOrgVndLine}
-        showReadOnlyVndNote={readOnlyOrgVndLine != null}
-        showPriceDataUnavailable={
-          tab === "specialists" &&
-          catalogFilterQuerySuccess &&
-          !catalogFilterApi?.priceRangeVnd &&
-          !hasPriceInListData &&
-          specialists.length > 0
-        }
-        radiusMapFilter={{
-          isActive: hasRadiusFilter,
-          activeDetailLabel: radiusFilterDetailLabel,
-          onSelectOnMap: () => {
-            setFiltersOpen(false);
-            const base = urlFiltersRef.current;
-            const qs = buildSearchMapQueryString(base, { pickRadius: true });
-            router.push(
-              qs ? `/search/map?${qs}` : "/search/map?pickRadius=1",
-            );
-          },
-        }}
+        onOpenChange={setFiltersOpen}
       />
     </div>
   );
 }
+

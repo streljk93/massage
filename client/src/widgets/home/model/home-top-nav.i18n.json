@@ -1,0 +1,34 @@
+{
+  "messages": {
+    "en": {
+      "homeTopNav": {
+        "logoLinkAria": "Home",
+        "searchLinkAria": "Open search",
+        "favoritesLinkAria": "Favorites",
+        "notificationsLinkAria": "Notifications",
+        "avatarLinkAria": "Open profile",
+        "avatarLinkLoginAria": "Sign in"
+      }
+    },
+    "vi": {
+      "homeTopNav": {
+        "logoLinkAria": "Trang chủ",
+        "searchLinkAria": "Mở tìm kiếm",
+        "favoritesLinkAria": "Yêu thích",
+        "notificationsLinkAria": "Thông báo",
+        "avatarLinkAria": "Mở hồ sơ",
+        "avatarLinkLoginAria": "Đăng nhập"
+      }
+    },
+    "ru": {
+      "homeTopNav": {
+        "logoLinkAria": "Главная",
+        "searchLinkAria": "Открыть поиск",
+        "favoritesLinkAria": "Избранное",
+        "notificationsLinkAria": "Уведомления",
+        "avatarLinkAria": "Открыть профиль",
+        "avatarLinkLoginAria": "Вход"
+      }
+    }
+  }
+}

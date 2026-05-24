@@ -1,4 +1,5 @@
 export { AppBackButton, type AppBackButtonProps } from "./app-back-button";
+export { BrandLogo, type BrandLogoProps } from "./brand-logo";
 export {
   FullScreenPhotoGallery,
   type FullScreenPhotoGalleryItem,
@@ -33,10 +34,18 @@ export {
   DropdownMenuTrigger,
 } from "./shadcn/dropdown-menu";
 export { Separator } from "./shadcn/separator";
+export { Calendar } from "./shadcn/calendar";
 export { Textarea } from "./shadcn/textarea";
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./shadcn/tooltip";
 export { Switch, type SwitchProps } from "./switch";
 export { Text, type TextProps } from "./text";
 export { Input, type InputProps } from "./input";
+export { DatePicker, type DatePickerProps } from "./date-picker";
 export {
   SearchAutocomplete,
   type SearchAutocompleteItem,

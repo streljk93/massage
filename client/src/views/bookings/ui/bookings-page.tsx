@@ -24,7 +24,12 @@ import {
   parseBookingsListTab,
   type BookingsListTab,
 } from "@/entities/booking";
-import { HomeBottomNav, HomeScreenHeader } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  HomeScreenHeader,
+  consumerPageMainClass,
+  consumerPageRootClass,
+} from "@/widgets/home";
 import { homeUser } from "@/widgets/home/lib/mock-data";
 import { cn, motion, resolveApiResourceUrl } from "@/shared/lib";
 import { notify } from "@/shared/lib/notifications";
@@ -459,9 +464,9 @@ export function BookingsPage() {
   })();
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
+    <div className={consumerPageRootClass()}>
       <div className="flex min-h-0 flex-1 flex-col">
-        <main className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+        <main className={consumerPageMainClass("space-y-3")}>
           <HomeScreenHeader
             title={t("title")}
             avatarAlt={headerName}

@@ -572,15 +572,20 @@ export class DirectoryService {
   ): Promise<SpecialistsListResponseDto> {
     const limit = options.limit;
     const fetch = limit + 1;
-    const { specialistIds: ids } =
-      await this.marketplaceListingEdgesIndex.searchSpecialistsGrouped({
+    const [{ specialistIds: ids }, matchingCount] = await Promise.all([
+      this.marketplaceListingEdgesIndex.searchSpecialistsGrouped({
         sort: options.sort,
         page: indexedPage,
         perPageGroups: fetch,
         locale,
         filters,
         radius: options.radius,
-      });
+      }),
+      this.directoryRepository.countSpecialistsForDirectoryList({
+        filters,
+        radius: options.radius,
+      }),
+    ]);
     const hasMore = ids.length > limit;
     const idPage = hasMore ? ids.slice(0, limit) : ids;
     const rowMap = new Map<string, SpecialistListRow>();
@@ -635,6 +640,7 @@ export class DirectoryService {
         ),
       ),
       cursorPage: { nextCursor, hasMore },
+      matchingCount,
     };
   }
 
@@ -882,14 +888,20 @@ export class DirectoryService {
       );
     }
 
-    const rows = await this.directoryRepository.findSpecialistsPage({
+    const [matchingCount, rows] = await Promise.all([
+      this.directoryRepository.countSpecialistsForDirectoryList({
+        filters,
+        radius: options.radius,
+      }),
+      this.directoryRepository.findSpecialistsPage({
       take: limit + 1,
       sort: options.sort,
       cursor: decodedSql,
       filters,
       radius: options.radius,
       overlapCategorySlugs,
-    });
+    }),
+    ]);
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
     const occupiedBySpecialist = await this.buildOccupiedBySpecialistMap(
@@ -937,6 +949,7 @@ export class DirectoryService {
         ),
       ),
       cursorPage: { nextCursor, hasMore },
+      matchingCount,
     };
   }
 
@@ -1007,14 +1020,20 @@ export class DirectoryService {
       options.categorySlugs,
       options.bodyZoneSlugs,
     );
-    const rows = await this.directoryRepository.findOrganizationsPage({
+    const [matchingCount, rows] = await Promise.all([
+      this.directoryRepository.countOrganizationsForDirectoryList({
+        filters,
+        radius: options.radius,
+      }),
+      this.directoryRepository.findOrganizationsPage({
       take: limit + 1,
       sort: options.sort,
       cursor: decoded,
       filters,
       radius: options.radius,
       overlapCategorySlugs,
-    });
+    }),
+    ]);
     const hasMore = rows.length > limit;
     const slice = hasMore ? rows.slice(0, limit) : rows;
     const specialistIds = new Set<string>();
@@ -1070,6 +1089,7 @@ export class DirectoryService {
         ),
       ),
       cursorPage: { nextCursor, hasMore },
+      matchingCount,
     };
   }
 

@@ -28,3 +28,9 @@ export function parseVndAmountInputToInt(displayOrRaw: string): number | null {
   if (d.length === 0) return null;
   return Number.parseInt(d, 10);
 }
+
+/** Стабильная подпись VND для SSR/CSR (ASCII-пробелы, символ ₫). */
+export function formatVndListingLabel(amount: number): string {
+  const digits = Math.max(0, Math.round(amount)).toString();
+  return `${groupDigitsWithAsciiSpaces(digits)} ₫`;
+}

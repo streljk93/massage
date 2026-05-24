@@ -14,6 +14,8 @@ type BodyZonesSelectorProps = {
   selectedSlugs: string[];
   onChangeSelectedSlugs: (slugs: string[]) => void;
   disabled?: boolean;
+  /** Sidebar: без собственного заголовка, компактная обводка. */
+  compact?: boolean;
 };
 
 type BodySide = "front" | "back";
@@ -96,6 +98,7 @@ export function BodyZonesSelector({
   selectedSlugs,
   onChangeSelectedSlugs,
   disabled = false,
+  compact = false,
 }: BodyZonesSelectorProps) {
   const t = useTranslations("bodyZonesSelector");
   const selected = useMemo(() => new Set(selectedSlugs), [selectedSlugs]);
@@ -159,12 +162,20 @@ export function BodyZonesSelector({
   );
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">{t("title")}</p>
-        <p className="text-xs text-muted-foreground">{t("description")}</p>
-      </div>
-      <div className="rounded-2xl border border-border/40 bg-card p-3 md:px-3 md:pt-3 md:pb-6">
+    <div className={cn("space-y-3", compact && "space-y-2.5")}>
+      {compact ? null : (
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{t("title")}</p>
+          <p className="text-xs text-muted-foreground">{t("description")}</p>
+        </div>
+      )}
+      <div
+        className={cn(
+          compact ?
+            "rounded-lg bg-muted/30 p-2"
+          : "rounded-2xl border border-border/40 bg-card p-3 md:px-3 md:pt-3 md:pb-6",
+        )}
+      >
         <div className="mb-1 grid grid-cols-2 gap-3 px-2">
           <p className="text-center text-xs font-medium text-muted-foreground">
             {t("front")}

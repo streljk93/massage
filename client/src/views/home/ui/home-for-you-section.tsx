@@ -96,7 +96,7 @@ export function HomeForYouSection({ className }: HomeForYouSectionProps) {
       >
         {t("title")}
       </h2>
-      <div className="space-y-2.5">
+      <div className="space-y-2.5 lg:grid lg:auto-rows-fr lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:grid-cols-3">
         {specialists.map((s) => {
           const card = specialistCardSeedFromApi(s, listingNow);
           return (

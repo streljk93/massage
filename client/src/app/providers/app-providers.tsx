@@ -10,9 +10,10 @@ import { ConfirmActionHost } from "@/shared/ui/confirm-action-host";
 import { PortraitOrientationLock } from "./portrait-orientation-lock";
 import { FavoritesSyncOnAuth } from "@/features/favorites-sync";
 import { SyncUserLocaleWithApp } from "@/features/user-locale-sync";
-// import { FcmTokenSync } from "@/features/push-notifications";
-// import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
+import { FcmTokenSync } from "@/features/push-notifications";
+import { isWebPushClientSyncEnabled } from "@/shared/config/firebase-public";
 import { ThemePreferenceProvider } from "@/shared/lib/theme-preference-provider";
+import { TooltipProvider } from "@/shared/ui";
 
 import { PwaServiceWorkerRegistrar } from "./pwa-service-worker-registrar";
 
@@ -35,15 +36,17 @@ export function AppProviders({ children }: AppProvidersProps) {
     <SessionProvider refetchInterval={300}>
       <QueryClientProvider client={queryClient}>
         <ThemePreferenceProvider>
-        {/* <FavoritesSyncOnAuth /> */}
-        {/* <SyncUserLocaleWithApp /> */}
-        {/* {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null} */}
-        <NotificationToaster />
-        <ConfirmActionHost />
-        <PortraitOrientationLock />
-        <PwaServiceWorkerRegistrar />
-        <ComingSoonDialogHost />
-        {children}
+          <TooltipProvider delayDuration={300}>
+            <FavoritesSyncOnAuth />
+            <SyncUserLocaleWithApp />
+            {isWebPushClientSyncEnabled() ? <FcmTokenSync /> : null}
+            <NotificationToaster />
+            <ConfirmActionHost />
+            <PortraitOrientationLock />
+            <PwaServiceWorkerRegistrar />
+            <ComingSoonDialogHost />
+            {children}
+          </TooltipProvider>
         </ThemePreferenceProvider>
       </QueryClientProvider>
     </SessionProvider>

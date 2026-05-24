@@ -1,0 +1,109 @@
+{
+  "messages": {
+    "en": {
+      "profileVitrine": {
+        "tabs": {
+          "services": "Services & prices",
+          "portfolio": "Portfolio",
+          "reviews": "Reviews",
+          "about": "About",
+          "aboutOrganization": "About the salon"
+        },
+        "portfolioTitle": "Portfolio",
+        "portfolioPlaceholderCaption": "Sample works — portfolio coming soon",
+        "reviewsTitle": "Reviews",
+        "reviewsSeeAll": "See all reviews",
+        "reviewsCount": "{count} reviews",
+        "aboutTitle": "About",
+        "aboutOrganizationTitle": "About the salon",
+        "aboutEmpty": "No description yet.",
+        "verified": "Verified specialist",
+        "breadcrumbHome": "Home",
+        "breadcrumbSpecialists": "Specialists",
+        "breadcrumbOrganizations": "Organizations",
+        "book": "Book",
+        "toFavorites": "To favorites",
+        "shareAria": "Share profile",
+        "servicesTitle": "Services and prices",
+        "serviceRowAria": "Book {name}",
+        "bookingDialogTitle": "Book an appointment",
+        "bookingDialogCloseAria": "Close booking",
+        "experienceTag": "{years} years experience",
+        "clientsTag": "{count}+ clients",
+        "sampleReviewAuthor": "Maria L.",
+        "sampleReviewDate": "2 days ago",
+        "sampleReviewText": "Great specialist, very professional and attentive. Highly recommend!"
+      }
+    },
+    "vi": {
+      "profileVitrine": {
+        "tabs": {
+          "services": "Dịch vụ & giá",
+          "portfolio": "Portfolio",
+          "reviews": "Đánh giá",
+          "about": "Giới thiệu",
+          "aboutOrganization": "Về cơ sở"
+        },
+        "portfolioTitle": "Portfolio",
+        "portfolioPlaceholderCaption": "Ảnh mẫu — portfolio sắp ra mắt",
+        "reviewsTitle": "Đánh giá",
+        "reviewsSeeAll": "Xem tất cả đánh giá",
+        "reviewsCount": "{count} đánh giá",
+        "aboutTitle": "Giới thiệu",
+        "aboutOrganizationTitle": "Về cơ sở",
+        "aboutEmpty": "Chưa có mô tả.",
+        "verified": "Chuyên gia đã xác minh",
+        "breadcrumbHome": "Trang chủ",
+        "breadcrumbSpecialists": "Chuyên gia",
+        "breadcrumbOrganizations": "Cơ sở",
+        "book": "Đặt lịch",
+        "toFavorites": "Yêu thích",
+        "shareAria": "Chia sẻ hồ sơ",
+        "servicesTitle": "Dịch vụ và giá",
+        "serviceRowAria": "Đặt {name}",
+        "bookingDialogTitle": "Đặt lịch hẹn",
+        "bookingDialogCloseAria": "Đóng đặt lịch",
+        "experienceTag": "{years} năm kinh nghiệm",
+        "clientsTag": "{count}+ khách",
+        "sampleReviewAuthor": "Maria L.",
+        "sampleReviewDate": "2 ngày trước",
+        "sampleReviewText": "Chuyên gia tuyệt vời, rất chuyên nghiệp và chu đáo. Rất khuyên dùng!"
+      }
+    },
+    "ru": {
+      "profileVitrine": {
+        "tabs": {
+          "services": "Услуги и цены",
+          "portfolio": "Портфолио",
+          "reviews": "Отзывы",
+          "about": "О мастере",
+          "aboutOrganization": "О салоне"
+        },
+        "portfolioTitle": "Портфолио",
+        "portfolioPlaceholderCaption": "Примеры работ — портфолио скоро появится",
+        "reviewsTitle": "Отзывы",
+        "reviewsSeeAll": "Все отзывы",
+        "reviewsCount": "{count} отзывов",
+        "aboutTitle": "О мастере",
+        "aboutOrganizationTitle": "О салоне",
+        "aboutEmpty": "Описание пока не добавлено.",
+        "verified": "Проверенный специалист",
+        "breadcrumbHome": "Главная",
+        "breadcrumbSpecialists": "Мастера",
+        "breadcrumbOrganizations": "Салоны",
+        "book": "Записаться",
+        "toFavorites": "В избранное",
+        "shareAria": "Поделиться профилем",
+        "servicesTitle": "Услуги и цены",
+        "serviceRowAria": "Записаться: {name}",
+        "bookingDialogTitle": "Запись на приём",
+        "bookingDialogCloseAria": "Закрыть запись",
+        "experienceTag": "{years} лет опыта",
+        "clientsTag": "{count}+ клиентов",
+        "sampleReviewAuthor": "Мария Л.",
+        "sampleReviewDate": "2 дня назад",
+        "sampleReviewText": "Отличный мастер, очень профессиональный и внимательный. Рекомендую!"
+      }
+    }
+  }
+}

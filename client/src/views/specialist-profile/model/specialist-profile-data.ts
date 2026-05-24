@@ -21,6 +21,11 @@ export type SpecialistProfileData = {
   lng: number;
   /** Склейка услуг/форматов с витрины (как на карточке в поиске). */
   servicesLine: string;
+  /** Витринное описание мастера. */
+  bio: string | null;
+  /** Адрес активной организации. */
+  addressLine: string | null;
+  city: string | null;
   experienceYears: number;
   /** Уникальные клиенты с бронью в статусе `done` (см. API `doneClientsCount`). */
   doneClientsCount: number;

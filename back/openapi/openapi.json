@@ -157,7 +157,8 @@
                   "type": "object",
                   "required": [
                     "specialists",
-                    "cursorPage"
+                    "cursorPage",
+                    "matchingCount"
                   ],
                   "properties": {
                     "specialists": {
@@ -463,6 +464,11 @@
                           "description": "Есть ли ещё элементы после текущей страницы."
                         }
                       }
+                    },
+                    "matchingCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Число карточек, совпадающих с фильтрами запроса (без учёта курсора и limit). Одинаково на каждой странице выдачи."
                     }
                   }
                 }
@@ -1094,7 +1100,8 @@
                   "type": "object",
                   "required": [
                     "organizations",
-                    "cursorPage"
+                    "cursorPage",
+                    "matchingCount"
                   ],
                   "properties": {
                     "organizations": {
@@ -1304,6 +1311,11 @@
                           "description": "Есть ли ещё элементы после текущей страницы."
                         }
                       }
+                    },
+                    "matchingCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "Число карточек, совпадающих с фильтрами запроса (без учёта курсора и limit). Одинаково на каждой странице выдачи."
                     }
                   }
                 }

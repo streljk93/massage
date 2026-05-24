@@ -56,6 +56,7 @@ export function organizationProfileFromApiDetail(
     reviewsCount: detail.reviewsCount,
     phone: detail.phone ?? null,
     addressLine,
+    description: detail.description ?? null,
     yearsInBusiness: detail.yearsInBusiness ?? 0,
     clientsCount: detail.clientsCount,
     calendarDays,

@@ -18,7 +18,11 @@ import {
 } from "@/entities/booking";
 import { notify } from "@/shared/lib/notifications";
 import { AppBackButton, Button } from "@/shared/ui";
-import { HomeBottomNav } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  consumerPageRootClass,
+  consumerSubpageContentClass,
+} from "@/widgets/home";
 import { cn, motion } from "@/shared/lib";
 
 function RatingInput({
@@ -181,8 +185,8 @@ export function VisitRatePage() {
 
   if (sessionStatus === "loading" || (accessToken && loadState === "initial")) {
     return (
-      <div className="flex min-h-screen flex-col bg-surface-background">
-        <div className="mx-auto w-full max-w-lg flex-1 px-4 pt-3 pb-28">
+      <div className={consumerPageRootClass()}>
+        <div className={consumerSubpageContentClass()}>
           <p className="text-sm text-muted-foreground">{t("loading")}</p>
         </div>
         <HomeBottomNav activeId="bookings" />
@@ -192,8 +196,8 @@ export function VisitRatePage() {
 
   if (!accessToken) {
     return (
-      <div className="flex min-h-screen flex-col bg-surface-background">
-        <div className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-28">
+      <div className={consumerPageRootClass()}>
+        <div className={consumerSubpageContentClass("space-y-3")}>
           <p className="text-sm text-muted-foreground">{t("signInHint")}</p>
         </div>
         <HomeBottomNav activeId="bookings" />
@@ -203,9 +207,9 @@ export function VisitRatePage() {
 
   if (loadState === "err" || loadMessage != null) {
     return (
-      <div className="flex min-h-screen flex-col bg-surface-background">
-        <div className="mx-auto w-full max-w-lg flex-1 space-y-3 px-4 pt-3 pb-28">
-          <div className="mb-2 flex items-center gap-2">
+      <div className={consumerPageRootClass()}>
+        <div className={consumerSubpageContentClass("space-y-3")}>
+          <div className="mb-2 flex items-center gap-2 lg:hidden">
             <AppBackButton
               fallback={returnBookingsPath}
               ariaLabel={t("backAria")}
@@ -230,14 +234,15 @@ export function VisitRatePage() {
       : t("sectionSpecialist");
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      <div className="mx-auto w-full max-w-lg flex-1 space-y-5 px-4 pt-3 pb-28">
+    <div className={consumerPageRootClass()}>
+      <div className={consumerSubpageContentClass("space-y-5")}>
         <div className="flex items-center gap-2">
           <AppBackButton
             fallback={returnBookingsPath}
             ariaLabel={t("backAria")}
+            className="lg:hidden"
           />
-          <h1 className="font-heading text-lg font-semibold leading-tight text-foreground">
+          <h1 className="font-heading text-lg font-semibold leading-tight text-foreground lg:text-2xl">
             {t("title")}
           </h1>
         </div>

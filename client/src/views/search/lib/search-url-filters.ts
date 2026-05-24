@@ -22,9 +22,9 @@ export type SearchUrlFilters = {
   sort: SearchDirectoryListSort;
   priceMinVnd: number | null;
   priceMaxVnd: number | null;
-  /** `yyyy-MM-dd` в календаре витрины; в паре с `slotTime` — фильтр по свободному слоту. */
+  /** Календарный день витрины `yyyy-MM-dd`. Может быть без `slotTime` (выбор порциями из UI). */
   slotDay: string | null;
-  /** `HH:mm`; в паре с `slotDay` — показывать только с совпадением в сетке. */
+  /** Время начала слота витрины `HH:mm` (канонический вид с ведущим нулём). Отдельно от дня возможно только из URL/share. */
   slotTime: string | null;
   /**
    * Поиск по радиусу от точки (метры, WGS-84). Все три поля задаются вместе; иначе сбрасываются.
@@ -64,6 +64,29 @@ export function parseCategorySlugsParam(raw: string): string[] {
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
   return [...new Set(parts)].sort((a, b) => a.localeCompare(b));
+}
+
+/** Нормализует время слота как в селекте поиска (`07:30`), либо `null` если неверный формат. */
+function normalizeSearchUrlSlotHm(raw: string): string | null {
+  const t = raw.trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) {
+    return null;
+  }
+  const h = Number.parseInt(m[1], 10);
+  const mins = Number.parseInt(m[2], 10);
+  if (
+    !Number.isFinite(h) ||
+    !Number.isFinite(mins) ||
+    h < 0 ||
+    h > 23 ||
+    mins < 0 ||
+    mins > 59
+  ) {
+    return null;
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(h)}:${pad(mins)}`;
 }
 
 function parsePrice(raw: string): number | null {
@@ -180,15 +203,10 @@ export function parseSearchUrlFilters(
     priceMaxVnd = t;
   }
   const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-  const HM = /^\d{1,2}:\d{2}$/;
   const rawDay = getParam(searchParams, "slotDay").trim();
   const rawTime = getParam(searchParams, "slotTime").trim();
-  let slotDay: string | null = ISO_DATE.test(rawDay) ? rawDay : null;
-  let slotTime: string | null = HM.test(rawTime) ? rawTime : null;
-  if (slotDay == null || slotTime == null) {
-    slotDay = null;
-    slotTime = null;
-  }
+  const slotDay = ISO_DATE.test(rawDay) ? rawDay : null;
+  const slotTime = normalizeSearchUrlSlotHm(rawTime);
   const rawRM = getParam(searchParams, "radiusM");
   const rawRLat = getParam(searchParams, "radiusLat");
   const rawRLng = getParam(searchParams, "radiusLng");
@@ -287,8 +305,10 @@ export function buildSearchQueryString(
   if (f.priceMaxVnd != null) {
     sp.set("priceMax", String(f.priceMaxVnd));
   }
-  if (f.slotDay != null && f.slotTime != null) {
+  if (f.slotDay != null) {
     sp.set("slotDay", f.slotDay);
+  }
+  if (f.slotTime != null) {
     sp.set("slotTime", f.slotTime);
   }
   if (f.radiusM != null && f.radiusLat != null && f.radiusLng != null) {
@@ -303,6 +323,37 @@ export function buildSearchQueryString(
     sp.set("filters", "1");
   }
   return sp.toString();
+}
+
+const SLUG_SEP = "\u001f";
+
+function sortedSlugCsv(slugs: string[]): string {
+  return [...slugs].sort((a, b) => a.localeCompare(b)).join(SLUG_SEP);
+}
+
+/** Снимок фильтров/поиска для побочного UI («найдено N» после смены настроек). */
+export function buildSearchFiltersResultHintSignature(
+  f: SearchUrlFilters,
+): string {
+  const radiusTriple =
+    f.radiusM != null && f.radiusLat != null && f.radiusLng != null ?
+      `${f.radiusM}${SLUG_SEP}${f.radiusLat}${SLUG_SEP}${f.radiusLng}`
+    : "";
+  return JSON.stringify({
+    tab: f.tab,
+    q: f.q.trim(),
+    orgCat: sortedSlugCsv(f.orgCategorySlugs),
+    specCat: sortedSlugCsv(f.specCategorySlugs),
+    orgBZ: sortedSlugCsv(f.orgBodyZoneSlugs),
+    specBZ: sortedSlugCsv(f.specBodyZoneSlugs),
+    gender: f.specialistGender,
+    sort: f.sort,
+    priceMin: f.priceMinVnd,
+    priceMax: f.priceMaxVnd,
+    slotDay: f.slotDay,
+    slotTime: f.slotTime,
+    radius: radiusTriple,
+  });
 }
 
 /**

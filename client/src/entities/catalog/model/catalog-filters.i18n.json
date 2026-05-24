@@ -22,6 +22,7 @@
         "genderAny": "Any",
         "genderMale": "Male",
         "genderFemale": "Female",
+        "bodyZones": "Body zones",
         "reset": "Reset",
         "done": "Done"
       }
@@ -48,6 +49,7 @@
         "genderAny": "Tất cả",
         "genderMale": "Nam",
         "genderFemale": "Nữ",
+        "bodyZones": "Vùng cơ thể",
         "reset": "Đặt lại",
         "done": "Xong"
       }
@@ -74,6 +76,7 @@
         "genderAny": "Любой",
         "genderMale": "Мужчина",
         "genderFemale": "Женщина",
+        "bodyZones": "Зоны тела",
         "reset": "Сбросить",
         "done": "Готово"
       }

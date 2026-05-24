@@ -115,9 +115,15 @@ const linkCardClass = cn(
   "block w-full min-w-0 max-w-full rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
 );
 
+const bookingsWrapperClass = cn(
+  "w-full rounded-2xl border border-border/60 bg-card/40 p-3 md:p-4",
+);
+
+const bookingsGridClass =
+  "grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3";
+
 /**
- * «Ваши записи» на главной: только при JWT и если есть предстоящие визиты
- * в статусах `confirmed` и `in_progress`. Несколько записей — карусель {@link Slider}.
+ * «Ваши записи» на главной: mobile — 1 карточка / слайдер; tablet — 2 колонки; desktop — 3.
  */
 export function HomeCurrentBookingSection() {
   const t = useTranslations("home");
@@ -197,6 +203,21 @@ export function HomeCurrentBookingSection() {
 
   const total = bookings.length;
 
+  const bookingCards = bookings.map((booking, i) => (
+    <Link
+      key={booking.id}
+      href="/bookings"
+      className={linkCardClass}
+      aria-label={
+        total === 1
+          ? t("yourBooking")
+          : t("bookingSlideAria", { current: i + 1, total })
+      }
+    >
+      <BookingCard {...cardPropsList[i]!} />
+    </Link>
+  ));
+
   return (
     <section className="space-y-2.5" aria-labelledby="booking-heading">
       <h2
@@ -205,35 +226,25 @@ export function HomeCurrentBookingSection() {
       >
         {t("yourBooking")}
       </h2>
-      {total === 1 ? (
-        <Link
-          href="/bookings"
-          className={linkCardClass}
-          aria-label={t("yourBooking")}
-        >
-          <BookingCard {...cardPropsList[0]!} />
-        </Link>
-      ) : (
-        <Slider
-          dotsPlacement="below"
-          dotsAriaLabel={t("bookingsSliderDotsAria")}
-          slides={bookings.map((booking, i) => ({
-            id: booking.id,
-            content: (
-              <Link
-                href="/bookings"
-                className={linkCardClass}
-                aria-label={t("bookingSlideAria", {
-                  current: i + 1,
-                  total,
-                })}
-              >
-                <BookingCard {...cardPropsList[i]!} />
-              </Link>
-            ),
-          }))}
-        />
-      )}
+      <div className={bookingsWrapperClass}>
+        <div className="md:hidden">
+          {total === 1 ? (
+            bookingCards[0]
+          ) : (
+            <Slider
+              dotsPlacement="below"
+              dotsAriaLabel={t("bookingsSliderDotsAria")}
+              slides={bookings.map((booking, i) => ({
+                id: booking.id,
+                content: bookingCards[i],
+              }))}
+            />
+          )}
+        </div>
+        <div className={cn("hidden md:grid", bookingsGridClass)}>
+          {bookingCards}
+        </div>
+      </div>
     </section>
   );
 }

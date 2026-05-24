@@ -122,7 +122,7 @@ export function HomeScreenHeader({
 
   return (
     <header
-      className={cn("flex items-start justify-between gap-3", className)}
+      className={cn("flex items-start justify-between gap-3 lg:hidden", className)}
     >
       <div
         className={cn("min-w-0 flex-1", showHeadline && "space-y-1")}

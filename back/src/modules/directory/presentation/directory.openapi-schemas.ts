@@ -254,15 +254,23 @@ const cursorPageMetaSchema = {
   },
 };
 
+const matchingCountDirectoryListSchema = {
+  type: 'integer',
+  minimum: 0,
+  description:
+    'Число карточек, совпадающих с фильтрами запроса (без учёта курсора и limit). Одинаково на каждой странице выдачи.',
+};
+
 export const specialistsListResponseSchema = {
   type: 'object',
-  required: ['specialists', 'cursorPage'],
+  required: ['specialists', 'cursorPage', 'matchingCount'],
   properties: {
     specialists: {
       type: 'array',
       items: specialistListItemSchema,
     },
     cursorPage: cursorPageMetaSchema,
+    matchingCount: matchingCountDirectoryListSchema,
   },
 };
 
@@ -340,13 +348,14 @@ export const organizationListItemSchema = {
 
 export const organizationsListResponseSchema = {
   type: 'object',
-  required: ['organizations', 'cursorPage'],
+  required: ['organizations', 'cursorPage', 'matchingCount'],
   properties: {
     organizations: {
       type: 'array',
       items: organizationListItemSchema,
     },
     cursorPage: cursorPageMetaSchema,
+    matchingCount: matchingCountDirectoryListSchema,
   },
 };
 

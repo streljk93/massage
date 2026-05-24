@@ -3,9 +3,11 @@ import { getLocale } from "next-intl/server";
 import type { AppLocale } from "@/app/i18n/routing";
 import {
   createServerSdkClient,
+  directoryGetCatalogFilterOptions,
   organizationsList,
   serverSdkFetchNoStore,
   specialistsList,
+  type DirectoryGetCatalogFilterOptionsResponse,
 } from "@/shared/api";
 import { SEARCH_DIRECTORY_CURSOR_PAGE_SIZE } from "@/shared/config/directory-cursor-pagination";
 import { CATALOG_MAJOR_CATEGORY_SLUG } from "@/shared/config/catalog-major-category";
@@ -37,8 +39,12 @@ export default async function Page({ searchParams }: PageProps) {
   const sdkClient = createServerSdkClient();
   let initialOrganizationsPage = null;
   let initialSpecialistsPage = null;
+  let initialCatalogFilterOrganizations: DirectoryGetCatalogFilterOptionsResponse | null =
+    null;
+  let initialCatalogFilterSpecialists: DirectoryGetCatalogFilterOptionsResponse | null =
+    null;
   if (sdkClient) {
-    const [orgRes, specRes] = await Promise.all([
+    const [orgRes, specRes, orgFilterRes, specFilterRes] = await Promise.all([
       organizationsList({
         client: sdkClient,
         query: {
@@ -84,12 +90,28 @@ export default async function Page({ searchParams }: PageProps) {
         },
         fetch: serverSdkFetchNoStore,
       }),
+      directoryGetCatalogFilterOptions({
+        client: sdkClient,
+        query: { locale, tab: "organizations" },
+        fetch: serverSdkFetchNoStore,
+      }),
+      directoryGetCatalogFilterOptions({
+        client: sdkClient,
+        query: { locale, tab: "specialists" },
+        fetch: serverSdkFetchNoStore,
+      }),
     ]);
     if (!orgRes.error && orgRes.data) {
       initialOrganizationsPage = orgRes.data;
     }
     if (!specRes.error && specRes.data) {
       initialSpecialistsPage = specRes.data;
+    }
+    if (!orgFilterRes.error && orgFilterRes.data) {
+      initialCatalogFilterOrganizations = orgFilterRes.data;
+    }
+    if (!specFilterRes.error && specFilterRes.data) {
+      initialCatalogFilterSpecialists = specFilterRes.data;
     }
   }
 
@@ -127,6 +149,9 @@ export default async function Page({ searchParams }: PageProps) {
           initialSpecialistsPage={initialSpecialistsPage}
           initialOrgListPrefetch={initialOrgListPrefetch}
           initialSpecListPrefetch={initialSpecListPrefetch}
+          initialCatalogFilterOrganizations={initialCatalogFilterOrganizations}
+          initialCatalogFilterSpecialists={initialCatalogFilterSpecialists}
+          initialListingNowIso={new Date().toISOString()}
         />
       </div>
     </Suspense>

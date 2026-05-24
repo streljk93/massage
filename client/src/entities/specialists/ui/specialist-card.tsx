@@ -108,18 +108,18 @@ export function SpecialistCard({
 
   if (!profileHref) {
     return (
-      <EntityCard className={cn("items-start", className)}>
+      <EntityCard className={cn("h-full items-stretch", className)}>
         <EntityCardImage src={imageSrc} alt={imageAlt} />
-        <EntityCardContent>
+        <EntityCardContent className="h-full">
           {textBlock}
-          {strip}
+          <div className="mt-auto pt-1">{strip}</div>
         </EntityCardContent>
       </EntityCard>
     );
   }
 
   return (
-    <div className="relative min-w-0 w-full">
+    <div className="relative h-full min-w-0 w-full">
       <Link
         href={profileHref}
         className={cn(
@@ -133,16 +133,18 @@ export function SpecialistCard({
       <article
         className={cn(
           motion.interactiveSlow,
-          "relative z-[2] flex min-w-0 gap-3 overflow-visible rounded-2xl bg-card p-3 items-start",
+          "relative z-[2] flex h-full min-w-0 items-stretch overflow-visible rounded-2xl bg-card",
           "origin-center pointer-events-none",
           "peer-active:scale-[0.97] peer-active:translate-y-px",
           className,
         )}
       >
         <EntityCardImage src={imageSrc} alt={imageAlt} />
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 p-3">
           {textBlock}
-          <div className="pointer-events-auto relative z-[3]">{strip}</div>
+          <div className="pointer-events-auto relative z-[3] mt-auto pt-1">
+            {strip}
+          </div>
         </div>
       </article>
     </div>

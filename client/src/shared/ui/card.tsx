@@ -7,8 +7,8 @@ export function EntityCard({ className, ...props }: EntityCardProps) {
   return (
     <article
       className={cn(
-        /* overflow-visible: на iOS вложенный горизонтальный скролл (слоты) ломается при overflow-hidden у предка */
-        "flex min-w-0 gap-3 overflow-visible rounded-2xl bg-card p-3",
+        /* overflow-visible: горизонтальный скролл слотов на iOS ломается при overflow-hidden у предка */
+        "flex min-w-0 items-stretch overflow-visible rounded-2xl bg-card",
         className,
       )}
       {...props}
@@ -26,12 +26,16 @@ export function EntityCardImage({ src, alt, className }: EntityCardImageProps) {
   return (
     <div
       className={cn(
-        "relative size-[4.5rem] shrink-0 overflow-hidden rounded-xl bg-muted sm:size-24",
+        "relative w-[calc(var(--spacing)*38)] shrink-0 self-stretch overflow-hidden rounded-l-2xl bg-muted",
         className,
       )}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- remote placeholders */}
-      <img src={src} alt={alt} className="size-full object-cover" />
+      <img
+        src={src}
+        alt={alt}
+        className="absolute inset-0 size-full object-cover"
+      />
     </div>
   );
 }
@@ -46,7 +50,7 @@ export function EntityCardContent({
   className,
 }: EntityCardContentProps) {
   return (
-    <div className={cn("flex min-w-0 flex-1 flex-col gap-1", className)}>
+    <div className={cn("flex min-w-0 flex-1 flex-col gap-1 p-3", className)}>
       {children}
     </div>
   );

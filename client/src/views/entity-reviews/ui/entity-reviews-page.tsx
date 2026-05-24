@@ -18,7 +18,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/shared/ui/shadcn/empty";
-import { HomeBottomNav } from "@/widgets/home";
+import {
+  HomeBottomNav,
+  consumerPageRootClass,
+  consumerSubpageContentClass,
+} from "@/widgets/home";
 import { cn } from "@/shared/lib";
 
 export type EntityReviewsInitial = {
@@ -103,15 +107,16 @@ export function EntityReviewsPage({
     kind === "organization" ? t("titleSalon") : t("titleSpecialist");
 
   return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      <div className="mx-auto w-full max-w-lg flex-1 px-4 pt-3 pb-28">
-        <div className="mb-4 flex items-center gap-2">
+    <div className={consumerPageRootClass()}>
+      <div className={consumerSubpageContentClass()}>
+        <div className="mb-4 flex items-center gap-2 lg:mb-6">
           <AppBackButton
             fallback={profileHref}
             ariaLabel={t("backAria")}
+            className="lg:hidden"
           />
           <div className="min-w-0">
-            <h1 className="font-heading text-lg font-semibold leading-tight text-foreground">
+            <h1 className="font-heading text-lg font-semibold leading-tight text-foreground lg:text-2xl">
               {title}
             </h1>
             <p className="truncate text-sm text-muted-foreground">

@@ -4,18 +4,13 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  CalendarOff,
-  Clock,
+  BadgeCheck,
   Heart,
-  Info,
   LocateFixed,
-  MessageSquare,
-  PackageOpen,
-  Phone,
+  Share2,
   ShieldAlert,
-  Users,
 } from "lucide-react";
-import { useLocale, useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { Link, useRouter } from "@/app/i18n/navigation";
 import { goBackOrFallback } from "@/shared/lib";
@@ -29,19 +24,25 @@ import {
 import {
   majorSphereTabsFromBookableRows,
   priceForDuration,
-  ProfileServicePickCard,
-  ProfileServiceSphereChips,
 } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
-import { Rating } from "@/shared/ui/rating";
 import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/shared/ui/shadcn/empty";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/ui/shadcn/dialog";
 import { HomeBottomNav } from "@/widgets/home";
+import {
+  ProfileAboutBlock,
+  ProfileHeroAboutText,
+  ProfileHeroRatingLine,
+  ProfilePortfolioPlaceholder,
+  ProfileReviewsTeaser,
+  ProfileServiceRow,
+  ProfileVitrineTabs,
+  type ProfileVitrineTabId,
+} from "@/widgets/profile-vitrine";
 import { useUserGeolocation } from "@/widgets/search-map";
 import type { BookingSlotSearch } from "@/shared/lib/booking-slot-search-params";
 import {
@@ -53,7 +54,6 @@ import {
   resolveSlotLabelInDay,
 } from "@/shared/lib/profile-booking-initial-from-search";
 import { cn, motion } from "@/shared/lib";
-import { telHrefFromDisplayPhone } from "@/shared/lib/tel-href";
 import { notify } from "@/shared/lib/notifications";
 import type { SpecialistProfileData } from "../model/specialist-profile-data";
 import { bookingStartsAtIsoUtc } from "../lib/booking-starts-at";
@@ -62,6 +62,7 @@ import {
   shortestDurationThatIncludesSlot,
 } from "../lib/filter-slots-for-duration";
 import { trackSpecialistProfileView } from "@/shared/lib/personalization/personalization-track";
+import { SpecialistProfileBookingPanel } from "./specialist-profile-booking-panel";
 
 const SearchResultsLeafletMap = dynamic(
   () =>
@@ -90,19 +91,24 @@ export function SpecialistProfilePage({
   bookingSlotFromSearch,
 }: SpecialistProfilePageProps) {
   const t = useTranslations("specialistProfile");
+  const tVitrine = useTranslations("profileVitrine");
   const tApiErrors = useTranslations("apiErrorToast");
   const format = useFormatter();
   const router = useRouter();
   const locale = useLocale() as AppLocale;
   const { data: session, status: sessionStatus } = useSession();
   const accessToken = session?.accessToken;
-  const specialistCallHref = telHrefFromDisplayPhone(profile.phone);
+
+  const [activeTab, setActiveTab] = useState<ProfileVitrineTabId>("services");
+  const [bookingOpen, setBookingOpen] = useState(false);
+
   useEffect(() => {
     trackSpecialistProfileView({
       accessToken: accessToken || undefined,
       specialistId: profile.id,
     });
   }, [profile.id, accessToken]);
+
   const [bookingPending, setBookingPending] = useState(false);
   const [bookingErrorKey, setBookingErrorKey] =
     useState<SpecialistBookingErrorKey | null>(null);
@@ -112,6 +118,7 @@ export function SpecialistProfilePage({
     isPending: favoritePending,
     toggle: toggleFavorite,
   } = useClientFavorite("specialist", profile.id);
+
   const mapFlyToRef = useRef<((p: [number, number]) => void) | null>(null);
   const { userPosition, requestFromUserGesture } = useUserGeolocation();
   const onMapFlyReady = useCallback(
@@ -120,6 +127,7 @@ export function SpecialistProfilePage({
     },
     [],
   );
+
   const mapMarkerItems = useMemo(
     () => [
       {
@@ -133,6 +141,7 @@ export function SpecialistProfilePage({
     ],
     [profile],
   );
+
   const { dayIndex: initialDayIndex, slot: initialSlot } =
     initialDayAndSlotFromSearch(profile, bookingSlotFromSearch);
   const [dayIndex, setDayIndex] = useState(initialDayIndex);
@@ -143,6 +152,7 @@ export function SpecialistProfilePage({
       `${profile.slotCalendarDates.join(",")}|${profile.timeSlotsByDay.map((d) => d.join(",")).join(";")}`,
     [profile.slotCalendarDates, profile.timeSlotsByDay],
   );
+
   const deepLinkApplySigRef = useRef<string | null>(null);
   useEffect(() => {
     if (bookingSlotFromSearch == null) {
@@ -150,9 +160,7 @@ export function SpecialistProfilePage({
       return;
     }
     const sig = `${profile.id}\0${bookingSlotFromSearch.calendarDate}\0${bookingSlotFromSearch.time}\0${profileSlotGridKey}`;
-    if (deepLinkApplySigRef.current === sig) {
-      return;
-    }
+    if (deepLinkApplySigRef.current === sig) return;
     deepLinkApplySigRef.current = sig;
     const next = initialDayAndSlotFromSearch(
       {
@@ -163,13 +171,14 @@ export function SpecialistProfilePage({
     );
     setDayIndex(next.dayIndex);
     setSlot(next.slot);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- profileSlotGridKey от slotCalendarDates/timeSlotsByDay
+    setBookingOpen(true);
   }, [bookingSlotFromSearch, profile.id, profileSlotGridKey]);
 
   const daySlots = useMemo(
     () => profile.timeSlotsByDay[dayIndex] ?? [],
     [profile.timeSlotsByDay, dayIndex],
   );
+
   const [bookableRowId, setBookableRowId] = useState(
     profile.services[0]?.id ?? "",
   );
@@ -189,46 +198,37 @@ export function SpecialistProfilePage({
   );
   const [sphereFilterSlug, setSphereFilterSlug] = useState("");
   useEffect(() => {
-    if (serviceSphereTabs.length <= 1) {
-      return;
-    }
+    if (serviceSphereTabs.length <= 1) return;
     setSphereFilterSlug((prev) =>
-      prev && serviceSphereTabs.some((x) => x.slug === prev) ?
-        prev
-      : serviceSphereTabs[0]!.slug,
+      prev && serviceSphereTabs.some((x) => x.slug === prev)
+        ? prev
+        : serviceSphereTabs[0]!.slug,
     );
   }, [serviceSphereTabs]);
 
   const visibleBookingServices = useMemo(() => {
-    if (serviceSphereTabs.length <= 1) {
-      return profile.services;
-    }
+    if (serviceSphereTabs.length <= 1) return profile.services;
     const slug =
-      sphereFilterSlug && serviceSphereTabs.some((x) => x.slug === sphereFilterSlug) ?
-        sphereFilterSlug
-      : serviceSphereTabs[0]!.slug;
+      sphereFilterSlug &&
+      serviceSphereTabs.some((x) => x.slug === sphereFilterSlug)
+        ? sphereFilterSlug
+        : serviceSphereTabs[0]!.slug;
     return profile.services.filter((s) => s.majorSlug === slug);
   }, [profile.services, sphereFilterSlug, serviceSphereTabs]);
 
   const sphereChipValue =
-    sphereFilterSlug && serviceSphereTabs.some((x) => x.slug === sphereFilterSlug) ?
-      sphereFilterSlug
-    : (serviceSphereTabs[0]?.slug ?? "");
+    sphereFilterSlug &&
+    serviceSphereTabs.some((x) => x.slug === sphereFilterSlug)
+      ? sphereFilterSlug
+      : (serviceSphereTabs[0]?.slug ?? "");
 
   useEffect(() => {
     setBookableRowId((cur) =>
-      visibleBookingServices.some((s) => s.id === cur) ?
-        cur
-      : (visibleBookingServices[0]?.id ?? ""),
+      visibleBookingServices.some((s) => s.id === cur)
+        ? cur
+        : (visibleBookingServices[0]?.id ?? ""),
     );
   }, [visibleBookingServices]);
-
-  const nameParts = useMemo(
-    () => profile.name.trim().split(/\s+/).filter(Boolean),
-    [profile.name],
-  );
-  const nameLine1 = nameParts[0] ?? "";
-  const nameLine2 = nameParts.slice(1).join(" ");
 
   const selectedService = useMemo(
     () => profile.services.find((s) => s.id === bookableRowId),
@@ -236,28 +236,20 @@ export function SpecialistProfilePage({
   );
 
   const selectedBookingMinutes = useMemo(() => {
-    if (!selectedService) {
-      return undefined;
-    }
+    if (!selectedService) return undefined;
     return (
       durationByBookableRow[bookableRowId] ?? selectedService.durationMinutes[0]
     );
   }, [durationByBookableRow, selectedService, bookableRowId]);
 
   const filteredDaySlots = useMemo(() => {
-    if (selectedBookingMinutes === undefined) {
-      return [];
-    }
+    if (selectedBookingMinutes === undefined) return [];
     return filterSlotTimesForDuration(daySlots, selectedBookingMinutes);
   }, [daySlots, selectedBookingMinutes]);
 
   const effectiveSlot = useMemo(() => {
-    if (filteredDaySlots.length === 0) {
-      return "";
-    }
-    if (filteredDaySlots.includes(slot)) {
-      return slot;
-    }
+    if (filteredDaySlots.length === 0) return "";
+    if (filteredDaySlots.includes(slot)) return slot;
     return filteredDaySlots[0] ?? "";
   }, [filteredDaySlots, slot]);
 
@@ -271,7 +263,6 @@ export function SpecialistProfilePage({
     urlSlotDurationApplyKeyRef.current = null;
   }, [urlBookingSlotKey]);
 
-  /** Дефолтная длительность может выкинуть слот из витрины; подбираем минимальную, куда он помещается. */
   useEffect(() => {
     if (
       urlBookingSlotKey == null ||
@@ -281,9 +272,7 @@ export function SpecialistProfilePage({
     ) {
       return;
     }
-    if (urlSlotDurationApplyKeyRef.current === urlBookingSlotKey) {
-      return;
-    }
+    if (urlSlotDurationApplyKeyRef.current === urlBookingSlotKey) return;
     const raw = profile.timeSlotsByDay[dayIndex] ?? [];
     const canonical = resolveSlotLabelInDay(raw, bookingSlotFromSearch.time);
     if (canonical == null) {
@@ -301,7 +290,6 @@ export function SpecialistProfilePage({
       selectedService.durationMinutes,
     );
     if (minDur !== undefined && minDur !== selectedBookingMinutes) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- длительность под URL-слот (иначе слот пропадает из сетки)
       setDurationByBookableRow((prev) => ({
         ...prev,
         [bookableRowId]: minDur,
@@ -330,14 +318,15 @@ export function SpecialistProfilePage({
       maximumFractionDigits: 0,
     });
 
+  const openBooking = useCallback((serviceId?: string) => {
+    if (serviceId) setBookableRowId(serviceId);
+    setBookingOpen(true);
+  }, []);
+
   const onBooking = useCallback(async () => {
     setBookingErrorKey(null);
-    if (bookingPending) {
-      return;
-    }
-    if (sessionStatus === "loading") {
-      return;
-    }
+    if (bookingPending) return;
+    if (sessionStatus === "loading") return;
     if (!accessToken) {
       router.push("/login");
       return;
@@ -388,14 +377,13 @@ export function SpecialistProfilePage({
         query: { locale },
       });
       const outcome = interpretBookingCreateResponse(res);
-      if (!outcome.ok) {
-        return;
-      }
+      if (!outcome.ok) return;
       notify.success(t("bookingSuccess"));
+      setBookingOpen(false);
       router.refresh();
       router.push("/bookings");
     } catch {
-      /* неожиданные ошибки вне SDK — тосты не показываем здесь */
+      /* SDK errors handled elsewhere */
     } finally {
       setBookingPending(false);
     }
@@ -421,79 +409,166 @@ export function SpecialistProfilePage({
     filteredDaySlots.length === 0 ||
     !effectiveSlot.trim();
 
-  return (
-    <div className="flex min-h-screen flex-col bg-surface-background">
-      {/* Hero: мягкий градиент + «ореол» */}
-      <div
-        className={cn(
-          "relative overflow-hidden",
-          "pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]",
-        )}
-      >
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_100%_-10%,var(--ds-primary)_0%,transparent_55%)] opacity-[0.11]"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-surface-muted/90 via-surface-background to-surface-background"
-          aria-hidden
-        />
+  const locationLine = [profile.city, profile.addressLine]
+    .filter(Boolean)
+    .join(" · ");
 
-        <div className="relative z-10 mx-auto w-full max-w-lg px-4 pt-3">
-          <div className="flex items-start gap-3 sm:gap-5">
-            <div className="min-w-0 flex-1 space-y-2.5 pt-0.5">
-              <Button
-                type="button"
-                variant="secondary"
-                tone="light"
-                className="size-11 shrink-0 rounded-full border border-border/50 bg-surface-light/90 backdrop-blur-sm"
-                aria-label={t("backAria")}
-                onClick={() => {
-                  goBackOrFallback(router, "/search");
-                }}
-              >
-                <ArrowLeft className="size-5 text-foreground" aria-hidden />
-              </Button>
-              <h1 className="font-heading text-[1.75rem] font-semibold leading-[1.12] tracking-tight text-foreground sm:text-[1.95rem]">
-                {nameLine1 ? (
-                  <span className="block">{nameLine1}</span>
-                ) : null}
-                {nameLine2 ? (
-                  <span className="block text-foreground/88">{nameLine2}</span>
-                ) : null}
-              </h1>
-              <Rating
-                value={profile.rating}
-                className="[&_span:last-child]:text-xs [&_span:last-child]:text-muted-foreground"
-              />
-              {profile.servicesLine.trim() ? (
-                <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                  {profile.servicesLine}
-                </p>
-              ) : null}
+  const clientsTag =
+    profile.doneClientsCount >= 1000
+      ? `${Math.floor(profile.doneClientsCount / 100) / 10}k+`
+      : String(profile.doneClientsCount);
+
+  return (
+    <div className="flex min-h-screen flex-col pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-6">
+      <div className="mx-auto w-full max-w-7xl px-4 lg:px-12">
+        <nav
+          className="hidden pt-4 pb-6 text-sm text-muted-foreground lg:block"
+          aria-label="Breadcrumb"
+        >
+          <ol className="flex flex-wrap items-center gap-1.5">
+            <li>
+              <Link href="/" className="hover:text-foreground">
+                {tVitrine("breadcrumbHome")}
+              </Link>
+            </li>
+            <li aria-hidden>›</li>
+            <li>
+              <Link href="/search" className="hover:text-foreground">
+                {tVitrine("breadcrumbSpecialists")}
+              </Link>
+            </li>
+            <li aria-hidden>›</li>
+            <li className="font-medium text-foreground">{profile.name}</li>
+          </ol>
+        </nav>
+
+        <div className="relative">
+          <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)_minmax(240px,34%)] lg:gap-6 lg:items-start">
+            <div className="relative mx-auto w-full max-w-sm lg:max-w-none">
+              <div className="relative overflow-hidden rounded-[14px] border border-border/60 bg-muted/20">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  tone="light"
+                  className="absolute top-3 left-3 z-20 size-11 rounded-full border border-border/50 bg-card lg:hidden"
+                  aria-label={t("backAria")}
+                  onClick={() => goBackOrFallback(router, "/search")}
+                >
+                  <ArrowLeft className="size-5" aria-hidden />
+                </Button>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={profile.imageSrc}
+                  alt={profile.imageAlt}
+                  className="aspect-[380/420] w-full object-cover object-[center_12%]"
+                />
+              </div>
             </div>
 
-            {/* Портрет: скругление + лёгкая маска снизу */}
-            <div
-              className="pointer-events-none relative h-[13.25rem] w-[9.75rem] shrink-0 overflow-hidden rounded-[1.65rem] border border-border/45 bg-muted/25 sm:h-[14.5rem] sm:w-[11rem]"
-              aria-hidden
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={profile.imageSrc}
-                alt=""
-                className="size-full object-cover object-[center_12%] [mask-image:linear-gradient(to_bottom,black_72%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,black_72%,transparent)]"
-              />
+            <div className="space-y-3.5">
+              <div className="space-y-2">
+                <h1 className="font-heading text-[30px] font-bold leading-tight tracking-[-0.018em] text-foreground">
+                  {profile.name}
+                </h1>
+                <p className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary">
+                  <BadgeCheck className="size-4 shrink-0" aria-hidden />
+                  {tVitrine("verified")}
+                </p>
+                {profile.servicesLine.trim() ? (
+                  <p className="text-[15px] text-muted-foreground">
+                    {profile.servicesLine}
+                  </p>
+                ) : null}
+                {locationLine ? (
+                  <p className="text-[15px] text-muted-foreground">{locationLine}</p>
+                ) : null}
+                <ProfileHeroRatingLine
+                  rating={profile.rating}
+                  reviewsCount={profile.reviewsCount}
+                  reviewsHref={`/specialists/${profile.id}/reviews`}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-muted px-3 py-1.5 text-[13px] text-muted-foreground">
+                  {tVitrine("experienceTag", {
+                    years: profile.experienceYears,
+                  })}
+                </span>
+                <span className="rounded-full bg-muted px-3 py-1.5 text-[13px] text-muted-foreground">
+                  {tVitrine("clientsTag", { count: clientsTag })}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="h-11 rounded-[10px] px-6 font-semibold"
+                  onClick={() => openBooking()}
+                >
+                  {tVitrine("book")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  tone="light"
+                  className="h-11 rounded-[10px] border border-border px-5 font-semibold"
+                  disabled={favoritePending}
+                  aria-pressed={isFavorite}
+                  onClick={() => toggleFavorite()}
+                >
+                  <Heart
+                    className={cn(
+                      "mr-2 size-4",
+                      isFavorite && "fill-rose-500 text-rose-500",
+                    )}
+                    aria-hidden
+                  />
+                  {tVitrine("toFavorites")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  tone="light"
+                  className="size-11 rounded-[10px] border border-border p-0"
+                  aria-label={tVitrine("shareAria")}
+                  onClick={() => {
+                    if (typeof navigator !== "undefined" && navigator.share) {
+                      void navigator.share({
+                        title: profile.name,
+                        url: window.location.href,
+                      });
+                    }
+                  }}
+                >
+                  <Share2 className="size-5" aria-hidden />
+                </Button>
+              </div>
+
+              {profile.activeWorkplace ? (
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  <Link
+                    href={`/organizations/${profile.activeWorkplace.id}`}
+                    className="font-medium text-foreground underline-offset-2 hover:underline"
+                  >
+                    {profile.activeWorkplace.name}
+                  </Link>
+                </p>
+              ) : null}
+
+              <ProfileHeroAboutText text={profile.bio} className="hidden lg:block" />
+            </div>
+
+            <div className="hidden lg:block">
+              <ProfilePortfolioPlaceholder variant="hero" />
             </div>
           </div>
         </div>
 
         {(profile.workplacePublicationModerationStatus === "pending_review" ||
           profile.workplacePublicationModerationStatus === "rejected") && (
-          <div
-            className="relative z-10 mx-auto w-full max-w-lg px-4 pb-2"
-            role="status"
-          >
+          <div className="mb-4" role="status">
             <div
               className={cn(
                 "flex gap-2 rounded-xl border px-3 py-2.5 text-sm leading-snug",
@@ -502,11 +577,8 @@ export function SpecialistProfilePage({
                   : "border-amber-500/35 bg-amber-500/10 text-foreground",
               )}
             >
-              <ShieldAlert
-                className="mt-0.5 size-4 shrink-0 opacity-90"
-                aria-hidden
-              />
-              <p className="min-w-0">
+              <ShieldAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+              <p>
                 {profile.workplacePublicationModerationStatus === "rejected"
                   ? t("workplaceModerationRejected")
                   : t("workplaceModerationPending")}
@@ -515,161 +587,90 @@ export function SpecialistProfilePage({
           </div>
         )}
 
-        {/* Основной блок: одна карточка на контент */}
-        <div className="relative z-10 mx-auto mt-4 w-full max-w-lg px-4">
-          <div className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-card">
-            {/* Панель действий */}
-            <div className="flex items-center justify-between gap-2 border-b border-border/50 bg-muted/25 px-3 py-2.5 sm:px-4">
-              <Button
-                asChild
-                variant="secondary"
-                tone="light"
-                className="h-10 gap-2 rounded-full border border-border/45 bg-card px-4 text-sm font-medium hover:bg-card"
-              >
-                <Link href={`/specialists/${profile.id}/details`}>
-                  <Info className="size-4 text-primary" aria-hidden />
-                  {t("details")}
-                </Link>
-              </Button>
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                {specialistCallHref != null ? (
-                  <Button
-                    asChild
-                    variant="secondary"
-                    tone="light"
-                    className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
-                  >
-                    <a href={specialistCallHref} aria-label={t("callAria")}>
-                      <Phone
-                        className="size-[1.15rem] text-foreground"
-                        aria-hidden
+        <ProfileVitrineTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          className="mt-2"
+        />
+
+        <div className="py-6 lg:py-8">
+          {activeTab === "services" ? (
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(280px,42%)] lg:items-start">
+              <section className="space-y-4">
+                <h2 className="font-heading text-xl font-semibold text-foreground">
+                  {tVitrine("servicesTitle")}
+                </h2>
+                <div className="space-y-2">
+                  {profile.services.map((svc) => {
+                    const minutes = svc.durationMinutes[0];
+                    const price = priceForDuration(svc, minutes);
+                    return (
+                      <ProfileServiceRow
+                        key={svc.id}
+                        title={svc.categoryShortName}
+                        durationLabel={t("durationMin", { n: minutes })}
+                        priceLabel={priceText(price)}
+                        ariaLabel={tVitrine("serviceRowAria", {
+                          name: svc.categoryShortName,
+                        })}
+                        onSelect={() => openBooking(svc.id)}
                       />
-                    </a>
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    tone="light"
-                    disabled
-                    className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
-                    aria-label={t("callAria")}
-                  >
-                    <Phone
-                      className="size-[1.15rem] text-foreground"
-                      aria-hidden
-                    />
-                  </Button>
-                )}
-                {/* TODO: чат — вернуть, когда будет готов */}
-                {/* <Button
-                  type="button"
-                  variant="secondary"
-                  tone="light"
-                  className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
-                  aria-label={t("messageAria")}
-                >
-                  <MessageCircle
-                    className="size-[1.15rem] text-foreground"
-                    aria-hidden
-                  />
-                </Button> */}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  tone="light"
-                  disabled={favoritePending}
-                  className="size-10 shrink-0 rounded-full border border-border/40 bg-surface-light p-0 sm:size-11"
-                  aria-label={t("favoriteAria")}
-                  aria-pressed={isFavorite}
-                  onClick={() => toggleFavorite()}
-                >
-                  <Heart
-                    className={cn(
-                      "size-[1.15rem] transition-colors",
-                      isFavorite
-                        ? "fill-rose-500 text-rose-500"
-                        : "text-foreground",
-                    )}
-                    aria-hidden
-                  />
-                </Button>
-              </div>
-            </div>
-
-            {/* Статистика (dense) */}
-            <div className="grid grid-cols-3 divide-x divide-border/60 bg-card px-0.5 py-2 sm:px-1">
-              <div className="flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1">
-                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Clock className="size-[0.9rem]" aria-hidden />
-                </span>
-                <p className="text-[0.8125rem] font-semibold leading-tight tabular-nums text-foreground">
-                  {t("stats.experienceValue", {
-                    years: profile.experienceYears,
+                    );
                   })}
-                </p>
-                <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
-                  {t("stats.experienceLabel")}
-                </p>
-              </div>
-              <div className="flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1">
-                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <Users className="size-[0.9rem]" aria-hidden />
-                </span>
-                <p className="text-[0.8125rem] font-semibold leading-tight tabular-nums text-foreground">
-                  {format.number(profile.doneClientsCount)}
-                </p>
-                <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
-                  {t("stats.clientsLabel")}
-                </p>
-              </div>
-              <Link
-                href={`/specialists/${profile.id}/reviews`}
-                className={cn(
-                  motion.interactivePressStrong,
-                  "flex flex-col items-center gap-1 px-0.5 py-0.5 text-center sm:px-1",
-                )}
-              >
-                <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <MessageSquare className="size-[0.9rem]" aria-hidden />
-                </span>
-                <p className="text-[0.8125rem] font-semibold leading-tight tabular-nums text-foreground">
-                  {format.number(profile.reviewsCount)}
-                </p>
-                <p className="text-[0.6rem] font-medium uppercase leading-tight tracking-wide text-muted-foreground">
-                  {t("stats.reviewsLabel")}
-                </p>
-              </Link>
+                </div>
+              </section>
+              <aside className="hidden lg:block">
+                <ProfileReviewsTeaser
+                  rating={profile.rating}
+                  reviewsCount={profile.reviewsCount}
+                  reviewsHref={`/specialists/${profile.id}/reviews`}
+                  showSampleReview
+                />
+              </aside>
             </div>
+          ) : null}
 
-            <div className="space-y-4 border-t border-border/50 bg-surface-light px-4 py-4 sm:px-5">
+          {activeTab === "portfolio" ? (
+            <ProfilePortfolioPlaceholder />
+          ) : null}
+
+          {activeTab === "reviews" ? (
+            <ProfileReviewsTeaser
+              rating={profile.rating}
+              reviewsCount={profile.reviewsCount}
+              reviewsHref={`/specialists/${profile.id}/reviews`}
+            />
+          ) : null}
+
+          {activeTab === "about" ? (
+            <div className="space-y-6">
+              <ProfileAboutBlock text={profile.bio} />
               <section className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
+                  <h2 className="font-heading text-base font-semibold text-foreground">
                     {t("mapTitle")}
                   </h2>
                   <button
                     type="button"
                     className={cn(
                       motion.interactivePressStrong,
-                      "inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-2 text-xs font-medium text-foreground outline-none ring-1 ring-border/60 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
+                      "inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-2 text-xs font-medium ring-1 ring-border/60",
                     )}
                     onClick={() => {
-                      const fly = mapFlyToRef.current;
-                      if (userPosition && fly) {
-                        fly(userPosition);
+                      if (userPosition && mapFlyToRef.current) {
+                        mapFlyToRef.current(userPosition);
                       }
                       requestFromUserGesture((p) => {
                         mapFlyToRef.current?.(p);
                       });
                     }}
                   >
-                    <LocateFixed className="size-4 shrink-0" aria-hidden />
+                    <LocateFixed className="size-4" aria-hidden />
                     {t("mapWhereAmI")}
                   </button>
                 </div>
-                <div className="overflow-hidden rounded-2xl border border-border/60 bg-muted/15 [&_.leaflet-control-container]:z-[25]">
-                  <div className="h-[280px] min-h-[280px] w-full">
+                <div className="overflow-hidden rounded-2xl border border-border/60 [&_.leaflet-control-container]:z-[25]">
+                  <div className="h-[280px] w-full">
                     <SearchResultsLeafletMap
                       userPosition={userPosition}
                       onMapFlyReady={onMapFlyReady}
@@ -683,183 +684,8 @@ export function SpecialistProfilePage({
                   </div>
                 </div>
               </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectService")}
-                </h2>
-                <ProfileServiceSphereChips
-                  items={serviceSphereTabs}
-                  valueSlug={sphereChipValue}
-                  onChange={setSphereFilterSlug}
-                  disabled={bookingPending}
-                />
-                <div className="space-y-2.5">
-                  {profile.services.length === 0 ?
-                    <Empty className="items-stretch py-4">
-                      <EmptyHeader className="max-w-none">
-                        <EmptyMedia variant="icon">
-                          <PackageOpen aria-hidden />
-                        </EmptyMedia>
-                        <EmptyTitle className="text-muted-foreground">
-                          {t("noServices")}
-                        </EmptyTitle>
-                      </EmptyHeader>
-                    </Empty>
-                  : visibleBookingServices.length === 0 ?
-                    <Empty className="items-stretch py-4">
-                      <EmptyHeader className="max-w-none">
-                        <EmptyMedia variant="icon">
-                          <PackageOpen aria-hidden />
-                        </EmptyMedia>
-                        <EmptyTitle className="text-muted-foreground">
-                          {t("noServicesInSphere")}
-                        </EmptyTitle>
-                      </EmptyHeader>
-                    </Empty>
-                  : null}
-                  {visibleBookingServices.map((svc) => {
-                    const selected = svc.id === bookableRowId;
-                    const dur =
-                      durationByBookableRow[svc.id] ?? svc.durationMinutes[0];
-                    return (
-                      <ProfileServicePickCard
-                        key={svc.id}
-                        service={svc}
-                        selected={selected}
-                        selectedDurationMinutes={dur}
-                        formatPrice={priceText}
-                        formatDurationMinutes={(m) =>
-                          t("durationMin", { n: m })
-                        }
-                        onSelectService={() => setBookableRowId(svc.id)}
-                        onSelectDuration={(m) => {
-                          setDurationByBookableRow((prev) => ({
-                            ...prev,
-                            [svc.id]: m,
-                          }));
-                          setBookableRowId(svc.id);
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectDate")}
-                </h2>
-                <div className="-mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {profile.calendarDays.length === 0 ? (
-                    <Empty className="items-stretch px-1 py-3">
-                      <EmptyHeader className="max-w-none">
-                        <EmptyMedia variant="icon">
-                          <CalendarOff aria-hidden />
-                        </EmptyMedia>
-                        <EmptyDescription className="text-sm">
-                          {t("noSlots")}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : null}
-                  {profile.calendarDays.map((d, i) => {
-                    const selected = i === dayIndex;
-                    return (
-                      <button
-                        key={profile.slotCalendarDates[i] ?? i}
-                        type="button"
-                        onClick={() => {
-                          setDayIndex(i);
-                          const raw = profile.timeSlotsByDay[i] ?? [];
-                          const next =
-                            selectedBookingMinutes !== undefined
-                              ? filterSlotTimesForDuration(
-                                  raw,
-                                  selectedBookingMinutes,
-                                )
-                              : raw;
-                          setSlot(next[0] ?? "");
-                        }}
-                        className={cn(
-                          motion.interactivePressStrong,
-                          "flex w-[3.25rem] shrink-0 flex-col items-center gap-1 rounded-3xl border px-2 py-3 text-center transition-colors",
-                          selected
-                            ? "border-primary/50 bg-primary/10 text-foreground"
-                            : "border-transparent bg-muted/38 text-foreground hover:bg-muted/55",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "text-[0.7rem] font-medium uppercase",
-                            selected
-                              ? "text-primary"
-                              : "text-muted-foreground/75",
-                          )}
-                        >
-                          {t(`weekdays.${d.weekdayKey}`)}
-                        </span>
-                        <span className="text-base font-semibold tabular-nums">
-                          {d.dayOfMonth}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section className="space-y-2.5">
-                <h2 className="font-heading text-base font-semibold tracking-tight text-foreground">
-                  {t("selectSlot")}
-                </h2>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-2">
-                  {daySlots.length === 0 ? (
-                    <Empty className="col-span-full items-stretch py-3">
-                      <EmptyHeader className="max-w-none">
-                        <EmptyMedia variant="icon">
-                          <CalendarOff aria-hidden />
-                        </EmptyMedia>
-                        <EmptyDescription className="text-sm">
-                          {t("noSlots")}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : filteredDaySlots.length === 0 ? (
-                    <Empty className="col-span-full items-stretch py-3">
-                      <EmptyHeader className="max-w-none">
-                        <EmptyMedia variant="icon">
-                          <Clock aria-hidden />
-                        </EmptyMedia>
-                        <EmptyDescription className="text-sm">
-                          {t("noSlotsForDuration")}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : (
-                    filteredDaySlots.map((time) => {
-                      const selected = time === effectiveSlot;
-                      return (
-                        <button
-                          key={time}
-                          type="button"
-                          onClick={() => setSlot(time)}
-                          className={cn(
-                            motion.interactivePressStrong,
-                            "flex h-10 w-full min-w-0 touch-target items-center justify-center rounded-full border px-2 text-center text-sm font-semibold tabular-nums tracking-tight transition-colors",
-                            selected
-                              ? "border-primary/45 bg-primary/12 text-primary"
-                              : "border-border/55 bg-muted/35 text-foreground hover:bg-muted/55",
-                          )}
-                        >
-                          {time}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
 
@@ -881,29 +707,59 @@ export function SpecialistProfilePage({
             className="h-12 w-full rounded-full text-base font-semibold"
             disabled={bookingDisabled}
             aria-busy={bookingPending}
-            aria-label={
-              bookingPending
-                ? t("bookingAriaLoading")
-                : bookingPriceVnd !== undefined
-                  ? `${t("booking")}, ${priceText(bookingPriceVnd)}`
-                  : t("booking")
-            }
-            onClick={() => void onBooking()}
+            onClick={() => openBooking()}
           >
-            {bookingPriceVnd !== undefined ? (
-              <>
-                {t("booking")}
-                <span className="tabular-nums">
-                  {" · "}
-                  {priceText(bookingPriceVnd)}
-                </span>
-              </>
-            ) : (
-              t("booking")
-            )}
+            {bookingPriceVnd !== undefined
+              ? `${tVitrine("book")} · ${priceText(bookingPriceVnd)}`
+              : tVitrine("book")}
           </Button>
         }
       />
+
+      <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{tVitrine("bookingDialogTitle")}</DialogTitle>
+          </DialogHeader>
+          <SpecialistProfileBookingPanel
+            profile={profile}
+            serviceSphereTabs={serviceSphereTabs}
+            sphereChipValue={sphereChipValue}
+            onSphereChange={setSphereFilterSlug}
+            visibleBookingServices={visibleBookingServices}
+            bookableRowId={bookableRowId}
+            onSelectService={setBookableRowId}
+            durationByBookableRow={durationByBookableRow}
+            onSelectDuration={(serviceId, minutes) => {
+              setDurationByBookableRow((prev) => ({
+                ...prev,
+                [serviceId]: minutes,
+              }));
+              setBookableRowId(serviceId);
+            }}
+            dayIndex={dayIndex}
+            onDayIndexChange={setDayIndex}
+            effectiveSlot={effectiveSlot}
+            onSlotChange={setSlot}
+            filteredDaySlots={filteredDaySlots}
+            selectedBookingMinutes={selectedBookingMinutes}
+            bookingPending={bookingPending}
+            formatPrice={priceText}
+          />
+          <Button
+            type="button"
+            variant="primary"
+            className="mt-2 h-12 w-full rounded-xl font-semibold"
+            disabled={bookingDisabled}
+            aria-busy={bookingPending}
+            onClick={() => void onBooking()}
+          >
+            {bookingPriceVnd !== undefined
+              ? `${t("booking")} · ${priceText(bookingPriceVnd)}`
+              : t("booking")}
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
