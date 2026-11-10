@@ -131,6 +131,44 @@ export function vitrineCategoryCoverageExists(): Prisma.Sql {
 }
 
 /**
+ * Мастер ↔ подкатегория витрины активного салона (`sp`, `sc`, `w` в запросе).
+ * С навыками — `SpecialistSkill`; без навыков (часто добавлен салоном) — категории активных `SpecialistOffering`.
+ */
+export function specialistStorefrontCategoryBindingSql(): Prisma.Sql {
+  return Prisma.sql`
+    (
+      EXISTS (
+        SELECT 1
+        FROM "SpecialistSkill" ssc
+        WHERE ssc."specialistId" = sp.id
+          AND ssc."serviceCategoryId" = sc.id
+      )
+      OR (
+        NOT EXISTS (
+          SELECT 1 FROM "SpecialistSkill" ssc0 WHERE ssc0."specialistId" = sp.id
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM "SpecialistOffering" so
+          INNER JOIN "OrganizationOffering" oo ON oo.id = so."organizationOfferingId"
+            AND oo."organizationId" = w."organizationId"
+            AND oo."categoryId" = sc.id
+            AND oo."deletedAt" IS NULL
+            AND oo."publicationStatus" = 'published'::"OfferingPublicationStatus"
+          INNER JOIN "OfferingPriceOption" po ON po."organizationOfferingId" = oo.id
+            AND po."currency" = 'VND'
+            AND po."deletedAt" IS NULL
+            AND po."status" = 'active'::"OfferingPriceOptionStatus"
+          WHERE so."specialistId" = sp.id
+            AND so."deletedAt" IS NULL
+            AND so."status" = 'active'::"SpecialistOfferingStatus"
+        )
+      )
+    )
+  `;
+}
+
+/**
  * Салоны, у которых есть мастер из каталога с **текущим** местом приёма = этому салону
  * (иначе запись через витрину организации невозможна).
  */
@@ -335,8 +373,8 @@ export type SpecialistVitrineCategoryListFilter = {
 };
 
 /**
- * Мастера с тегами SSC по подкатегории, где для **текущего** активного салона есть витринная OSC с покрытием.
- * Без голого SSC «вне салона» — синхрон с карточкой организации по OSC.
+ * Мастера по подкатегории витрины активного салона (OSC + покрытие).
+ * Категория: `SpecialistSkill` или, если навыков нет, категории назначенных услуг салона.
  */
 export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
   prisma: { $queryRaw: <T>(query: Prisma.Sql) => Promise<T> },
@@ -375,16 +413,14 @@ export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
     Prisma.sql`
       SELECT DISTINCT sp.id::text AS id
       FROM "Specialist" sp
-      INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
-      INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
-      INNER JOIN "MajorServiceCategory" msc ON msc.id = sc."majorServiceCategoryId"
       INNER JOIN "SpecialistWorkplace" w
         ON w."specialistId" = sp.id
         AND w."isActive" = true
         AND w."deletedAt" IS NULL
       INNER JOIN "OrganizationServiceCategory" osc
         ON osc."organizationId" = w."organizationId"
-        AND osc."serviceCategoryId" = sc.id
+      INNER JOIN "ServiceCategory" sc ON sc.id = osc."serviceCategoryId"
+      INNER JOIN "MajorServiceCategory" msc ON msc.id = sc."majorServiceCategoryId"
       WHERE sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
         AND sc."deletedAt" IS NULL
@@ -392,6 +428,7 @@ export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
         ${majorClause}
         ${slugClause}
         ${restrict}
+        AND ${specialistStorefrontCategoryBindingSql()}
         AND ${vitrineCategoryCoverageExists()}
     `,
   );
@@ -400,7 +437,7 @@ export async function querySpecialistIdsMatchingStorefrontCategoryConstraints(
 }
 
 /**
- * Текст по подкатегории — только SSC, закреплённые за витринной OSC активного салона мастера.
+ * Текст по подкатегории: навык или (без навыков) категория назначенной услуги салона.
  */
 export async function querySpecialistIdsMatchingStorefrontCategoryTextSearch(
   prisma: { $queryRaw: <T>(query: Prisma.Sql) => Promise<T> },
@@ -420,20 +457,19 @@ export async function querySpecialistIdsMatchingStorefrontCategoryTextSearch(
     Prisma.sql`
       SELECT DISTINCT sp.id::text AS id
       FROM "Specialist" sp
-      INNER JOIN "SpecialistSkill" ssc ON ssc."specialistId" = sp.id
-      INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
       INNER JOIN "SpecialistWorkplace" w
         ON w."specialistId" = sp.id
         AND w."isActive" = true
         AND w."deletedAt" IS NULL
       INNER JOIN "OrganizationServiceCategory" osc
         ON osc."organizationId" = w."organizationId"
-        AND osc."serviceCategoryId" = sc.id
+      INNER JOIN "ServiceCategory" sc ON sc.id = osc."serviceCategoryId"
       WHERE sp."deletedAt" IS NULL
         AND sp."listedInDirectory" = true
         AND sc."deletedAt" IS NULL
         AND sc."isActive" = true
         ${restrict}
+        AND ${specialistStorefrontCategoryBindingSql()}
         AND (
           sc.name ILIKE ${term}
           OR sc."shortName" ILIKE ${term}

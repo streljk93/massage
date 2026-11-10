@@ -41,6 +41,7 @@ import {
   queryOrganizationStorefrontCategoryPairs,
   querySpecialistIdsMatchingStorefrontCategoryConstraints,
   querySpecialistIdsMatchingStorefrontCategoryTextSearch,
+  specialistStorefrontCategoryBindingSql,
   vitrineCategoryCoverageExists,
 } from './organization-vitrine-category-coverage';
 import type { DirectoryListRadiusFilter } from '../../../common/pagination/directory-list-radius-filter';
@@ -821,22 +822,21 @@ export class DirectoryRepository {
           { specialistId: string; cnt: number }[]
         >(
           Prisma.sql`
-            SELECT ssc."specialistId"::text AS "specialistId", COUNT(*)::int AS cnt
-            FROM "SpecialistSkill" ssc
-            INNER JOIN "ServiceCategory" sc ON sc.id = ssc."serviceCategoryId"
-            INNER JOIN "Specialist" sp ON sp.id = ssc."specialistId"
+            SELECT sp.id::text AS "specialistId", COUNT(DISTINCT sc.id)::int AS cnt
+            FROM "Specialist" sp
             INNER JOIN "SpecialistWorkplace" w
               ON w."specialistId" = sp.id
               AND w."isActive" = true
               AND w."deletedAt" IS NULL
             INNER JOIN "OrganizationServiceCategory" osc
               ON osc."organizationId" = w."organizationId"
-              AND osc."serviceCategoryId" = sc.id
-            WHERE ssc."specialistId"::text IN (${Prisma.join(ids)})
+            INNER JOIN "ServiceCategory" sc ON sc.id = osc."serviceCategoryId"
+            WHERE sp.id::text IN (${Prisma.join(ids)})
               AND LOWER(sc.slug) IN (${Prisma.join(slugs)})
               AND sp."deletedAt" IS NULL
+              AND ${specialistStorefrontCategoryBindingSql()}
               AND ${vitrineCategoryCoverageExists()}
-            GROUP BY ssc."specialistId"
+            GROUP BY sp.id
           `,
         );
         for (const r of rows) {
