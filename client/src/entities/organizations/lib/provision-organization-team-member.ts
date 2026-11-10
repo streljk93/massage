@@ -32,19 +32,22 @@ export async function provisionOrganizationTeamMember(
   | { data: ProvisionOrganizationTeamMemberResponse; error: null }
   | { data: null; error: unknown }
 > {
-  const res = await client.post({
+  const res = (await client.post({
     security: [{ scheme: "bearer", type: "http" }],
     url: "/organizations/{organizationId}/cabinet-team/provision-member",
     path: { organizationId },
     body,
     headers: { "Content-Type": "application/json" },
     suppressGlobalErrorToast: true,
-  } as Parameters<SdkClient["post"]>[0]);
-  if (res.error) {
+  } as Parameters<SdkClient["post"]>[0])) as {
+    data?: ProvisionOrganizationTeamMemberResponse;
+    error?: unknown;
+  };
+  if (res.error != null) {
     return { data: null, error: res.error };
   }
-  return {
-    data: res.data as ProvisionOrganizationTeamMemberResponse,
-    error: null,
-  };
+  if (res.data == null) {
+    return { data: null, error: new Error("Empty provision-member response") };
+  }
+  return { data: res.data, error: null };
 }
