@@ -25,6 +25,7 @@ import "leaflet.markercluster";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 import "react-leaflet-markercluster/styles";
 import { cn } from "@/shared/lib";
+import { ADDRESS_MAP_TILE_URL } from "@/widgets/address-map-picker/lib/address-map-tiles";
 
 export type SearchMapMarkerItem = {
   id: string;
@@ -807,7 +808,7 @@ export function SearchResultsLeafletMap({
           touchZoom={mapInteractive}
           boxZoom={mapInteractive}
         >
-          <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+          <TileLayer url={ADDRESS_MAP_TILE_URL} />
           <MapInteractionLockSync interactive={mapInteractive} />
           <MapFocusOnBackgroundClick
             enabled={Boolean(interactionGate && !mapFocused)}
