@@ -1,6 +1,6 @@
 /**
- * Начальные данные: каталог («Массаж» и подкатегории), подписи статусов бронирования (BookingStatusLocale),
- * реклама, демо-специалисты. Идемпотентно (upsert) — безопасно при повторном запуске.
+ * Начальные данные: каталог («Массаж» / «Ногти»), подписи статусов бронирования (BookingStatusLocale),
+ * реклама. Демо-салоны/мастера — только при `SEED_DEMO_DATA=true`. Идемпотентно (upsert).
  *
  * Prisma 7: клиент с драйвером pg (как в Nest `PrismaService`).
  */
@@ -242,7 +242,17 @@ async function main() {
 
   await seedBookingStatusLocales(prisma);
   await seedAdvertising(prisma);
-  await seedDemoSpecialists(prisma);
+
+  const seedDemo = ['1', 'true', 'yes'].includes(
+    (process.env.SEED_DEMO_DATA ?? '').trim().toLowerCase(),
+  );
+  if (seedDemo) {
+    await seedDemoSpecialists(prisma);
+  } else {
+    console.log(
+      '[seed] Демо-салоны и мастера пропущены (включите SEED_DEMO_DATA=true для локальной витрины).',
+    );
+  }
 }
 
 main()

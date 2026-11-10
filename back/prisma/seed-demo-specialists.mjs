@@ -1381,3 +1381,56 @@ async function upsertFullSalon(prisma, args) {
 
   await syncOrganizationRating(prisma, org.id);
 }
+
+function isDemoSeedUserEmail(email) {
+  const e = (email ?? '').trim().toLowerCase();
+  if (e.length === 0) {
+    return false;
+  }
+  if (e === 'hello@demo-salon-seed.example.com') {
+    return true;
+  }
+  return e.endsWith('@example.com') && e.startsWith('demo.');
+}
+
+/**
+ * Удаляет салоны `demo-salon-seed*` и учётки demo.*@example.com из сида.
+ * Реальные организации и пользователи не трогает.
+ *
+ * @param {import('@prisma/client').PrismaClient} prisma
+ */
+export async function purgeDemoSeedData(prisma) {
+  const demoOrgs = await prisma.organization.findMany({
+    where: { slug: { startsWith: 'demo-salon-seed' } },
+    select: { id: true, slug: true },
+  });
+  for (const org of demoOrgs) {
+    await prisma.organization.delete({ where: { id: org.id } });
+    console.log(`[purge-demo] Удалена организация ${org.slug}`);
+  }
+
+  const users = await prisma.user.findMany({
+    where: { email: { not: null } },
+    select: { id: true, email: true },
+  });
+  const demoUsers = users.filter((u) => isDemoSeedUserEmail(u.email));
+  for (const u of demoUsers) {
+    try {
+      await prisma.user.delete({ where: { id: u.id } });
+      console.log(`[purge-demo] Удалён пользователь ${u.email}`);
+    } catch (err) {
+      console.warn(
+        `[purge-demo] Не удалось удалить ${u.email}: ${err instanceof Error ? err.message : err}`,
+      );
+    }
+  }
+
+  const leftovers = await prisma.organization.count({
+    where: { slug: { startsWith: 'demo-salon-seed' } },
+  });
+  if (leftovers > 0) {
+    console.warn(`[purge-demo] Осталось demo-организаций: ${leftovers}`);
+  } else {
+    console.log('[purge-demo] Готово: демо-салоны и demo-учётки сняты.');
+  }
+}

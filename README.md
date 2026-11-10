@@ -23,7 +23,7 @@ npm run init
 3. При необходимости дописывает **`client/.env.local`**: `AUTH_SECRET` и `AUTH_BACKEND_URL=http://localhost:3001`
 4. Поднимает стек **`docker compose up --build -d`**: см. раздел ниже **«Сервисы Docker Compose»** и `docker-compose.yml`
 5. Ждёт готовности ключевых контейнеров (Postgres, MinIO, MailHog, **Redis**, **Ollama**, **image-moderation**) и при необходимости дописывает **`back/.env`** (S3 под MinIO, SMTP под MailHog, Ollama/модерация картинок/Redis под BullMQ при пустых значениях — см. `scripts/init-project.mjs` и `back/.env.example`)
-6. Применяет миграции и **сидирует каталог по умолчанию** (большая категория «Массаж» и подкатегории — см. `back/prisma/seed.mjs`)
+6. Применяет миграции и **сидирует каталог** (категории «Массаж» / «Ногти», без демо-салонов — см. `back/prisma/seed.mjs`; демо-витрина только при `SEED_DEMO_DATA=true`)
 7. Выполняет **`openapi:sync`** (экспорт OpenAPI + генерация typed SDK на клиенте; нужен доступ к БД на `localhost:5432`)
 
 ### После успешного `init`
@@ -119,7 +119,7 @@ sudo npm run nginx:setup:host -- --domain bukvu.com --skip-certbot
 docker compose up postgres -d
 ```
 
-Укажите **`DATABASE_URL`** в `back/.env` (см. `back/.env.example`) и выполните миграции и сид при необходимости: `cd back && npx prisma migrate deploy && npx prisma db seed` (каталог «Массаж» и подкатегории создаются идемпотентно).
+Укажите **`DATABASE_URL`** в `back/.env` (см. `back/.env.example`) и выполните миграции и сид при необходимости: `cd back && npx prisma migrate deploy && npx prisma db seed` (каталог создаётся идемпотентно, без демо-салонов). Удалить старые демо-данные: `cd back && npm run prisma:purge-demo`. Локальная демо-витрина: `SEED_DEMO_DATA=true npx prisma db seed`.
 
 ### Пересборка типов клиента после смены API
 
