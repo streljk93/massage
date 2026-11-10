@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { resolveApiOrigin } from "@/shared/lib/api-origin";
 
 export async function POST(request: Request) {
-  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  const base = resolveApiOrigin();
   if (!base) {
     return NextResponse.json(
-      { message: "AUTH_BACKEND_URL is not configured" },
+      { message: "API backend is not configured" },
       { status: 503 },
     );
   }

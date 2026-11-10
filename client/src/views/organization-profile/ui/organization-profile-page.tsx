@@ -36,15 +36,10 @@ import type {
   StaffBookableServiceRow,
 } from "@/entities/specialists";
 import { Button } from "@/shared/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/ui/shadcn/dialog";
 import { HomeBottomNav } from "@/widgets/home";
 import {
   ProfileAboutBlock,
+  ProfileBookingDialog,
   ProfileHeroAboutText,
   ProfileHeroRatingLine,
   ProfilePortfolioPlaceholder,
@@ -1197,15 +1192,6 @@ export function OrganizationProfilePage({
         </div>
       </div>
 
-      {bookingErrorKey ? (
-        <p
-          role="alert"
-          className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
-        >
-          {tApiErrors(bookingErrorKey)}
-        </p>
-      ) : null}
-
       <HomeBottomNav
         activeId="search"
         actions={
@@ -1224,61 +1210,70 @@ export function OrganizationProfilePage({
         }
       />
 
-      <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{tVitrine("bookingDialogTitle")}</DialogTitle>
-          </DialogHeader>
-          <OrganizationProfileBookingPanel
-            profile={profile}
-            showBookingFlow={showBookingFlow}
-            organizationServiceSphereTabs={organizationServiceSphereTabs}
-            orgSphereChipValue={orgSphereChipValue}
-            onOrgSphereChange={setOrgSphereFilterSlug}
-            salonBookableServiceOptions={salonBookableServiceOptions}
-            selectedServiceMenuKey={selectedServiceMenuKey}
-            durationByMenuKey={durationByMenuKey}
-            onSelectSalonService={onSelectSalonService}
-            onSelectSalonDuration={onSelectSalonDuration}
-            serviceMenuKeyFromOption={serviceMenuKeyFromOption}
-            specialistsCount={profile.specialists.length}
-            salonMergedCount={salonMergedBookableOptions.length}
-            dayIndex={dayIndex}
-            onDayIndexChange={setDayIndex}
-            daySlots={daySlots}
-            filteredDaySlots={filteredDaySlots}
-            effectiveSlot={effectiveSlot}
-            onSlotChange={setSlot}
-            selectedBookingMinutes={selectedBookingMinutes}
-            bookingPending={bookingPending}
-            formatPrice={priceText}
-            specialistsWithSelectedMenuService={
-              specialistsWithSelectedMenuService
-            }
-            selectedSalonSpecialistId={selectedSalonSpecialistId}
-            proposedBookingSlotKeys={proposedBookingSlotKeys}
-            onSelectSpecialist={onSelectSpecialist}
-            specialistAvailableCoversProposed={
-              specialistAvailableCoversProposed
-            }
-            specialistOccupiedOverlapsProposed={
-              specialistOccupiedOverlapsProposed
-            }
-          />
-          <Button
-            type="button"
-            variant="primary"
-            className="mt-2 h-12 w-full rounded-xl font-semibold"
-            disabled={bookingDisabled}
-            aria-busy={bookingPending}
-            onClick={() => void onBooking()}
-          >
-            {bookingPriceVnd !== undefined
-              ? `${t("booking")} · ${priceText(bookingPriceVnd)}`
-              : t("booking")}
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <ProfileBookingDialog
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        title={tVitrine("bookingDialogTitle")}
+        footer={
+          <>
+            {bookingErrorKey ? (
+              <p
+                role="alert"
+                className="mb-2 text-center text-sm text-destructive"
+              >
+                {tApiErrors(bookingErrorKey)}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              className="h-12 w-full rounded-xl font-semibold"
+              disabled={bookingDisabled}
+              aria-busy={bookingPending}
+              onClick={() => void onBooking()}
+            >
+              {bookingPriceVnd !== undefined
+                ? `${t("booking")} · ${priceText(bookingPriceVnd)}`
+                : t("booking")}
+            </Button>
+          </>
+        }
+      >
+        <OrganizationProfileBookingPanel
+          profile={profile}
+          showBookingFlow={showBookingFlow}
+          organizationServiceSphereTabs={organizationServiceSphereTabs}
+          orgSphereChipValue={orgSphereChipValue}
+          onOrgSphereChange={setOrgSphereFilterSlug}
+          salonBookableServiceOptions={salonBookableServiceOptions}
+          selectedServiceMenuKey={selectedServiceMenuKey}
+          durationByMenuKey={durationByMenuKey}
+          onSelectSalonService={onSelectSalonService}
+          onSelectSalonDuration={onSelectSalonDuration}
+          serviceMenuKeyFromOption={serviceMenuKeyFromOption}
+          specialistsCount={profile.specialists.length}
+          salonMergedCount={salonMergedBookableOptions.length}
+          dayIndex={dayIndex}
+          onDayIndexChange={setDayIndex}
+          daySlots={daySlots}
+          filteredDaySlots={filteredDaySlots}
+          effectiveSlot={effectiveSlot}
+          onSlotChange={setSlot}
+          selectedBookingMinutes={selectedBookingMinutes}
+          bookingPending={bookingPending}
+          formatPrice={priceText}
+          specialistsWithSelectedMenuService={
+            specialistsWithSelectedMenuService
+          }
+          selectedSalonSpecialistId={selectedSalonSpecialistId}
+          proposedBookingSlotKeys={proposedBookingSlotKeys}
+          onSelectSpecialist={onSelectSpecialist}
+          specialistAvailableCoversProposed={specialistAvailableCoversProposed}
+          specialistOccupiedOverlapsProposed={
+            specialistOccupiedOverlapsProposed
+          }
+        />
+      </ProfileBookingDialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
+import { resolveApiOrigin } from "@/shared/lib/api-origin";
 import { resolveApiResourceUrl } from "@/shared/lib/resolve-api-resource-url";
 
 const credentialsSchema = z.object({
@@ -32,7 +33,7 @@ async function loginViaBackend(
   email: string,
   password: string,
 ): Promise<BackendAuthResponse | null> {
-  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  const base = resolveApiOrigin();
   if (!base) {
     return null;
   }
@@ -70,7 +71,7 @@ function decodeAccessTokenExpSec(accessToken: string): number | null {
 async function refreshViaBackend(
   refreshToken: string,
 ): Promise<BackendAuthResponse | null> {
-  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  const base = resolveApiOrigin();
   if (!base) {
     return null;
   }
@@ -238,8 +239,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
         }
 
-        // Локальная демо-сессия без API (если AUTH_BACKEND_URL не задан)
-        if (!process.env.AUTH_BACKEND_URL) {
+        // Локальная демо-сессия без API (если backend origin не настроен)
+        if (!resolveApiOrigin()) {
           const name =
             parsed.data.name?.trim() ||
             email.split("@")[0] ||

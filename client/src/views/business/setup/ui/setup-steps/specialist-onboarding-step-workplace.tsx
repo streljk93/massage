@@ -7,7 +7,6 @@ import {
   type OrganizationSalonCabinetFormInitialValues,
 } from "@/entities/organizations";
 import { filesUploadPublic } from "@/shared/api";
-import { SearchAutocomplete } from "@/shared/ui";
 import { useSpecialistOnboarding } from "../specialist-onboarding-context";
 
 function majorsInitialValues(
@@ -35,15 +34,6 @@ export default function SpecialistOnboardingStepWorkplace() {
   const t = useTranslations("specialistOnboarding");
   const {
     sdk,
-    orgQ,
-    setOrgQ,
-    orgHits,
-    orgPicked,
-    setOrgPicked,
-    orgSuggestOpen,
-    setOrgSuggestOpen,
-    orgPending,
-    workplaceSubmitting,
     createOrgSubmitting,
     formError,
     setFormError,
@@ -53,9 +43,6 @@ export default function SpecialistOnboardingStepWorkplace() {
     spec,
   } = useSpecialistOnboarding();
 
-  const pattern = spec?.onboardingWorkPattern ?? null;
-  const isEmployed = pattern === "employed_salon";
-
   const orgFormInitialValues = useMemo(
     () => majorsInitialValues(spec?.onboardingMajorCategorySlugs),
     [spec?.onboardingMajorCategorySlugs],
@@ -63,48 +50,18 @@ export default function SpecialistOnboardingStepWorkplace() {
 
   const orgFormSyncKey = useMemo(() => {
     const m = spec?.onboardingMajorCategorySlugs ?? [];
-    return `onboarding-org-${pattern ?? "unknown"}-${[...m].sort().join(",")}`;
-  }, [pattern, spec?.onboardingMajorCategorySlugs]);
+    return `onboarding-org-business-${[...m].sort().join(",")}`;
+  }, [spec?.onboardingMajorCategorySlugs]);
 
-  if (isEmployed) {
+  if (spec?.activeOrganizationId) {
     return (
-      <section className="space-y-3">
+      <section className="space-y-2">
         <h1 className="font-heading text-2xl font-semibold text-foreground">
-          {t("stepWorkplaceJoinTitle")}
+          {t("stepWorkplaceCreateTitle")}
         </h1>
-        <p className="text-pretty text-[0.9375rem] text-muted-foreground">{t("stepWorkplaceJoinSub")}</p>
-        <div className="space-y-1.5">
-          <span className="text-sm font-medium text-foreground" id="org-search-label">
-            {t("searchOrg")}
-          </span>
-          <SearchAutocomplete
-            value={orgQ}
-            onValueChange={(v) => {
-              setOrgQ(v);
-              setOrgPicked(null);
-              setOrgSuggestOpen(true);
-            }}
-            onSelect={(item) => {
-              setOrgPicked(item.id);
-              setOrgQ(item.name);
-              setOrgSuggestOpen(false);
-            }}
-            items={orgHits}
-            isLoading={orgPending}
-            selectedId={orgPicked}
-            listOpen={orgSuggestOpen}
-            onListOpenChange={setOrgSuggestOpen}
-            minQueryLength={0}
-            inputId="org-workplace-combobox"
-            listboxId="org-workplace-listbox"
-            inputLabelledBy="org-search-label"
-            placeholder={t("searchPlaceholder")}
-            listAriaLabel={t("searchOrg")}
-            loadingText={t("orgSearchLoading")}
-            emptyText={t("orgSearchEmpty")}
-            disabled={workplaceSubmitting || createOrgSubmitting}
-          />
-        </div>
+        <p className="text-pretty text-[0.9375rem] text-muted-foreground">
+          {t("stepWorkplaceAlreadyLinkedHint")}
+        </p>
       </section>
     );
   }

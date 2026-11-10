@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
   CalendarClock,
+  Camera,
   ChevronLeft,
   Loader2,
   Search,
@@ -23,13 +24,31 @@ import {
   pickSelectedContextOrganization,
   specialistMyOrganizationsQueryKey,
 } from "@/entities/organizations";
+import { provisionOrganizationTeamMember } from "@/entities/organizations/lib/provision-organization-team-member";
+import { extractApiErrorCode } from "@/shared/lib/api/extract-api-error-code";
+
+function describeRemoveMemberFailure(
+  error: unknown,
+  t: BusinessSpecialistsT,
+): string {
+  const code = extractApiErrorCode(error);
+  if (code === "ORGANIZATION_OWNER_MEMBERSHIP_IMMUTABLE") {
+    return t("errorRemoveOwner");
+  }
+  if (code === "ORGANIZATION_TEAM_MEMBER_NOT_FOUND") {
+    return t("errorRemoveMemberNotFound");
+  }
+  return t("errorRemoveMember");
+}
 import { useSetBusinessPageTitle } from "@/widgets/business/chrome";
+import { BUSINESS_CABINET_SHOW_TEAM_SPECIALIST_INVITE_SEARCH } from "@/widgets/business/chrome/lib/business-cabinet-nav-visibility";
 import {
   calendarGetResourceAvailability,
   calendarListResources,
   calendarPutResourceAvailabilityRulesBulk,
   calendarPutResourceAvailabilityRules,
   createBrowserSdkClient,
+  filesUploadPublic,
   organizationsCabinetDeleteCabinetOrganizationTeamMember,
   organizationsCabinetGetCabinetOrganizationTeamInviteCandidates,
   organizationsCabinetGetCabinetOrganizationTeamMembers,
@@ -57,6 +76,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
+  MARKETPLACE_PHOTO_ACCEPT,
 } from "@/shared/ui";
 import { Skeleton } from "@/shared/ui/shadcn/skeleton";
 import {
@@ -184,6 +204,41 @@ function roleLabelKey(
   );
 }
 
+type BusinessSpecialistsT = ReturnType<
+  typeof useTranslations<"businessSpecialistsPage">
+>;
+
+function describeProvisionFailure(
+  error: unknown,
+  t: BusinessSpecialistsT,
+): string {
+  const code = extractApiErrorCode(error);
+  if (
+    code === "EMAIL_ALREADY_REGISTERED" ||
+    code === "EMAIL_REGISTRATION_PENDING"
+  ) {
+    return t("provisionErrorEmailTaken");
+  }
+  if (code === "ALREADY_ORGANIZATION_MEMBER") {
+    return t("provisionErrorAlreadyMember");
+  }
+  if (code === "UNAUTHORIZED") {
+    return t("provisionErrorSession");
+  }
+  if (error != null && typeof error === "object") {
+    const issues = (error as { issues?: { fieldErrors?: Record<string, string[]> } })
+      .issues;
+    const fieldErrors = issues?.fieldErrors;
+    if (fieldErrors?.password?.length) {
+      return t("provisionErrorPasswordShort");
+    }
+    if (fieldErrors?.email?.length) {
+      return t("provisionErrorEmailInvalid");
+    }
+  }
+  return t("provisionError");
+}
+
 function getInitials(name: string | null | undefined): string {
   if (!name) return "?";
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -209,6 +264,12 @@ export function BusinessSpecialistsPage() {
   const [debouncedInviteSearch, setDebouncedInviteSearch] = useState("");
   const [invitedSpecialistIds, setInvitedSpecialistIds] = useState<Set<string>>(
     () => new Set(),
+  );
+  const [provisionName, setProvisionName] = useState("");
+  const [provisionEmail, setProvisionEmail] = useState("");
+  const [provisionPassword, setProvisionPassword] = useState("");
+  const [provisionPhotoFile, setProvisionPhotoFile] = useState<File | null>(
+    null,
   );
 
   useEffect(() => {
@@ -285,6 +346,7 @@ export function BusinessSpecialistsPage() {
       debouncedInviteSearch,
     ],
     enabled:
+      BUSINESS_CABINET_SHOW_TEAM_SPECIALIST_INVITE_SEARCH &&
       authed &&
       canInvite &&
       organizationId.length > 0 &&
@@ -347,7 +409,72 @@ export function BusinessSpecialistsPage() {
       void queryClient.invalidateQueries({ queryKey: RESOURCES_QK });
       void queryClient.invalidateQueries({ queryKey: AVAILABILITY_QK });
     },
-    onError: () => notify.error(t("errorRemoveMember")),
+    onError: (error) => notify.error(describeRemoveMemberFailure(error, t)),
+  });
+
+  const provisionMutation = useMutation({
+    mutationFn: async () => {
+      const name = provisionName.trim();
+      const email = provisionEmail.trim().toLowerCase();
+      const password = provisionPassword.trim();
+      if (password.length > 0 && password.length < 8) {
+        throw { code: "CLIENT_PASSWORD_TOO_SHORT" };
+      }
+      let imageUrl: string | undefined;
+      if (provisionPhotoFile) {
+        const up = await filesUploadPublic({
+          client: sdk,
+          body: { file: provisionPhotoFile },
+        });
+        if (up.error || !up.data?.url) {
+          throw { code: "CLIENT_PHOTO_UPLOAD_FAILED" };
+        }
+        imageUrl = up.data.url;
+      }
+      const { data, error } = await provisionOrganizationTeamMember(
+        sdk,
+        organizationId,
+        {
+          name,
+          email,
+          ...(password.length > 0 ? { password } : {}),
+          ...(imageUrl != null ? { imageUrl } : {}),
+          targetRole: "specialist",
+        },
+      );
+      if (error || !data) {
+        throw error ?? new Error("provision");
+      }
+      return data;
+    },
+    onSuccess: () => {
+      setProvisionName("");
+      setProvisionEmail("");
+      setProvisionPassword("");
+      setProvisionPhotoFile(null);
+      void queryClient.invalidateQueries({ queryKey: TEAM_QK });
+      void queryClient.invalidateQueries({ queryKey: RESOURCES_QK });
+      notify.success(t("provisionSuccess"));
+    },
+    onError: (error) => {
+      if (
+        error != null &&
+        typeof error === "object" &&
+        (error as { code?: string }).code === "CLIENT_PASSWORD_TOO_SHORT"
+      ) {
+        notify.error(t("provisionErrorPasswordShort"));
+        return;
+      }
+      if (
+        error != null &&
+        typeof error === "object" &&
+        (error as { code?: string }).code === "CLIENT_PHOTO_UPLOAD_FAILED"
+      ) {
+        notify.error(t("provisionErrorPhoto"));
+        return;
+      }
+      notify.error(describeProvisionFailure(error, t));
+    },
   });
 
   const inviteMutation = useMutation({
@@ -409,20 +536,35 @@ export function BusinessSpecialistsPage() {
   return (
     <main className="flex w-full min-w-0 flex-1 flex-col gap-0 pb-6">
       {canInvite ? (
-        <div className="px-4 pt-2 pb-3">
-          <InvitePanel
-            canInvite={canInvite}
-            searchInput={inviteSearchInput}
-            onSearchInputChange={setInviteSearchInput}
-            candidates={inviteCandidates}
-            loading={
-              directInviteQuery.isPending && debouncedInviteSearch.length >= 2
-            }
-            invitedSpecialistIds={invitedSpecialistIds}
-            disabled={inviteMutation.isPending}
-            onInvite={(specialistId) => inviteMutation.mutate(specialistId)}
-            pendingSpecialistId={inviteMutation.variables ?? null}
+        <div className="space-y-4 px-4 pt-2 pb-3">
+          <ProvisionMemberPanel
+            name={provisionName}
+            email={provisionEmail}
+            password={provisionPassword}
+            photoFile={provisionPhotoFile}
+            onNameChange={setProvisionName}
+            onEmailChange={setProvisionEmail}
+            onPasswordChange={setProvisionPassword}
+            onPhotoFileChange={setProvisionPhotoFile}
+            disabled={provisionMutation.isPending}
+            onSubmit={() => provisionMutation.mutate()}
           />
+          {BUSINESS_CABINET_SHOW_TEAM_SPECIALIST_INVITE_SEARCH ? (
+            <InvitePanel
+              canInvite={canInvite}
+              searchInput={inviteSearchInput}
+              onSearchInputChange={setInviteSearchInput}
+              candidates={inviteCandidates}
+              loading={
+                directInviteQuery.isPending &&
+                debouncedInviteSearch.length >= 2
+              }
+              invitedSpecialistIds={invitedSpecialistIds}
+              disabled={inviteMutation.isPending}
+              onInvite={(specialistId) => inviteMutation.mutate(specialistId)}
+              pendingSpecialistId={inviteMutation.variables ?? null}
+            />
+          ) : null}
         </div>
       ) : null}
 
@@ -631,6 +773,167 @@ function TeamRow({
         ) : null}
       </div>
     </li>
+  );
+}
+
+// --- ProvisionMemberPanel ---
+
+function ProvisionMemberPanel({
+  name,
+  email,
+  password,
+  photoFile,
+  onNameChange,
+  onEmailChange,
+  onPasswordChange,
+  onPhotoFileChange,
+  disabled,
+  onSubmit,
+}: {
+  name: string;
+  email: string;
+  password: string;
+  photoFile: File | null;
+  onNameChange: (v: string) => void;
+  onEmailChange: (v: string) => void;
+  onPasswordChange: (v: string) => void;
+  onPhotoFileChange: (file: File | null) => void;
+  disabled: boolean;
+  onSubmit: () => void;
+}) {
+  const t = useTranslations("businessSpecialistsPage");
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photoFile]);
+
+  const passwordTrimmed = password.trim();
+  const passwordOk =
+    passwordTrimmed.length === 0 || passwordTrimmed.length >= 8;
+  const canSubmit =
+    name.trim().length > 0 &&
+    email.trim().length > 3 &&
+    passwordOk &&
+    !disabled;
+
+  const initials =
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("") || "?";
+
+  return (
+    <section className="space-y-3 rounded-2xl border border-border/60 bg-card p-4">
+      <div>
+        <h2 className="font-heading text-base font-semibold text-foreground">
+          {t("provisionTitle")}
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">{t("provisionHint")}</p>
+      </div>
+      <div className="space-y-2">
+        <div className="space-y-1.5">
+          <span className="text-sm font-medium">{t("provisionPhotoLabel")}</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => photoInputRef.current?.click()}
+              className={cn(
+                "relative shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                disabled && "cursor-not-allowed opacity-60",
+              )}
+              aria-label={t("provisionPhotoAria")}
+            >
+              <Avatar className="size-16 border border-border/60">
+                {photoPreviewUrl ? (
+                  <AvatarImage src={photoPreviewUrl} alt="" />
+                ) : null}
+                <AvatarFallback className="text-lg">{initials}</AvatarFallback>
+              </Avatar>
+              <span className="absolute -bottom-0.5 -right-0.5 flex size-7 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground shadow-sm">
+                <Camera className="size-3.5" aria-hidden />
+              </span>
+            </button>
+            <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+              {t("provisionPhotoHint")}
+            </p>
+          </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept={MARKETPLACE_PHOTO_ACCEPT}
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              onPhotoFileChange(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">{t("provisionNameLabel")}</span>
+          <Input
+            value={name}
+            onChange={(e) => onNameChange(e.target.value)}
+            autoComplete="name"
+            className="rounded-xl"
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">{t("provisionEmailLabel")}</span>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+            autoComplete="email"
+            className="rounded-xl"
+          />
+        </label>
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">{t("provisionPasswordLabel")}</span>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => onPasswordChange(e.target.value)}
+            autoComplete="new-password"
+            className="rounded-xl"
+          />
+          <span className="text-xs text-muted-foreground">
+            {t("provisionPasswordHint")}
+          </span>
+          {!passwordOk ? (
+            <span className="text-xs text-destructive">
+              {t("provisionErrorPasswordShort")}
+            </span>
+          ) : null}
+        </label>
+      </div>
+      <Button
+        type="button"
+        className="h-11 w-full rounded-full"
+        disabled={!canSubmit}
+        onClick={onSubmit}
+      >
+        {disabled ? (
+          <>
+            <Loader2 className="size-4 animate-spin" aria-hidden />
+            {t("provisionSubmit")}
+          </>
+        ) : (
+          t("provisionSubmit")
+        )}
+      </Button>
+    </section>
   );
 }
 

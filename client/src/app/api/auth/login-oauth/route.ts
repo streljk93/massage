@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
+import { resolveApiOrigin } from "@/shared/lib/api-origin";
 
 /**
  * Клиентский OAuth (idToken / accessToken) → `POST` на backend `/v1/auth/login/oauth`
  * (как `register`, без CORS / без обязательного `NEXT_PUBLIC_API_URL`).
  */
 export async function POST(request: Request) {
-  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  const base = resolveApiOrigin();
   if (!base) {
     return NextResponse.json(
-      { message: "AUTH_BACKEND_URL is not configured" },
+      { message: "API backend is not configured" },
       { status: 503 },
     );
   }

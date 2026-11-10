@@ -53,6 +53,8 @@ import {
   organizationTeamInviteCandidatesResponseSchema,
   organizationTeamInvitationListResponseSchema,
   organizationTeamInvitationMutationResponseSchema,
+  organizationTeamProvisionMemberRequestSchema,
+  organizationTeamProvisionMemberResponseSchema,
   organizationTeamInviteRequestSchema,
   organizationTeamInviteRespondRequestSchema,
   organizationTeamMutationResponseSchema,
@@ -70,9 +72,11 @@ import {
   organizationTeamInviteBodySchema,
   organizationTeamInviteCandidatesQuerySchema,
   organizationTeamInviteRespondBodySchema,
+  organizationTeamProvisionMemberBodySchema,
   type OrganizationTeamInviteBody,
   type OrganizationTeamInviteCandidatesQuery,
   type OrganizationTeamInviteRespondBody,
+  type OrganizationTeamProvisionMemberBody,
 } from '../dto/organization-team-invite.schema';
 import { specialistOnboardingResponseSchema } from '../../specialists/presentation/specialists.openapi-schemas';
 
@@ -247,6 +251,40 @@ export class OrganizationsCabinetController {
     body: OrganizationTeamInviteBody,
   ) {
     return this.organizationCabinet.createCabinetTeamInvitation(
+      req.user.id,
+      organizationId,
+      body,
+    );
+  }
+
+  @Post(':organizationId/cabinet-team/provision-member')
+  @UseGuards(JwtAccessGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Добавить мастера в команду (создать учётку без самостоятельной регистрации).',
+    description:
+      'Создаёт User + Specialist при необходимости и сразу добавляет в организацию. Без привязки к услугам и без приглашения.',
+  })
+  @ApiParam({ name: 'organizationId', format: 'uuid' })
+  @ApiBody({ schema: organizationTeamProvisionMemberRequestSchema })
+  @ApiOkResponse({ schema: organizationTeamProvisionMemberResponseSchema })
+  @ApiBadRequestResponse({ description: 'Невалидное тело' })
+  @ApiConflictResponse({
+    description: 'Email уже в команде организации',
+  })
+  @ApiForbiddenResponse({
+    description: 'Нет прав добавлять специалистов',
+  })
+  @ApiNotFoundResponse({ description: 'Организация не найдена' })
+  @ApiUnauthorizedResponse({ description: 'Нет или невалидный access token' })
+  async postCabinetOrganizationTeamProvisionMember(
+    @Req() req: AuthedRequest,
+    @Param('organizationId', new ParseUUIDPipe({ version: '4' }))
+    organizationId: string,
+    @Body(new ZodValidationPipe(organizationTeamProvisionMemberBodySchema))
+    body: OrganizationTeamProvisionMemberBody,
+  ) {
+    return this.organizationCabinet.provisionCabinetTeamMember(
       req.user.id,
       organizationId,
       body,

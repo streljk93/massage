@@ -28,6 +28,7 @@
 #
 # Бэкапы: профиль `backup` (сервис `postgres-backup`, том `postgres_backups`) или
 # `npm run docker:pg-backup` / cron на хосте → ./backups/postgres/
+# MinIO: Docker Hub `minio/minio` / `minio/mc` недоступны — `cgr.dev/chainguard/minio` (server + `mc` для init).
 # MinIO bucket: сервис `minio-init` создаёт `S3_BUCKET` после готовности MinIO.
 # MinIO health: TCP `:9000` через `bash /dev/tcp` (в образе нет `nc`).
 # Ollama health: `ollama list`, нет curl в образе; `start_period` — из‑за pull в entrypoint.
@@ -49,7 +50,7 @@ x-service-defaults: &service-defaults
 services:
   minio:
     <<: *service-defaults
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
@@ -68,7 +69,7 @@ services:
       start_period: 20s
 
   minio-init:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio:latest
     restart: "no"
     depends_on:
       minio:
@@ -80,7 +81,7 @@ services:
     networks:
       - internal
     entrypoint:
-      - /bin/sh
+      - /usr/bin/bash
       - -c
       - |
         set -e

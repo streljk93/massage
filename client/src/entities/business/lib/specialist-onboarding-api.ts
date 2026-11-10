@@ -2,7 +2,7 @@ import type { SpecialistsCabinetGetSpecialistOnboardingResponse } from "@/shared
 
 /**
  * Серверный шаг `onboardingStep` из `GET /specialists/me/onboarding` → локальный номер страницы
- * `/business/setup/:step` (1…8).
+ * `/business/setup/:step` (1…7). Шаг выбора режима работы (API 2) скрыт — режим `business` по умолчанию.
  */
 export function onboardingApiStepToUiStep(apiStep: number): number {
   switch (apiStep) {
@@ -11,19 +11,19 @@ export function onboardingApiStepToUiStep(apiStep: number): number {
     case 2:
       return 2;
     case 3:
-      return 3;
+      return 2;
     case 4:
-      return 4;
+      return 3;
     case 5:
-      return 5;
+      return 4;
     case 11:
-      return 6;
+      return 5;
     case 12:
-      return 7;
+      return 6;
     case 13:
-      return 8;
+      return 7;
     case 6:
-      return 8;
+      return 7;
     default:
       return 1;
   }
@@ -56,7 +56,7 @@ export function defaultWizardStepForApiStep(apiStep: number): number {
 /** Допустимый максимальный UI-шаг (ниже нельзя уводить пользователя глубже, чем разрешено API). */
 export function maxUiStepAllowed(apiStep: number): number {
   if (apiStep === 6) {
-    return 8;
+    return 7;
   }
   return onboardingApiStepToUiStep(apiStep);
 }

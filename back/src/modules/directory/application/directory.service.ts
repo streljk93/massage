@@ -180,7 +180,10 @@ function specialistEmploymentsForOrganizationStaffSection(
     if (!e.isActive) {
       return false;
     }
-    if (e.specialist.workplaces[0]?.organizationId !== organizationId) {
+    const atSalon = e.specialist.workplaces.some(
+      (w) => w.organizationId === organizationId && w.isActive,
+    );
+    if (!atSalon) {
       return false;
     }
     if (viewerOwnsOrganization) {
@@ -207,6 +210,7 @@ function isVndPriceOption(p: { currency: string }): boolean {
 function mapMarketplaceOfferingEdgesToBookable(
   specialist: SpecialistBookableSource,
   locale: ApiLocale,
+  organizationIdForOfferings?: string,
 ): SpecialistBookableServiceDto[] {
   type Edge = NonNullable<
     SpecialistBookableSource['offeringsExecution']
@@ -215,7 +219,10 @@ function mapMarketplaceOfferingEdgesToBookable(
   if (edges == null || edges.length === 0) {
     return [];
   }
-  const orgId = specialist.workplaces[0]?.organization.id ?? null;
+  const orgId =
+    organizationIdForOfferings?.trim() ||
+    specialist.workplaces[0]?.organization.id ||
+    null;
   if (orgId == null) {
     return [];
   }
@@ -304,8 +311,13 @@ type SpecialistBookableSource = Pick<
 function mapSpecialistOwnBookableServices(
   specialist: SpecialistBookableSource,
   locale: ApiLocale,
+  organizationIdForOfferings?: string,
 ): SpecialistBookableServiceDto[] {
-  return mapMarketplaceOfferingEdgesToBookable(specialist, locale);
+  return mapMarketplaceOfferingEdgesToBookable(
+    specialist,
+    locale,
+    organizationIdForOfferings,
+  );
 }
 
 function mapSpecialistRowToListItem(
@@ -472,6 +484,8 @@ function mapOrganizationRowToListItem(
 function mapSpecialistToStaffMember(
   s: OrganizationListRow['specialistEmployments'][number]['specialist'],
   locale: ApiLocale,
+  /** Салон профиля — услуги для записи берём по этой организации, не по «первому» workplace. */
+  organizationId: string,
   /** Строка локации салона (карточка сотрудника привязана к этой организации). */
   organizationMetaLine: string,
   occupiedKeys: Set<string>,
@@ -492,7 +506,7 @@ function mapSpecialistToStaffMember(
     rating: s.ratingAverage,
     metaLine,
     imageUrl: staffImg,
-    bookableServices: mapSpecialistOwnBookableServices(s, locale),
+    bookableServices: mapSpecialistOwnBookableServices(s, locale, organizationId),
     occupiedListingSlotKeys: [...occupiedKeys].sort(),
     availableListingSlotKeys: [...availableKeys].sort(),
   };
@@ -1217,6 +1231,7 @@ export class DirectoryService {
       mapSpecialistToStaffMember(
         e.specialist,
         locale,
+        id,
         base.metaLine,
         occupiedBySpecialist.get(e.specialist.id) ?? new Set(),
         availableBySpecialist.get(e.specialist.id) ?? new Set(),

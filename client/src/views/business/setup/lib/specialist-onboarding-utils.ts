@@ -9,8 +9,8 @@ export function clampUi(n: number): number {
   if (Number.isNaN(n) || n < 1) {
     return 1;
   }
-  if (n > 8) {
-    return 8;
+  if (n > 7) {
+    return 7;
   }
   return n;
 }

@@ -7,10 +7,6 @@ const StepIntro = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-intro"),
   { ssr: false },
 );
-const StepWorkPattern = dynamic(
-  () => import("./setup-steps/specialist-onboarding-step-work-pattern"),
-  { ssr: false },
-);
 const StepMajors = dynamic(
   () => import("./setup-steps/specialist-onboarding-step-majors"),
   { ssr: false },
@@ -38,13 +34,12 @@ const StepDone = dynamic(
 
 const byUi = {
   1: StepIntro,
-  2: StepWorkPattern,
-  3: StepMajors,
-  4: StepProfile,
-  5: StepMassage,
-  6: StepWorkplace,
-  7: StepSkills,
-  8: StepDone,
+  2: StepMajors,
+  3: StepProfile,
+  4: StepMassage,
+  5: StepWorkplace,
+  6: StepSkills,
+  7: StepDone,
 } as const;
 
 export function SpecialistOnboardingRoutedStep() {

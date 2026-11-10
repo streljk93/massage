@@ -6,6 +6,20 @@ const withNextIntl = createNextIntlPlugin("./src/app/i18n/request.ts");
 const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
+  /** Same-origin `/v1/*` → Nest (когда SDK ходит на `/v1` без `NEXT_PUBLIC_API_URL`). */
+  async rewrites() {
+    const target =
+      process.env.API_PROXY_TARGET?.replace(/\/+$/, "") ??
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ??
+      process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "") ??
+      "http://localhost:3001";
+    return [
+      {
+        source: "/v1/:path*",
+        destination: `${target}/v1/:path*`,
+      },
+    ];
+  },
   /**
    * Dev по IP в LAN: иначе Next режет WebSocket HMR и часть `/_next/*` (Origin ≠ localhost).
    * Маски — сегменты через точку, `*` на октет (как у `remotePatterns`).

@@ -19,6 +19,12 @@ import { HiringService } from '../../hiring/application/hiring.service';
 import { ModerationEnqueueService } from '../../moderation/application/moderation-enqueue.service';
 import { recomputeListedInDirectoryTx } from './recompute-specialist-listed-in-directory';
 import {
+  filterServiceCategoryIdsForOrganizationMajors,
+  resolveOrganizationOfferingBootstrapTargets,
+} from '../../organizations/infrastructure/organization-offering-bootstrap-targets';
+import { ensurePublishedOrgOfferingsForCategories } from '../../organizations/infrastructure/ensure-published-org-offerings-for-categories';
+import { syncOrganizationServiceCategoriesFromPublishedOfferings } from '../../organizations/infrastructure/organization-service-category-sync';
+import {
   SpecialistCabinetProfileService,
   type SpecialistCabinetVitrine,
 } from './specialist-cabinet-profile.service';
@@ -64,6 +70,50 @@ export class SpecialistOnboardingService {
     return this.prisma.specialistSkill.count({
       where: { specialistId },
     });
+  }
+
+  /** Офферы точки по выбранным подкатегориям + теги витрины (перед привязкой SpecialistOffering). */
+  private async bootstrapOrgOfferingsForSkillCategories(
+    specialistId: string,
+    serviceCategoryIds: readonly string[],
+  ): Promise<void> {
+    if (serviceCategoryIds.length === 0) {
+      return;
+    }
+    const targets = await resolveOrganizationOfferingBootstrapTargets(
+      this.prisma,
+      specialistId,
+    );
+    for (const target of targets) {
+      const categoryIds = await filterServiceCategoryIdsForOrganizationMajors(
+        this.prisma,
+        target.organizationId,
+        serviceCategoryIds,
+      );
+      if (categoryIds.length === 0) {
+        continue;
+      }
+      await ensurePublishedOrgOfferingsForCategories(this.prisma, {
+        organizationId: target.organizationId,
+        orgSlug: target.orgSlug,
+        categoryIds,
+      });
+      await syncOrganizationServiceCategoriesFromPublishedOfferings(
+        this.prisma,
+        target.organizationId,
+      );
+    }
+  }
+
+  private async bootstrapOrgOfferingsFromCurrentSkills(
+    specialistId: string,
+  ): Promise<void> {
+    const rows = await this.prisma.specialistSkill.findMany({
+      where: { specialistId },
+      select: { serviceCategoryId: true },
+    });
+    const ids = rows.map((r) => r.serviceCategoryId);
+    await this.bootstrapOrgOfferingsForSkillCategories(specialistId, ids);
   }
 
   /** Полная замена `SpecialistSkill` с проверкой majors (организация + остаток онбординга до complete). */
@@ -342,13 +392,21 @@ export class SpecialistOnboardingService {
   async ensureSpecialist(userId: string): Promise<void> {
     const exists = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
+      select: { id: true, onboardingWorkPattern: true },
     });
     if (exists) {
+      if (exists.onboardingWorkPattern == null) {
+        await this.prisma.specialist.update({
+          where: { id: exists.id },
+          data: { onboardingWorkPattern: SpecialistWorkPattern.business },
+        });
+      }
       return;
     }
     await this.prisma.specialist.create({
       data: {
         userId,
+        onboardingWorkPattern: SpecialistWorkPattern.business,
         profile: { create: { isActive: true } },
       },
     });
@@ -458,6 +516,10 @@ export class SpecialistOnboardingService {
     });
 
     if (body.serviceCategoryIds !== undefined) {
+      await this.bootstrapOrgOfferingsForSkillCategories(
+        specialist.id,
+        body.serviceCategoryIds,
+      );
       await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
         specialist.id,
       );
@@ -490,6 +552,10 @@ export class SpecialistOnboardingService {
         body.serviceCategoryIds,
       );
     });
+    await this.bootstrapOrgOfferingsForSkillCategories(
+      specialist.id,
+      body.serviceCategoryIds,
+    );
     await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
       specialist.id,
     );
@@ -706,6 +772,7 @@ export class SpecialistOnboardingService {
       });
       await recomputeListedInDirectoryTx(tx, spec.id);
     });
+    await this.bootstrapOrgOfferingsFromCurrentSkills(spec.id);
     await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
       spec.id,
     );

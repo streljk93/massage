@@ -29,3 +29,7 @@ export {
   ProfileHeroRatingLine,
   type ProfileHeroRatingLineProps,
 } from "./ui/profile-hero-rating-line";
+export {
+  ProfileBookingDialog,
+  type ProfileBookingDialogProps,
+} from "./ui/profile-booking-dialog";

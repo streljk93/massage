@@ -21,8 +21,8 @@ import {
   SpecialistWorkPattern,
   SpecialistWorkplaceJoinRequestStatus,
   type BookingStatus,
+  Prisma,
 } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { ApiLocale } from '../../../common/i18n';
 import {
@@ -31,6 +31,7 @@ import {
   pickBookingStatusLabel,
   pickLocalizedOrganizationListItem,
 } from '../../../common/i18n';
+import { PasswordHasher } from '../../auth/infrastructure/password-hasher';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
 import { BookingAppendService } from '../../bookings/application/booking-append.service';
 import {
@@ -70,6 +71,7 @@ import type {
   OrganizationTeamInviteBody,
   OrganizationTeamInviteCandidatesQuery,
   OrganizationTeamInviteRespondBody,
+  OrganizationTeamProvisionMemberBody,
 } from '../dto/organization-team-invite.schema';
 
 const CABINET_ALLOWED_PLACE_PROVIDERS = new Set<
@@ -155,6 +157,7 @@ export class OrganizationCabinetService {
     private readonly specialistOfferingEdgeLifecycle: SpecialistOfferingEdgeLifecycleService,
     private readonly calendarService: CalendarService,
     private readonly organizationAccess: OrganizationAccessPolicyService,
+    private readonly passwordHasher: PasswordHasher,
   ) {}
 
   /** Все активные брони организации (все мастера) — append массовой отмены при удалении салона. */
@@ -283,11 +286,47 @@ export class OrganizationCabinetService {
     await recomputeListedInDirectoryTx(tx, specialistId);
   }
 
+  /** Мастер, добавленный салоном: виден в записи без прохождения self-service онбординга. */
+  private async ensureSalonTeamMemberDirectoryReadyTx(
+    tx: Prisma.TransactionClient,
+    specialistId: string,
+    listingNameFallback?: string | null,
+  ): Promise<void> {
+    const spec = await tx.specialist.findFirst({
+      where: { id: specialistId, deletedAt: null },
+      select: {
+        listingName: true,
+        onboardingCompletedAt: true,
+        user: { select: { name: true } },
+      },
+    });
+    if (spec == null) {
+      return;
+    }
+    const fallback =
+      listingNameFallback?.trim() || spec.user.name?.trim() || '';
+    const data: { onboardingCompletedAt?: Date; listingName?: string } = {};
+    if (spec.onboardingCompletedAt == null) {
+      data.onboardingCompletedAt = new Date();
+    }
+    if (!spec.listingName?.trim() && fallback.length > 0) {
+      data.listingName = fallback;
+    }
+    if (Object.keys(data).length > 0) {
+      await tx.specialist.update({
+        where: { id: specialistId },
+        data,
+      });
+    }
+    await recomputeListedInDirectoryTx(tx, specialistId);
+  }
+
   private async grantSpecialistMembershipAtOrganization(
     tx: Prisma.TransactionClient,
     specialistId: string,
     organizationId: string,
     role: OrganizationMembershipRole = OrganizationMembershipRole.specialist,
+    opts?: { listingNameFallback?: string | null },
   ): Promise<void> {
     const startDate = new Date();
     const existing = await tx.specialistOrganizationEmployment.findFirst({
@@ -314,8 +353,13 @@ export class OrganizationCabinetService {
         },
       });
     }
-    const activeWorkplacesCount = await tx.specialistWorkplace.count({
-      where: { specialistId, isActive: true, deletedAt: null },
+    await tx.specialistWorkplace.updateMany({
+      where: {
+        specialistId,
+        organizationId: { not: organizationId },
+        deletedAt: null,
+      },
+      data: { isActive: false },
     });
     await tx.specialistWorkplace.upsert({
       where: {
@@ -324,15 +368,23 @@ export class OrganizationCabinetService {
       create: {
         specialistId,
         organizationId,
-        isActive: activeWorkplacesCount === 0,
+        isActive: true,
       },
-      update: { deletedAt: null },
+      update: { deletedAt: null, isActive: true },
+    });
+    await tx.specialist.updateMany({
+      where: { id: specialistId },
+      data: { activeOrganizationId: organizationId },
     });
     await this.calendarService.ensureSpecialistResourceForOrganizationTx(tx, {
       specialistId,
       organizationId,
     });
-    await this.syncSpecialistListedInDirectory(tx, specialistId);
+    await this.ensureSalonTeamMemberDirectoryReadyTx(
+      tx,
+      specialistId,
+      opts?.listingNameFallback,
+    );
   }
 
   private async resolveCabinetBookingPreviewLocaleOrg(
@@ -740,6 +792,221 @@ export class OrganizationCabinetService {
     return { invitation: mapOrganizationTeamInvitation(invitation) };
   }
 
+  /**
+   * Создать пользователя + профиль мастера и сразу добавить в команду организации
+   * (без приглашения и без самостоятельной регистрации специалиста).
+   */
+  async provisionCabinetTeamMember(
+    actorUserId: string,
+    organizationId: string,
+    body: OrganizationTeamProvisionMemberBody,
+  ): Promise<{
+    createdUser: boolean;
+    member: {
+      employmentId: string;
+      specialistId: string;
+      userId: string;
+      email: string;
+      displayName: string | null;
+      role: 'admin' | 'specialist';
+    };
+  }> {
+    await this.organizationAccess.assertCan(
+      actorUserId,
+      organizationId,
+      OrganizationCapabilities.JOIN_REQUESTS_REVIEW,
+      { type: 'Organization', organizationId },
+    );
+
+    const email = body.email.trim().toLowerCase();
+    const name = body.name.trim();
+    const targetRole = toOrganizationMembershipRole(body.targetRole);
+    const passwordPlain = body.password?.trim() ?? '';
+    let passwordHash: string | null = null;
+    if (passwordPlain.length > 0) {
+      passwordHash = await this.passwordHasher.hash(passwordPlain);
+    }
+
+    const org = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (org == null) {
+      throw new NotFoundException({
+        code: 'ORGANIZATION_NOT_FOUND',
+        message: 'Organization not found',
+      });
+    }
+
+    let createdUser = false;
+    let userId: string;
+    let specialistId: string;
+
+    const pendingRegistration =
+      await this.prisma.pendingRegistration.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+    if (pendingRegistration != null) {
+      throw new ConflictException({
+        code: 'EMAIL_REGISTRATION_PENDING',
+        message:
+          'This email is completing self-registration; finish verification or use another address',
+      });
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, deletedAt: true },
+    });
+
+    if (existingUser != null) {
+      userId = existingUser.id;
+      if (existingUser.deletedAt != null) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: {
+            deletedAt: null,
+            name,
+            phone: body.phone?.trim() || null,
+            emailVerifiedAt: new Date(),
+            ...(passwordHash != null ? { passwordHash } : {}),
+          },
+        });
+        createdUser = true;
+      } else if (passwordHash != null) {
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { passwordHash },
+        });
+      }
+      const spec = await this.prisma.specialist.findFirst({
+        where: { userId, deletedAt: null },
+        select: { id: true },
+      });
+      if (spec != null) {
+        specialistId = spec.id;
+      } else {
+        const created = await this.prisma.specialist.create({
+          data: {
+            userId,
+            onboardingWorkPattern: SpecialistWorkPattern.business,
+            profile: { create: { isActive: true } },
+          },
+          select: { id: true },
+        });
+        specialistId = created.id;
+      }
+    } else {
+      createdUser = true;
+      try {
+        const user = await this.prisma.user.create({
+          data: {
+            email,
+            name,
+            phone: body.phone?.trim() || null,
+            passwordHash,
+            emailVerifiedAt: new Date(),
+          },
+          select: { id: true },
+        });
+        userId = user.id;
+      } catch (e) {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002'
+        ) {
+          throw new ConflictException({
+            code: 'EMAIL_ALREADY_REGISTERED',
+            message: 'Email is already registered',
+          });
+        }
+        throw e;
+      }
+      const spec = await this.prisma.specialist.create({
+        data: {
+          userId,
+          onboardingWorkPattern: SpecialistWorkPattern.business,
+          profile: { create: { isActive: true } },
+        },
+        select: { id: true },
+      });
+      specialistId = spec.id;
+    }
+
+    const activeMember =
+      await this.prisma.specialistOrganizationEmployment.findFirst({
+        where: {
+          specialistId,
+          organizationId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+    if (activeMember != null) {
+      throw new ConflictException({
+        code: 'ALREADY_ORGANIZATION_MEMBER',
+        message: 'Specialist is already an active member of this organization',
+      });
+    }
+
+    const employmentId = await this.prisma.$transaction(async (tx) => {
+      await this.grantSpecialistMembershipAtOrganization(
+        tx,
+        specialistId,
+        organizationId,
+        targetRole,
+        { listingNameFallback: name },
+      );
+      const imageUrl = body.imageUrl?.trim() ?? '';
+      if (imageUrl.length > 0) {
+        await tx.specialist.update({
+          where: { id: specialistId },
+          data: {
+            imageUrl,
+            imageAlt: name.trim() || null,
+          },
+        });
+      }
+      const employment = await tx.specialistOrganizationEmployment.findFirst({
+        where: { specialistId, organizationId, isActive: true },
+        select: { id: true },
+      });
+      if (employment == null) {
+        throw new Error('employment missing after grant');
+      }
+      return employment.id;
+    });
+
+    await this.specialistOfferingEdgeLifecycle.assignSpecialistToAllPublishedOrgOfferingsAtOrganization(
+      specialistId,
+      organizationId,
+    );
+
+    const displayRow = await this.prisma.specialist.findFirst({
+      where: { id: specialistId },
+      select: {
+        listingName: true,
+        user: { select: { name: true, email: true } },
+      },
+    });
+
+    return {
+      createdUser,
+      member: {
+        employmentId,
+        specialistId,
+        userId,
+        email: displayRow?.user?.email ?? email,
+        displayName:
+          displayRow?.listingName?.trim() ||
+          displayRow?.user?.name?.trim() ||
+          name,
+        role: body.targetRole,
+      },
+    };
+  }
+
   async listMyOrganizationTeamInvitations(userId: string) {
     const specialist = await this.prisma.specialist.findFirst({
       where: { userId, deletedAt: null },
@@ -835,8 +1102,9 @@ export class OrganizationCabinetService {
         include: { organization: { select: { name: true } } },
       });
     });
-    await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+    await this.specialistOfferingEdgeLifecycle.assignSpecialistToAllPublishedOrgOfferingsAtOrganization(
       specialist.id,
+      invitation.organizationId,
     );
     return { invitation: mapOrganizationTeamInvitation(updated) };
   }
@@ -941,22 +1209,6 @@ export class OrganizationCabinetService {
         }
 
         const now = new Date();
-        const activeWorkplace = await tx.specialistWorkplace.findFirst({
-          where: {
-            specialistId: target.specialistId,
-            organizationId,
-            isActive: true,
-            deletedAt: null,
-          },
-          select: { id: true },
-        });
-        if (activeWorkplace != null) {
-          throw new ConflictException({
-            code: 'CANNOT_REMOVE_EMPLOYMENT_WITH_ACTIVE_WORKPLACE',
-            message:
-              'Specialist must switch workplace or turn off activity before being removed from this organization',
-          });
-        }
         await tx.specialistOrganizationEmployment.update({
           where: { id: target.id },
           data: { isActive: false, endDate: now },
@@ -1311,8 +1563,9 @@ export class OrganizationCabinetService {
           organizationId,
         );
       });
-      await this.specialistOfferingEdgeLifecycle.reconcileAssignmentsForSpecialist(
+      await this.specialistOfferingEdgeLifecycle.assignSpecialistToAllPublishedOrgOfferingsAtOrganization(
         joinRow.specialistId,
+        organizationId,
       );
     } else if (body.decision === 'reject') {
       await this.prisma.specialistWorkplaceJoinRequest.update({

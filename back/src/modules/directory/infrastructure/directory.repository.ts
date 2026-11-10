@@ -225,8 +225,7 @@ function specialistIncludeForOrgEmployment() {
       },
     },
     workplaces: {
-      where: { isActive: true, deletedAt: null },
-      take: 1,
+      where: { deletedAt: null },
       include: { organization: specialistActiveOrganizationInclude },
     },
     offeringsExecution: marketplaceSpecialistOfferingInclude,

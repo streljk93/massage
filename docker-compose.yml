@@ -23,7 +23,8 @@
 # Бэкапы: профиль Compose `backup` (сервис `postgres-backup`, том `postgres_backups`) или
 # хостовый cron → `npm run docker:pg-backup:dev` / `docker:pg-backup` (one-shot в ./backups/postgres/).
 #
-# MinIO health: TCP `:9000` через `bash /dev/tcp` — без curl/wget/nc (в официальном образе `nc` нет).
+# MinIO: `minio/minio` и `minio/mc` с Docker Hub сняты (2026); образы — cgr.dev/chainguard (server + mc в одном).
+# MinIO health: TCP `:9000` через `bash /dev/tcp` — без curl/wget/nc.
 #
 # Архитектура: back сейчас знает S3 / Ollama / image-moderation напрямую; при выносе AI — разумный
 # следующий шаг — отдельный шлюз (ai-gateway), чтобы back не оставался «god service».
@@ -54,7 +55,7 @@ x-service-defaults: &service-defaults
 services:
   minio:
     <<: *service-defaults
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
@@ -76,7 +77,7 @@ services:
       start_period: 20s
 
   minio-init:
-    image: minio/mc:latest
+    image: cgr.dev/chainguard/minio:latest
     restart: "no"
     depends_on:
       minio:
@@ -88,7 +89,7 @@ services:
     networks:
       - internal
     entrypoint:
-      - /bin/sh
+      - /usr/bin/bash
       - -c
       - |
         set -e

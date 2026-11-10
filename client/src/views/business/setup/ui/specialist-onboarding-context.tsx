@@ -103,6 +103,7 @@ export type SpecialistOnboardingContextValue = {
   sessionLoading: boolean;
   unauthenticated: boolean;
   onboardingLoading: boolean;
+  onboardingLoadError: boolean;
   ready: boolean;
   activeUi: number;
   apiStep: number;
@@ -184,6 +185,7 @@ export type SpecialistOnboardingContextValue = {
     body: OrganizationSalonCabinetSubmitBody,
   ) => Promise<void>;
   onWorkplaceSkip: () => void;
+  onWorkplaceLinkedContinue: () => Promise<void>;
   onDone: () => Promise<void>;
 };
 
@@ -210,6 +212,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
   const {
     data: onboard,
     isLoading: onboardingQueryLoading,
+    isError: onboardingQueryError,
     refetch,
   } = useQuery({
     queryKey: [...ONB_QK, accessToken, locale],
@@ -225,7 +228,10 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
       return data;
     },
   });
-  const { data: cabinetProfile, isLoading: profileLoading } = useQuery({
+  const {
+    data: cabinetProfile,
+    isLoading: profileLoading,
+  } = useQuery({
     queryKey: [...SPECIALIST_CABINET_PROFILE_QK, accessToken, locale],
     enabled: sessionStatus === "authenticated" && accessToken.length > 0,
     queryFn: async () => {
@@ -376,6 +382,11 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
         setFormError(t("vErrName"));
         return;
       }
+      await specialistsCabinetPatchSpecialistOnboardingPreferences({
+        client: sdk,
+        query: { locale },
+        body: { workPattern: "business" },
+      });
       const { data: fresh } = await refetch();
       const stepAfter = fresh?.onboardingStep ?? 1;
       setStep(defaultWizardStepForApiStep(Number(stepAfter)), Number(stepAfter));
@@ -717,6 +728,18 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     router.replace("/business/organizations");
   };
 
+  const onWorkplaceLinkedContinue = useCallback(async () => {
+    setFormError(null);
+    await invalidateOnboardingAndCabinetProfile(
+      queryClient,
+      accessToken,
+      locale,
+    );
+    const { data: o2 } = await refetch();
+    const stepAfter = Number(o2?.onboardingStep ?? 1);
+    setStep(defaultWizardStepForApiStep(stepAfter), stepAfter);
+  }, [accessToken, locale, queryClient, refetch, setStep]);
+
   const onDone = async () => {
     setFormError(null);
     setDoneSubmitting(true);
@@ -759,7 +782,14 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     sessionStatus === "unauthenticated" || accessToken.length === 0;
   const onboardingLoading =
     sessionStatus === "authenticated" &&
-    (onboardingQueryLoading || profileLoading || !onboard);
+    accessToken.length > 0 &&
+    (onboardingQueryLoading ||
+      profileLoading ||
+      (!onboard && !onboardingQueryError));
+  const onboardingLoadError =
+    sessionStatus === "authenticated" &&
+    accessToken.length > 0 &&
+    onboardingQueryError;
   const ready =
     sessionStatus === "authenticated" &&
     accessToken.length > 0 &&
@@ -771,6 +801,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     sessionLoading,
     unauthenticated,
     onboardingLoading,
+    onboardingLoadError,
     ready,
     activeUi,
     apiStep,
@@ -836,6 +867,7 @@ export function SpecialistOnboardingProvider({ children }: { children: ReactNode
     onOrgContinue,
     submitCreateOrganizationFromOnboarding,
     onWorkplaceSkip,
+    onWorkplaceLinkedContinue,
     onDone,
   };
 

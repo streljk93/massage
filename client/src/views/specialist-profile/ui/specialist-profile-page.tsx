@@ -26,15 +26,10 @@ import {
   priceForDuration,
 } from "@/entities/services";
 import { Button } from "@/shared/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/ui/shadcn/dialog";
 import { HomeBottomNav } from "@/widgets/home";
 import {
   ProfileAboutBlock,
+  ProfileBookingDialog,
   ProfileHeroAboutText,
   ProfileHeroRatingLine,
   ProfilePortfolioPlaceholder,
@@ -689,15 +684,6 @@ export function SpecialistProfilePage({
         </div>
       </div>
 
-      {bookingErrorKey ? (
-        <p
-          role="alert"
-          className="mx-auto max-w-lg px-4 pb-2 text-center text-sm text-destructive"
-        >
-          {tApiErrors(bookingErrorKey)}
-        </p>
-      ) : null}
-
       <HomeBottomNav
         activeId="search"
         actions={
@@ -716,50 +702,61 @@ export function SpecialistProfilePage({
         }
       />
 
-      <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{tVitrine("bookingDialogTitle")}</DialogTitle>
-          </DialogHeader>
-          <SpecialistProfileBookingPanel
-            profile={profile}
-            serviceSphereTabs={serviceSphereTabs}
-            sphereChipValue={sphereChipValue}
-            onSphereChange={setSphereFilterSlug}
-            visibleBookingServices={visibleBookingServices}
-            bookableRowId={bookableRowId}
-            onSelectService={setBookableRowId}
-            durationByBookableRow={durationByBookableRow}
-            onSelectDuration={(serviceId, minutes) => {
-              setDurationByBookableRow((prev) => ({
-                ...prev,
-                [serviceId]: minutes,
-              }));
-              setBookableRowId(serviceId);
-            }}
-            dayIndex={dayIndex}
-            onDayIndexChange={setDayIndex}
-            effectiveSlot={effectiveSlot}
-            onSlotChange={setSlot}
-            filteredDaySlots={filteredDaySlots}
-            selectedBookingMinutes={selectedBookingMinutes}
-            bookingPending={bookingPending}
-            formatPrice={priceText}
-          />
-          <Button
-            type="button"
-            variant="primary"
-            className="mt-2 h-12 w-full rounded-xl font-semibold"
-            disabled={bookingDisabled}
-            aria-busy={bookingPending}
-            onClick={() => void onBooking()}
-          >
-            {bookingPriceVnd !== undefined
-              ? `${t("booking")} · ${priceText(bookingPriceVnd)}`
-              : t("booking")}
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <ProfileBookingDialog
+        open={bookingOpen}
+        onOpenChange={setBookingOpen}
+        title={tVitrine("bookingDialogTitle")}
+        footer={
+          <>
+            {bookingErrorKey ? (
+              <p
+                role="alert"
+                className="mb-2 text-center text-sm text-destructive"
+              >
+                {tApiErrors(bookingErrorKey)}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              className="h-12 w-full rounded-xl font-semibold"
+              disabled={bookingDisabled}
+              aria-busy={bookingPending}
+              onClick={() => void onBooking()}
+            >
+              {bookingPriceVnd !== undefined
+                ? `${t("booking")} · ${priceText(bookingPriceVnd)}`
+                : t("booking")}
+            </Button>
+          </>
+        }
+      >
+        <SpecialistProfileBookingPanel
+          profile={profile}
+          serviceSphereTabs={serviceSphereTabs}
+          sphereChipValue={sphereChipValue}
+          onSphereChange={setSphereFilterSlug}
+          visibleBookingServices={visibleBookingServices}
+          bookableRowId={bookableRowId}
+          onSelectService={setBookableRowId}
+          durationByBookableRow={durationByBookableRow}
+          onSelectDuration={(serviceId, minutes) => {
+            setDurationByBookableRow((prev) => ({
+              ...prev,
+              [serviceId]: minutes,
+            }));
+            setBookableRowId(serviceId);
+          }}
+          dayIndex={dayIndex}
+          onDayIndexChange={setDayIndex}
+          effectiveSlot={effectiveSlot}
+          onSlotChange={setSlot}
+          filteredDaySlots={filteredDaySlots}
+          selectedBookingMinutes={selectedBookingMinutes}
+          bookingPending={bookingPending}
+          formatPrice={priceText}
+        />
+      </ProfileBookingDialog>
     </div>
   );
 }

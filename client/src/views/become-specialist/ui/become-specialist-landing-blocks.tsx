@@ -21,8 +21,6 @@ import {
   type LandingSpecialistSlideSeed,
 } from "../lib/landing-partners-seed";
 
-/** Единая точка регистрации; в бизнес-слой — сначала настройка аккаунта на `/business/setup`. */
-const REGISTRATION_FOR_BUSINESS_HREF = "/registration?next=/business/setup" as const;
 const BUSINESS_ONBOARDING_HREF = "/business/setup" as const;
 
 type Translate = (key: string) => string;
@@ -267,21 +265,27 @@ export function BecomeSpecialistLandingBody({
         </div>
 
         <div className="space-y-2">
-          <Button
-            variant="primary"
-            className="h-12 w-full rounded-full text-base font-semibold shadow-none"
-            asChild
-          >
-            <Link
-              href={isAuthed ? BUSINESS_ONBOARDING_HREF : REGISTRATION_FOR_BUSINESS_HREF}
+          {isAuthed ? (
+            <Button
+              variant="primary"
+              className="h-12 w-full rounded-full text-base font-semibold shadow-none"
+              asChild
             >
-              <UserPlus className="mr-2 size-5 shrink-0" aria-hidden />
-              {isAuthed ? t("configureSpecialistProfileCta") : t("registrationCta")}
-            </Link>
-          </Button>
-          <p className="text-center text-xs leading-relaxed text-muted-foreground">
-            {t("heroCtaHint")}
-          </p>
+              <Link href={BUSINESS_ONBOARDING_HREF}>
+                <UserPlus className="mr-2 size-5 shrink-0" aria-hidden />
+                {t("configureSpecialistProfileCta")}
+              </Link>
+            </Button>
+          ) : (
+            <p className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-center text-sm leading-relaxed text-muted-foreground">
+              {t("specialistInviteOnlyHint")}
+            </p>
+          )}
+          {isAuthed ? (
+            <p className="text-center text-xs leading-relaxed text-muted-foreground">
+              {t("heroCtaHint")}
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -400,18 +404,22 @@ export function BecomeSpecialistLandingBody({
           <p className="max-w-md text-pretty text-sm leading-relaxed text-primary-foreground/92">
             {t("bannerBody")}
           </p>
-          <Button
-            variant="secondary"
-            tone="light"
-            className="h-12 w-full rounded-full text-base font-semibold sm:w-auto sm:min-w-[13rem] sm:px-10"
-            asChild
-          >
-            <Link
-              href={isAuthed ? BUSINESS_ONBOARDING_HREF : REGISTRATION_FOR_BUSINESS_HREF}
+          {isAuthed ? (
+            <Button
+              variant="secondary"
+              tone="light"
+              className="h-12 w-full rounded-full text-base font-semibold sm:w-auto sm:min-w-[13rem] sm:px-10"
+              asChild
             >
-              {isAuthed ? t("configureSpecialistProfileCta") : t("registrationCta")}
-            </Link>
-          </Button>
+              <Link href={BUSINESS_ONBOARDING_HREF}>
+                {t("configureSpecialistProfileCta")}
+              </Link>
+            </Button>
+          ) : (
+            <p className="max-w-md text-pretty text-sm leading-relaxed text-primary-foreground/92">
+              {t("specialistInviteOnlyHint")}
+            </p>
+          )}
         </div>
       </section>
 

@@ -254,6 +254,58 @@ export const organizationTeamInvitationMutationResponseSchema = {
   },
 };
 
+export const organizationTeamProvisionMemberRequestSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['email', 'name'],
+  properties: {
+    email: { type: 'string', format: 'email', maxLength: 255 },
+    name: { type: 'string', minLength: 1, maxLength: 120 },
+    phone: { type: 'string', nullable: true, minLength: 8, maxLength: 32 },
+    password: { type: 'string', nullable: true, minLength: 8, maxLength: 256 },
+    targetRole: {
+      type: 'string',
+      enum: ['admin', 'specialist'],
+      default: 'specialist',
+    },
+    imageUrl: {
+      type: 'string',
+      nullable: true,
+      minLength: 1,
+      maxLength: 2048,
+    },
+  },
+};
+
+export const organizationTeamProvisionMemberResponseSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['createdUser', 'member'],
+  properties: {
+    createdUser: { type: 'boolean' },
+    member: {
+      type: 'object',
+      additionalProperties: false,
+      required: [
+        'employmentId',
+        'specialistId',
+        'userId',
+        'email',
+        'displayName',
+        'role',
+      ],
+      properties: {
+        employmentId: { type: 'string', format: 'uuid' },
+        specialistId: { type: 'string', format: 'uuid' },
+        userId: { type: 'string', format: 'uuid' },
+        email: { type: 'string', format: 'email' },
+        displayName: { type: 'string', nullable: true },
+        role: { type: 'string', enum: ['admin', 'specialist'] },
+      },
+    },
+  },
+};
+
 export const organizationTeamInvitationListResponseSchema = {
   type: 'object',
   additionalProperties: false,

@@ -20,37 +20,34 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     sessionLoading,
     unauthenticated,
     onboardingLoading,
+    onboardingLoadError,
     ready,
+    refetch,
     activeUi,
     formError,
     createSalonOpen,
-    draftWorkPattern,
     draftMajorSlugs,
     introSubmitting,
     profileSaving,
     skillsSubmitting,
-    workplaceSubmitting,
     createOrgSubmitting,
     doneSubmitting,
-    workPatternSubmitting,
     majorsSubmitting,
     massageSaving,
     spec,
     draftSkillCategoryIds,
     onIntroContinue,
-    onWorkPatternContinue,
     onMajorsContinue,
     onProfileContinue,
     onMassageContinue,
     onSkillsContinue,
-    onOrgContinue,
-    onWorkplaceSkip,
+    onWorkplaceLinkedContinue,
     onDone,
   } = useSpecialistOnboarding();
 
-  const skillsStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 7);
+  const skillsStepCatalog = useSpecialistOnboardingCatalogCategories(activeUi === 6);
   const skillsContinueBlocked =
-    activeUi === 7 &&
+    activeUi === 6 &&
     (skillsStepCatalog.isLoading ||
       !(skillsStepCatalog.data?.categories?.length ?? 0));
 
@@ -114,6 +111,26 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     );
   }
 
+  if (onboardingLoadError) {
+    return (
+      <div className="space-y-3 px-4 py-6">
+        <p className="text-sm text-muted-foreground" role="alert">
+          {t("loadErrorHint")}
+        </p>
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full rounded-full"
+          onClick={() => {
+            void refetch();
+          }}
+        >
+          {t("loadErrorRetry")}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
       <div
@@ -130,7 +147,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
           />
           <SpecialistOnboardingStepper
             current={activeUi}
-            total={8}
+            total={7}
             aria={t("stepperAria")}
           />
           {formError ? (
@@ -172,18 +189,6 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               type="button"
               className="h-12 w-full rounded-full"
               onClick={() => {
-                void onWorkPatternContinue();
-              }}
-              disabled={workPatternSubmitting || draftWorkPattern == null}
-            >
-              {workPatternSubmitting ? t("saving") : t("continue")}
-            </Button>
-          : null}
-          {activeUi === 3 ?
-            <Button
-              type="button"
-              className="h-12 w-full rounded-full"
-              onClick={() => {
                 void onMajorsContinue();
               }}
               disabled={majorsSubmitting || draftMajorSlugs.length < 1}
@@ -191,7 +196,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               {majorsSubmitting ? t("saving") : t("continue")}
             </Button>
           : null}
-          {activeUi === 4 ?
+          {activeUi === 3 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
@@ -203,7 +208,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               {profileSaving ? t("saving") : t("continue")}
             </Button>
           : null}
-          {activeUi === 5 ?
+          {activeUi === 4 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
@@ -215,30 +220,18 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               {massageSaving ? t("saving") : t("continue")}
             </Button>
           : null}
-          {activeUi === 6 && spec?.onboardingWorkPattern === "employed_salon" ?
-            <>
-              <Button
-                type="button"
-                className="h-12 w-full rounded-full"
-                onClick={() => {
-                  void onOrgContinue();
-                }}
-                disabled={workplaceSubmitting || createOrgSubmitting || createSalonOpen}
-              >
-                {workplaceSubmitting ? t("saving") : t("workplaceRequestSubmit")}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="h-12 w-full rounded-full"
-                onClick={onWorkplaceSkip}
-                disabled={createOrgSubmitting}
-              >
-                {t("skip")}
-              </Button>
-            </>
+          {activeUi === 5 && spec?.activeOrganizationId ?
+            <Button
+              type="button"
+              className="h-12 w-full rounded-full"
+              onClick={() => {
+                void onWorkplaceLinkedContinue();
+              }}
+            >
+              {t("continue")}
+            </Button>
           : null}
-          {activeUi === 7 ?
+          {activeUi === 6 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"
@@ -254,7 +247,7 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
               {skillsSubmitting ? t("saving") : t("continue")}
             </Button>
           : null}
-          {activeUi === 8 ?
+          {activeUi === 7 ?
             <Button
               type="button"
               className="h-12 w-full rounded-full"

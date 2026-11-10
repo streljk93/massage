@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   OfferingPriceOptionStatus,
   OfferingPublicationStatus,
+  Prisma,
   SpecialistOfferingStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
@@ -17,6 +18,25 @@ export class SpecialistOfferingEdgeLifecycleService {
     private readonly prisma: PrismaService,
     private readonly listingEdges: MarketplaceListingEdgesIndexService,
   ) {}
+
+  /** При добавлении в команду салона — все опубликованные услуги организации, без фильтра по навыкам. */
+  async assignSpecialistToAllPublishedOrgOfferingsAtOrganization(
+    specialistId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const rows = await this.prisma.organizationOffering.findMany({
+      where: this.publishedOrgOfferingWhere(organizationId, undefined),
+      select: { id: true },
+    });
+    await this.prisma.$transaction(async (tx) => {
+      await this.upsertActiveEdgesForOfferings(
+        tx,
+        specialistId,
+        rows.map((r) => r.id),
+      );
+    });
+    await this.listingEdges.upsertAllEdgesForSpecialist(specialistId);
+  }
 
   async reconcileAssignmentsForSpecialist(specialistId: string): Promise<void> {
     const specialist = await this.prisma.specialist.findFirst({
@@ -42,6 +62,8 @@ export class SpecialistOfferingEdgeLifecycleService {
       ...new Set(categoryRows.map((r) => r.serviceCategoryId)),
     ];
 
+    const orgId = specialist.workplaces[0]?.organizationId ?? null;
+
     const activeEdges = await this.prisma.specialistOffering.findMany({
       where: { specialistId, deletedAt: null },
       select: {
@@ -56,9 +78,9 @@ export class SpecialistOfferingEdgeLifecycleService {
     const removedEdgeIds: string[] = [];
     const now = new Date();
 
-    const orgId = specialist.workplaces[0]?.organizationId ?? null;
+    let desiredOfferingIds: Set<string>;
 
-    if (orgId == null || categoryIds.length === 0) {
+    if (orgId == null) {
       for (const e of activeEdges) {
         removedEdgeIds.push(e.id);
       }
@@ -75,23 +97,40 @@ export class SpecialistOfferingEdgeLifecycleService {
       return;
     }
 
-    const desiredRows = await this.prisma.organizationOffering.findMany({
-      where: {
-        organizationId: orgId,
-        deletedAt: null,
-        publicationStatus: OfferingPublicationStatus.published,
-        categoryId: { in: categoryIds },
-        priceOptions: {
-          some: {
-            deletedAt: null,
-            status: OfferingPriceOptionStatus.active,
-            currency: 'VND',
-          },
-        },
-      },
-      select: { id: true },
-    });
-    const desiredOfferingIds = new Set(desiredRows.map((r) => r.id));
+    if (categoryIds.length === 0) {
+      const employed =
+        await this.prisma.specialistOrganizationEmployment.findFirst({
+          where: { specialistId, organizationId: orgId, isActive: true },
+          select: { id: true },
+        });
+      if (employed == null) {
+        for (const e of activeEdges) {
+          removedEdgeIds.push(e.id);
+        }
+        if (removedEdgeIds.length > 0) {
+          await this.prisma.specialistOffering.updateMany({
+            where: { id: { in: removedEdgeIds } },
+            data: {
+              deletedAt: now,
+              status: SpecialistOfferingStatus.removed,
+            },
+          });
+        }
+        await this.flushIndexRemovalsThenRefresh(removedEdgeIds, specialistId);
+        return;
+      }
+      const allAtOrg = await this.prisma.organizationOffering.findMany({
+        where: this.publishedOrgOfferingWhere(orgId, undefined),
+        select: { id: true },
+      });
+      desiredOfferingIds = new Set(allAtOrg.map((r) => r.id));
+    } else {
+      const desiredRows = await this.prisma.organizationOffering.findMany({
+        where: this.publishedOrgOfferingWhere(orgId, { in: categoryIds }),
+        select: { id: true },
+      });
+      desiredOfferingIds = new Set(desiredRows.map((r) => r.id));
+    }
 
     for (const e of activeEdges) {
       const off = e.organizationOffering;
@@ -115,43 +154,74 @@ export class SpecialistOfferingEdgeLifecycleService {
         });
       }
 
-      for (const organizationOfferingId of desiredOfferingIds) {
-        const row = await tx.specialistOffering.findUnique({
-          where: {
-            specialistId_organizationOfferingId: {
-              specialistId,
-              organizationOfferingId,
-            },
-          },
-          select: { id: true, deletedAt: true, status: true },
-        });
-        if (row == null) {
-          await tx.specialistOffering.create({
-            data: {
-              specialistId,
-              organizationOfferingId,
-              status: SpecialistOfferingStatus.active,
-            },
-          });
-          continue;
-        }
-        const patch: { deletedAt: null; status: SpecialistOfferingStatus } = {
-          deletedAt: null,
-          status: SpecialistOfferingStatus.active,
-        };
-        if (
-          row.deletedAt != null ||
-          row.status !== SpecialistOfferingStatus.active
-        ) {
-          await tx.specialistOffering.update({
-            where: { id: row.id },
-            data: patch,
-          });
-        }
-      }
+      await this.upsertActiveEdgesForOfferings(
+        tx,
+        specialistId,
+        desiredOfferingIds,
+      );
     });
 
     await this.flushIndexRemovalsThenRefresh(removedEdgeIds, specialistId);
+  }
+
+  private publishedOrgOfferingWhere(
+    organizationId: string,
+    categoryFilter: { in: string[] } | undefined,
+  ) {
+    return {
+      organizationId,
+      deletedAt: null,
+      publicationStatus: OfferingPublicationStatus.published,
+      ...(categoryFilter != null ? { categoryId: categoryFilter } : {}),
+      priceOptions: {
+        some: {
+          deletedAt: null,
+          status: OfferingPriceOptionStatus.active,
+          currency: 'VND',
+        },
+      },
+    };
+  }
+
+  private async upsertActiveEdgesForOfferings(
+    tx: Prisma.TransactionClient,
+    specialistId: string,
+    organizationOfferingIds: Iterable<string>,
+  ): Promise<void> {
+    for (const organizationOfferingId of organizationOfferingIds) {
+      const row = await tx.specialistOffering.findUnique({
+        where: {
+          specialistId_organizationOfferingId: {
+            specialistId,
+            organizationOfferingId,
+          },
+        },
+        select: { id: true, deletedAt: true, status: true },
+      });
+      if (row == null) {
+        await tx.specialistOffering.create({
+          data: {
+            specialistId,
+            organizationOfferingId,
+            status: SpecialistOfferingStatus.active,
+          },
+        });
+        continue;
+      }
+      const patch: { deletedAt: null; status: SpecialistOfferingStatus } = {
+        deletedAt: null,
+        status: SpecialistOfferingStatus.active,
+      };
+      if (
+        row.deletedAt != null ||
+        row.status !== SpecialistOfferingStatus.active
+      ) {
+        await tx.specialistOffering.update({
+          where: { id: row.id },
+          data: patch,
+        });
+      }
+    }
   }
 
   private async flushIndexRemovalsThenRefresh(

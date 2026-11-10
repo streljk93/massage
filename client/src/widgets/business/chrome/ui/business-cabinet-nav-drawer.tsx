@@ -42,7 +42,14 @@ import { Skeleton } from "@/shared/ui/shadcn/skeleton";
 import { Button, UserAvatar } from "@/shared/ui";
 import { cn, motion } from "@/shared/lib";
 import { OrgSwitcher } from "./org-switcher";
+import { isBusinessCabinetNavItemVisible } from "../lib/business-cabinet-nav-visibility";
 import { useBusinessCabinetAvatarSrc } from "../lib/use-business-cabinet-avatar-src";
+
+function filterVisibleNavItems<T extends { id: string }>(
+  items: readonly T[],
+): T[] {
+  return items.filter((item) => isBusinessCabinetNavItemVisible(item.id));
+}
 
 const profileSettingsIconButtonClassName = cn(
   motion.interactive,
@@ -297,13 +304,21 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
   const hasOrg = selectedOrg != null;
 
   const organizationNavItems = useMemo(() => {
-    if (selectedOrg == null) return ORGANIZATION_NAV;
-    return ORGANIZATION_NAV.filter((item) => {
-      const cap = item.requiredCapability;
-      if (cap == null) return true;
-      return canOrganization(selectedOrg, cap);
-    });
+    const base =
+      selectedOrg == null
+        ? [...ORGANIZATION_NAV]
+        : ORGANIZATION_NAV.filter((item) => {
+            const cap = item.requiredCapability;
+            if (cap == null) return true;
+            return canOrganization(selectedOrg, cap);
+          });
+    return filterVisibleNavItems(base);
   }, [selectedOrg]);
+
+  const globalNavItems = useMemo(
+    () => filterVisibleNavItems(GLOBAL_NAV),
+    [],
+  );
 
   return (
     <>
@@ -335,7 +350,7 @@ function BusinessCabinetNavPanelContent({ mode }: { mode: NavPanelMode }) {
 
         {/* Глобальные пункты */}
         <NavRows
-          items={GLOBAL_NAV}
+          items={globalNavItems}
           activeId={activeId}
           tNav={tNav}
           mode={mode}

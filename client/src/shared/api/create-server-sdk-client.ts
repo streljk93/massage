@@ -1,3 +1,4 @@
+import { resolveApiOrigin } from "@/shared/lib/api-origin";
 import { createClient, createConfig } from "./generated/sdk/client";
 import type { ClientOptions } from "./generated/sdk/types.gen";
 
@@ -22,11 +23,11 @@ export function serverSdkFetchNoStore(
 
 /**
  * Typed SDK-клиент для серверных вызовов (RSC, route handlers) к Nest API.
- * `baseUrl` = `AUTH_BACKEND_URL` + `/v1`. Без переменной — `null`.
+ * `baseUrl` = origin API + `/v1` (`AUTH_BACKEND_URL` / `NEXT_PUBLIC_API_URL`, в dev — localhost:3001).
  * При `accessToken` запросы к опционально защищённым GET отдают данные «как для владельца» (напр. статус модерации).
  */
 export function createServerSdkClient(options?: CreateServerSdkClientOptions) {
-  const base = process.env.AUTH_BACKEND_URL?.replace(/\/+$/, "");
+  const base = resolveApiOrigin();
   if (!base) {
     return null;
   }
