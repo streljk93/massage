@@ -266,6 +266,8 @@ services:
       REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MODERATION_QUEUE_ENABLED: ${MODERATION_QUEUE_ENABLED:-true}
+      # Тот же Web Client ID, что у GSI на фронте (`NEXT_PUBLIC_*` при build client).
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-${NEXT_PUBLIC_GOOGLE_OAUTH_CLIENT_ID}}
     depends_on:
       postgres:
         condition: service_healthy
