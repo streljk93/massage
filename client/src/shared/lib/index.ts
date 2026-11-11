@@ -7,6 +7,11 @@ export {
   type AppRouterBackLike,
 } from "./navigation/go-back-or-fallback";
 export { safePostAuthPath } from "./safe-post-auth-path";
+export {
+  authReturnPathQuery,
+  loginHrefWithReturn,
+  registrationHrefWithReturn,
+} from "./auth-return-path";
 export { localeFlagEmoji } from "./locale-flag-emoji";
 export { previewSrcForPersistedGalleryUrl } from "./preview-src-for-persisted-gallery-url";
 export { resolveApiResourceUrl } from "./resolve-api-resource-url";

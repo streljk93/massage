@@ -12,8 +12,12 @@ import {
   maxUiStepAllowed,
 } from "@/entities/business";
 import { createBrowserSdkClient, specialistsCabinetGetSpecialistOnboarding } from "@/shared/api";
+import { loginHrefWithReturn } from "@/shared/lib";
+import { SPECIALIST_ONBOARDING_ENTRY_PATH } from "@/views/become-specialist/lib/specialist-onboarding-entry";
 import { ONB_QK } from "./specialist-onboarding-context";
 import { clampUi } from "../lib/specialist-onboarding-utils";
+
+const setupLoginHref = loginHrefWithReturn(SPECIALIST_ONBOARDING_ENTRY_PATH);
 
 /**
  * `/business/setup` → редирект на шаг по данным онбординга.
@@ -49,10 +53,14 @@ export function SpecialistSetupIndexRedirect() {
   });
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace(setupLoginHref);
+      return;
+    }
     if (status === "loading" || (status === "authenticated" && accessToken.length === 0)) {
       return;
     }
-    if (status === "unauthenticated" || accessToken.length === 0) {
+    if (accessToken.length === 0) {
       return;
     }
     if (!isFetched) {
@@ -76,9 +84,10 @@ export function SpecialistSetupIndexRedirect() {
 
   if (status === "unauthenticated") {
     return (
-      <p className="text-sm text-muted-foreground">
-        {t("vErrName")}
-      </p>
+      <div
+        className="min-h-[12rem] w-full max-w-md animate-pulse rounded-2xl bg-muted/50"
+        aria-hidden
+      />
     );
   }
 

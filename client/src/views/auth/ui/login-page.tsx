@@ -7,7 +7,7 @@ import { Link, useRouter } from "@/app/i18n/navigation";
 import type { OAuthEnvFlags } from "@/auth/oauth-env";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { cn, motion } from "@/shared/lib";
+import { cn, motion, registrationHrefWithReturn } from "@/shared/lib";
 import { AuthSocialCircles } from "./auth-social-circles";
 
 const authFieldClass =
@@ -15,9 +15,11 @@ const authFieldClass =
 
 export type LoginPageProps = {
   oauth: OAuthEnvFlags;
+  /** Куда вести после успешного входа (email и OAuth). */
+  postSignInPath?: string;
 };
 
-export function LoginPage({ oauth }: LoginPageProps) {
+export function LoginPage({ oauth, postSignInPath = "/" }: LoginPageProps) {
   const t = useTranslations("authLogin");
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -40,7 +42,7 @@ export function LoginPage({ oauth }: LoginPageProps) {
         return;
       }
       if (res?.ok) {
-        router.push("/");
+        router.push(postSignInPath);
         router.refresh();
       }
     } catch {
@@ -113,7 +115,11 @@ export function LoginPage({ oauth }: LoginPageProps) {
             >
               {t("submit")}
             </Button>
-            <AuthSocialCircles oauth={oauth} namespace="authLogin" />
+            <AuthSocialCircles
+              oauth={oauth}
+              namespace="authLogin"
+              postSignInPath={postSignInPath}
+            />
           </div>
         </form>
 
@@ -127,7 +133,9 @@ export function LoginPage({ oauth }: LoginPageProps) {
             )}
             asChild
           >
-            <Link href="/registration">{t("registrationCta")}</Link>
+            <Link href={registrationHrefWithReturn(postSignInPath)}>
+              {t("registrationCta")}
+            </Link>
           </Button>
         </div>
       </div>

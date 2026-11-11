@@ -20,8 +20,7 @@ import {
   type LandingSalonRowSeed,
   type LandingSpecialistSlideSeed,
 } from "../lib/landing-partners-seed";
-
-const BUSINESS_ONBOARDING_HREF = "/business/setup" as const;
+import { specialistOnboardingCtaHref } from "../lib/specialist-onboarding-entry";
 
 type Translate = (key: string) => string;
 
@@ -204,6 +203,7 @@ export function BecomeSpecialistLandingBody({
 }) {
   const sectionTitleClass =
     "font-heading text-xl font-bold tracking-tight text-foreground sm:text-[1.3125rem]";
+  const onboardingCtaHref = specialistOnboardingCtaHref(isAuthed);
 
   return (
     <div className="space-y-8 sm:space-y-9">
@@ -265,27 +265,19 @@ export function BecomeSpecialistLandingBody({
         </div>
 
         <div className="space-y-2">
-          {isAuthed ? (
-            <Button
-              variant="primary"
-              className="h-12 w-full rounded-full text-base font-semibold shadow-none"
-              asChild
-            >
-              <Link href={BUSINESS_ONBOARDING_HREF}>
-                <UserPlus className="mr-2 size-5 shrink-0" aria-hidden />
-                {t("configureSpecialistProfileCta")}
-              </Link>
-            </Button>
-          ) : (
-            <p className="rounded-2xl border border-border/50 bg-muted/30 px-4 py-3 text-center text-sm leading-relaxed text-muted-foreground">
-              {t("specialistInviteOnlyHint")}
-            </p>
-          )}
-          {isAuthed ? (
-            <p className="text-center text-xs leading-relaxed text-muted-foreground">
-              {t("heroCtaHint")}
-            </p>
-          ) : null}
+          <Button
+            variant="primary"
+            className="h-12 w-full rounded-full text-base font-semibold shadow-none"
+            asChild
+          >
+            <Link href={onboardingCtaHref}>
+              <UserPlus className="mr-2 size-5 shrink-0" aria-hidden />
+              {t("configureSpecialistProfileCta")}
+            </Link>
+          </Button>
+          <p className="text-center text-xs leading-relaxed text-muted-foreground">
+            {isAuthed ? t("heroCtaHint") : t("heroCtaHintGuest")}
+          </p>
         </div>
       </section>
 
@@ -404,22 +396,14 @@ export function BecomeSpecialistLandingBody({
           <p className="max-w-md text-pretty text-sm leading-relaxed text-primary-foreground/92">
             {t("bannerBody")}
           </p>
-          {isAuthed ? (
-            <Button
-              variant="secondary"
-              tone="light"
-              className="h-12 w-full rounded-full text-base font-semibold sm:w-auto sm:min-w-[13rem] sm:px-10"
-              asChild
-            >
-              <Link href={BUSINESS_ONBOARDING_HREF}>
-                {t("configureSpecialistProfileCta")}
-              </Link>
-            </Button>
-          ) : (
-            <p className="max-w-md text-pretty text-sm leading-relaxed text-primary-foreground/92">
-              {t("specialistInviteOnlyHint")}
-            </p>
-          )}
+          <Button
+            variant="secondary"
+            tone="light"
+            className="h-12 w-full rounded-full text-base font-semibold sm:w-auto sm:min-w-[13rem] sm:px-10"
+            asChild
+          >
+            <Link href={onboardingCtaHref}>{t("configureSpecialistProfileCta")}</Link>
+          </Button>
         </div>
       </section>
 
@@ -449,12 +433,6 @@ export function BecomeSpecialistLandingBody({
               {t("footerHoursLabel")}
             </dt>
             <dd className="mt-1 text-muted-foreground">{t("footerHours")}</dd>
-          </div>
-          <div>
-            <dt className="sr-only">{t("footerNoteLabel")}</dt>
-            <dd className="text-xs leading-relaxed text-muted-foreground">
-              {t("footerNote")}
-            </dd>
           </div>
         </dl>
       </footer>

@@ -13,7 +13,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/shared/ui/shadcn/input-otp";
-import { cn, motion } from "@/shared/lib";
+import { cn, loginHrefWithReturn, motion } from "@/shared/lib";
 import { AuthSocialCircles } from "./auth-social-circles";
 
 const authFieldClass =
@@ -425,7 +425,7 @@ export function RegisterPage({
                 )}
                 asChild
               >
-                <Link href="/login">{t("loginCta")}</Link>
+                <Link href={loginHrefWithReturn(postSignInPath)}>{t("loginCta")}</Link>
               </Button>
             </div>
           </>

@@ -21,6 +21,7 @@
         "configureSpecialistProfileCta": "Set up your specialist profile",
         "specialistInviteOnlyHint": "Self-registration for specialists is temporarily unavailable. Ask your salon administrator to add you to the team.",
         "heroCtaHint": "When you sign up, you can add your city, specialty, and language preferences.",
+        "heroCtaHintGuest": "Sign in or register — we’ll take you straight to profile setup.",
         "sliderHeading": "Professionals already on the app",
         "sliderSub": "Examples of specialists who receive bookings through our platform.",
         "sliderCardTag": "App bookings",
@@ -101,8 +102,6 @@
         "footerEmailLabel": "Email",
         "footerHoursLabel": "Response hours",
         "footerHours": "Monday–Saturday, 9:00–18:00 ICT.",
-        "footerNoteLabel": "Other channels",
-        "footerNote": "Zalo and a phone line will be added before public launch—for now, email is the fastest way to reach us.",
         "contactAria": "Contact details"
       }
     },
@@ -127,6 +126,7 @@
         "specialistInviteOnlyHint": "Tự đăng ký chuyên viên tạm thời không khả dụng. Hãy nhờ quản trị salon thêm bạn vào đội ngũ.",
         "configureSpecialistProfileCta": "Thiết lập hồ sơ chuyên viên",
         "heroCtaHint": "Khi đăng ký, bạn có thể điền thành phố, chuyên môn và ngôn ngữ ưu tiên.",
+        "heroCtaHintGuest": "Đăng nhập hoặc đăng ký — sau đó bạn vào thẳng bước thiết lập hồ sơ.",
         "sliderHeading": "Chuyên viên đã có trên app",
         "sliderSub": "Một số hồ sơ đang nhận lịch qua nền tảng.",
         "sliderCardTag": "Đặt qua app",
@@ -207,8 +207,6 @@
         "footerEmailLabel": "Email",
         "footerHoursLabel": "Giờ phản hồi",
         "footerHours": "Thứ Hai–Thứ Bảy, 9:00–18:00 (ICT).",
-        "footerNoteLabel": "Kênh khác",
-        "footerNote": "Zalo và hotline sẽ bổ sung trước khi mở rộng công khai — hiện tại email là nhanh nhất.",
         "contactAria": "Thông tin liên hệ"
       }
     },
@@ -233,6 +231,7 @@
         "specialistInviteOnlyHint": "Самостоятельная регистрация специалистов временно недоступна. Попросите администратора салона добавить вас в команду.",
         "configureSpecialistProfileCta": "Настроить профиль специалиста",
         "heroCtaHint": "При регистрации можно указать город, специализацию и удобный язык общения.",
+        "heroCtaHintGuest": "Войдите или зарегистрируйтесь — дальше сразу откроется настройка профиля.",
         "sliderHeading": "Специалисты в приложении",
         "sliderSub": "Примеры профилей, которые получают записи через платформу.",
         "sliderCardTag": "Запись через приложение",
@@ -313,8 +312,6 @@
         "footerEmailLabel": "Почта",
         "footerHoursLabel": "Время ответа",
         "footerHours": "Понедельник–суббота, 9:00–18:00 по ICT.",
-        "footerNoteLabel": "Другие каналы",
-        "footerNote": "Zalo и телефон появятся здесь перед публичным запуском — сейчас быстрее всего написать на почту.",
         "contactAria": "Контактные данные"
       }
     }

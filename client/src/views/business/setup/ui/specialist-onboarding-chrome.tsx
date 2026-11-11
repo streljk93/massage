@@ -1,21 +1,28 @@
 "use client";
 
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/app/i18n/navigation";
+import { loginHrefWithReturn } from "@/shared/lib";
+import { SPECIALIST_ONBOARDING_ENTRY_PATH } from "@/views/become-specialist/lib/specialist-onboarding-entry";
 import { BusinessScreenHeader } from "@/widgets/business/chrome";
 import { Button } from "@/shared/ui";
 import { SpecialistOnboardingStepper } from "./specialist-onboarding-stepper";
 import { useSpecialistOnboardingCatalogCategories } from "../lib/use-specialist-onboarding-catalog-categories";
 import { useSpecialistOnboarding } from "./specialist-onboarding-context";
 
+const setupLoginHref = loginHrefWithReturn(SPECIALIST_ONBOARDING_ENTRY_PATH);
+
 export function SpecialistOnboardingChrome({ children }: { children: ReactNode }) {
   const t = useTranslations("specialistOnboarding");
   const tSetup = useTranslations("specialistAccountSetup");
+  const router = useRouter();
   const {
     sessionLoading,
     unauthenticated,
@@ -50,6 +57,12 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
     activeUi === 6 &&
     (skillsStepCatalog.isLoading ||
       !(skillsStepCatalog.data?.categories?.length ?? 0));
+
+  useEffect(() => {
+    if (!sessionLoading && unauthenticated) {
+      router.replace(setupLoginHref);
+    }
+  }, [sessionLoading, unauthenticated, router]);
 
   const topChromeRef = useRef<HTMLDivElement | null>(null);
   const bottomChromeRef = useRef<HTMLDivElement | null>(null);
@@ -96,9 +109,10 @@ export function SpecialistOnboardingChrome({ children }: { children: ReactNode }
 
   if (unauthenticated) {
     return (
-      <p className="text-sm text-muted-foreground">
-        {t("vErrName")}
-      </p>
+      <div
+        className="min-h-[12rem] w-full max-w-md animate-pulse rounded-2xl bg-muted/50"
+        aria-hidden
+      />
     );
   }
 
